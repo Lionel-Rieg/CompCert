@@ -83,6 +83,7 @@ let init () =
     | "riscV"   -> if Configuration.model = "64"
                    then Machine.rv64
                    else Machine.rv32
+    | "mppa_k1c" -> Machine.mppa_k1c
     | _         -> assert false
   end;
   Builtins.set C2C.builtins;
