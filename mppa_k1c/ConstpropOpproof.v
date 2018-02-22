@@ -201,7 +201,6 @@ Proof.
   predSpec Int.eq Int.eq_spec n Int.zero; intros.
   subst. exists (e#r); split; auto.
   destruct (e#r); simpl; auto; rewrite ?Int.add_zero, ?Ptrofs.add_zero; auto.
-  destruct Archi.ptr64; auto.
   exists (Val.add e#r (Vint n)); split; auto.
 Qed.
 
@@ -374,7 +373,6 @@ Proof.
   predSpec Int64.eq Int64.eq_spec n Int64.zero; intros.
   subst. exists (e#r); split; auto.
   destruct (e#r); simpl; auto; rewrite ? Int64.add_zero, ? Ptrofs.add_zero; auto.
-  destruct Archi.ptr64; auto.
   exists (Val.addl e#r (Vlong n)); split; auto.
 Qed.
 

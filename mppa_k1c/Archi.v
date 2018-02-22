@@ -20,7 +20,7 @@ Require Import ZArith.
 Require Import Fappli_IEEE.
 Require Import Fappli_IEEE_bits.
 
-Parameter ptr64 : bool.
+Definition ptr64 := true.
 
 Definition big_endian := false.
 

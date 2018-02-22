@@ -143,15 +143,12 @@ Proof.
   - subst n. intros. exists x; split; auto.
     destruct x; simpl; auto.
     rewrite Int.add_zero; auto.
-    destruct Archi.ptr64; auto. rewrite Ptrofs.add_zero; auto. 
   - case (addimm_match a); intros; InvEval; simpl.
     + TrivialExists; simpl. rewrite Int.add_commut. auto.
     + econstructor; split. EvalOp. simpl; eauto. 
       unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto.
-      destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto.
     + econstructor; split. EvalOp. simpl; eauto. 
-      destruct sp; simpl; auto. destruct Archi.ptr64; auto. 
-      rewrite Ptrofs.add_assoc. rewrite (Ptrofs.add_commut m0). auto.
+      destruct sp; simpl; auto.
     + TrivialExists; simpl. subst x. rewrite Val.add_assoc. rewrite Int.add_commut. auto.
     + TrivialExists.
 Qed.
@@ -171,18 +168,10 @@ Proof.
     EvalOp. constructor. EvalOp. simpl; eauto. constructor. eauto. constructor. simpl; eauto.
     rewrite Val.add_commut. destruct sp; simpl; auto.
     destruct v1; simpl; auto.
-    destruct Archi.ptr64 eqn:SF; auto. 
-    apply Val.lessdef_same. f_equal. rewrite ! Ptrofs.add_assoc. f_equal. 
-    rewrite (Ptrofs.add_commut (Ptrofs.of_int n1)), Ptrofs.add_assoc. f_equal. auto with ptrofs.
-    destruct Archi.ptr64 eqn:SF; auto.
   - subst. econstructor; split.
     EvalOp. constructor. EvalOp. simpl; eauto. constructor. eauto. constructor. simpl; eauto.
     destruct sp; simpl; auto.
     destruct v1; simpl; auto.
-    destruct Archi.ptr64 eqn:SF; auto. 
-    apply Val.lessdef_same. f_equal. rewrite ! Ptrofs.add_assoc. f_equal. f_equal.
-    rewrite Ptrofs.add_commut. auto with ptrofs.
-    destruct Archi.ptr64 eqn:SF; auto.
   - subst.
     replace (Val.add (Val.add v1 (Vint n1)) y)
        with (Val.add (Val.add v1 y) (Vint n1)).
@@ -889,8 +878,7 @@ Proof.
     constructor. EvalOp. simpl. congruence. constructor. simpl. rewrite Ptrofs.add_zero. congruence.
   + exists (@nil val); split. constructor. simpl; auto.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
-    destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
-    simpl. auto.
+    destruct v1; simpl in H; try discriminate.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
@@ -917,7 +905,6 @@ Proof.
 - destruct Archi.ptr64 eqn:SF.
 + InvEval. replace v with (if Archi.ptr64 then Val.addl v1 (Vlong n) else Val.add v1 (Vlong n)).
   repeat constructor; auto.
-  rewrite SF; auto.
 + constructor; auto.
 - constructor; auto.
 Qed.

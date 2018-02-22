@@ -553,9 +553,9 @@ Lemma transl_cond_int32s_correct:
 Proof.
   intros. destruct cmp; simpl. 
 - econstructor; split. apply exec_straight_one; [simpl; eauto|auto].
-  split; intros; Simpl. destruct (rs##r1); auto. destruct (rs##r2); auto.
+  split; intros; Simpl. destruct (rs##r1); auto.
 - econstructor; split. apply exec_straight_one; [simpl; eauto|auto].
-  split; intros; Simpl. destruct (rs##r1); auto. destruct (rs##r2); auto.
+  split; intros; Simpl. destruct (rs##r1); auto.
 - econstructor; split. apply exec_straight_one; [simpl; eauto|auto].
   split; intros; Simpl.
 - econstructor; split.
