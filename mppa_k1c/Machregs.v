@@ -39,37 +39,27 @@ Require Import Op.
 *)
 
 Inductive mreg: Type :=
- (** Allocatable integer regs. *)
-              | R5:  mreg | R6:  mreg | R7:  mreg
-  | R8:  mreg | R9:  mreg | R10: mreg | R11: mreg
-  | R12: mreg | R13: mreg | R14: mreg | R15: mreg
-  | R16: mreg | R17: mreg | R18: mreg | R19: mreg
-  | R20: mreg | R21: mreg | R22: mreg | R23: mreg
-  | R24: mreg | R25: mreg | R26: mreg | R27: mreg
-  | R28: mreg | R29: mreg | R30: mreg
-  (** Allocatable double-precision float regs *)
-  | F0:  mreg | F1:  mreg | F2:  mreg | F3:  mreg
-  | F4:  mreg | F5:  mreg | F6:  mreg | F7:  mreg
-  | F8:  mreg | F9:  mreg | F10: mreg | F11: mreg
-  | F12: mreg | F13: mreg | F14: mreg | F15: mreg
-  | F16: mreg | F17: mreg | F18: mreg | F19: mreg
-  | F20: mreg | F21: mreg | F22: mreg | F23: mreg
-  | F24: mreg | F25: mreg | F26: mreg | F27: mreg
-  | F28: mreg | F29: mreg | F30: mreg | F31: mreg.
+  (* Allocatable General Purpose regs. *)
+  | R0  | R1  | R2  | R3  | R4  | R5  | R6  | R7  | R8  | R9
+  (* R10 to R14 are reserved *) | R15 | R16 | R17 | R18 | R19
+  | R20 | R21 | R22 | R23 | R24 | R25 | R26 | R27 | R28 | R29
+  | R30 | R31 | R32 | R33 | R34 | R35 | R36 | R37 | R38 | R39
+  | R40 | R41 | R42 | R43 | R44 | R45 | R46 | R47 | R48 | R49
+  | R50 | R51 | R52 | R53 | R54 | R55 | R56 | R57 | R58 | R59
+  | R60 | R61 | R62 | R63.
 
 Lemma mreg_eq: forall (r1 r2: mreg), {r1 = r2} + {r1 <> r2}.
 Proof. decide equality. Defined.
 Global Opaque mreg_eq.
 
 Definition all_mregs :=
-    R5 :: R6 :: R7 :: R8 :: R9 :: R10 :: R11 :: R12 :: R13 :: R14 :: R15
- :: R16 :: R17 :: R18 :: R19 :: R20 :: R21 :: R22 :: R23
- :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30
- :: F0 :: F1 :: F2 :: F3 :: F4 :: F5 :: F6 :: F7
- :: F8 :: F9 :: F10 :: F11 :: F12 :: F13 :: F14 :: F15
- :: F16 :: F17 :: F18 :: F19 :: F20 :: F21 :: F22 :: F23
- :: F24 :: F25 :: F26 :: F27 :: F28 :: F29 :: F30 :: F31
- :: nil.
+     R0  :: R1  :: R2  :: R3  :: R4  :: R5  :: R6  :: R7  :: R8  :: R9
+                                     :: R15 :: R16 :: R17 :: R18 :: R19
+  :: R20 :: R21 :: R22 :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29
+  :: R30 :: R31 :: R32 :: R33 :: R34 :: R35 :: R36 :: R37 :: R38 :: R39
+  :: R40 :: R41 :: R42 :: R43 :: R44 :: R45 :: R46 :: R47 :: R48 :: R49
+  :: R50 :: R51 :: R52 :: R53 :: R54 :: R55 :: R56 :: R57 :: R58 :: R59
+  :: R60 :: R61 :: R62 :: R63 :: nil.
 
 Lemma all_mregs_complete:
   forall (r: mreg), In r all_mregs.
@@ -85,18 +75,7 @@ Instance Finite_mreg : Finite mreg := {
   Finite_elements_spec := all_mregs_complete
 }.
 
-Definition mreg_type (r: mreg): typ :=
-  match r with
-        | R5  | R6  | R7  | R8  | R9  | R10 | R11
-  | R12 | R13 | R14 | R15 | R16 | R17 | R18 | R19
-  | R20 | R21 | R22 | R23 | R24 | R25 | R26 | R27
-  | R28 | R29 | R30 => if Archi.ptr64 then Tany64 else Tany32
-
-  | F0  | F1  | F2  | F3  | F4  | F5  | F6  | F7
-  | F8  | F9  | F10 | F11 | F12 | F13 | F14 | F15
-  | F16 | F17 | F18 | F19 | F20 | F21 | F22 | F23
-  | F24 | F25 | F26 | F27 | F28 | F29 | F30 | F31 => Tany64
-  end.
+Definition mreg_type (r: mreg): typ := Tany64.
 
 Open Scope positive_scope.
 
@@ -105,23 +84,19 @@ Module IndexedMreg <: INDEXED_TYPE.
   Definition eq := mreg_eq.
   Definition index (r: mreg): positive :=
     match r with
-                | R5  =>  1 | R6  =>  2 | R7  =>  3
-    | R8  =>  4 | R9  =>  5 | R10 =>  6 | R11 =>  7
-    | R12 =>  8 | R13 =>  9 | R14 => 10 | R15 => 11
-    | R16 => 12 | R17 => 13 | R18 => 14 | R19 => 15
-    | R20 => 16 | R21 => 17 | R22 => 18 | R23 => 19
-    | R24 => 20 | R25 => 21 | R26 => 22 | R27 => 23
-    | R28 => 24 | R29 => 25 | R30 => 26
+    R0  => 1  | R1  => 2  | R2  => 3  | R3  => 4  | R4  => 5 
+  | R5  => 6  | R6  => 7  | R7  => 8  | R8  => 9  | R9  => 10
+  | R15 => 16 | R16 => 17 | R17 => 18 | R18 => 19 | R19 => 20
+  | R20 => 21 | R21 => 22 | R22 => 23 | R23 => 24 | R24 => 25 
+  | R25 => 26 | R26 => 27 | R27 => 28 | R28 => 29 | R29 => 30
+  | R30 => 31 | R31 => 32 | R32 => 33 | R33 => 34 | R34 => 35 
+  | R35 => 36 | R36 => 37 | R37 => 38 | R38 => 39 | R39 => 40
+  | R40 => 41 | R41 => 42 | R42 => 43 | R43 => 44 | R44 => 45 
+  | R45 => 46 | R46 => 47 | R47 => 48 | R48 => 49 | R49 => 50
+  | R50 => 51 | R51 => 52 | R52 => 53 | R53 => 54 | R54 => 55 
+  | R55 => 56 | R56 => 57 | R57 => 58 | R58 => 59 | R59 => 60
+  | R60 => 61 | R61 => 62 | R62 => 63 | R63 => 64 end.
 
-    | F0  => 28 | F1  => 29 | F2  => 30 | F3  => 31
-    | F4  => 32 | F5  => 33 | F6  => 34 | F7  => 35
-    | F8  => 36 | F9  => 37 | F10 => 38 | F11 => 39
-    | F12 => 40 | F13 => 41 | F14 => 42 | F15 => 43
-    | F16 => 44 | F17 => 45 | F18 => 46 | F19 => 47
-    | F20 => 48 | F21 => 49 | F22 => 50 | F23 => 51
-    | F24 => 52 | F25 => 53 | F26 => 54 | F27 => 55
-    | F28 => 56 | F29 => 57 | F30 => 58 | F31 => 59
-    end.
   Lemma index_inj:
     forall r1 r2, index r1 = index r2 -> r1 = r2.
   Proof.
@@ -136,23 +111,18 @@ Definition is_stack_reg (r: mreg) : bool := false.
 Local Open Scope string_scope.
 
 Definition register_names :=
-                  ("X5",  R5)  :: ("X6",  R6)  :: ("X7",  R7)  ::
-  ("X8",  R8)  :: ("X9",  R9)  :: ("X10", R10) :: ("X11", R11) ::
-  ("X12", R12) :: ("X13", R13) :: ("X14", R14) :: ("X15", R15) ::
-  ("X16", R16) :: ("X17", R17) :: ("X18", R18) :: ("X19", R19) ::
-  ("X20", R20) :: ("X21", R21) :: ("X22", R22) :: ("X23", R23) ::
-  ("X24", R24) :: ("X25", R25) :: ("X26", R26) :: ("X27", R27) ::
-  ("X28", R28) :: ("X29", R29) :: ("X30", R30) ::
-
-  ("F0",  F0)  :: ("F1",  F1)  :: ("F2",  F2)  :: ("F3",  F3)  ::
-  ("F4",  F4)  :: ("F5",  F5)  :: ("F6",  F6)  :: ("F7",  F7)  ::
-  ("F8",  F8)  :: ("F9",  F9)  :: ("F10", F10) :: ("F11", F11) ::
-  ("F12", F12) :: ("F13", F13) :: ("F14", F14) :: ("F15", F15) ::
-  ("F16", F16) :: ("F17", F17) :: ("F18", F18) :: ("F19", F19) ::
-  ("F20", F20) :: ("F21", F21) :: ("F22", F22) :: ("F23", F23) ::
-  ("F24", F24) :: ("F25", F25) :: ("F26", F26) :: ("F27", F27) ::
-  ("F28", F28) :: ("F29", F29) :: ("F30", F30) :: ("F31", F31) ::
-  nil.
+     ("R0", R0)   :: ("R1", R1)   :: ("R2", R2)   :: ("R3", R3)   :: ("R4", R4)  
+  :: ("R5", R5)   :: ("R6", R6)   :: ("R7", R7)   :: ("R8", R8)   :: ("R9", R9) 
+  :: ("R15", R15) :: ("R16", R16) :: ("R17", R17) :: ("R18", R18) :: ("R19", R19)
+  :: ("R20", R20) :: ("R21", R21) :: ("R22", R22) :: ("R23", R23) :: ("R24", R24)
+  :: ("R25", R25) :: ("R26", R26) :: ("R27", R27) :: ("R28", R28) :: ("R29", R29)
+  :: ("R30", R30) :: ("R31", R31) :: ("R32", R32) :: ("R33", R33) :: ("R34", R34)
+  :: ("R35", R35) :: ("R36", R36) :: ("R37", R37) :: ("R38", R38) :: ("R39", R39)
+  :: ("R40", R40) :: ("R41", R41) :: ("R42", R42) :: ("R43", R43) :: ("R44", R44)
+  :: ("R45", R45) :: ("R46", R46) :: ("R47", R47) :: ("R48", R48) :: ("R49", R49)
+  :: ("R50", R50) :: ("R51", R51) :: ("R52", R52) :: ("R53", R53) :: ("R54", R54)
+  :: ("R55", R55) :: ("R56", R56) :: ("R57", R57) :: ("R58", R58) :: ("R59", R59)
+  :: ("R60", R60) :: ("R61", R61) :: ("R62", R62) :: ("R63", R63) :: nil.
 
 Definition register_by_name (s: string) : option mreg :=
   let fix assoc (l: list (string * mreg)) : option mreg :=
@@ -164,13 +134,14 @@ Definition register_by_name (s: string) : option mreg :=
 
 (** ** Destroyed registers, preferred registers *)
 
-Definition destroyed_by_op (op: operation): list mreg :=
-  match op with
+Definition destroyed_by_op (op: operation): list mreg := nil.
+(*match op with
   | Ointoffloat | Ointuoffloat | Ointofsingle | Ointuofsingle
   | Olongoffloat | Olonguoffloat | Olongofsingle | Olonguofsingle
       => F6 :: nil
   | _ => nil
-  end.
+  end. *)
+
 
 Definition destroyed_by_load (chunk: memory_chunk) (addr: addressing): list mreg := nil.
 
@@ -178,7 +149,8 @@ Definition destroyed_by_store (chunk: memory_chunk) (addr: addressing): list mre
 
 Definition destroyed_by_cond (cond: condition): list mreg := nil.
 
-Definition destroyed_by_jumptable: list mreg := R5 :: nil.
+(* Definition destroyed_by_jumptable: list mreg := R5 :: nil. *)
+Definition destroyed_by_jumptable: list mreg := nil.
 
 Fixpoint destroyed_by_clobber (cl: list string): list mreg :=
   match cl with
@@ -193,23 +165,24 @@ Fixpoint destroyed_by_clobber (cl: list string): list mreg :=
 Definition destroyed_by_builtin (ef: external_function): list mreg :=
   match ef with
   | EF_inline_asm txt sg clob => destroyed_by_clobber clob
-  | EF_memcpy sz al => R5 :: R6 :: R7 :: F0 :: nil
+  (* | EF_memcpy sz al => R5 :: R6 :: R7 :: F0 :: nil *)
   | _ => nil
   end.
 
 Definition destroyed_by_setstack (ty: typ): list mreg := nil.
 
-Definition destroyed_at_function_entry: list mreg := R30 :: nil.
+(* Definition destroyed_at_function_entry: list mreg := R30 :: nil. *)
+Definition destroyed_at_function_entry: list mreg := nil.
 
-Definition temp_for_parent_frame: mreg := R30.
+Definition temp_for_parent_frame: mreg := R8. (* FIXME - and R9 ?? *)
 
-Definition destroyed_at_indirect_call: list mreg :=
-  R10 :: R11 :: R12 :: R13 :: R14 :: R15 :: R16 :: R17 :: nil.
+Definition destroyed_at_indirect_call: list mreg := nil.
+  (* R10 :: R11 :: R12 :: R13 :: R14 :: R15 :: R16 :: R17 :: nil. *)
 
 Definition mregs_for_operation (op: operation): list (option mreg) * option mreg := (nil, None).
 
-Definition mregs_for_builtin (ef: external_function): list (option mreg) * list(option mreg) :=
-  match ef with
+Definition mregs_for_builtin (ef: external_function): list (option mreg) * list(option mreg) := (nil, nil).
+  (* match ef with
   | EF_builtin name sg =>
       if (negb Archi.ptr64) && string_dec name "__builtin_bswap64" then
         (Some R6 :: Some R5 :: nil, Some R5 :: Some R6 :: nil)
@@ -217,7 +190,7 @@ Definition mregs_for_builtin (ef: external_function): list (option mreg) * list(
         (nil, nil)
   | _ =>
     (nil, nil)
-  end.
+  end. *)
 
 Global Opaque
     destroyed_by_op destroyed_by_load destroyed_by_store
@@ -232,11 +205,11 @@ Global Opaque
   integers as their 64-bit sign extension; and [Ocast32unsigned],
   because it builds on the same magic no-op. *)
 
-Definition two_address_op (op: operation) : bool :=
-  match op with
+Definition two_address_op (op: operation) : bool := false.
+  (* match op with
   | Ocast32signed | Ocast32unsigned => true
   | _ => false
-  end.
+  end. *)
 
 (** Constraints on constant propagation for builtins *)
 

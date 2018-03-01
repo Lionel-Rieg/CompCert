@@ -32,62 +32,37 @@ Require Import AST Machregs Locations.
   of callee- and caller-save registers.
 *)
 
-Definition is_callee_save (r: mreg) : bool :=
+Definition is_callee_save (r: mreg): bool :=
   match r with
-  | R5 | R6 | R7 => false
-  | R8 | R9 => true
-  | R10 | R11 | R12 | R13 | R14 | R15 | R16 | R17 => false
-  | R18 | R19 | R20 | R21 | R22 | R23 | R24 | R25 | R26 | R27 => true
-  | R28 | R29 | R30 => false
-  | F0 | F1 | F2 | F3 | F4 | F5 | F6 | F7 => false
-  | F8 | F9 => true
-  | F10 | F11 | F12 | F13 | F14 | F15 | F16 | F17 => false
-  | F18 | F19 | F20 | F21 | F22 | F23 | F24 | F25 | F26 | F27 => true
-  | F28 | F29 | F30 | F31 => false
+  | R15 | R16 | R17 | R18 | R19 | R20 | R21 | R22
+  | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 | R31 => true
+  | _ => false
   end.
 
 Definition int_caller_save_regs :=
-  R5  :: R6  :: R7 ::
-  R10 :: R11 :: R12 :: R13 :: R14 :: R15 :: R16 :: R17 ::
-  R28 :: R29 :: R30 ::
-  nil.
+     R0  :: R1  :: R2  :: R3  :: R4  :: R5  :: R6  :: R7  :: R8  :: R9
+  :: R32 :: R33 :: R34 :: R35 :: R36 :: R37 :: R38 :: R39 :: R40 :: R41
+  :: R42 :: R43 :: R44 :: R45 :: R46 :: R47 :: R48 :: R49 :: R50 :: R51
+  :: R52 :: R53 :: R54 :: R55 :: R56 :: R57 :: R58 :: R59 :: R60 :: R61
+  :: R62 :: R63 :: nil.
 
-Definition float_caller_save_regs :=
-  F0  :: F1  :: F2  :: F3  :: F4  :: F5  :: F6  :: F7  ::
-  F10 :: F11 :: F12 :: F13 :: F14 :: F15 :: F16 :: F17 ::
-  F28 :: F29 :: F30 :: F31 ::
-  nil.
+Definition float_caller_save_regs := @nil mreg.
 
 Definition int_callee_save_regs :=
-  R8  :: R9  ::
-  R18 :: R19 :: R20 :: R21 :: R22 :: R23 :: R24 :: R25 :: R26 :: R27 ::
-  nil.
+     R15 :: R16 :: R17 :: R18 :: R19 :: R20 :: R21 :: R22
+  :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30 :: R31 :: nil.
 
-Definition float_callee_save_regs :=
-  F8  :: F9  ::
-  F18 :: F19 :: F20 :: F21 :: F22 :: F23 :: F24 :: F25 :: F26 :: F27 ::
-  nil.
+Definition float_callee_save_regs := @nil mreg.
 
 Definition destroyed_at_call :=
   List.filter (fun r => negb (is_callee_save r)) all_mregs.
 
-Definition dummy_int_reg   := R6.    (**r Used in [Coloring]. *)
-Definition dummy_float_reg := F0 .   (**r Used in [Coloring]. *)
+Definition dummy_int_reg   := R0.    (**r Used in [Coloring]. *)
+Definition dummy_float_reg := R0.    (**r Used in [Coloring]. *)
 
 Definition callee_save_type := mreg_type.
   
-Definition is_float_reg (r: mreg) :=
-  match r with
-        | R5  | R6  | R7  | R8  | R9  | R10 | R11
-  | R12 | R13 | R14 | R15 | R16 | R17 | R18 | R19
-  | R20 | R21 | R22 | R23 | R24 | R25 | R26 | R27
-  | R28 | R29 | R30 => false
-
-  | F0  | F1  | F2  | F3  | F4  | F5  | F6  | F7
-  | F8  | F9  | F10 | F11 | F12 | F13 | F14 | F15
-  | F16 | F17 | F18 | F19 | F20 | F21 | F22 | F23
-  | F24 | F25 | F26 | F27 | F28 | F29 | F30 | F31 => true
-  end.
+Definition is_float_reg (r: mreg) := false.
 
 (** * Function calling conventions *)
 
@@ -115,12 +90,12 @@ Definition is_float_reg (r: mreg) :=
   with one integer result. *)
 
 Definition loc_result (s: signature) : rpair mreg :=
-  match s.(sig_res) with
-  | None => One R10
-  | Some (Tint | Tany32) => One R10
-  | Some (Tfloat | Tsingle | Tany64) => One F10
-  | Some Tlong => if Archi.ptr64 then One R10 else Twolong R11 R10
-  end.
+   match s.(sig_res) with 
+   | None => One R0
+   | Some (Tint | Tany32) => One R0
+   | Some (Tfloat | Tsingle | Tany64) => One R0
+   | Some Tlong => if Archi.ptr64 then One R0 else One R0
+   end.
 
 (** The result registers have types compatible with that given in the signature. *)
 
@@ -157,7 +132,6 @@ Proof.
   intros.
   unfold loc_result; destruct (sig_res sg) as [[]|]; auto.
   unfold mreg_type; destruct Archi.ptr64; auto.
-  split; auto. congruence.
 Qed.
 
 (** The location of the result depends only on the result part of the signature *)
@@ -204,10 +178,8 @@ and reserving the corresponding integer registers, so that fixup
 code can be introduced in the Asmexpand pass.
 *)
 
-Definition int_param_regs :=
-  R10 :: R11 :: R12 :: R13 :: R14 :: R15 :: R16 :: R17 :: nil.
-Definition float_param_regs :=
-  F10 :: F11 :: F12 :: F13 :: F14 :: F15 :: F16 :: F17 :: nil.
+Definition param_regs :=
+  R0 :: R1 :: R2 :: R3 :: R4 :: R5 :: R6 :: R7 :: nil.
 
 Definition one_arg (regs: list mreg) (rn: Z) (ofs: Z) (ty: typ)
                            (rec: Z -> Z -> list (rpair loc)) :=
@@ -246,6 +218,8 @@ Fixpoint loc_arguments_rec (va: bool)
     (tyl: list typ) (r ofs: Z) {struct tyl} : list (rpair loc) :=
   match tyl with
   | nil => nil
+  | ty :: tys => one_arg param_regs r ofs ty (loc_arguments_rec va tys)
+(*
   | (Tint | Tany32) as ty :: tys =>
       one_arg int_param_regs r ofs ty (loc_arguments_rec va tys)
   | Tsingle as ty :: tys =>
@@ -258,6 +232,7 @@ Fixpoint loc_arguments_rec (va: bool)
       if va && negb Archi.ptr64
       then hybrid_arg float_param_regs r ofs ty (loc_arguments_rec va tys)
       else one_arg float_param_regs r ofs ty (loc_arguments_rec va tys)
+*)
   end.
 
 (** [loc_arguments s] returns the list of locations where to store arguments
@@ -352,32 +327,23 @@ Proof.
   - subst p; simpl. rewrite OTY. split. apply (AL ofs Tlong OO). apply Z.divide_1_l. 
   - eapply OF; [idtac|eauto]. generalize (AL ofs Tlong OO); simpl; omega.
   }
-  assert (D: OKREGS int_param_regs).
+  assert (D: OKREGS param_regs).
   { red. decide_goal. }
-  assert (E: OKREGS float_param_regs).
+  assert (E: OKREGS param_regs).
   { red. decide_goal. }
 
   cut (forall va tyl rn ofs, ofs >= 0 -> OK (loc_arguments_rec va tyl rn ofs)).
   unfold OK. eauto.
-  induction tyl as [ | ty1 tyl]; intros until ofs; intros OO; simpl.
-- red; simpl; tauto.
-- destruct ty1.
-+ (* int *) apply A; auto.
+  induction tyl as [ | ty1 tyl]; intros until ofs; intros OO; simpl.  - red; simpl; tauto.  - destruct ty1.  + (* int *) apply A; auto.
 + (* float *) 
-  destruct (va && negb Archi.ptr64).
-  apply C; auto.
   apply A; auto.
 + (* long *)
-  destruct Archi.ptr64.
   apply A; auto.
-  apply B; auto.
 + (* single *)
   apply A; auto.
 + (* any32 *)
   apply A; auto.
 + (* any64 *)
-  destruct (va && negb Archi.ptr64).
-  apply C; auto.
   apply A; auto.
 Qed.
 
