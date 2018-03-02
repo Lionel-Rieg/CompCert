@@ -33,53 +33,43 @@ Require Import Conventions.
 
 (** * Abstract syntax *)
 
-(** Integer registers.  X0 is treated specially because it always reads 
-  as zero and is never used as a destination of an instruction. *)
+(** General Purpose registers. *)
 
-Inductive ireg: Type :=
-  | X1:  ireg | X2:  ireg | X3:  ireg | X4:  ireg | X5:  ireg
-  | X6:  ireg | X7:  ireg | X8:  ireg | X9:  ireg | X10: ireg
-  | X11: ireg | X12: ireg | X13: ireg | X14: ireg | X15: ireg
-  | X16: ireg | X17: ireg | X18: ireg | X19: ireg | X20: ireg
-  | X21: ireg | X22: ireg | X23: ireg | X24: ireg | X25: ireg
-  | X26: ireg | X27: ireg | X28: ireg | X29: ireg | X30: ireg
-  | X31: ireg.
+Inductive gpreg: Type :=
+  | GPR0:  gpreg | GPR1:  gpreg | GPR2:  gpreg | GPR3:  gpreg | GPR4:  gpreg
+  | GPR5:  gpreg | GPR6:  gpreg | GPR7:  gpreg | GPR8:  gpreg | GPR9:  gpreg
+  | GPR10: gpreg | GPR11: gpreg | GPR12: gpreg | GPR13: gpreg | GPR14: gpreg 
+  | GPR15: gpreg | GPR16: gpreg | GPR17: gpreg | GPR18: gpreg | GPR19: gpreg 
+  | GPR20: gpreg | GPR21: gpreg | GPR22: gpreg | GPR23: gpreg | GPR24: gpreg 
+  | GPR25: gpreg | GPR26: gpreg | GPR27: gpreg | GPR28: gpreg | GPR29: gpreg 
+  | GPR30: gpreg | GPR31: gpreg | GPR32: gpreg | GPR33: gpreg | GPR34: gpreg 
+  | GPR35: gpreg | GPR36: gpreg | GPR37: gpreg | GPR38: gpreg | GPR39: gpreg 
+  | GPR40: gpreg | GPR41: gpreg | GPR42: gpreg | GPR43: gpreg | GPR44: gpreg 
+  | GPR45: gpreg | GPR46: gpreg | GPR47: gpreg | GPR48: gpreg | GPR49: gpreg 
+  | GPR50: gpreg | GPR51: gpreg | GPR52: gpreg | GPR53: gpreg | GPR54: gpreg 
+  | GPR55: gpreg | GPR56: gpreg | GPR57: gpreg | GPR58: gpreg | GPR59: gpreg 
+  | GPR60: gpreg | GPR61: gpreg | GPR62: gpreg | GPR63: gpreg.
 
-Inductive ireg0: Type :=
-  | X0: ireg0 | X: ireg -> ireg0.
+Definition ireg := gpreg.
 
-Coercion X: ireg >-> ireg0.
-
-(** Floating-point registers *)
-
-Inductive freg: Type :=
-  | F0: freg  | F1: freg  | F2: freg  | F3: freg
-  | F4: freg  | F5: freg  | F6: freg  | F7: freg
-  | F8: freg  | F9: freg  | F10: freg | F11: freg
-  | F12: freg | F13: freg | F14: freg | F15: freg
-  | F16: freg | F17: freg | F18: freg | F19: freg
-  | F20: freg | F21: freg | F22: freg | F23: freg
-  | F24: freg | F25: freg | F26: freg | F27: freg
-  | F28: freg | F29: freg | F30: freg | F31: freg.
+Definition freg := gpreg.
 
 Lemma ireg_eq: forall (x y: ireg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
-Lemma ireg0_eq: forall (x y: ireg0), {x=y} + {x<>y}.
-Proof. decide equality. apply ireg_eq. Defined.
-
 Lemma freg_eq: forall (x y: freg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
-  
+
 (** We model the following registers of the RISC-V architecture. *)
 
 Inductive preg: Type :=
-  | IR: ireg -> preg                    (**r integer registers *)
-  | FR: freg -> preg                    (**r double-precision float registers *)
-  | PC: preg.                           (**r program counter *)
+  | IR: gpreg -> preg                   (**r integer registers *)
+  | FR: gpreg -> preg                   (**r float registers   *)
+  | RA: preg                            (**r return address    *)
+  | PC: preg.                           (**r program counter   *)
 
-Coercion IR: ireg >-> preg.
-Coercion FR: freg >-> preg.
+Coercion IR: gpreg >-> preg.
+Coercion FR: gpreg >-> preg.
 
 Lemma preg_eq: forall (x y: preg), {x=y} + {x<>y}.
 Proof. decide equality. apply ireg_eq. apply freg_eq. Defined.
@@ -93,8 +83,10 @@ Module Pregmap := EMap(PregEq).
 
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
-Notation "'SP'" := X2 (only parsing) : asm.
-Notation "'RA'" := X1 (only parsing) : asm.
+Notation "'SP'" := GPR12 (only parsing) : asm.
+
+(* FIXME - placeholder definitions to make sure the Risc-V instruction definitions work *)
+Definition ireg0 := ireg.
 
 (** Offsets for load and store instructions.  An offset is either an
   immediate integer or the low part of a symbol. *)
@@ -139,6 +131,7 @@ Definition label := positive.
   [Asmgen]) is careful to respect this range. *)
 
 Inductive instruction : Type :=
+(*
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
@@ -175,7 +168,7 @@ Inductive instruction : Type :=
   | Psraw   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-arith *)
 
 (** 64-bit integer register-immediate instructions *)
-  | Paddil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r add immediate *)
+*)  | Paddil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r add immediate *) (*
   | Psltil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than immediate *)
   | Psltiul (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than unsigned immediate *)
   | Pandil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r and immediate *)
@@ -186,7 +179,7 @@ Inductive instruction : Type :=
   | Psrail  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-arith immediate *)
   | Pluil   (rd: ireg)             (imm: int64)      (**r load upper-immediate *)
 (** 64-bit integer register-register instructions *)
-  | Paddl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *)
+*)  | Paddl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *) (*
   | Psubl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer subtraction *)
 
   | Pmull   (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply low *)
@@ -213,8 +206,8 @@ Inductive instruction : Type :=
   (* Unconditional jumps.  Links are always to X1/RA. *)
   | Pj_l    (l: label)                              (**r jump to label *)
   | Pj_s    (symb: ident) (sg: signature)           (**r jump to symbol *)
-  | Pj_r    (r: ireg)     (sg: signature)           (**r jump register *)
-  | Pjal_s  (symb: ident) (sg: signature)           (**r jump-and-link symbol *)
+*)| Pj_r    (r: ireg)     (sg: signature)           (**r jump register *)
+(*| Pjal_s  (symb: ident) (sg: signature)           (**r jump-and-link symbol *)
   | Pjal_r  (r: ireg)     (sg: signature)           (**r jump-and-link register *)
 
   (* Conditional branches, 32-bit comparisons *)
@@ -332,20 +325,20 @@ Inductive instruction : Type :=
 
   | Pfcvtds  (rd: freg) (rs: freg)                  (**r float32 -> float   *)
   | Pfcvtsd  (rd: freg) (rs: freg)                  (**r float   -> float32 *)
-
+*)
   (* Pseudo-instructions *)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
   | Plabel  (lbl: label)                            (**r define a code label *)
-  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
+(*  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
   | Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
   | Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
   | Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
   | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
-  | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *)
+  | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
-              -> builtin_res preg -> instruction.   (**r built-in function (pseudo) *)
-
+              -> builtin_res preg -> instruction.   (**r built-in function (pseudo) *) (*
+*)
 
 (** The pseudo-instructions are the following:
 
@@ -441,13 +434,11 @@ Definition genv := Genv.t fundef unit.
 Definition get0w (rs: regset) (r: ireg0) : val :=
   match r with
   | X0 => Vint Int.zero
-  | X r => rs r
   end.
 
 Definition get0l (rs: regset) (r: ireg0) : val :=
   match r with
   | X0 => Vlong Int64.zero
-  | X r => rs r
   end.
 
 Notation "a # b" := (a b) (at level 1, only parsing) : asm.
@@ -612,7 +603,7 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
 
 Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : outcome :=
   match i with
-  | Pmv d s =>
+(*  | Pmv d s =>
       Next (nextinstr (rs#d <- (rs#s))) m
 
 (** 32-bit integer register-immediate instructions *)
@@ -678,9 +669,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.shr rs##s1 rs##s2))) m
 
 (** 64-bit integer register-immediate instructions *)
-  | Paddil d s i =>
+*)| Paddil d s i =>
       Next (nextinstr (rs#d <- (Val.addl rs###s (Vlong i)))) m
-  | Psltil d s i =>
+(*| Psltil d s i =>
       Next (nextinstr (rs#d <- (Val.maketotal (Val.cmpl Clt rs###s (Vlong i))))) m
   | Psltiul d s i =>
       Next (nextinstr (rs#d <- (Val.maketotal (Val.cmplu (Mem.valid_pointer m) Clt rs###s (Vlong i))))) m
@@ -700,9 +691,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Vlong (Int64.sign_ext 32 (Int64.shl i (Int64.repr 12)))))) m
 
 (** 64-bit integer register-register instructions *)
-  | Paddl d s1 s2 =>
+*)| Paddl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
-  | Psubl d s1 s2 =>
+(*| Psubl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.subl rs###s1 rs###s2))) m
   | Pmull d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.mull rs###s1 rs###s2))) m
@@ -749,9 +740,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       goto_label f l rs m
   | Pj_s s sg =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-  | Pj_r r sg =>
+*)| Pj_r r sg =>
       Next (rs#PC <- (rs#r)) m
-  | Pjal_s s sg =>
+(*| Pjal_s s sg =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)
               #RA <- (Val.offset_ptr rs#PC Ptrofs.one)
            ) m
@@ -919,12 +910,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.singleoffloat rs#s))) m
 
 (** Pseudo-instructions *)
-  | Pallocframe sz pos =>
+*)| Pallocframe sz pos =>
       let (m1, stk) := Mem.alloc m 0 sz in
       let sp := (Vptr stk Ptrofs.zero) in
       match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
       | None => Stuck
-      | Some m2 => Next (nextinstr (rs #X30 <- (rs SP) #SP <- sp #X31 <- Vundef)) m2
+      | Some m2 => Next (nextinstr (rs #GPR30 <- (rs SP) #SP <- sp #GPR31 <- Vundef)) m2
       end
   | Pfreeframe sz pos =>
       match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
@@ -934,38 +925,38 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
           | Vptr stk ofs =>
               match Mem.free m stk 0 sz with
               | None => Stuck
-              | Some m' => Next (nextinstr (rs#SP <- v #X31 <- Vundef)) m'
+              | Some m' => Next (nextinstr (rs#SP <- v #GPR31 <- Vundef)) m'
               end
           | _ => Stuck
           end
       end
   | Plabel lbl =>
       Next (nextinstr rs) m
-  | Ploadsymbol rd s ofs =>
+(*| Ploadsymbol rd s ofs =>
       Next (nextinstr (rs#rd <- (Genv.symbol_address ge s ofs))) m
   | Ploadsymbol_high rd s ofs =>
       Next (nextinstr (rs#rd <- (high_half ge s ofs))) m
   | Ploadli rd i =>
-      Next (nextinstr (rs#X31 <- Vundef #rd <- (Vlong i))) m
+      Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vlong i))) m
   | Ploadfi rd f =>
-      Next (nextinstr (rs#X31 <- Vundef #rd <- (Vfloat f))) m
+      Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vfloat f))) m
   | Ploadsi rd f =>
-      Next (nextinstr (rs#X31 <- Vundef #rd <- (Vsingle f))) m
+      Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vsingle f))) m
   | Pbtbl r tbl =>
       match rs r with
       | Vint n =>
           match list_nth_z tbl (Int.unsigned n) with
           | None => Stuck
-          | Some lbl => goto_label f lbl (rs#X5 <- Vundef #X31 <- Vundef) m
+          | Some lbl => goto_label f lbl (rs#GPR5 <- Vundef #GPR31 <- Vundef) m
           end
       | _ => Stuck
       end
-  | Pbuiltin ef args res =>
+*)| Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
 
   (** The following instructions and directives are not generated directly by Asmgen,
       so we do not model them. *)
-  | Pfence
+(*| Pfence
 
   | Pfmvxs _ _
   | Pfmvxd _ _
@@ -986,31 +977,29 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
   | Pfnmaddd _ _ _ _
   | Pfnmsubd _ _ _ _
     => Stuck
-  end.
+*)end.
 
 (** Translation of the LTL/Linear/Mach view of machine registers to
   the RISC-V view.  Note that no LTL register maps to [X31].  This
   register is reserved as temporary, to be used by the generated RV32G
   code.  *)
 
+  (* FIXME - R31 is not there *)
 Definition preg_of (r: mreg) : preg :=
   match r with
-               | R5  => X5  | R6  => X6  | R7  => X7
-  | R8  => X8  | R9  => X9  | R10 => X10 | R11 => X11
-  | R12 => X12 | R13 => X13 | R14 => X14 | R15 => X15
-  | R16 => X16 | R17 => X17 | R18 => X18 | R19 => X19
-  | R20 => X20 | R21 => X21 | R22 => X22 | R23 => X23
-  | R24 => X24 | R25 => X25 | R26 => X26 | R27 => X27
-  | R28 => X28 | R29 => X29 | R30 => X30
-
-  | Machregs.F0  => F0  | Machregs.F1  => F1  | Machregs.F2  => F2  | Machregs.F3  => F3
-  | Machregs.F4  => F4  | Machregs.F5  => F5  | Machregs.F6  => F6  | Machregs.F7  => F7
-  | Machregs.F8  => F8  | Machregs.F9  => F9  | Machregs.F10 => F10 | Machregs.F11 => F11
-  | Machregs.F12 => F12 | Machregs.F13 => F13 | Machregs.F14 => F14 | Machregs.F15 => F15
-  | Machregs.F16 => F16 | Machregs.F17 => F17 | Machregs.F18 => F18 | Machregs.F19 => F19
-  | Machregs.F20 => F20 | Machregs.F21 => F21 | Machregs.F22 => F22 | Machregs.F23 => F23
-  | Machregs.F24 => F24 | Machregs.F25 => F25 | Machregs.F26 => F26 | Machregs.F27 => F27
-  | Machregs.F28 => F28 | Machregs.F29 => F29 | Machregs.F30 => F30 | Machregs.F31 => F31
+  | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
+  | R5  => GPR5  | R6  => GPR6  | R7  => GPR7  | R8  => GPR8  | R9  => GPR9
+(*| R10 => GPR10 | R11 => GPR11 | R12 => GPR12 | R13 => GPR13 | R14  => GPR14 *)
+  | R15 => GPR15 | R16 => GPR16 | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
+  | R20 => GPR20 | R21 => GPR21 | R22 => GPR22 | R23 => GPR23 | R24  => GPR24
+  | R25 => GPR25 | R26 => GPR26 | R27 => GPR27 | R28 => GPR28 | R29  => GPR29
+  | R30 => GPR30 |                R32 => GPR32 | R33 => GPR33 | R34  => GPR34
+  | R35 => GPR35 | R36 => GPR36 | R37 => GPR37 | R38 => GPR38 | R39  => GPR39
+  | R40 => GPR40 | R41 => GPR41 | R42 => GPR42 | R43 => GPR43 | R44  => GPR44
+  | R45 => GPR45 | R46 => GPR46 | R47 => GPR47 | R48 => GPR48 | R49  => GPR49
+  | R50 => GPR50 | R51 => GPR51 | R52 => GPR52 | R53 => GPR53 | R54  => GPR54
+  | R55 => GPR55 | R56 => GPR56 | R57 => GPR57 | R58 => GPR58 | R59  => GPR59
+  | R60 => GPR60 | R61 => GPR61 | R62 => GPR62 | R63 => GPR63
   end.
 
 (** Extract the values of the arguments of an external call.
@@ -1065,7 +1054,7 @@ Inductive step: state -> trace -> state -> Prop :=
       rs' = nextinstr
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
-                   (rs#X31 <- Vundef))) ->
+                   (rs#GPR31 <- Vundef))) ->
       step (State rs m) t (State rs' m')
   | exec_step_external:
       forall b ef args res rs m t rs' m',
@@ -1094,7 +1083,7 @@ Inductive initial_state (p: program): state -> Prop :=
 Inductive final_state: state -> int -> Prop :=
   | final_state_intro: forall rs m r,
       rs PC = Vnullptr ->
-      rs X10 = Vint r ->
+      rs GPR9 = Vint r ->
       final_state (State rs m) r.
 
 Definition semantics (p: program) :=
@@ -1164,8 +1153,7 @@ Qed.
 
 Definition data_preg (r: preg) : bool :=
   match r with
-  | IR RA  => false
-  | IR X31 => false
+  | RA  => false
   | IR _   => true
   | FR _   => true
   | PC     => false

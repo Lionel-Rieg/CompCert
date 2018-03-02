@@ -35,7 +35,7 @@ Require Import AST Machregs Locations.
 Definition is_callee_save (r: mreg): bool :=
   match r with
   | R15 | R16 | R17 | R18 | R19 | R20 | R21 | R22
-  | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 | R31 => true
+  | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 => true
   | _ => false
   end.
 
@@ -50,7 +50,7 @@ Definition float_caller_save_regs := @nil mreg.
 
 Definition int_callee_save_regs :=
      R15 :: R16 :: R17 :: R18 :: R19 :: R20 :: R21 :: R22
-  :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30 :: R31 :: nil.
+  :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30        :: nil.
 
 Definition float_callee_save_regs := @nil mreg.
 

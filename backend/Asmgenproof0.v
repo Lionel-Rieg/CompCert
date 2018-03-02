@@ -39,11 +39,13 @@ Proof.
   unfold ireg_of; intros. destruct (preg_of r); inv H; auto.
 Qed.
 
+(* FIXME - Replaced FR by IR for MPPA *)
 Lemma freg_of_eq:
-  forall r r', freg_of r = OK r' -> preg_of r = FR r'.
+  forall r r', freg_of r = OK r' -> preg_of r = IR r'.
 Proof.
   unfold freg_of; intros. destruct (preg_of r); inv H; auto.
 Qed.
+
 
 Lemma preg_of_injective:
   forall r1 r2, preg_of r1 = preg_of r2 -> r1 = r2.
