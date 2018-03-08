@@ -106,11 +106,11 @@ Definition orimm32  := opimm32 Porw  Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
-  
+*)
 Definition load_hilo64 (r: ireg) (hi lo: int64) k :=
   if Int64.eq lo Int64.zero then Pluil r hi :: k
   else Pluil r hi :: Paddil r r lo :: k.
-  
+(*
 Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
   | Imm64_single imm => Paddil r GPR0 imm :: k
@@ -123,9 +123,8 @@ Definition opimm64 (op: ireg -> ireg0 -> ireg0 -> instruction)
                    (rd rs: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
   | Imm64_single imm => opimm rd rs imm :: k
-(*| Imm64_pair hi lo => load_hilo64 GPR31 hi lo (op rd rs GPR31 :: k)
+  | Imm64_pair hi lo => load_hilo64 GPR31 hi lo (op rd rs GPR31 :: k)
   | Imm64_large imm  => Ploadli GPR31 imm :: op rd rs GPR31 :: k
-*)| _ => nil
   end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
@@ -705,27 +704,19 @@ Definition transl_op
   end.
 
 (** Accessing data in the stack frame. *)
-(*
+
 Definition indexed_memory_access
         (mk_instr: ireg -> offset -> instruction)
         (base: ireg) (ofs: ptrofs) (k: code) :=
-  if Archi.ptr64 then
-    match make_immed64 (Ptrofs.to_int64 ofs) with
-    | Imm64_single imm =>
-        mk_instr base (Ofsimm (Ptrofs.of_int64 imm)) :: k
-    | Imm64_pair hi lo =>
-        Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
-    | Imm64_large imm =>
-        Ploadli GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
-    end
-  else
-    match make_immed32 (Ptrofs.to_int ofs) with
-    | Imm32_single imm =>
-        mk_instr base (Ofsimm (Ptrofs.of_int imm)) :: k
-    | Imm32_pair hi lo =>
-        Pluiw GPR31 hi :: Paddw GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int lo)) :: k
-    end.
-
+  match make_immed64 (Ptrofs.to_int64 ofs) with
+  | Imm64_single imm =>
+      mk_instr base (Ofsimm (Ptrofs.of_int64 imm)) :: k
+  | Imm64_pair hi lo =>
+      Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
+  | Imm64_large imm =>
+      Ploadli GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
+  end.
+(*
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   match ty, preg_of dst with
   | Tint,    IR rd => OK (indexed_memory_access (Plw rd) base ofs k)
@@ -748,12 +739,13 @@ Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :
   | _, _           => Error (msg "Asmgen.storeind")
   end.
 
+*)
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) (k: code) :=
-  indexed_memory_access (if Archi.ptr64 then Pld dst else Plw dst) base ofs k.
+  indexed_memory_access (Pld dst) base ofs k.
 
 Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) (k: code) :=
-  indexed_memory_access (if Archi.ptr64 then Psd src else Psw src) base ofs k.
-*)
+  indexed_memory_access (Psd src) base ofs k.
+
 (** Translation of memory accesses: loads, and stores. *)
 
 Definition transl_memory_access
@@ -829,9 +821,36 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
 
 (** Function epilogue *)
 
+(*
+Definition store_ra (base: ireg) (ofs: ptrofs) (k: code) :=
+  indexed_memory_access (Psd GPR8) base ofs (Pget GPR8 RA :: k)
+  .
+*)
+
+(*
+Definition make_ra (base: ireg) (ofs: ptrofs) (k: code) :=
+  Pset RA GPR8
+  :: (indexed_memory_access (Pld GPR8) base ofs k) (* FIXME - not sure about GPR8 *)
+  .
+*)
+
+(*
+Definition make_epilogue (f: Mach.function) (k: code) :=
+  Pset RA GPR8 :: (indexed_memory_access (Pld GPR8) SP f.(fn_retaddr_ofs) (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k))
+  (* make_ra SP f.(fn_retaddr_ofs)
+     (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k) *)
+  .
+*)
+
+Definition make_epilogue (f: Mach.function) (k: code) :=
+  Pset RA GPR8 :: loadind_ptr SP f.(fn_retaddr_ofs) GPR8
+    (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
+
+(*
 Definition make_epilogue (f: Mach.function) (k: code) :=
   loadind_ptr SP f.(fn_retaddr_ofs) RA
     (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
+*)
 
 (** Translation of a Mach instruction. *)
 
@@ -870,11 +889,10 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       OK (Pj_l lbl :: k)
   | Mcond cond args lbl =>
       transl_cbranch cond args lbl k
-  | Mjumptable arg tbl =>
-      do r <- ireg_of arg;
-      OK (Pbtbl r tbl :: k)
+  | Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
 *)| Mreturn =>
-      OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))
+      OK (make_epilogue f (Pret :: k))
+      (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)
   | _ =>
       Error (msg "Asmgen.transl_instr")
   end.
@@ -924,7 +942,16 @@ Definition transl_function (f: Mach.function) :=
   do c <- transl_code' f f.(Mach.fn_code) true;
   OK (mkfunction f.(Mach.fn_sig)
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
-         storeind_ptr RA SP f.(fn_retaddr_ofs) c)).
+         storeind_ptr GPR8 SP f.(fn_retaddr_ofs) (Pget GPR8 RA :: c))).
+
+(*
+Definition transl_function (f: Mach.function) :=
+  do c <- transl_code' f f.(Mach.fn_code) true;
+  OK (mkfunction f.(Mach.fn_sig)
+        (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
+         indexed_memory_access (Psd GPR8) SP f.(fn_retaddr_ofs) (Pget GPR8 RA :: c))).
+         (* store_ra SP f.(fn_retaddr_ofs) c)). *)
+*)
 
 Definition transf_function (f: Mach.function) : res Asm.function :=
   do tf <- transl_function f;

@@ -21,7 +21,7 @@ Require Import Op Locations Mach Conventions.
 Require Import Asm Asmgen Asmgenproof0.
 
 (** Decomposition of integer constants. *)
-
+(*
 Lemma make_immed32_sound:
   forall n,
   match make_immed32 n with
@@ -55,7 +55,7 @@ Proof.
   rewrite (Int.modu_divu_Euclid m (Int.repr 4096)) at 1 by (vm_compute; congruence).
   rewrite D. apply Int.add_zero.
 Qed.
-
+*)
 Lemma make_immed64_sound:
   forall n,
   match make_immed64 n with
@@ -79,7 +79,7 @@ Qed.
 Lemma ireg_of_not_GPR31:
   forall m r, ireg_of m = OK r -> IR r <> IR GPR31.
 Proof.
-  intros. erewrite <- ireg_of_eq; eauto with asmgen. destruct m; unfold preg_of; discriminate.
+  intros. erewrite <- ireg_of_eq; eauto with asmgen.
 Qed.
 
 Lemma ireg_of_not_GPR31':
@@ -109,7 +109,7 @@ Variable ge: genv.
 Variable fn: function.
 
 (** 32-bit integer constants and arithmetic *)
-
+(*
 Lemma load_hilo32_correct:
   forall rd hi lo k rs m,
   exists rs',
@@ -175,7 +175,7 @@ Proof.
 Qed.
 
 (** 64-bit integer constants and arithmetic *)
-
+*)
 Lemma load_hilo64_correct:
   forall rd hi lo k rs m,
   exists rs',
@@ -194,7 +194,7 @@ Proof.
   split. Simpl. 
   intros; Simpl.
 Qed.
-
+(*
 Lemma loadimm64_correct:
   forall rd n k rs m,
   exists rs',
@@ -215,7 +215,7 @@ Proof.
   split. Simpl. 
   intros; Simpl.
 Qed.
-
+*)
 Lemma opimm64_correct:
   forall (op: ireg -> ireg0 -> ireg0 -> instruction)
          (opi: ireg -> ireg0 -> int64 -> instruction)
@@ -249,7 +249,7 @@ Proof.
 Qed.
 
 (** Add offset to pointer *)
-
+(*
 Lemma addptrofs_correct:
   forall rd r1 n k rs m,
   r1 <> GPR31 ->
@@ -385,7 +385,7 @@ Remark branch_on_GPR31:
 Proof.
   intros. destruct normal; simpl; rewrite H; simpl; destruct b; reflexivity. 
 Qed.
-
+*)
 Ltac ArgsInv :=
   repeat (match goal with
   | [ H: Error _ = OK _ |- _ ] => discriminate
@@ -415,7 +415,7 @@ Remark exec_straight_opt_right:
 Proof.
   destruct 1; intros. auto. eapply exec_straight_trans; eauto. 
 Qed.
-
+(*
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m',
   transl_cbranch cond args lbl k = OK c ->
@@ -940,7 +940,7 @@ Proof.
   apply exec_straight_one. eapply transl_cond_single_correct with (v := Val.notbool v); eauto. auto.
   split; intros; Simpl.
 Qed.
-
+*)
 (** Some arithmetic properties. *)
 
 Remark cast32unsigned_from_cast32signed:
@@ -980,6 +980,7 @@ Proof.
 Opaque Int.eq.
   intros until c; intros TR EV.
   unfold transl_op in TR; destruct op; ArgsInv; simpl in EV; SimplEval EV; try TranslOpSimpl.
+(*
 - (* move *)
   destruct (preg_of res), (preg_of m0); inv TR; TranslOpSimpl.
 - (* intconst *)
@@ -1069,10 +1070,12 @@ Opaque Int.eq.
   assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
   rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
   rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
+*)
 - (* addlimm *)
   exploit (opimm64_correct Paddl Paddil Val.addl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen. 
+  exists rs'; split; eauto. rewrite B; auto with asmgen.
+(*
 - (* andimm *)
   exploit (opimm64_correct Pandl Pandil Val.andl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
@@ -1100,6 +1103,7 @@ Opaque Int.eq.
 - (* cond *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
+*)
 Qed.
 
 (** Memory accesses *)
@@ -1114,7 +1118,8 @@ Lemma indexed_memory_access_correct:
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   unfold indexed_memory_access; intros.
-  destruct Archi.ptr64 eqn:SF.
+  (* destruct Archi.ptr64 eqn:SF. *)
+  assert (Archi.ptr64 = true) as SF; auto.
 - generalize (make_immed64_sound (Ptrofs.to_int64 ofs)); intros EQ.
   destruct (make_immed64 (Ptrofs.to_int64 ofs)).
 + econstructor; econstructor; econstructor; split.
@@ -1132,6 +1137,7 @@ Proof.
   simpl; eauto. simpl; eauto. auto. auto. 
   split; intros; Simpl. unfold eval_offset. destruct (rs base); auto; simpl. rewrite SF. simpl.
   rewrite Ptrofs.add_zero. subst imm. rewrite Ptrofs.of_int64_to_int64 by auto. auto.
+(* 32 bits part, irrelevant for us
 - generalize (make_immed32_sound (Ptrofs.to_int ofs)); intros EQ.
   destruct (make_immed32 (Ptrofs.to_int ofs)).
 + econstructor; econstructor; econstructor; split.
@@ -1144,6 +1150,7 @@ Proof.
   rewrite Ptrofs.add_assoc. f_equal. f_equal. 
   rewrite <- (Ptrofs.of_int_to_int SF ofs). rewrite EQ. 
   symmetry; auto with ptrofs.
+*)
 Qed.
 
 Lemma indexed_load_access_correct:
@@ -1186,7 +1193,7 @@ Proof.
   unfold exec_store. rewrite B, C, STORE by auto. eauto. auto. 
   intros; Simpl.
 Qed.
-
+(*
 Lemma loadind_correct:
   forall (base: ireg) ofs ty dst k c (rs: regset) m v,
   loadind base ofs ty dst k = OK c ->
@@ -1227,7 +1234,7 @@ Proof.
   destruct A as (mk_instr & B & C). subst c. 
   eapply indexed_store_access_correct; eauto with asmgen. 
 Qed.
-
+*)
 Lemma loadind_ptr_correct:
   forall (base: ireg) ofs (dst: ireg) k (rs: regset) m v,
   Mem.loadv Mptr m (Val.offset_ptr rs#base ofs) = Some v ->
@@ -1238,9 +1245,9 @@ Lemma loadind_ptr_correct:
   /\ forall r, r <> PC -> r <> GPR31 -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
-  intros. unfold Mptr. destruct Archi.ptr64; auto. 
+  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H1. auto.
 Qed.
-
+(*
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
@@ -1252,7 +1259,7 @@ Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
   intros. unfold Mptr. destruct Archi.ptr64; auto. 
 Qed.
-
+*)
 Lemma transl_memory_access_correct:
   forall mk_instr addr args k c (rs: regset) m v,
   transl_memory_access mk_instr addr args k = OK c ->
@@ -1264,6 +1271,7 @@ Lemma transl_memory_access_correct:
 Proof.
   intros until v; intros TR EV. 
   unfold transl_memory_access in TR; destruct addr; ArgsInv.
+(*
 - (* indexed *)
   inv EV. apply indexed_memory_access_correct; eauto with asmgen.
 - (* global *)
@@ -1272,6 +1280,7 @@ Proof.
   split; intros; Simpl. unfold eval_offset. apply low_high_half.
 - (* stack *)
   inv TR. inv EV. apply indexed_memory_access_correct; eauto with asmgen.
+*)
 Qed.
 
 Lemma transl_load_access_correct:
@@ -1354,15 +1363,15 @@ Proof.
    /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src)).
   { unfold transl_store in TR; destruct chunk; ArgsInv;
     (econstructor; econstructor; split; [eassumption | split; [ intros; simpl; reflexivity | auto]]).
+(*
     destruct a; auto. apply Mem.store_signed_unsigned_8. 
     destruct a; auto. apply Mem.store_signed_unsigned_16. 
+*)
   }
   destruct A as (mk_instr & chunk' & B & C & D).
   rewrite D in STORE; clear D. 
   eapply transl_store_access_correct; eauto with asmgen.
 Qed.
-
-(** Function epilogues *)
 
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,
@@ -1387,7 +1396,8 @@ Proof.
   exploit lessdef_parent_ra; eauto. intros EQ; subst ra'; clear LDRA'.
   exploit Mem.free_parallel_extends; eauto. intros (tm' & FREE' & MEXT').
   unfold make_epilogue. 
-  rewrite chunk_of_Tptr in *. 
+  rewrite chunk_of_Tptr in *.
+  
   exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) RA (Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs tm).
     rewrite <- (sp_val _ _ _ AG). simpl. eexact LRA'. congruence.
   intros (rs1 & A1 & B1 & C1).
