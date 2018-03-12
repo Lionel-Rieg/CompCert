@@ -1235,6 +1235,22 @@ Proof.
   eapply indexed_store_access_correct; eauto with asmgen. 
 Qed.
 *)
+
+Lemma Pset_correct:
+  forall (dst: preg) (src: gpreg) k (rs: regset) m,
+  dst = RA ->
+  exists rs',
+     exec_straight ge fn (Pset dst src :: k) rs m k rs' m
+  /\ rs'#dst = rs#src
+  /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
+Proof.
+  intros. econstructor; econstructor; econstructor; simpl.
+  rewrite H. auto.
+  Simpl.
+  Simpl.
+  intros. rewrite H. Simpl.
+Qed.
+
 Lemma loadind_ptr_correct:
   forall (base: ireg) ofs (dst: ireg) k (rs: regset) m v,
   Mem.loadv Mptr m (Val.offset_ptr rs#base ofs) = Some v ->
@@ -1387,7 +1403,7 @@ Lemma make_epilogue_correct:
   /\ Mem.extends m' tm'
   /\ rs'#RA = parent_ra cs
   /\ rs'#SP = parent_sp cs
-  /\ (forall r, r <> PC -> r <> RA -> r <> SP -> r <> GPR31 -> rs'#r = rs#r).
+  /\ (forall r, r <> PC -> r <> RA -> r <> SP -> r <> GPR31 -> r <> GPR8 -> rs'#r = rs#r).
 Proof.
   intros until tm; intros LP LRA FREE AG MEXT MCS.
   exploit Mem.loadv_extends. eauto. eexact LP. auto. simpl. intros (parent' & LP' & LDP').
@@ -1398,21 +1414,35 @@ Proof.
   unfold make_epilogue. 
   rewrite chunk_of_Tptr in *.
   
-  exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) RA (Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs tm).
-    rewrite <- (sp_val _ _ _ AG). simpl. eexact LRA'. congruence.
-  intros (rs1 & A1 & B1 & C1).
-  econstructor; econstructor; split.
-  eapply exec_straight_trans. eexact A1. apply exec_straight_one. simpl. 
-    rewrite (C1 X2) by auto with asmgen. rewrite <- (sp_val _ _ _ AG). simpl; rewrite LP'. 
-    rewrite FREE'. eauto. auto. 
-  split. apply agree_nextinstr. apply agree_set_other; auto with asmgen. 
+  exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) GPR8 (Pset RA GPR8
+           :: Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs tm).
+  - rewrite <- (sp_val _ _ rs AG). simpl. eexact LRA'.
+  - congruence.
+  - intros (rs1 & A1 & B1 & C1).
+    assert (agree ms (Vptr stk soff) rs1) as AG1.
+    + destruct AG.  
+      apply mkagree; auto.
+      rewrite C1; discriminate || auto.
+      intro. rewrite C1; auto; destruct r; simpl; try discriminate.
+    + exploit (Pset_correct RA GPR8 (Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs1 tm). auto.
+      intros (rs2 & A2 & B2 & C2).
+      econstructor; econstructor; split.
+      * eapply exec_straight_trans.
+        { eexact A1. }
+        { eapply exec_straight_trans.
+          { eapply A2. }
+          { apply exec_straight_one. simpl.
+            rewrite (C2 GPR12) by auto with asmgen. rewrite <- (sp_val _ _ rs1 AG1). simpl; rewrite LP'.
+            rewrite FREE'; eauto. auto. } }
+      * split. apply agree_nextinstr. apply agree_set_other; auto with asmgen. 
     apply agree_change_sp with (Vptr stk soff).
-    apply agree_exten with rs; auto. intros; apply C1; auto with asmgen.
+    apply agree_exten with rs; auto. intros; rewrite C2; auto with asmgen.
     eapply parent_sp_def; eauto.
   split. auto.
+  split. Simpl. rewrite B2. auto. 
   split. Simpl. 
-  split. Simpl. 
-  intros. Simpl. 
+  intros. Simpl.
+  rewrite C2; auto.
 Qed.
 
 End CONSTRUCTORS.

@@ -1019,7 +1019,7 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
-  | R5  => GPR5  | R6  => GPR6  | R7  => GPR7  | R8  => GPR8  | R9  => GPR9
+  | R5  => GPR5  | R6  => GPR6  | R7  => GPR7                 | R9  => GPR9
 (*| R10 => GPR10 | R11 => GPR11 | R12 => GPR12 | R13 => GPR13 | R14  => GPR14 *)
   | R15 => GPR15 | R16 => GPR16 | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
   | R20 => GPR20 | R21 => GPR21 | R22 => GPR22 | R23 => GPR23 | R24  => GPR24
@@ -1186,6 +1186,7 @@ Definition data_preg (r: preg) : bool :=
   match r with
   | RA  => false
   | IR GPR31 => false (* FIXME - GPR31 is used as temporary in some instructions.. ??? *)
+  | IR GPR8 => false (* FIXME - idem *)
   | IR _   => true
   | FR _   => true
   | PC     => false

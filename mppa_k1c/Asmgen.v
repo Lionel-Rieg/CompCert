@@ -843,8 +843,8 @@ Definition make_epilogue (f: Mach.function) (k: code) :=
 *)
 
 Definition make_epilogue (f: Mach.function) (k: code) :=
-  Pset RA GPR8 :: loadind_ptr SP f.(fn_retaddr_ofs) GPR8
-    (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
+  loadind_ptr SP f.(fn_retaddr_ofs) GPR8 
+  (Pset RA GPR8 :: Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
 
 (*
 Definition make_epilogue (f: Mach.function) (k: code) :=
@@ -942,7 +942,8 @@ Definition transl_function (f: Mach.function) :=
   do c <- transl_code' f f.(Mach.fn_code) true;
   OK (mkfunction f.(Mach.fn_sig)
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
-         storeind_ptr GPR8 SP f.(fn_retaddr_ofs) (Pget GPR8 RA :: c))).
+         Pget GPR8 RA ::
+         storeind_ptr GPR8 SP f.(fn_retaddr_ofs) c)).
 
 (*
 Definition transl_function (f: Mach.function) :=
