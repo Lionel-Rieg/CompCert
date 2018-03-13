@@ -946,7 +946,7 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       let sp := (Vptr stk Ptrofs.zero) in
       match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
       | None => Stuck
-      | Some m2 => Next (nextinstr (rs #GPR30 <- (rs SP) #SP <- sp #GPR31 <- Vundef)) m2
+      | Some m2 => Next (nextinstr (rs #GPR32 <- (rs SP) #SP <- sp #GPR31 <- Vundef)) m2
       end
   | Pfreeframe sz pos =>
       match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
@@ -1114,7 +1114,7 @@ Inductive initial_state (p: program): state -> Prop :=
 Inductive final_state: state -> int -> Prop :=
   | final_state_intro: forall rs m r,
       rs PC = Vnullptr ->
-      rs GPR9 = Vint r ->
+      rs GPR0 = Vint r ->
       final_state (State rs m) r.
 
 Definition semantics (p: program) :=

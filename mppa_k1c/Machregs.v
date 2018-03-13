@@ -172,8 +172,7 @@ Definition destroyed_by_builtin (ef: external_function): list mreg :=
 
 Definition destroyed_by_setstack (ty: typ): list mreg := nil.
 
-(* Definition destroyed_at_function_entry: list mreg := R30 :: nil. *)
-Definition destroyed_at_function_entry: list mreg := nil.
+Definition destroyed_at_function_entry: list mreg := R32 :: nil.
 
 Definition temp_for_parent_frame: mreg := R9. (* FIXME - and R8 ?? *)
 

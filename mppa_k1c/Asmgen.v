@@ -902,8 +902,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
 Definition it1_is_parent (before: bool) (i: Mach.instruction) : bool :=
   match i with
   | Msetstack src ofs ty => before
-  | Mgetparam ofs ty dst => negb (mreg_eq dst R30)
-  | Mop op args res => before && negb (mreg_eq res R30)
+  | Mgetparam ofs ty dst => negb (mreg_eq dst R32)
+  | Mop op args res => before && negb (mreg_eq res R32)
   | _ => false
   end.
 

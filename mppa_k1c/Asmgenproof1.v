@@ -1236,6 +1236,21 @@ Proof.
 Qed.
 *)
 
+Lemma Pget_correct:
+  forall (dst: gpreg) (src: preg) k (rs: regset) m,
+  src = RA ->
+  exists rs',
+     exec_straight ge fn (Pget dst src :: k) rs m k rs' m
+  /\ rs'#dst = rs#src
+  /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
+Proof.
+  intros. econstructor; econstructor; econstructor.
+- simpl. rewrite H. auto.
+- Simpl.
+- Simpl.
+- intros. rewrite H. Simpl. 
+Qed.
+
 Lemma Pset_correct:
   forall (dst: preg) (src: gpreg) k (rs: regset) m,
   dst = RA ->
@@ -1263,7 +1278,7 @@ Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H1. auto.
 Qed.
-(*
+
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
@@ -1273,9 +1288,9 @@ Lemma storeind_ptr_correct:
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
-  intros. unfold Mptr. destruct Archi.ptr64; auto. 
+  intros. unfold Mptr. assert (Archi.ptr64 = true); auto.
 Qed.
-*)
+
 Lemma transl_memory_access_correct:
   forall mk_instr addr args k c (rs: regset) m v,
   transl_memory_access mk_instr addr args k = OK c ->
