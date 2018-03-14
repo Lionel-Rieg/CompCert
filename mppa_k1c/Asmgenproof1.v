@@ -60,9 +60,9 @@ Lemma make_immed64_sound:
   forall n,
   match make_immed64 n with
   | Imm64_single imm => n = imm
-  | Imm64_pair hi lo => n = Int64.add (Int64.sign_ext 32 (Int64.shl hi (Int64.repr 12))) lo
+(*| Imm64_pair hi lo => n = Int64.add (Int64.sign_ext 32 (Int64.shl hi (Int64.repr 12))) lo
   | Imm64_large imm => n = imm
-  end.
+*)end.
 Proof.
   intros; unfold make_immed64. set (lo := Int64.sign_ext 12 n).
   predSpec Int64.eq Int64.eq_spec n lo.
@@ -175,7 +175,7 @@ Proof.
 Qed.
 
 (** 64-bit integer constants and arithmetic *)
-*)
+  
 Lemma load_hilo64_correct:
   forall rd hi lo k rs m,
   exists rs',
@@ -194,7 +194,7 @@ Proof.
   split. Simpl. 
   intros; Simpl.
 Qed.
-(*
+  
 Lemma loadimm64_correct:
   forall rd n k rs m,
   exists rs',
@@ -236,6 +236,7 @@ Proof.
 - subst imm. econstructor; split. 
   apply exec_straight_one. rewrite H0. simpl; eauto. auto.
   split. Simpl. intros; Simpl.
+(*
 - destruct (load_hilo64_correct GPR31 hi lo (op rd r1 GPR31 :: k) rs m)
   as (rs' & A & B & C).
   econstructor; split.
@@ -246,6 +247,7 @@ Proof.
 - subst imm. econstructor; split. 
   eapply exec_straight_two. simpl; eauto. rewrite H. simpl; eauto. auto. auto.
   split. Simpl. intros; Simpl.
+*)
 Qed.
 
 (** Add offset to pointer *)
@@ -1070,12 +1072,12 @@ Opaque Int.eq.
   assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
   rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
   rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
-*)
+  
 - (* addlimm *)
   exploit (opimm64_correct Paddl Paddil Val.addl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
-(*
+  
 - (* andimm *)
   exploit (opimm64_correct Pandl Pandil Val.andl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
@@ -1125,6 +1127,7 @@ Proof.
 + econstructor; econstructor; econstructor; split.
   apply exec_straight_opt_refl. 
   split; auto. simpl. subst imm. rewrite Ptrofs.of_int64_to_int64 by auto. auto.
+(*
 + econstructor; econstructor; econstructor; split. 
   constructor. eapply exec_straight_two. 
   simpl; eauto. simpl; eauto. auto. auto. 
@@ -1150,7 +1153,7 @@ Proof.
   rewrite Ptrofs.add_assoc. f_equal. f_equal. 
   rewrite <- (Ptrofs.of_int_to_int SF ofs). rewrite EQ. 
   symmetry; auto with ptrofs.
-*)
+*)*)
 Qed.
 
 Lemma indexed_load_access_correct:

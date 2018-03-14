@@ -65,16 +65,19 @@ Definition make_immed32 (val: int) :=
 *)
 Inductive immed64 : Type :=
   | Imm64_single (imm: int64)
-  | Imm64_pair   (hi: int64) (lo: int64)
+(*| Imm64_pair   (hi: int64) (lo: int64)
   | Imm64_large  (imm: int64).
+*).
 
-Definition make_immed64 (val: int64) :=
-  let lo := Int64.sign_ext 12 val in
+(* For now, let's suppose all instructions of K1c can handle 64-bits immediate *)
+Definition make_immed64 (val: int64) := Imm64_single val.
+(*let lo := Int64.sign_ext 12 val in
   if Int64.eq val lo then Imm64_single lo else
   let hi := Int64.zero_ext 20 (Int64.shru (Int64.sub val lo) (Int64.repr 12)) in
   if Int64.eq val (Int64.add (Int64.sign_ext 32 (Int64.shl hi (Int64.repr 12))) lo)
   then Imm64_pair hi lo
   else Imm64_large val.
+*)
 (*
 (** Smart constructors for arithmetic operations involving
   a 32-bit or 64-bit integer constant.  Depending on whether the
@@ -107,9 +110,11 @@ Definition xorimm32 := opimm32 Pxorw Pxoriw.
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
 *)
+(*
 Definition load_hilo64 (r: ireg) (hi lo: int64) k :=
   if Int64.eq lo Int64.zero then Pluil r hi :: k
   else Pluil r hi :: Paddil r r lo :: k.
+*)
 (*
 Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
@@ -123,26 +128,27 @@ Definition opimm64 (op: ireg -> ireg0 -> ireg0 -> instruction)
                    (rd rs: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
   | Imm64_single imm => opimm rd rs imm :: k
-  | Imm64_pair hi lo => load_hilo64 GPR31 hi lo (op rd rs GPR31 :: k)
+(*| Imm64_pair hi lo => load_hilo64 GPR31 hi lo (op rd rs GPR31 :: k)
   | Imm64_large imm  => Ploadli GPR31 imm :: op rd rs GPR31 :: k
-  end.
+*)end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
+
 (*
 Definition andimm64 := opimm64 Pandl Pandil.
 Definition orimm64  := opimm64 Porl  Poril.
 Definition xorimm64 := opimm64 Pxorl  Pxoril.
 Definition sltimm64 := opimm64 Psltl Psltil.
 Definition sltuimm64 := opimm64 Psltul Psltiul.
+*)
 
 Definition addptrofs (rd rs: ireg) (n: ptrofs) (k: code) :=
   if Ptrofs.eq_dec n Ptrofs.zero then
     Pmv rd rs :: k
   else
-    if Archi.ptr64
-    then addimm64 rd rs (Ptrofs.to_int64 n) k
-    else addimm32 rd rs (Ptrofs.to_int n) k.
-  
+    addimm64 rd rs (Ptrofs.to_int64 n) k.
+
+(*
 (** Translation of conditional branches. *)
 
 Definition transl_cbranch_int32s (cmp: comparison) (r1 r2: ireg0) (lbl: label) :=
@@ -711,11 +717,11 @@ Definition indexed_memory_access
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
       mk_instr base (Ofsimm (Ptrofs.of_int64 imm)) :: k
-  | Imm64_pair hi lo =>
+(*| Imm64_pair hi lo =>
       Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
   | Imm64_large imm =>
-      Ploadli GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
-  end.
+      Pmake GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
+*)end.
 (*
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   match ty, preg_of dst with

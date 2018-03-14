@@ -138,11 +138,11 @@ Inductive instruction : Type :=
   | Pget    (rd: ireg) (rs: preg)                    (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                    (**r set system register *)
   | Pret                                             (**r return *)
-(*
+  
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
-  | Paddiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r add immediate *)
+(*| Paddiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r add immediate *)
   | Psltiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r set-less-than immediate *)
   | Psltiuw (rd: ireg) (rs: ireg0) (imm: int)        (**r set-less-than unsigned immediate *)
   | Pandiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r and immediate *)
@@ -184,7 +184,8 @@ Inductive instruction : Type :=
   | Psllil  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-left-logical immediate *)
   | Psrlil  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-logical immediate *)
   | Psrail  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-arith immediate *)
-*)| Pluil   (rd: ireg)             (imm: int64)      (**r load upper-immediate *)
+  | Pluil   (rd: ireg)             (imm: int64)      (**r FIXME - remove it ; load upper-immediate *)
+*)| Pmake   (rd: ireg)             (imm: int64)      (**r load immediate *)
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *) (*
   | Psubl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer subtraction *)
@@ -634,11 +635,11 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
     end
   | Pret =>
       Next (rs#PC <- (rs#RA)) m
-(*  | Pmv d s =>
+  | Pmv d s =>
       Next (nextinstr (rs#d <- (rs#s))) m
 
 (** 32-bit integer register-immediate instructions *)
-  | Paddiw d s i =>
+(*| Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
   | Psltiw d s i =>
       Next (nextinstr (rs#d <- (Val.cmp Clt rs##s (Vint i)))) m
@@ -718,8 +719,10 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.shrlu rs###s (Vint i)))) m
   | Psrail d s i =>
       Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
-*)| Pluil d i =>
+  | Pluil d i =>
       Next (nextinstr (rs#d <- (Vlong (Int64.sign_ext 32 (Int64.shl i (Int64.repr 12)))))) m
+*)| Pmake d i =>
+      Next (nextinstr (rs#d <- (Vlong i))) m
 
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>

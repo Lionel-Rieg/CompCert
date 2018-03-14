@@ -149,7 +149,7 @@ Remark opimm64_label:
   tail_nolabel k (opimm64 op opimm r1 r2 n k).
 Proof.
   intros; unfold opimm64. destruct (make_immed64 n); TailNoLabel.
-  unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.
+(*unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.*)
 Qed.
 Hint Resolve opimm64_label: labels.
 (*
@@ -414,7 +414,8 @@ Lemma transl_find_label:
 Proof.
   intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (list_length_z x.(fn_code))); inv EQ0.
   monadInv EQ. rewrite transl_code'_transl_code in EQ0. unfold fn_code. 
-  simpl. destruct (storeind_ptr_label GPR8 GPR12 (fn_retaddr_ofs f) x) as [A B]; rewrite B. 
+  simpl. destruct (storeind_ptr_label GPR8 GPR12 (fn_retaddr_ofs f) x) as [A B]. 
+  (* destruct B. *)
   eapply transl_code_label; eauto.
 Qed.
 
