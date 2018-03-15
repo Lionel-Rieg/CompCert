@@ -185,7 +185,8 @@ Inductive instruction : Type :=
   | Psrlil  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-logical immediate *)
   | Psrail  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-arith immediate *)
   | Pluil   (rd: ireg)             (imm: int64)      (**r FIXME - remove it ; load upper-immediate *)
-*)| Pmake   (rd: ireg)             (imm: int64)      (**r load immediate *)
+*)| Pmake   (rd: ireg)             (imm: int)        (**r load immediate *)
+  | Pmakel  (rd: ireg)             (imm: int64)      (**r load immediate long *)
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *) (*
   | Psubl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer subtraction *)
@@ -340,8 +341,8 @@ Inductive instruction : Type :=
   | Plabel  (lbl: label)                            (**r define a code label *)
 (*  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
   | Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
-*)| Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
-(*| Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
+  | Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
+  | Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
   | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
@@ -721,8 +722,10 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
   | Pluil d i =>
       Next (nextinstr (rs#d <- (Vlong (Int64.sign_ext 32 (Int64.shl i (Int64.repr 12)))))) m
-*)| Pmake d i =>
+*)| Pmakel d i =>
       Next (nextinstr (rs#d <- (Vlong i))) m
+  | Pmake d i =>
+      Next (nextinstr (rs#d <- (Vint i))) m
 
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
@@ -970,9 +973,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#rd <- (Genv.symbol_address ge s ofs))) m
   | Ploadsymbol_high rd s ofs =>
       Next (nextinstr (rs#rd <- (high_half ge s ofs))) m
-*)| Ploadli rd i =>
+  | Ploadli rd i =>
       Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vlong i))) m
-(*| Ploadfi rd f =>
+  | Ploadfi rd f =>
       Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vfloat f))) m
   | Ploadsi rd f =>
       Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vsingle f))) m

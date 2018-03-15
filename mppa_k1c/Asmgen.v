@@ -44,57 +44,36 @@ Definition freg_of (r: mreg) : res freg :=
   small signed immediates that fit in 12-bits, or, if they do not fit,
   into a (20-bit hi, 12-bit lo) pair where lo is sign-extended. *)
 
-Inductive immed32 : Type :=
-  | Imm32_single (imm: int)
-  | Imm32_pair   (hi: int) (lo: int).
-
-Definition make_immed32 (val: int) :=
-  let lo := Int.sign_ext 12 val in
-  if Int.eq val lo
-  then Imm32_single val
-  else Imm32_pair (Int.shru (Int.sub val lo) (Int.repr 12)) lo.
-(*
-  let discr := Int.shr val (Int.repr 11) in
-  let hi    := Int.shru val (Int.repr 12) in
-  if Int.eq discr Int.zero || Int.eq discr Int.mone
-  then Imm32_single val
-  else Imm32_pair (Int.add hi (Int.and discr Int.one)) (Int.sign_ext 12 val).
 *)
+Inductive immed32 : Type :=
+  | Imm32_single (imm: int).
+
+Definition make_immed32 (val: int) := Imm32_single val.
 
 (** Likewise, for 64-bit integer constants. *)
-*)
 Inductive immed64 : Type :=
   | Imm64_single (imm: int64)
-(*| Imm64_pair   (hi: int64) (lo: int64)
-  | Imm64_large  (imm: int64).
-*).
+.
 
 (* For now, let's suppose all instructions of K1c can handle 64-bits immediate *)
 Definition make_immed64 (val: int64) := Imm64_single val.
-(*let lo := Int64.sign_ext 12 val in
-  if Int64.eq val lo then Imm64_single lo else
-  let hi := Int64.zero_ext 20 (Int64.shru (Int64.sub val lo) (Int64.repr 12)) in
-  if Int64.eq val (Int64.add (Int64.sign_ext 32 (Int64.shl hi (Int64.repr 12))) lo)
-  then Imm64_pair hi lo
-  else Imm64_large val.
-*)
-(*
+
 (** Smart constructors for arithmetic operations involving
   a 32-bit or 64-bit integer constant.  Depending on whether the
   constant fits in 12 bits or not, one or several instructions
   are generated as required to perform the operation
   and prepended to the given instruction sequence [k]. *)
 
+(*
 Definition load_hilo32 (r: ireg) (hi lo: int) k :=
   if Int.eq lo Int.zero then Pluiw r hi :: k
   else Pluiw r hi :: Paddiw r r lo :: k.
-  
+*)  
 Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   match make_immed32 n with
-  | Imm32_single imm => Paddiw r GPR0 imm :: k
-  | Imm32_pair hi lo => load_hilo32 r hi lo k
+  | Imm32_single imm => Pmake r imm :: k
   end.
-
+(*
 Definition opimm32 (op: ireg -> ireg0 -> ireg0 -> instruction)
                    (opimm: ireg -> ireg0 -> int -> instruction)
                    (rd rs: ireg) (n: int) (k: code) :=
@@ -115,22 +94,18 @@ Definition load_hilo64 (r: ireg) (hi lo: int64) k :=
   if Int64.eq lo Int64.zero then Pluil r hi :: k
   else Pluil r hi :: Paddil r r lo :: k.
 *)
-(*
+
 Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
-  | Imm64_single imm => Paddil r GPR0 imm :: k
-  | Imm64_pair hi lo => load_hilo64 r hi lo k
-  | Imm64_large imm  => Ploadli r imm :: k
+  | Imm64_single imm => Pmakel r imm :: k
   end.
-*)
+
 Definition opimm64 (op: ireg -> ireg0 -> ireg0 -> instruction)
                    (opimm: ireg -> ireg0 -> int64 -> instruction)
                    (rd rs: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
   | Imm64_single imm => opimm rd rs imm :: k
-(*| Imm64_pair hi lo => load_hilo64 GPR31 hi lo (op rd rs GPR31 :: k)
-  | Imm64_large imm  => Ploadli GPR31 imm :: op rd rs GPR31 :: k
-*)end.
+end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
 
@@ -409,13 +384,13 @@ Definition transl_op
       | IR r, IR a => OK (Pmv r a :: k)
       |  _  ,  _   => Error(msg "Asmgen.Omove")
       end
-  | Ointconst n, nil =>
+*)| Ointconst n, nil =>
       do rd <- ireg_of res;
       OK (loadimm32 rd n k)
   | Olongconst n, nil =>
       do rd <- ireg_of res;
       OK (loadimm64 rd n k)
-  | Ofloatconst f, nil =>
+(*| Ofloatconst f, nil =>
       do rd <- freg_of res;
       OK (if Float.eq_dec f Float.zero
           then Pfcvtdw rd GPR0 :: k

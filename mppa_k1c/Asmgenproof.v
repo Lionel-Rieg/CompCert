@@ -114,15 +114,14 @@ Qed.
 *)
 
 Section TRANSL_LABEL.
-(*
+
 Remark loadimm32_label:
   forall r n k, tail_nolabel k (loadimm32 r n k).
 Proof.
   intros; unfold loadimm32. destruct (make_immed32 n); TailNoLabel.
-  unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.
 Qed.
 Hint Resolve loadimm32_label: labels.
-
+(*
 Remark opimm32_label:
   forall op opimm r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
@@ -133,15 +132,14 @@ Proof.
   unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.
 Qed.
 Hint Resolve opimm32_label: labels.
-
+*)
 Remark loadimm64_label:
   forall r n k, tail_nolabel k (loadimm64 r n k).
 Proof.
   intros; unfold loadimm64. destruct (make_immed64 n); TailNoLabel.
-  unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.
 Qed.
 Hint Resolve loadimm64_label: labels.
-*)
+
 Remark opimm64_label:
   forall op opimm r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
