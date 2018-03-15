@@ -42,9 +42,10 @@ let wordsize = if Archi.ptr64 then 8 else 4
 let align n a = (n + a - 1) land (-a)
 
 (* Emit instruction sequences that set or offset a register by a constant. *)
-
-let expand_loadimm32 dst n =
+(*
+  let expand_loadimm32 dst n =
   List.iter emit (Asmgen.loadimm32 dst n [])
+*)
 let expand_addptrofs dst src n =
   List.iter emit (Asmgen.addptrofs dst src n [])
 let expand_storeind_ptr src base ofs =
@@ -60,11 +61,12 @@ let expand_storeind_ptr src base ofs =
 (* Fix-up code around calls to variadic functions.  Floating-point arguments
    residing in FP registers need to be moved to integer registers. *)
 
-let int_param_regs   = [| X10; X11; X12; X13; X14; X15; X16; X17 |]
-let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |]
+let int_param_regs   = [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
+(* let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |] *)
+let float_param_regs = [| |]
 
-let rec fixup_variadic_call pos tyl =
-  if pos < 8 then
+let fixup_variadic_call pos tyl = assert false
+(*if pos < 8 then
     match tyl with
     | [] ->
         ()
@@ -98,14 +100,15 @@ let rec fixup_variadic_call pos tyl =
             fixup_variadic_call (pos + 2) tyl
           end
         end
+*)
         
 let fixup_call sg =
   if sg.sig_cc.cc_vararg then fixup_variadic_call 0 sg.sig_args
 
 (* Handling of annotations *)
 
-let expand_annot_val kind txt targ args res =
-  emit (Pbuiltin (EF_annot(kind,txt,[targ]), args, BR_none));
+let expand_annot_val kind txt targ args res = assert false
+(*emit (Pbuiltin (EF_annot(kind,txt,[targ]), args, BR_none));
   match args, res with
   | [BA(IR src)], BR(IR dst) ->
      if dst <> src then emit (Pmv (dst, src))
@@ -113,6 +116,7 @@ let expand_annot_val kind txt targ args res =
      if dst <> src then emit (Pfmv (dst, src))
   | _, _ ->
      raise (Error "ill-formed __builtin_annot_val")
+*)
 
 (* Handling of memcpy *)
 
@@ -121,20 +125,21 @@ let expand_annot_val kind txt targ args res =
 let offset_in_range ofs =
   let ofs = Z.to_int64 ofs in -2048L <= ofs && ofs < 2048L
   
-let memcpy_small_arg sz arg tmp =
-  match arg with
+let memcpy_small_arg sz arg tmp = assert false
+(*match arg with
   | BA (IR r) ->
       (r, _0)
   | BA_addrstack ofs ->
       if offset_in_range ofs
       && offset_in_range (Ptrofs.add ofs (Ptrofs.repr (Z.of_uint sz)))
-      then (X2, ofs)
-      else begin expand_addptrofs tmp X2 ofs; (tmp, _0) end
+      then (GPR12, ofs)
+      else begin expand_addptrofs tmp GPR12 ofs; (tmp, _0) end
   | _ ->
       assert false
+*)
 
-let expand_builtin_memcpy_small sz al src dst =
-  let (tsrc, tdst) =
+let expand_builtin_memcpy_small sz al src dst = assert false
+(*let (tsrc, tdst) =
     if dst <> BA (IR X5) then (X5, X6) else (X6, X5) in
   let (rsrc, osrc) = memcpy_small_arg sz src tsrc in
   let (rdst, odst) = memcpy_small_arg sz dst tdst in
@@ -164,17 +169,19 @@ let expand_builtin_memcpy_small sz al src dst =
         copy (Ptrofs.add osrc _1) (Ptrofs.add odst _1) (sz - 1)
       end
   in copy osrc odst sz
+*)
 
-let memcpy_big_arg sz arg tmp =
-  match arg with
+let memcpy_big_arg sz arg tmp = assert false
+(*match arg with
   | BA (IR r) -> if r <> tmp then emit (Pmv(tmp, r))
   | BA_addrstack ofs ->
       expand_addptrofs tmp X2 ofs
   | _ ->
       assert false
+*)
 
-let expand_builtin_memcpy_big sz al src dst =
-  assert (sz >= al);
+let expand_builtin_memcpy_big sz al src dst = assert false
+(*assert (sz >= al);
   assert (sz mod al = 0);
   let (s, d) =
     if dst <> BA (IR X5) then (X5, X6) else (X6, X5) in
@@ -200,6 +207,7 @@ let expand_builtin_memcpy_big sz al src dst =
   emit store;
   expand_addptrofs d d delta;
   emit (Pbnew (X X7, X0, lbl))
+*)
 
 let expand_builtin_memcpy  sz al args =
   let (dst, src) =
@@ -210,8 +218,8 @@ let expand_builtin_memcpy  sz al args =
 
 (* Handling of volatile reads and writes *)
 
-let expand_builtin_vload_common chunk base ofs res =
-  match chunk, res with
+let expand_builtin_vload_common chunk base ofs res = assert false
+(*match chunk, res with
   | Mint8unsigned, BR(IR res) ->
      emit (Plbu (res, base, Ofsimm ofs))
   | Mint8signed, BR(IR res) ->
@@ -239,30 +247,32 @@ let expand_builtin_vload_common chunk base ofs res =
      emit (Pfld (res, base, Ofsimm ofs))
   | _ ->
      assert false
+*)
 
-let expand_builtin_vload chunk args res =
-  match args with
+let expand_builtin_vload chunk args res = assert false
+(*match args with
   | [BA(IR addr)] ->
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vload_common chunk X2 ofs res
+        expand_builtin_vload_common chunk GPR12 ofs res
       else begin
-        expand_addptrofs X31 X2 ofs; (* X31 <- sp + ofs *)
-        expand_builtin_vload_common chunk X31 _0 res
+        expand_addptrofs GPR32 GPR12 ofs; (* X31 <- sp + ofs *)
+        expand_builtin_vload_common chunk GPR32 _0 res
       end
   | [BA_addptr(BA(IR addr), (BA_int ofs | BA_long ofs))] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vload_common chunk addr ofs res
       else begin
-        expand_addptrofs X31 addr ofs; (* X31 <- addr + ofs *)
-        expand_builtin_vload_common chunk X31 _0 res
+        expand_addptrofs GPR32 addr ofs; (* X31 <- addr + ofs *)
+        expand_builtin_vload_common chunk GPR32 _0 res
       end
   | _ ->
       assert false
+*)
 
-let expand_builtin_vstore_common chunk base ofs src =
-  match chunk, src with
+let expand_builtin_vstore_common chunk base ofs src = assert false
+(*match chunk, src with
   | (Mint8signed | Mint8unsigned), BA(IR src) ->
      emit (Psb (src, base, Ofsimm ofs))
   | (Mint16signed | Mint16unsigned), BA(IR src) ->
@@ -281,9 +291,10 @@ let expand_builtin_vstore_common chunk base ofs src =
      emit (Pfsd (src, base, Ofsimm ofs))
   | _ ->
      assert false
+*)
 
-let expand_builtin_vstore chunk args =
-  match args with
+let expand_builtin_vstore chunk args = assert false
+(*match args with
   | [BA(IR addr); src] ->
       expand_builtin_vstore_common chunk addr _0 src
   | [BA_addrstack ofs; src] ->
@@ -302,6 +313,7 @@ let expand_builtin_vstore chunk args =
       end
   | _ ->
       assert false
+*)
 
 (* Handling of varargs *)
 
@@ -322,19 +334,20 @@ let save_arguments first_reg base_ofs =
   for i = first_reg to 7 do
     expand_storeind_ptr
       int_param_regs.(i)
-      X2
+      GPR12
       (Ptrofs.repr (Z.add base_ofs (Z.of_uint ((i - first_reg) * wordsize))))
   done
 
 let vararg_start_ofs : Z.t option ref = ref None
 
-let expand_builtin_va_start r =
-  match !vararg_start_ofs with
+let expand_builtin_va_start r = assert false
+(*match !vararg_start_ofs with
   | None ->
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
       expand_addptrofs X31 X2 (Ptrofs.repr ofs);
       expand_storeind_ptr X31 r Ptrofs.zero
+*)
 
 (* Auxiliary for 64-bit integer arithmetic built-ins.  They expand to
    two instructions, one computing the low 32 bits of the result,
@@ -343,26 +356,27 @@ let expand_builtin_va_start r =
    instruction, we must go through X31 to hold the low 32 bits of the result.
 *)
 
-let expand_int64_arith conflict rl fn =
-  if conflict then (fn X31; emit (Pmv(rl, X31))) else fn rl
+let expand_int64_arith conflict rl fn = assert false
+(*if conflict then (fn X31; emit (Pmv(rl, X31))) else fn rl *)
 
 (* Byte swaps.  There are no specific instructions, so we use standard,
    not-very-efficient formulas. *)
 
-let expand_bswap16 d s =
+let expand_bswap16 d s = assert false
   (* d = (s & 0xFF) << 8 | (s >> 8) & 0xFF *)
-  emit (Pandiw(X31, X s, coqint_of_camlint 0xFFl));
+(*emit (Pandiw(X31, X s, coqint_of_camlint 0xFFl));
   emit (Pslliw(X31, X X31, _8));
   emit (Psrliw(d, X s, _8));
   emit (Pandiw(d, X d, coqint_of_camlint 0xFFl));
   emit (Porw(d, X X31, X d))
+*)
 
-let expand_bswap32 d s =
+let expand_bswap32 d s = assert false
   (* d = (s << 24)
        | (((s >> 8) & 0xFF) << 16)
        | (((s >> 16) & 0xFF) << 8)
        | (s >> 24)  *)
-  emit (Pslliw(X1, X s, coqint_of_camlint 24l));
+(*emit (Pslliw(X1, X s, coqint_of_camlint 24l));
   emit (Psrliw(X31, X s, _8));
   emit (Pandiw(X31, X X31, coqint_of_camlint 0xFFl));
   emit (Pslliw(X31, X X31, _16));
@@ -373,8 +387,9 @@ let expand_bswap32 d s =
   emit (Porw(X1, X X1, X X31));
   emit (Psrliw(X31, X s, coqint_of_camlint 24l));
   emit (Porw(d, X X1, X X31))
+*)
 
-let expand_bswap64 d s =
+let expand_bswap64 d s = assert false
   (* d = s << 56
          | (((s >> 8) & 0xFF) << 48)
          | (((s >> 16) & 0xFF) << 40)
@@ -383,7 +398,7 @@ let expand_bswap64 d s =
          | (((s >> 40) & 0xFF) << 16)
          | (((s >> 48) & 0xFF) << 8)
          | s >> 56 *)
-  emit (Psllil(X1, X s, coqint_of_camlint 56l));
+(*emit (Psllil(X1, X s, coqint_of_camlint 56l));
   List.iter
     (fun (n1, n2) ->
       emit (Psrlil(X31, X s, coqint_of_camlint n1));
@@ -393,6 +408,7 @@ let expand_bswap64 d s =
     [(8l,48l); (16l,40l); (24l,32l); (32l,24l); (40l,16l); (48l,8l)];
   emit (Psrlil(X31, X s, coqint_of_camlint 56l));
   emit (Porl(d, X X1, X X31))
+*)
 
 (* Handling of compiler-inlined builtins *)
 
@@ -401,13 +417,13 @@ let expand_builtin_inline name args res =
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
      ()
-  | "__builtin_fence", [], _ ->
+(*| "__builtin_fence", [], _ ->
      emit Pfence
-  (* Vararg stuff *)
+*)(* Vararg stuff *)
   | "__builtin_va_start", [BA(IR a)], _ ->
      expand_builtin_va_start a
   (* Byte swaps *)
-  | "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
+(*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1
   | ("__builtin_bswap"| "__builtin_bswap32"), [BA(IR a1)], BR(IR res) ->
      expand_bswap32 res a1
@@ -468,7 +484,7 @@ let expand_builtin_inline name args res =
                         (fun rl ->
                           emit (Pmulw (rl, X a, X b));
                           emit (Pmulhuw (rh, X a, X b)))
-
+*)
   (* Catch-all *)
   | _ ->
      raise (Error ("unrecognized builtin " ^ name))
@@ -479,20 +495,20 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (X30, X2));
+      emit (Pmv (GPR32, GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
-        expand_addptrofs X2 X2 (Ptrofs.repr (Z.neg full_sz));
-        expand_storeind_ptr X30 X2 ofs;
+        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg full_sz));
+        expand_storeind_ptr GPR32 GPR12 ofs;
         let va_ofs =
           Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs X2 X2 (Ptrofs.repr (Z.neg sz));
-        expand_storeind_ptr X30 X2 ofs;
+        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg sz));
+        expand_storeind_ptr GPR32 GPR12 ofs;
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
@@ -502,9 +518,9 @@ let expand_instruction instr =
         let n = arguments_size sg in
         if n >= 8 then 0 else align 16 ((8 - n) * wordsize)
       end else 0 in
-     expand_addptrofs X2 X2 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
+     expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
-  | Pseqw(rd, rs1, rs2) ->
+(*| Pseqw(rd, rs1, rs2) ->
       (* emulate based on the fact that x == 0 iff x <u 1 (unsigned cmp) *)
       if rs2 = X0 then begin
         emit (Psltiuw(rd, rs1, Int.one))
@@ -565,34 +581,30 @@ let expand_instruction instr =
      | _ ->
         assert false
      end
-  | _ ->
+*)| _ ->
      emit instr
 
 (* NOTE: Dwarf register maps for RV32G are not yet specified
    officially.  This is just a placeholder.  *)
 let int_reg_to_dwarf = function
-               | X1  -> 1  | X2  -> 2  | X3  -> 3
-   | X4  -> 4  | X5  -> 5  | X6  -> 6  | X7  -> 7
-   | X8  -> 8  | X9  -> 9  | X10 -> 10 | X11 -> 11
-   | X12 -> 12 | X13 -> 13 | X14 -> 14 | X15 -> 15
-   | X16 -> 16 | X17 -> 17 | X18 -> 18 | X19 -> 19
-   | X20 -> 20 | X21 -> 21 | X22 -> 22 | X23 -> 23
-   | X24 -> 24 | X25 -> 25 | X26 -> 26 | X27 -> 27
-   | X28 -> 28 | X29 -> 29 | X30 -> 30 | X31 -> 31
-
-let float_reg_to_dwarf = function
-   | F0  -> 32 | F1  -> 33 | F2  -> 34 | F3  -> 35
-   | F4  -> 36 | F5  -> 37 | F6  -> 38 | F7  -> 39
-   | F8  -> 40 | F9  -> 41 | F10 -> 42 | F11 -> 43
-   | F12 -> 44 | F13 -> 45 | F14 -> 46 | F15 -> 47
-   | F16 -> 48 | F17 -> 49 | F18 -> 50 | F19 -> 51
-   | F20 -> 52 | F21 -> 53 | F22 -> 54 | F23 -> 55
-   | F24 -> 56 | F25 -> 57 | F26 -> 58 | F27 -> 59
-   | F28 -> 60 | F29 -> 61 | F30 -> 62 | F31 -> 63
+   | GPR0  -> 1   | GPR1  -> 2   | GPR2  -> 3   | GPR3  -> 4   | GPR4  -> 5
+   | GPR5  -> 6   | GPR6  -> 7   | GPR7  -> 8   | GPR8  -> 9   | GPR9  -> 10
+   | GPR10 -> 11  | GPR11 -> 12  | GPR12 -> 13  | GPR13 -> 14  | GPR14 -> 15
+   | GPR15 -> 16  | GPR16 -> 17  | GPR17 -> 18  | GPR18 -> 19  | GPR19 -> 20
+   | GPR20 -> 21  | GPR21 -> 22  | GPR22 -> 23  | GPR23 -> 24  | GPR24 -> 25
+   | GPR25 -> 26  | GPR26 -> 27  | GPR27 -> 28  | GPR28 -> 29  | GPR29 -> 30
+   | GPR30 -> 31  | GPR31 -> 32  | GPR32 -> 33  | GPR33 -> 34  | GPR34 -> 35
+   | GPR35 -> 36  | GPR36 -> 37  | GPR37 -> 38  | GPR38 -> 39  | GPR39 -> 40
+   | GPR40 -> 41  | GPR41 -> 42  | GPR42 -> 43  | GPR43 -> 44  | GPR44 -> 45
+   | GPR45 -> 46  | GPR46 -> 47  | GPR47 -> 48  | GPR48 -> 49  | GPR49 -> 50
+   | GPR50 -> 51  | GPR51 -> 52  | GPR52 -> 53  | GPR53 -> 54  | GPR54 -> 55
+   | GPR55 -> 56  | GPR56 -> 57  | GPR57 -> 58  | GPR58 -> 59  | GPR59 -> 60
+   | GPR60 -> 61  | GPR61 -> 62  | GPR62 -> 63  | GPR63 -> 64
 
 let preg_to_dwarf = function
    | IR r -> int_reg_to_dwarf r
-   | FR r -> float_reg_to_dwarf r
+   | FR r -> int_reg_to_dwarf r
+   | RA   -> 65 (* FIXME - No idea *)
    | _ -> assert false
 
 let expand_function id fn =

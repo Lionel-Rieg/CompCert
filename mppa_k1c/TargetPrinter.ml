@@ -40,66 +40,41 @@ module Target : TARGET =
 
     let print_label oc lbl = label oc (transl_label lbl)
 
-    let use_abi_name = false
-
-    let int_reg_num_name = function
-                     | X1  -> "x1"  | X2  -> "x2"  | X3  -> "x3"
-      | X4  -> "x4"  | X5  -> "x5"  | X6  -> "x6"  | X7  -> "x7"
-      | X8  -> "x8"  | X9  -> "x9"  | X10 -> "x10" | X11 -> "x11"
-      | X12 -> "x12" | X13 -> "x13" | X14 -> "x14" | X15 -> "x15"
-      | X16 -> "x16" | X17 -> "x17" | X18 -> "x18" | X19 -> "x19"
-      | X20 -> "x20" | X21 -> "x21" | X22 -> "x22" | X23 -> "x23"
-      | X24 -> "x24" | X25 -> "x25" | X26 -> "x26" | X27 -> "x27"
-      | X28 -> "x28" | X29 -> "x29" | X30 -> "x30" | X31 -> "x31"
-
-    let int_reg_abi_name = function
-                     | X1  -> "ra"  | X2  -> "sp"  | X3  -> "gp"
-      | X4  -> "tp"  | X5  -> "t0"  | X6  -> "t1"  | X7  -> "t2"
-      | X8  -> "s0"  | X9  -> "s1"  | X10 -> "a0"  | X11 -> "a1"
-      | X12 -> "a2"  | X13 -> "a3"  | X14 -> "a4"  | X15 -> "a5"
-      | X16 -> "a6"  | X17 -> "a7"  | X18 -> "s2"  | X19 -> "s3"
-      | X20 -> "s4"  | X21 -> "s5"  | X22 -> "s6"  | X23 -> "s7"
-      | X24 -> "s8"  | X25 -> "s9"  | X26 -> "s10" | X27 -> "s11"
-      | X28 -> "t3"  | X29 -> "t4"  | X30 -> "t5"  | X31 -> "t6"
-
-    let float_reg_num_name = function
-      | F0  -> "f0"  | F1  -> "f1"  | F2  -> "f2"  | F3  -> "f3"
-      | F4  -> "f4"  | F5  -> "f5"  | F6  -> "f6"  | F7  -> "f7"
-      | F8  -> "f8"  | F9  -> "f9"  | F10 -> "f10" | F11 -> "f11"
-      | F12 -> "f12" | F13 -> "f13" | F14 -> "f14" | F15 -> "f15"
-      | F16 -> "f16" | F17 -> "f17" | F18 -> "f18" | F19 -> "f19"
-      | F20 -> "f20" | F21 -> "f21" | F22 -> "f22" | F23 -> "f23"
-      | F24 -> "f24" | F25 -> "f25" | F26 -> "f26" | F27 -> "f27"
-      | F28 -> "f28" | F29 -> "f29" | F30 -> "f30" | F31 -> "f31"
-
-    let float_reg_abi_name = function
-      | F0  -> "ft0" | F1  -> "ft1" | F2  -> "ft2" | F3  -> "ft3"
-      | F4  -> "ft4" | F5  -> "ft5" | F6  -> "ft6" | F7  -> "ft7"
-      | F8  -> "fs0" | F9  -> "fs1" | F10 -> "fa0" | F11 -> "fa1"
-      | F12 -> "fa2" | F13 -> "fa3" | F14 -> "fa4" | F15 -> "fa5"
-      | F16 -> "fa6" | F17 -> "fa7" | F18 -> "fs2" | F19 -> "fs3"
-      | F20 -> "fs4" | F21 -> "fs5" | F22 -> "fs6" | F23 -> "fs7"
-      | F24 -> "fs8" | F25 -> "fs9" | F26 ->"fs10" | F27 -> "fs11"
-      | F28 -> "ft3" | F29 -> "ft4" | F30 -> "ft5" | F31 -> "ft6"
-
-    let int_reg_name   = if use_abi_name then int_reg_abi_name   else int_reg_num_name
-    let float_reg_name = if use_abi_name then float_reg_abi_name else float_reg_num_name
+    let int_reg_name = function
+      | GPR0  -> "$r0"  | GPR1  -> "$r1"  | GPR2  -> "$r2"  | GPR3  -> "$r3"
+      | GPR4  -> "$r4"  | GPR5  -> "$r5"  | GPR6  -> "$r6"  | GPR7  -> "$r7"
+      | GPR8  -> "$r8"  | GPR9  -> "$r9"  | GPR10 -> "$r10" | GPR11 -> "$r11"
+      | GPR12 -> "$r12" | GPR13 -> "$r13" | GPR14 -> "$r14" | GPR15 -> "$r15"
+      | GPR16 -> "$r16" | GPR17 -> "$r17" | GPR18 -> "$r18" | GPR19 -> "$r19"
+      | GPR20 -> "$r20" | GPR21 -> "$r21" | GPR22 -> "$r22" | GPR23 -> "$r23"
+      | GPR24 -> "$r24" | GPR25 -> "$r25" | GPR26 -> "$r26" | GPR27 -> "$r27"
+      | GPR28 -> "$r28" | GPR29 -> "$r29" | GPR30 -> "$r30" | GPR31 -> "$r31"
+      | GPR32 -> "$r32" | GPR33 -> "$r33" | GPR34 -> "$r34" | GPR35 -> "$r35"
+      | GPR36 -> "$r36" | GPR37 -> "$r37" | GPR38 -> "$r38" | GPR39 -> "$r39"
+      | GPR40 -> "$r40" | GPR41 -> "$r41" | GPR42 -> "$r42" | GPR43 -> "$r43"
+      | GPR44 -> "$r44" | GPR45 -> "$r45" | GPR46 -> "$r46" | GPR47 -> "$r47"
+      | GPR48 -> "$r48" | GPR49 -> "$r49" | GPR50 -> "$r50" | GPR51 -> "$r51"
+      | GPR52 -> "$r52" | GPR53 -> "$r53" | GPR54 -> "$r54" | GPR55 -> "$r55"
+      | GPR56 -> "$r56" | GPR57 -> "$r57" | GPR58 -> "$r58" | GPR59 -> "$r59"
+      | GPR60 -> "$r60" | GPR61 -> "$r61" | GPR62 -> "$r62" | GPR63 -> "$r63"
 
     let ireg oc r = output_string oc (int_reg_name r)
-    let freg oc r = output_string oc (float_reg_name r)
 
+    let ireg0 = ireg
+(*
     let ireg0 oc = function
-      | X0 -> output_string oc "x0"
-      | X r -> ireg oc r
-
+      | GPR r -> ireg oc r
+*)
     let preg oc = function
       | IR r -> ireg oc r
-      | FR r -> freg oc r
+      | FR r -> ireg oc r
+      | RA   -> output_string oc "$ra"
       | _    -> assert false
 
     let preg_annot = function
       | IR r -> int_reg_name r
-      | FR r -> float_reg_name r
+      | FR r -> int_reg_name r
+      | RA   -> "$ra"
       | _ -> assert false
 
 (* Names of sections *)
@@ -152,7 +127,7 @@ module Target : TARGET =
 
 (* Generate code to load the address of id + ofs in register r *)
 
-    let loadsymbol oc r id ofs =
+  (*let loadsymbol oc r id ofs =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
         fprintf oc "	la	%a, %s\n" ireg r (extern_atom id)
@@ -162,7 +137,7 @@ module Target : TARGET =
         fprintf oc "	addi	%a, %a, %%lo(%a)\n"
                                 ireg r ireg r symbol_offset (id, ofs)
       end
-
+  *)
 (* Emit .file / .loc debugging directives *)
 
     let print_file_line oc file line =
@@ -175,9 +150,9 @@ module Target : TARGET =
 
 (* Add "w" suffix to 32-bit instructions if we are in 64-bit mode *)
   
-    let w oc =
+  (*let w oc =
       if Archi.ptr64 then output_string oc "w"
-
+  *)
 (* Offset part of a load or store *)
 
     let offset oc = function
@@ -186,11 +161,17 @@ module Target : TARGET =
 
 (* Printing of instructions *)
     let print_instruction oc = function
+      | Pret ->
+         fprintf oc "	ret\n;;\n"
+      | Pget (rd, rs) ->
+         fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs
+      | Pset (rd, rs) ->
+         fprintf oc "	set	%a = %a\n;;\n" preg rd ireg rs
       | Pmv(rd, rs) ->
-         fprintf oc "	mv	%a, %a\n"     ireg rd ireg rs
+         fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
 
       (* 32-bit integer register-immediate instructions *)
-      | Paddiw (rd, rs, imm) ->
+    (*| Paddiw (rd, rs, imm) ->
          fprintf oc "	addi%t	%a, %a, %a\n" w ireg rd ireg0 rs coqint imm
       | Psltiw (rd, rs, imm) ->
          fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
@@ -251,10 +232,10 @@ module Target : TARGET =
       | Psraw(rd, rs1, rs2) ->
          fprintf oc "	sra%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
 
-      (* 64-bit integer register-immediate instructions *)
+    *)(* 64-bit integer register-immediate instructions *)
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	addi	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
-      | Psltil (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg0 rs coqint64 imm
+    (*| Psltil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
       | Psltiul (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
@@ -272,11 +253,15 @@ module Target : TARGET =
          fprintf oc "	srai	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
       | Pluil (rd, imm) -> assert Archi.ptr64;
          fprintf oc "	lui	%a, %a\n"     ireg rd coqint64 imm
-
+    *)
+      | Pmake (rd, imm) ->
+         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint imm
+      | Pmakel (rd, imm) ->
+         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
       (* 64-bit integer register-register instructions *)
       | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	add	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
-      | Psubl(rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg0 rs1 ireg0 rs2
+    (*| Psubl(rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	sub	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
 
       | Pmull(rd, rs1, rs2) -> assert Archi.ptr64;
@@ -366,21 +351,21 @@ module Target : TARGET =
          fprintf oc "	lhu	%a, %a(%a)\n" ireg rd offset ofs ireg ra
       | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) ->
          fprintf oc "	lw	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-      | Pld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a, %a(%a)\n" ireg rd offset ofs ireg ra
+    *)| Pld(rd, ra, ofs) (*| Pld_a(rd, ra, ofs)*) -> assert Archi.ptr64;
+         fprintf oc "	ld	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
 
-      | Psb(rd, ra, ofs) ->
+    (*| Psb(rd, ra, ofs) ->
          fprintf oc "	sb	%a, %a(%a)\n" ireg rd offset ofs ireg ra
       | Psh(rd, ra, ofs) ->
          fprintf oc "	sh	%a, %a(%a)\n" ireg rd offset ofs ireg ra
       | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) ->
          fprintf oc "	sw	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a, %a(%a)\n" ireg rd offset ofs ireg ra
+    *)| Psd(rd, ra, ofs) (*| Psd_a(rd, ra, ofs)*) -> assert Archi.ptr64;
+         fprintf oc "	sd	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
 
 
       (* Synchronization *)
-      | Pfence ->
+    (*| Pfence ->
          fprintf oc "	fence\n"
 
       (* floating point register move.
@@ -522,17 +507,17 @@ module Target : TARGET =
          fprintf oc "	fcvt.s.d	%a, %a\n" freg fd freg fs
 
       (* Pseudo-instructions expanded in Asmexpand *)
-      | Pallocframe(sz, ofs) ->
+    *)| Pallocframe(sz, ofs) ->
          assert false
       | Pfreeframe(sz, ofs) ->
          assert false
-      | Pseqw _ | Psnew _ | Pseql _ | Psnel _ | Pcvtl2w _ | Pcvtw2l _ ->
+    (*| Pseqw _ | Psnew _ | Pseql _ | Psnel _ | Pcvtl2w _ | Pcvtw2l _ ->
          assert false
 
       (* Pseudo-instructions that remain *)
-      | Plabel lbl ->
+    *)| Plabel lbl ->
          fprintf oc "%a:\n" print_label lbl
-      | Ploadsymbol(rd, id, ofs) ->
+    (*| Ploadsymbol(rd, id, ofs) ->
          loadsymbol oc rd id ofs
       | Ploadsymbol_high(rd, id, ofs) ->
          fprintf oc "	lui	%a, %%hi(%a)\n" ireg rd symbol_offset (id, ofs)
@@ -563,7 +548,7 @@ module Target : TARGET =
          fprintf oc "	jr	x5\n";
          jumptables := (lbl, tbl) :: !jumptables;
          fprintf oc "%s end pseudoinstr btbl\n" comment
-      | Pbuiltin(ef, args, res) ->
+    *)| Pbuiltin(ef, args, res) ->
          begin match ef with
            | EF_annot(kind,txt, targs) ->
              let annot =
@@ -635,7 +620,7 @@ module Target : TARGET =
     let address = if Archi.ptr64 then ".quad" else ".long"
 
     let print_prologue oc =
-      fprintf oc "	.option %s\n" (if Archi.pic_code() then "pic" else "nopic");
+      (* fprintf oc "	.option %s\n" (if Archi.pic_code() then "pic" else "nopic"); *)
       if !Clflags.option_g then begin
         section oc Section_text;
       end
