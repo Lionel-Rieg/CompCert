@@ -15,7 +15,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for RISC-V assembly language. *)
+(** Abstract syntax and semantics for K1c assembly language. *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -38,22 +38,22 @@ Require Import Conventions.
 Inductive gpreg: Type :=
   | GPR0:  gpreg | GPR1:  gpreg | GPR2:  gpreg | GPR3:  gpreg | GPR4:  gpreg
   | GPR5:  gpreg | GPR6:  gpreg | GPR7:  gpreg | GPR8:  gpreg | GPR9:  gpreg
-  | GPR10: gpreg | GPR11: gpreg | GPR12: gpreg | GPR13: gpreg | GPR14: gpreg 
-  | GPR15: gpreg | GPR16: gpreg | GPR17: gpreg | GPR18: gpreg | GPR19: gpreg 
-  | GPR20: gpreg | GPR21: gpreg | GPR22: gpreg | GPR23: gpreg | GPR24: gpreg 
-  | GPR25: gpreg | GPR26: gpreg | GPR27: gpreg | GPR28: gpreg | GPR29: gpreg 
-  | GPR30: gpreg | GPR31: gpreg | GPR32: gpreg | GPR33: gpreg | GPR34: gpreg 
-  | GPR35: gpreg | GPR36: gpreg | GPR37: gpreg | GPR38: gpreg | GPR39: gpreg 
-  | GPR40: gpreg | GPR41: gpreg | GPR42: gpreg | GPR43: gpreg | GPR44: gpreg 
-  | GPR45: gpreg | GPR46: gpreg | GPR47: gpreg | GPR48: gpreg | GPR49: gpreg 
-  | GPR50: gpreg | GPR51: gpreg | GPR52: gpreg | GPR53: gpreg | GPR54: gpreg 
-  | GPR55: gpreg | GPR56: gpreg | GPR57: gpreg | GPR58: gpreg | GPR59: gpreg 
+  | GPR10: gpreg | GPR11: gpreg | GPR12: gpreg | GPR13: gpreg | GPR14: gpreg
+  | GPR15: gpreg | GPR16: gpreg | GPR17: gpreg | GPR18: gpreg | GPR19: gpreg
+  | GPR20: gpreg | GPR21: gpreg | GPR22: gpreg | GPR23: gpreg | GPR24: gpreg
+  | GPR25: gpreg | GPR26: gpreg | GPR27: gpreg | GPR28: gpreg | GPR29: gpreg
+  | GPR30: gpreg | GPR31: gpreg | GPR32: gpreg | GPR33: gpreg | GPR34: gpreg
+  | GPR35: gpreg | GPR36: gpreg | GPR37: gpreg | GPR38: gpreg | GPR39: gpreg
+  | GPR40: gpreg | GPR41: gpreg | GPR42: gpreg | GPR43: gpreg | GPR44: gpreg
+  | GPR45: gpreg | GPR46: gpreg | GPR47: gpreg | GPR48: gpreg | GPR49: gpreg
+  | GPR50: gpreg | GPR51: gpreg | GPR52: gpreg | GPR53: gpreg | GPR54: gpreg
+  | GPR55: gpreg | GPR56: gpreg | GPR57: gpreg | GPR58: gpreg | GPR59: gpreg
   | GPR60: gpreg | GPR61: gpreg | GPR62: gpreg | GPR63: gpreg.
 
 Definition ireg := gpreg.
 
 (* FIXME - placeholder definitions to make sure the Risc-V instruction definitions work *)
-Inductive ireg0: Type := 
+Inductive ireg0: Type :=
   | GPR: gpreg -> ireg0.
 
 Coercion GPR: gpreg >-> ireg0.
@@ -138,7 +138,7 @@ Inductive instruction : Type :=
   | Pget    (rd: ireg) (rs: preg)                    (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                    (**r set system register *)
   | Pret                                             (**r return *)
-  
+
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
@@ -175,7 +175,7 @@ Inductive instruction : Type :=
   | Psraw   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-arith *)
 
 (** 64-bit integer register-immediate instructions *)
-*)  | Paddil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r add immediate *) (*
+*)| Paddil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r add immediate *) (*
   | Psltil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than immediate *)
   | Psltiul (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than unsigned immediate *)
   | Pandil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r and immediate *)
@@ -339,15 +339,14 @@ Inductive instruction : Type :=
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
   | Plabel  (lbl: label)                            (**r define a code label *)
-(*  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
+(*| Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
   | Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
   | Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
   | Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
   | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
-              -> builtin_res preg -> instruction.   (**r built-in function (pseudo) *) (*
-*)
+              -> builtin_res preg -> instruction.   (**r built-in function (pseudo) *)
 
 (** The pseudo-instructions are the following:
 
@@ -444,23 +443,11 @@ Definition getw (rs: regset) (r: ireg0) : val :=
   match r with
   | GPR r => rs r
   end.
-(*
-  match r with
-  | X0 => Vint Int.zero
-  | X r => rs r
-  end.
-*)
 
 Definition getl (rs: regset) (r: ireg0) : val :=
   match r with
   | GPR r => rs r
   end.
-(*
-  match r with
-  | X0 => Vlong Int64.zero
-  | X r => rs r
-  end.
-*)
 
 Notation "a # b" := (a b) (at level 1, only parsing) : asm.
 Notation "a ## b" := (getw a b) (at level 1) : asm.

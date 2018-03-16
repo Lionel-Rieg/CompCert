@@ -68,7 +68,7 @@ Definition make_immed64 (val: int64) := Imm64_single val.
 Definition load_hilo32 (r: ireg) (hi lo: int) k :=
   if Int.eq lo Int.zero then Pluiw r hi :: k
   else Pluiw r hi :: Paddiw r r lo :: k.
-*)  
+*)
 Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   match make_immed32 n with
   | Imm32_single imm => Pmake r imm :: k
@@ -88,8 +88,7 @@ Definition orimm32  := opimm32 Porw  Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
-*)
-(*
+
 Definition load_hilo64 (r: ireg) (hi lo: int64) k :=
   if Int64.eq lo Int64.zero then Pluil r hi :: k
   else Pluil r hi :: Paddil r r lo :: k.
@@ -490,7 +489,7 @@ Definition transl_op
           Psraiw GPR31 rs (Int.repr 31) ::
           Psrliw GPR31 GPR31 (Int.sub Int.iwordsize n) ::
           Paddw GPR31 rs GPR31 ::
-          Psraiw rd GPR31 n :: k)  
+          Psraiw rd GPR31 n :: k)
 
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
@@ -579,7 +578,7 @@ Definition transl_op
           Psrail GPR31 rs (Int.repr 63) ::
           Psrlil GPR31 GPR31 (Int.sub Int64.iwordsize' n) ::
           Paddl GPR31 rs GPR31 ::
-          Psrail rd GPR31 n :: k)  
+          Psrail rd GPR31 n :: k)
 
   | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
@@ -802,36 +801,9 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
 
 (** Function epilogue *)
 
-(*
-Definition store_ra (base: ireg) (ofs: ptrofs) (k: code) :=
-  indexed_memory_access (Psd GPR8) base ofs (Pget GPR8 RA :: k)
-  .
-*)
-
-(*
-Definition make_ra (base: ireg) (ofs: ptrofs) (k: code) :=
-  Pset RA GPR8
-  :: (indexed_memory_access (Pld GPR8) base ofs k) (* FIXME - not sure about GPR8 *)
-  .
-*)
-
-(*
-Definition make_epilogue (f: Mach.function) (k: code) :=
-  Pset RA GPR8 :: (indexed_memory_access (Pld GPR8) SP f.(fn_retaddr_ofs) (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k))
-  (* make_ra SP f.(fn_retaddr_ofs)
-     (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k) *)
-  .
-*)
-
 Definition make_epilogue (f: Mach.function) (k: code) :=
   loadind_ptr SP f.(fn_retaddr_ofs) GPR8 
   (Pset RA GPR8 :: Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
-
-(*
-Definition make_epilogue (f: Mach.function) (k: code) :=
-  loadind_ptr SP f.(fn_retaddr_ofs) RA
-    (Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
-*)
 
 (** Translation of a Mach instruction. *)
 
@@ -925,15 +897,6 @@ Definition transl_function (f: Mach.function) :=
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
          Pget GPR8 RA ::
          storeind_ptr GPR8 SP f.(fn_retaddr_ofs) c)).
-
-(*
-Definition transl_function (f: Mach.function) :=
-  do c <- transl_code' f f.(Mach.fn_code) true;
-  OK (mkfunction f.(Mach.fn_sig)
-        (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
-         indexed_memory_access (Psd GPR8) SP f.(fn_retaddr_ofs) (Pget GPR8 RA :: c))).
-         (* store_ra SP f.(fn_retaddr_ofs) c)). *)
-*)
 
 Definition transf_function (f: Mach.function) : res Asm.function :=
   do tf <- transl_function f;

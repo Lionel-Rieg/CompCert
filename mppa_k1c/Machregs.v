@@ -85,18 +85,19 @@ Module IndexedMreg <: INDEXED_TYPE.
   Definition eq := mreg_eq.
   Definition index (r: mreg): positive :=
     match r with
-    R0  => 1  | R1  => 2  | R2  => 3  | R3  => 4  | R4  => 5 
-  | R5  => 6  | R6  => 7  | R7  => 8  |             R9  => 10
-  | R15 => 16 | R16 => 17 | R17 => 18 | R18 => 19 | R19 => 20
-  | R20 => 21 | R21 => 22 | R22 => 23 | R23 => 24 | R24 => 25 
-  | R25 => 26 | R26 => 27 | R27 => 28 | R28 => 29 | R29 => 30
-  | R30 => 31 |             R32 => 33 | R33 => 34 | R34 => 35 
-  | R35 => 36 | R36 => 37 | R37 => 38 | R38 => 39 | R39 => 40
-  | R40 => 41 | R41 => 42 | R42 => 43 | R43 => 44 | R44 => 45 
-  | R45 => 46 | R46 => 47 | R47 => 48 | R48 => 49 | R49 => 50
-  | R50 => 51 | R51 => 52 | R52 => 53 | R53 => 54 | R54 => 55 
-  | R55 => 56 | R56 => 57 | R57 => 58 | R58 => 59 | R59 => 60
-  | R60 => 61 | R61 => 62 | R62 => 63 | R63 => 64 end.
+    | R0  => 1  | R1  => 2  | R2  => 3  | R3  => 4  | R4  => 5
+    | R5  => 6  | R6  => 7  | R7  => 8  |             R9  => 10
+    | R15 => 16 | R16 => 17 | R17 => 18 | R18 => 19 | R19 => 20
+    | R20 => 21 | R21 => 22 | R22 => 23 | R23 => 24 | R24 => 25
+    | R25 => 26 | R26 => 27 | R27 => 28 | R28 => 29 | R29 => 30
+    | R30 => 31 |             R32 => 33 | R33 => 34 | R34 => 35
+    | R35 => 36 | R36 => 37 | R37 => 38 | R38 => 39 | R39 => 40
+    | R40 => 41 | R41 => 42 | R42 => 43 | R43 => 44 | R44 => 45
+    | R45 => 46 | R46 => 47 | R47 => 48 | R48 => 49 | R49 => 50
+    | R50 => 51 | R51 => 52 | R52 => 53 | R53 => 54 | R54 => 55 
+    | R55 => 56 | R56 => 57 | R57 => 58 | R58 => 59 | R59 => 60
+    | R60 => 61 | R61 => 62 | R62 => 63 | R63 => 64 
+    end.
 
   Lemma index_inj:
     forall r1 r2, index r1 = index r2 -> r1 = r2.
@@ -112,8 +113,8 @@ Definition is_stack_reg (r: mreg) : bool := false.
 Local Open Scope string_scope.
 
 Definition register_names :=
-     ("R0", R0)   :: ("R1", R1)   :: ("R2", R2)   :: ("R3", R3)   :: ("R4", R4)  
-  :: ("R5", R5)   :: ("R6", R6)   :: ("R7", R7)                   :: ("R9", R9) 
+     ("R0" , R0)  :: ("R1" , R1)  :: ("R2" , R2)  :: ("R3" , R3)  :: ("R4" , R4)
+  :: ("R5" , R5)  :: ("R6" , R6)  :: ("R7" , R7)                  :: ("R9" , R9)
   :: ("R15", R15) :: ("R16", R16) :: ("R17", R17) :: ("R18", R18) :: ("R19", R19)
   :: ("R20", R20) :: ("R21", R21) :: ("R22", R22) :: ("R23", R23) :: ("R24", R24)
   :: ("R25", R25) :: ("R26", R26) :: ("R27", R27) :: ("R28", R28) :: ("R29", R29)
@@ -141,8 +142,8 @@ Definition destroyed_by_op (op: operation): list mreg := nil.
   | Olongoffloat | Olonguoffloat | Olongofsingle | Olonguofsingle
       => F6 :: nil
   | _ => nil
-  end. *)
-
+  end.
+*)
 
 Definition destroyed_by_load (chunk: memory_chunk) (addr: addressing): list mreg := nil.
 
@@ -166,7 +167,7 @@ Fixpoint destroyed_by_clobber (cl: list string): list mreg :=
 Definition destroyed_by_builtin (ef: external_function): list mreg :=
   match ef with
   | EF_inline_asm txt sg clob => destroyed_by_clobber clob
-  (* | EF_memcpy sz al => R5 :: R6 :: R7 :: F0 :: nil *)
+(*| EF_memcpy sz al => R5 :: R6 :: R7 :: F0 :: nil *)
   | _ => nil
   end.
 

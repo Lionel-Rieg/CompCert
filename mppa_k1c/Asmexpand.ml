@@ -604,7 +604,7 @@ let int_reg_to_dwarf = function
 let preg_to_dwarf = function
    | IR r -> int_reg_to_dwarf r
    | FR r -> int_reg_to_dwarf r
-   | RA   -> 65 (* FIXME - No idea *)
+   | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)
    | _ -> assert false
 
 let expand_function id fn =

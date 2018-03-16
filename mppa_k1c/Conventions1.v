@@ -32,7 +32,7 @@ Require Import AST Machregs Locations.
   of callee- and caller-save registers.
 *)
 
-Definition is_callee_save (r: mreg): bool :=
+Definition is_callee_save (r: mreg) : bool :=
   match r with
   | R15 | R16 | R17 | R18 | R19 | R20 | R21 | R22
   | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 => true
@@ -90,7 +90,7 @@ Definition is_float_reg (r: mreg) := false.
   with one integer result. *)
 
 Definition loc_result (s: signature) : rpair mreg :=
-   match s.(sig_res) with 
+   match s.(sig_res) with
    | None => One R0
    | Some (Tint | Tany32) => One R0
    | Some (Tfloat | Tsingle | Tany64) => One R0
@@ -334,7 +334,10 @@ Proof.
 
   cut (forall va tyl rn ofs, ofs >= 0 -> OK (loc_arguments_rec va tyl rn ofs)).
   unfold OK. eauto.
-  induction tyl as [ | ty1 tyl]; intros until ofs; intros OO; simpl.  - red; simpl; tauto.  - destruct ty1.  + (* int *) apply A; auto.
+  induction tyl as [ | ty1 tyl]; intros until ofs; intros OO; simpl.
+  - red; simpl; tauto.
+  - destruct ty1.  
++ (* int *) apply A; auto.
 + (* float *) 
   apply A; auto.
 + (* long *)

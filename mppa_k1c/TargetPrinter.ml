@@ -61,10 +61,7 @@ module Target : TARGET =
     let ireg oc r = output_string oc (int_reg_name r)
 
     let ireg0 = ireg
-(*
-    let ireg0 oc = function
-      | GPR r -> ireg oc r
-*)
+
     let preg oc = function
       | IR r -> ireg oc r
       | FR r -> ireg oc r
@@ -620,7 +617,7 @@ module Target : TARGET =
     let address = if Archi.ptr64 then ".quad" else ".long"
 
     let print_prologue oc =
-      (* fprintf oc "	.option %s\n" (if Archi.pic_code() then "pic" else "nopic"); *)
+   (* fprintf oc "	.option %s\n" (if Archi.pic_code() then "pic" else "nopic"); *)
       if !Clflags.option_g then begin
         section oc Section_text;
       end

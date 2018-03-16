@@ -119,6 +119,7 @@ Remark loadimm32_label:
   forall r n k, tail_nolabel k (loadimm32 r n k).
 Proof.
   intros; unfold loadimm32. destruct (make_immed32 n); TailNoLabel.
+(*unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.*)
 Qed.
 Hint Resolve loadimm32_label: labels.
 (*
@@ -137,6 +138,7 @@ Remark loadimm64_label:
   forall r n k, tail_nolabel k (loadimm64 r n k).
 Proof.
   intros; unfold loadimm64. destruct (make_immed64 n); TailNoLabel.
+(*unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.*)
 Qed.
 Hint Resolve loadimm64_label: labels.
 
@@ -658,7 +660,7 @@ Proof.
   rewrite (sp_val _ _ _ AG) in A.
   left; eapply exec_straight_steps; eauto. intros. simpl in TR.
   inversion TR.
-(*  
+(*
   intros [rs' [P [Q R]]].
 
   exploit loadind_correct; eauto with asmgen. intros [rs' [P [Q R]]].
@@ -689,7 +691,7 @@ Proof.
   intros [v' [C D]].
 (* Opaque loadind. *)
   left; eapply exec_straight_steps; eauto; intros. monadInv TR.
-(* 
+(*
   destruct ep.
 (* X30 contains parent *)
   exploit loadind_correct. eexact EQ.
@@ -752,7 +754,7 @@ Local Transparent destroyed_by_op.
   assert (Val.lessdef (rs src) (rs0 (preg_of src))). eapply preg_val; eauto.
   exploit Mem.storev_extends; eauto. intros [m2' [C D]].
   left; eapply exec_straight_steps; eauto.
-  intros. simpl in TR. 
+  intros. simpl in TR.
   inversion TR.
 (*exploit transl_store_correct; eauto. intros [rs2 [P Q]].
   exists rs2; split. eauto.
@@ -971,8 +973,8 @@ Local Transparent destroyed_by_op.
     assert (rs' GPR12 = rs2 GPR12). { apply V'; discriminate. }
     rewrite H3. rewrite H4.
     (* change (rs' GPR8) with (rs0 RA). *)
-    rewrite ATLR. 
-    change (rs2 GPR12) with sp. eexact P. 
+    rewrite ATLR.
+    change (rs2 GPR12) with sp. eexact P.
     congruence. congruence.
   intros (rs3 & U & V).
   assert (EXEC_PROLOGUE:
@@ -985,7 +987,7 @@ Local Transparent destroyed_by_op.
     rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. rewrite F. reflexivity.
     reflexivity.
     eapply exec_straight_trans.
-    - eexact U'.  
+    - eexact U'.
     - eexact U. }
   exploit exec_straight_steps_2; eauto using functions_transl. omega. constructor.
   intros (ofs' & X & Y).                    
@@ -1003,7 +1005,7 @@ Local Transparent destroyed_at_function_entry.
   unfold sp; congruence.
 
   intros.
-  assert (r <> GPR31). { contradict H3; rewrite H3; unfold data_preg; auto. } 
+  assert (r <> GPR31). { contradict H3; rewrite H3; unfold data_preg; auto. }
   rewrite V.
   assert (r <> GPR8). { contradict H3; rewrite H3; unfold data_preg; auto. }
   assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }

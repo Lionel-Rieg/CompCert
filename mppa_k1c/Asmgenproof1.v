@@ -175,7 +175,7 @@ Proof.
 Qed.
 
 (** 64-bit integer constants and arithmetic *)
-  
+
 Lemma load_hilo64_correct:
   forall rd hi lo k rs m,
   exists rs',
@@ -194,7 +194,7 @@ Proof.
   split. Simpl. 
   intros; Simpl.
 Qed.
-  
+
 Lemma loadimm64_correct:
   forall rd n k rs m,
   exists rs',
@@ -381,7 +381,7 @@ Qed.
 
 Remark branch_on_GPR31:
   forall normal lbl (rs: regset) m b,
-  rs#GPR31 = Val.of_bool (eqb normal b) -> 
+  rs#GPR31 = Val.of_bool (eqb normal b) ->
   exec_instr ge fn (if normal then Pbnew GPR31 X0 lbl else Pbeqw GPR31 X0 lbl) rs m =
   eval_branch fn lbl rs m (Some b).
 Proof.
@@ -1072,12 +1072,12 @@ Opaque Int.eq.
   assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
   rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
   rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
-  
+
 - (* addlimm *)
   exploit (opimm64_correct Paddl Paddil Val.addl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
-  
+
 - (* andimm *)
   exploit (opimm64_correct Pandl Pandil Val.andl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
@@ -1251,7 +1251,7 @@ Proof.
 - simpl. rewrite H. auto.
 - Simpl.
 - Simpl.
-- intros. rewrite H. Simpl. 
+- intros. rewrite H. Simpl.
 Qed.
 
 Lemma Pset_correct:
@@ -1431,14 +1431,14 @@ Proof.
   exploit Mem.free_parallel_extends; eauto. intros (tm' & FREE' & MEXT').
   unfold make_epilogue. 
   rewrite chunk_of_Tptr in *.
-  
+
   exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) GPR8 (Pset RA GPR8
            :: Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs tm).
   - rewrite <- (sp_val _ _ rs AG). simpl. eexact LRA'.
   - congruence.
   - intros (rs1 & A1 & B1 & C1).
     assert (agree ms (Vptr stk soff) rs1) as AG1.
-    + destruct AG.  
+    + destruct AG.
       apply mkagree; auto.
       rewrite C1; discriminate || auto.
       intro. rewrite C1; auto; destruct r; simpl; try discriminate.
@@ -1457,7 +1457,7 @@ Proof.
     apply agree_exten with rs; auto. intros; rewrite C2; auto with asmgen.
     eapply parent_sp_def; eauto.
   split. auto.
-  split. Simpl. rewrite B2. auto. 
+  split. Simpl. rewrite B2. auto.
   split. Simpl. 
   intros. Simpl.
   rewrite C2; auto.
