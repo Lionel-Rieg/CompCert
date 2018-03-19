@@ -165,3 +165,34 @@ let transl_op op args res0 k =
   | Osingleoflongu -> (Printf.eprintf "Osingleoflongu\n"; thereal_transl_op op args res0 k)
   | Ocmp _ -> (Printf.eprintf "Ocmp _\n"; thereal_transl_op op args res0 k)
   | _ -> (Printf.eprintf "_\n"; thereal_transl_op op args res0 k)
+
+let thereal_transl_instr f i _ k =
+  match i with
+  | Mop (op, args, res0) -> transl_op op args res0 k
+  | Mbuiltin (ef, args, res0) ->
+    OK ((Pbuiltin (ef, (map (map_builtin_arg preg_of) args),
+      (map_builtin_res preg_of res0))) :: k)
+  | Mlabel lbl -> OK ((Plabel lbl) :: k)
+  | Mreturn -> OK (make_epilogue f (Pret :: k))
+  | _ ->
+    Error
+      (msg
+        ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('i'::('n'::('s'::('t'::('r'::[]))))))))))))))))))))
+
+let transl_instr f i _ k =
+  match i with
+  | Mgetstack _ -> (Printf.eprintf "Mgetstack\n"; thereal_transl_instr f i x k)
+  | Msetstack _ -> (Printf.eprintf "Msetstack\n"; thereal_transl_instr f i x k)
+  | Mgetparam _ -> (Printf.eprintf "Mgetparam\n"; thereal_transl_instr f i x k)
+  | Mop _ -> (Printf.eprintf "Mop\n"; thereal_transl_instr f i x k)
+  | Mload _ -> (Printf.eprintf "Mload\n"; thereal_transl_instr f i x k)
+  | Mstore _ -> (Printf.eprintf "Mstore\n"; thereal_transl_instr f i x k)
+  | Mcall _ -> (Printf.eprintf "Mcall\n"; thereal_transl_instr f i x k)
+  | Mtailcall _ -> (Printf.eprintf "Mtailcall\n"; thereal_transl_instr f i x k)
+  | Mbuiltin _ -> (Printf.eprintf "Mbuiltin\n"; thereal_transl_instr f i x k)
+  | Mlabel _ -> (Printf.eprintf "Mlabel\n"; thereal_transl_instr f i x k)
+  | Mgoto _ -> (Printf.eprintf "Mgoto\n"; thereal_transl_instr f i x k)
+  | Mcond _ -> (Printf.eprintf "Mcond\n"; thereal_transl_instr f i x k)
+  | Mjumptable _ -> (Printf.eprintf "Mjumptable\n"; thereal_transl_instr f i x k)
+  | Mreturn _ -> (Printf.eprintf "Mreturn\n"; thereal_transl_instr f i x k)
+  | _ -> (Printf.eprintf "UNKNOWN\n"; thereal_transl_instr f i x k)
