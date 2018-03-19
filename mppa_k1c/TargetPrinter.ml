@@ -168,9 +168,9 @@ module Target : TARGET =
          fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
 
       (* 32-bit integer register-immediate instructions *)
-    (*| Paddiw (rd, rs, imm) ->
-         fprintf oc "	addi%t	%a, %a, %a\n" w ireg rd ireg rs coqint imm
-      | Psltiw (rd, rs, imm) ->
+      | Paddiw (rd, rs, imm) ->
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+    (*| Psltiw (rd, rs, imm) ->
          fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Psltiuw (rd, rs, imm) ->
          fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg rs coqint imm
@@ -190,9 +190,9 @@ module Target : TARGET =
          fprintf oc "	lui	%a, %a\n"     ireg rd coqint imm
 
       (* 32-bit integer register-register instructions *)
-      | Paddw(rd, rs1, rs2) ->
-         fprintf oc "	add%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
-      | Psubw(rd, rs1, rs2) ->
+    *)| Paddw(rd, rs1, rs2) ->
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+    (*| Psubw(rd, rs1, rs2) ->
          fprintf oc "	sub%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
 
       | Pmulw(rd, rs1, rs2) ->

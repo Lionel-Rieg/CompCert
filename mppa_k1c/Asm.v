@@ -144,8 +144,8 @@ Inductive instruction : Type :=
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
-(*| Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
-  | Psltiw  (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than immediate *)
+  | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
+(*| Psltiw  (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than immediate *)
   | Psltiuw (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than unsigned immediate *)
   | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
   | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or immediate *)
@@ -155,8 +155,8 @@ Inductive instruction : Type :=
   | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-arith immediate *)
   | Pluiw   (rd: ireg)             (imm: int)        (**r load upper-immediate *)
 (** 32-bit integer register-register instructions *)
-  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
-  | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
+*)| Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+(*| Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
 
   | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply low *)
   | Pmulhw  (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high signed *)
@@ -629,9 +629,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (rs#s))) m
 
 (** 32-bit integer register-immediate instructions *)
-(*| Paddiw d s i =>
+  | Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
-  | Psltiw d s i =>
+(*| Psltiw d s i =>
       Next (nextinstr (rs#d <- (Val.cmp Clt rs##s (Vint i)))) m
   | Psltiuw d s i =>
       Next (nextinstr (rs#d <- (Val.cmpu (Mem.valid_pointer m) Clt rs##s (Vint i)))) m
@@ -651,9 +651,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Vint (Int.shl i (Int.repr 12))))) m
 
 (** 32-bit integer register-register instructions *)
-  | Paddw d s1 s2 =>
+*)| Paddw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.add rs##s1 rs##s2))) m
-  | Psubw d s1 s2 =>
+(*| Psubw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.sub rs##s1 rs##s2))) m
   | Pmulw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.mul rs##s1 rs##s2))) m

@@ -73,16 +73,16 @@ Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   match make_immed32 n with
   | Imm32_single imm => Pmake r imm :: k
   end.
-(*
+
 Definition opimm32 (op: ireg -> ireg -> ireg -> instruction)
                    (opimm: ireg -> ireg -> int -> instruction)
                    (rd rs: ireg) (n: int) (k: code) :=
   match make_immed32 n with
   | Imm32_single imm => opimm rd rs imm :: k
-  | Imm32_pair hi lo => load_hilo32 GPR31 hi lo (op rd rs GPR31 :: k)
   end.
 
 Definition addimm32 := opimm32 Paddw Paddiw.
+(*
 Definition andimm32 := opimm32 Pandw Pandiw.
 Definition orimm32  := opimm32 Porw  Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
@@ -414,13 +414,13 @@ Definition transl_op
   | Ocast16signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs (Int.repr 16) :: Psraiw rd rd (Int.repr 16) :: k)
-  | Oadd, a1 :: a2 :: nil =>
+*)| Oadd, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Paddw rd rs1 rs2 :: k)
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n k)
-  | Oneg, a1 :: nil =>
+(*| Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Psubw rd GPR0 rs :: k)
   | Osub, a1 :: a2 :: nil =>

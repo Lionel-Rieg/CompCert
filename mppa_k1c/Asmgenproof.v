@@ -122,7 +122,7 @@ Proof.
 (*unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.*)
 Qed.
 Hint Resolve loadimm32_label: labels.
-(*
+
 Remark opimm32_label:
   forall op opimm r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
@@ -130,10 +130,10 @@ Remark opimm32_label:
   tail_nolabel k (opimm32 op opimm r1 r2 n k).
 Proof.
   intros; unfold opimm32. destruct (make_immed32 n); TailNoLabel.
-  unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.
+(*unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.*)
 Qed.
 Hint Resolve opimm32_label: labels.
-*)
+
 Remark loadimm64_label:
   forall r n k, tail_nolabel k (loadimm64 r n k).
 Proof.
@@ -277,6 +277,7 @@ Remark transl_op_label:
 Proof.
 Opaque Int.eq.
   unfold transl_op; intros; destruct op; TailNoLabel.
+- apply opimm32_label; intros; exact I.
 - apply opimm64_label; intros; exact I.
 Qed.
 
