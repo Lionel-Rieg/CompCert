@@ -52,11 +52,13 @@ Inductive gpreg: Type :=
 
 Definition ireg := gpreg.
 
+(*
 (* FIXME - placeholder definitions to make sure the Risc-V instruction definitions work *)
 Inductive ireg0: Type :=
   | GPR: gpreg -> ireg0.
 
 Coercion GPR: gpreg >-> ireg0.
+*)
 
 Definition freg := gpreg.
 
@@ -142,74 +144,74 @@ Inductive instruction : Type :=
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
-(*| Paddiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r add immediate *)
-  | Psltiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r set-less-than immediate *)
-  | Psltiuw (rd: ireg) (rs: ireg0) (imm: int)        (**r set-less-than unsigned immediate *)
-  | Pandiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r and immediate *)
-  | Poriw   (rd: ireg) (rs: ireg0) (imm: int)        (**r or immediate *)
-  | Pxoriw  (rd: ireg) (rs: ireg0) (imm: int)        (**r xor immediate *)
-  | Pslliw  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-left-logical immediate *)
-  | Psrliw  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-logical immediate *)
-  | Psraiw  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-arith immediate *)
+(*| Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
+  | Psltiw  (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than immediate *)
+  | Psltiuw (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than unsigned immediate *)
+  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
+  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or immediate *)
+  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor immediate *)
+  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-left-logical immediate *)
+  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-logical immediate *)
+  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-arith immediate *)
   | Pluiw   (rd: ireg)             (imm: int)        (**r load upper-immediate *)
 (** 32-bit integer register-register instructions *)
-  | Paddw   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *)
-  | Psubw   (rd: ireg) (rs1 rs2: ireg0)              (**r integer subtraction *)
+  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
 
-  | Pmulw   (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply low *)
-  | Pmulhw  (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply high signed *)
-  | Pmulhuw (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply high unsigned *)
-  | Pdivw   (rd: ireg) (rs1 rs2: ireg0)              (**r integer division *)
-  | Pdivuw  (rd: ireg) (rs1 rs2: ireg0)              (**r unsigned integer division *)
-  | Premw   (rd: ireg) (rs1 rs2: ireg0)              (**r integer remainder *)
-  | Premuw  (rd: ireg) (rs1 rs2: ireg0)              (**r unsigned integer remainder *)
-  | Psltw   (rd: ireg) (rs1 rs2: ireg0)              (**r set-less-than *)
-  | Psltuw  (rd: ireg) (rs1 rs2: ireg0)              (**r set-less-than unsigned *)
-  | Pseqw   (rd: ireg) (rs1 rs2: ireg0)              (**r [rd <- rs1 == rs2] (pseudo) *)
-  | Psnew   (rd: ireg) (rs1 rs2: ireg0)              (**r [rd <- rs1 != rs2] (pseudo) *)
-  | Pandw   (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise and *)
-  | Porw    (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise or *)
-  | Pxorw   (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise xor *)
-  | Psllw   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-left-logical *)
-  | Psrlw   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-logical *)
-  | Psraw   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-arith *)
+  | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply low *)
+  | Pmulhw  (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high signed *)
+  | Pmulhuw (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high unsigned *)
+  | Pdivw   (rd: ireg) (rs1 rs2: ireg)              (**r integer division *)
+  | Pdivuw  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer division *)
+  | Premw   (rd: ireg) (rs1 rs2: ireg)              (**r integer remainder *)
+  | Premuw  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer remainder *)
+  | Psltw   (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than *)
+  | Psltuw  (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than unsigned *)
+  | Pseqw   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 == rs2] (pseudo) *)
+  | Psnew   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 != rs2] (pseudo) *)
+  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise and *)
+  | Porw    (rd: ireg) (rs1 rs2: ireg)              (**r bitwise or *)
+  | Pxorw   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise xor *)
+  | Psllw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-left-logical *)
+  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-logical *)
+  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-arith *)
 
 (** 64-bit integer register-immediate instructions *)
-*)| Paddil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r add immediate *) (*
-  | Psltil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than immediate *)
-  | Psltiul (rd: ireg) (rs: ireg0) (imm: int64)      (**r set-less-than unsigned immediate *)
-  | Pandil  (rd: ireg) (rs: ireg0) (imm: int64)      (**r and immediate *)
-  | Poril   (rd: ireg) (rs: ireg0) (imm: int64)      (**r or immediate *)
-  | Pxoril  (rd: ireg) (rs: ireg0) (imm: int64)      (**r xor immediate *)
-  | Psllil  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-left-logical immediate *)
-  | Psrlil  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-logical immediate *)
-  | Psrail  (rd: ireg) (rs: ireg0) (imm: int)        (**r shift-right-arith immediate *)
+*)| Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) (*
+  | Psltil  (rd: ireg) (rs: ireg) (imm: int64)      (**r set-less-than immediate *)
+  | Psltiul (rd: ireg) (rs: ireg) (imm: int64)      (**r set-less-than unsigned immediate *)
+  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *)
+  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or immediate *)
+  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor immediate *)
+  | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-left-logical immediate *)
+  | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-logical immediate *)
+  | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-arith immediate *)
   | Pluil   (rd: ireg)             (imm: int64)      (**r FIXME - remove it ; load upper-immediate *)
 *)| Pmake   (rd: ireg)             (imm: int)        (**r load immediate *)
   | Pmakel  (rd: ireg)             (imm: int64)      (**r load immediate long *)
 (** 64-bit integer register-register instructions *)
-  | Paddl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer addition *) (*
-  | Psubl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer subtraction *)
+  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *) (*
+  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
 
-  | Pmull   (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply low *)
-  | Pmulhl  (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply high signed *)
-  | Pmulhul (rd: ireg) (rs1 rs2: ireg0)              (**r integer multiply high unsigned *)
-  | Pdivl   (rd: ireg) (rs1 rs2: ireg0)              (**r integer division *)
-  | Pdivul  (rd: ireg) (rs1 rs2: ireg0)              (**r unsigned integer division *)
-  | Preml   (rd: ireg) (rs1 rs2: ireg0)              (**r integer remainder *)
-  | Premul  (rd: ireg) (rs1 rs2: ireg0)              (**r unsigned integer remainder *)
-  | Psltl   (rd: ireg) (rs1 rs2: ireg0)              (**r set-less-than *)
-  | Psltul  (rd: ireg) (rs1 rs2: ireg0)              (**r set-less-than unsigned *)
-  | Pseql   (rd: ireg) (rs1 rs2: ireg0)              (**r [rd <- rs1 == rs2] (pseudo) *)
-  | Psnel   (rd: ireg) (rs1 rs2: ireg0)              (**r [rd <- rs1 != rs2] (pseudo) *)
-  | Pandl   (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise and *)
-  | Porl    (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise or *)
-  | Pxorl   (rd: ireg) (rs1 rs2: ireg0)              (**r bitwise xor *)
-  | Pslll   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-left-logical *)
-  | Psrll   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-logical *)
-  | Psral   (rd: ireg) (rs1 rs2: ireg0)              (**r shift-right-arith *)
+  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply low *)
+  | Pmulhl  (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high signed *)
+  | Pmulhul (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high unsigned *)
+  | Pdivl   (rd: ireg) (rs1 rs2: ireg)              (**r integer division *)
+  | Pdivul  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer division *)
+  | Preml   (rd: ireg) (rs1 rs2: ireg)              (**r integer remainder *)
+  | Premul  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer remainder *)
+  | Psltl   (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than *)
+  | Psltul  (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than unsigned *)
+  | Pseql   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 == rs2] (pseudo) *)
+  | Psnel   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 != rs2] (pseudo) *)
+  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise and *)
+  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r bitwise or *)
+  | Pxorl   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise xor *)
+  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift-left-logical *)
+  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-logical *)
+  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-arith *)
 
-  | Pcvtl2w (rd: ireg) (rs: ireg0)                   (**r int64->int32 (pseudo) *)
+  | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r int64->int32 (pseudo) *)
   | Pcvtw2l (r: ireg)                                (**r int32 signed -> int64 (pseudo) *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
@@ -220,20 +222,20 @@ Inductive instruction : Type :=
   | Pjal_r  (r: ireg)     (sg: signature)           (**r jump-and-link register *)
 
   (* Conditional branches, 32-bit comparisons *)
-  | Pbeqw   (rs1 rs2: ireg0) (l: label)             (**r branch-if-equal *)
-  | Pbnew   (rs1 rs2: ireg0) (l: label)             (**r branch-if-not-equal signed *)
-  | Pbltw   (rs1 rs2: ireg0) (l: label)             (**r branch-if-less signed *)
-  | Pbltuw  (rs1 rs2: ireg0) (l: label)             (**r branch-if-less unsigned *)
-  | Pbgew   (rs1 rs2: ireg0) (l: label)             (**r branch-if-greater-or-equal signed *)
-  | Pbgeuw  (rs1 rs2: ireg0) (l: label)             (**r branch-if-greater-or-equal unsigned *)
+  | Pbeqw   (rs1 rs2: ireg) (l: label)             (**r branch-if-equal *)
+  | Pbnew   (rs1 rs2: ireg) (l: label)             (**r branch-if-not-equal signed *)
+  | Pbltw   (rs1 rs2: ireg) (l: label)             (**r branch-if-less signed *)
+  | Pbltuw  (rs1 rs2: ireg) (l: label)             (**r branch-if-less unsigned *)
+  | Pbgew   (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal signed *)
+  | Pbgeuw  (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal unsigned *)
 
   (* Conditional branches, 64-bit comparisons *)
-  | Pbeql   (rs1 rs2: ireg0) (l: label)             (**r branch-if-equal *)
-  | Pbnel   (rs1 rs2: ireg0) (l: label)             (**r branch-if-not-equal signed *)
-  | Pbltl   (rs1 rs2: ireg0) (l: label)             (**r branch-if-less signed *)
-  | Pbltul  (rs1 rs2: ireg0) (l: label)             (**r branch-if-less unsigned *)
-  | Pbgel   (rs1 rs2: ireg0) (l: label)             (**r branch-if-greater-or-equal signed *)
-  | Pbgeul  (rs1 rs2: ireg0) (l: label)             (**r branch-if-greater-or-equal unsigned *)
+  | Pbeql   (rs1 rs2: ireg) (l: label)             (**r branch-if-equal *)
+  | Pbnel   (rs1 rs2: ireg) (l: label)             (**r branch-if-not-equal signed *)
+  | Pbltl   (rs1 rs2: ireg) (l: label)             (**r branch-if-less signed *)
+  | Pbltul  (rs1 rs2: ireg) (l: label)             (**r branch-if-less unsigned *)
+  | Pbgel   (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal signed *)
+  | Pbgeul  (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal unsigned *)
 
   (* Loads and stores *)
   | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load signed int8 *)
@@ -287,13 +289,13 @@ Inductive instruction : Type :=
 
   | Pfcvtws  (rd: ireg) (rs: freg)                  (**r float32 -> int32 conversion *)
   | Pfcvtwus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int32 conversion *)
-  | Pfcvtsw  (rd: freg) (rs: ireg0)                 (**r int32 -> float32 conversion *)
-  | Pfcvtswu (rd: freg) (rs: ireg0)                 (**r unsigned int32 -> float32 conversion *)
+  | Pfcvtsw  (rd: freg) (rs: ireg)                 (**r int32 -> float32 conversion *)
+  | Pfcvtswu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float32 conversion *)
 
   | Pfcvtls  (rd: ireg) (rs: freg)                  (**r float32 -> int64 conversion *)
   | Pfcvtlus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int64 conversion *)
-  | Pfcvtsl  (rd: freg) (rs: ireg0)                 (**r int64 -> float32 conversion *)
-  | Pfcvtslu (rd: freg) (rs: ireg0)                 (**r unsigned int 64-> float32 conversion *)
+  | Pfcvtsl  (rd: freg) (rs: ireg)                 (**r int64 -> float32 conversion *)
+  | Pfcvtslu (rd: freg) (rs: ireg)                 (**r unsigned int 64-> float32 conversion *)
 
   (* 64-bit (double-precision) floating point *)
   | Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
@@ -324,13 +326,13 @@ Inductive instruction : Type :=
 
   | Pfcvtwd  (rd: ireg) (rs: freg)                  (**r float -> int32 conversion *)
   | Pfcvtwud (rd: ireg) (rs: freg)                  (**r float -> unsigned int32 conversion *)
-  | Pfcvtdw  (rd: freg) (rs: ireg0)                 (**r int32 -> float conversion *)
-  | Pfcvtdwu (rd: freg) (rs: ireg0)                 (**r unsigned int32 -> float conversion *)
+  | Pfcvtdw  (rd: freg) (rs: ireg)                 (**r int32 -> float conversion *)
+  | Pfcvtdwu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float conversion *)
 
   | Pfcvtld  (rd: ireg) (rs: freg)                  (**r float -> int64 conversion *)
   | Pfcvtlud (rd: ireg) (rs: freg)                  (**r float -> unsigned int64 conversion *)
-  | Pfcvtdl  (rd: freg) (rs: ireg0)                 (**r int64 -> float conversion *)
-  | Pfcvtdlu (rd: freg) (rs: ireg0)                 (**r unsigned int64 -> float conversion *)
+  | Pfcvtdl  (rd: freg) (rs: ireg)                 (**r int64 -> float conversion *)
+  | Pfcvtdlu (rd: freg) (rs: ireg)                 (**r unsigned int64 -> float conversion *)
 
   | Pfcvtds  (rd: freg) (rs: freg)                  (**r float32 -> float   *)
   | Pfcvtsd  (rd: freg) (rs: freg)                  (**r float   -> float32 *)
@@ -439,14 +441,14 @@ Definition program := AST.program fundef unit.
 Definition regset := Pregmap.t val.
 Definition genv := Genv.t fundef unit.
 
-Definition getw (rs: regset) (r: ireg0) : val :=
+Definition getw (rs: regset) (r: ireg) : val :=
   match r with
-  | GPR r => rs r
+  | _ => rs r
   end.
 
-Definition getl (rs: regset) (r: ireg0) : val :=
+Definition getl (rs: regset) (r: ireg) : val :=
   match r with
-  | GPR r => rs r
+  | _ => rs r
   end.
 
 Notation "a # b" := (a b) (at level 1, only parsing) : asm.

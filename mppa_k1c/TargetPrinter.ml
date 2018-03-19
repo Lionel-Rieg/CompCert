@@ -60,7 +60,7 @@ module Target : TARGET =
 
     let ireg oc r = output_string oc (int_reg_name r)
 
-    let ireg0 = ireg
+    let ireg = ireg
 
     let preg oc = function
       | IR r -> ireg oc r
@@ -169,85 +169,85 @@ module Target : TARGET =
 
       (* 32-bit integer register-immediate instructions *)
     (*| Paddiw (rd, rs, imm) ->
-         fprintf oc "	addi%t	%a, %a, %a\n" w ireg rd ireg0 rs coqint imm
+         fprintf oc "	addi%t	%a, %a, %a\n" w ireg rd ireg rs coqint imm
       | Psltiw (rd, rs, imm) ->
-         fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
+         fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Psltiuw (rd, rs, imm) ->
-         fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
+         fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Pandiw (rd, rs, imm) ->
-         fprintf oc "	andi	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
+         fprintf oc "	andi	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Poriw (rd, rs, imm) ->
-         fprintf oc "	ori	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
+         fprintf oc "	ori	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Pxoriw (rd, rs, imm) ->
-         fprintf oc "	xori	%a, %a, %a\n" ireg rd ireg0 rs coqint imm
+         fprintf oc "	xori	%a, %a, %a\n" ireg rd ireg rs coqint imm
       | Pslliw (rd, rs, imm) ->
-         fprintf oc "	slli%t	%a, %a, %a\n" w ireg rd ireg0 rs coqint imm
+         fprintf oc "	slli%t	%a, %a, %a\n" w ireg rd ireg rs coqint imm
       | Psrliw (rd, rs, imm) ->
-         fprintf oc "	srli%t	%a, %a, %a\n" w ireg rd ireg0 rs coqint imm
+         fprintf oc "	srli%t	%a, %a, %a\n" w ireg rd ireg rs coqint imm
       | Psraiw (rd, rs, imm) ->
-         fprintf oc "	srai%t	%a, %a, %a\n" w ireg rd ireg0 rs coqint imm
+         fprintf oc "	srai%t	%a, %a, %a\n" w ireg rd ireg rs coqint imm
       | Pluiw (rd, imm) ->
          fprintf oc "	lui	%a, %a\n"     ireg rd coqint imm
 
       (* 32-bit integer register-register instructions *)
       | Paddw(rd, rs1, rs2) ->
-         fprintf oc "	add%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	add%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Psubw(rd, rs1, rs2) ->
-         fprintf oc "	sub%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sub%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
 
       | Pmulw(rd, rs1, rs2) ->
-         fprintf oc "	mul%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mul%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Pmulhw(rd, rs1, rs2) ->  assert (not Archi.ptr64);
-         fprintf oc "	mulh	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mulh	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmulhuw(rd, rs1, rs2) ->  assert (not Archi.ptr64);
-         fprintf oc "	mulhu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mulhu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pdivw(rd, rs1, rs2) ->
-         fprintf oc "	div%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	div%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Pdivuw(rd, rs1, rs2) ->
-         fprintf oc "	divu%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	divu%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Premw(rd, rs1, rs2) ->
-         fprintf oc "	rem%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	rem%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Premuw(rd, rs1, rs2) ->
-         fprintf oc "	remu%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	remu%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
 
       | Psltw(rd, rs1, rs2) ->
-         fprintf oc "	slt	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	slt	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psltuw(rd, rs1, rs2) ->
-         fprintf oc "	sltu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sltu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pandw(rd, rs1, rs2) ->
-         fprintf oc "	and	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	and	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Porw(rd, rs1, rs2) ->
-         fprintf oc "	or	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	or	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pxorw(rd, rs1, rs2) ->
-         fprintf oc "	xor	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	xor	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psllw(rd, rs1, rs2) ->
-         fprintf oc "	sll%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sll%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Psrlw(rd, rs1, rs2) ->
-         fprintf oc "	srl%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	srl%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
       | Psraw(rd, rs1, rs2) ->
-         fprintf oc "	sra%t	%a, %a, %a\n" w ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sra%t	%a, %a, %a\n" w ireg rd ireg rs1 ireg rs2
 
     *)(* 64-bit integer register-immediate instructions *)
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
     (*| Psltil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	slti	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psltiul (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	sltiu	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	andi	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	andi	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Poril (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	ori	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	ori	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pxoril (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	xori	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	xori	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psllil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	slli	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	slli	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrlil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	srli	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	srli	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrail (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	srai	%a, %a, %a\n" ireg rd ireg0 rs coqint64 imm
+         fprintf oc "	srai	%a, %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pluil (rd, imm) -> assert Archi.ptr64;
          fprintf oc "	lui	%a, %a\n"     ireg rd coqint64 imm
     *)
@@ -257,43 +257,43 @@ module Target : TARGET =
          fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
       (* 64-bit integer register-register instructions *)
       | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
     (*| Psubl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	sub	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sub	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pmull(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	mul	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mul	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmulhl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	mulh	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mulh	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmulhul(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	mulhu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	mulhu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pdivl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	div	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	div	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pdivul(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	divu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	divu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Preml(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	rem	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	rem	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Premul(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	remu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	remu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Psltl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	slt	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	slt	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psltul(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	sltu	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sltu	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pandl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	and	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	and	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Porl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	or	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	or	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pxorl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	xor	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	xor	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pslll(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	sll	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sll	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrll(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	srl	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	srl	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psral(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	sra	%a, %a, %a\n" ireg rd ireg0 rs1 ireg0 rs2
+         fprintf oc "	sra	%a, %a, %a\n" ireg rd ireg rs1 ireg rs2
   
       (* Unconditional jumps.  Links are always to X1/RA. *)
       (* TODO: fix up arguments for calls to variadics, to move *)
@@ -311,31 +311,31 @@ module Target : TARGET =
 
       (* Conditional branches, 32-bit comparisons *)
       | Pbeqw(rs1, rs2, l) ->
-         fprintf oc "	beq	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	beq	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbnew(rs1, rs2, l) ->
-         fprintf oc "	bne	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bne	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbltw(rs1, rs2, l) ->
-         fprintf oc "	blt	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	blt	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbltuw(rs1, rs2, l) ->
-         fprintf oc "	bltu	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bltu	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbgew(rs1, rs2, l) ->
-         fprintf oc "	bge	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bge	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbgeuw(rs1, rs2, l) ->
-         fprintf oc "	bgeu	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bgeu	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
 
       (* Conditional branches, 64-bit comparisons *)
       | Pbeql(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	beq	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	beq	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbnel(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	bne	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bne	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbltl(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	blt	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	blt	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbltul(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	bltu	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bltu	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbgel(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	bge	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bge	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
       | Pbgeul(rs1, rs2, l) -> assert Archi.ptr64;
-         fprintf oc "	bgeu	%a, %a, %a\n" ireg0 rs1 ireg0 rs2 print_label l
+         fprintf oc "	bgeu	%a, %a, %a\n" ireg rs1 ireg rs2 print_label l
 
       (* Loads and stores *)
       | Plb(rd, ra, ofs) ->
@@ -424,18 +424,18 @@ module Target : TARGET =
       | Pfcvtwus (rd, fs) ->
          fprintf oc "	fcvt.wu.s	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtsw (fd, rs) ->
-         fprintf oc "	fcvt.s.w	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.s.w	%a, %a\n" freg fd ireg rs
       | Pfcvtswu (fd, rs) ->
-         fprintf oc "	fcvt.s.wu	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.s.wu	%a, %a\n" freg fd ireg rs
 
       | Pfcvtls (rd, fs) -> assert Archi.ptr64;
          fprintf oc "	fcvt.l.s	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtlus (rd, fs) -> assert Archi.ptr64;
          fprintf oc "	fcvt.lu.s	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtsl (fd, rs) -> assert Archi.ptr64;
-         fprintf oc "	fcvt.s.l	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.s.l	%a, %a\n" freg fd ireg rs
       | Pfcvtslu (fd, rs) -> assert Archi.ptr64;
-         fprintf oc "	fcvt.s.lu	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.s.lu	%a, %a\n" freg fd ireg rs
 
       (* 64-bit (double-precision) floating point *)
       | Pfld (fd, ra, ofs) | Pfld_a (fd, ra, ofs) ->
@@ -485,18 +485,18 @@ module Target : TARGET =
       | Pfcvtwud (rd, fs) ->
          fprintf oc "	fcvt.wu.d	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtdw (fd, rs) ->
-         fprintf oc "	fcvt.d.w	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.d.w	%a, %a\n" freg fd ireg rs
       | Pfcvtdwu (fd, rs) ->
-         fprintf oc "	fcvt.d.wu	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.d.wu	%a, %a\n" freg fd ireg rs
 
       | Pfcvtld (rd, fs) -> assert Archi.ptr64;
          fprintf oc "	fcvt.l.d	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtlud (rd, fs) -> assert Archi.ptr64;
          fprintf oc "	fcvt.lu.d	%a, %a, rtz\n" ireg rd freg fs
       | Pfcvtdl (fd, rs) -> assert Archi.ptr64;
-         fprintf oc "	fcvt.d.l	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.d.l	%a, %a\n" freg fd ireg rs
       | Pfcvtdlu (fd, rs) -> assert Archi.ptr64;
-         fprintf oc "	fcvt.d.lu	%a, %a\n" freg fd ireg0 rs
+         fprintf oc "	fcvt.d.lu	%a, %a\n" freg fd ireg rs
 
       | Pfcvtds (fd, fs) ->
          fprintf oc "	fcvt.d.s	%a, %a\n" freg fd freg fs

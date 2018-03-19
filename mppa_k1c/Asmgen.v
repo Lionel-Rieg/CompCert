@@ -74,8 +74,8 @@ Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   | Imm32_single imm => Pmake r imm :: k
   end.
 (*
-Definition opimm32 (op: ireg -> ireg0 -> ireg0 -> instruction)
-                   (opimm: ireg -> ireg0 -> int -> instruction)
+Definition opimm32 (op: ireg -> ireg -> ireg -> instruction)
+                   (opimm: ireg -> ireg -> int -> instruction)
                    (rd rs: ireg) (n: int) (k: code) :=
   match make_immed32 n with
   | Imm32_single imm => opimm rd rs imm :: k
@@ -99,8 +99,8 @@ Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
   | Imm64_single imm => Pmakel r imm :: k
   end.
 
-Definition opimm64 (op: ireg -> ireg0 -> ireg0 -> instruction)
-                   (opimm: ireg -> ireg0 -> int64 -> instruction)
+Definition opimm64 (op: ireg -> ireg -> ireg -> instruction)
+                   (opimm: ireg -> ireg -> int64 -> instruction)
                    (rd rs: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
   | Imm64_single imm => opimm rd rs imm :: k
@@ -125,7 +125,7 @@ Definition addptrofs (rd rs: ireg) (n: ptrofs) (k: code) :=
 (*
 (** Translation of conditional branches. *)
 
-Definition transl_cbranch_int32s (cmp: comparison) (r1 r2: ireg0) (lbl: label) :=
+Definition transl_cbranch_int32s (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
   match cmp with
   | Ceq => Pbeqw r1 r2 lbl
   | Cne => Pbnew r1 r2 lbl
@@ -135,7 +135,7 @@ Definition transl_cbranch_int32s (cmp: comparison) (r1 r2: ireg0) (lbl: label) :
   | Cge => Pbgew r1 r2 lbl
   end.
 
-Definition transl_cbranch_int32u (cmp: comparison) (r1 r2: ireg0) (lbl: label) :=
+Definition transl_cbranch_int32u (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
   match cmp with
   | Ceq => Pbeqw  r1 r2 lbl
   | Cne => Pbnew  r1 r2 lbl
@@ -145,7 +145,7 @@ Definition transl_cbranch_int32u (cmp: comparison) (r1 r2: ireg0) (lbl: label) :
   | Cge => Pbgeuw r1 r2 lbl
   end.
 
-Definition transl_cbranch_int64s (cmp: comparison) (r1 r2: ireg0) (lbl: label) :=
+Definition transl_cbranch_int64s (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
   match cmp with
   | Ceq => Pbeql r1 r2 lbl
   | Cne => Pbnel r1 r2 lbl
@@ -155,7 +155,7 @@ Definition transl_cbranch_int64s (cmp: comparison) (r1 r2: ireg0) (lbl: label) :
   | Cge => Pbgel r1 r2 lbl
   end.
 
-Definition transl_cbranch_int64u (cmp: comparison) (r1 r2: ireg0) (lbl: label) :=
+Definition transl_cbranch_int64u (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
   match cmp with
   | Ceq => Pbeql  r1 r2 lbl
   | Cne => Pbnel  r1 r2 lbl
@@ -248,7 +248,7 @@ Definition transl_cbranch
   [rd] target register to 0 or 1 depending on the truth value of the
   condition. *)
 
-Definition transl_cond_int32s (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: code) :=
+Definition transl_cond_int32s (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
   match cmp with
   | Ceq => Pseqw rd r1 r2 :: k
   | Cne => Psnew rd r1 r2 :: k
@@ -258,7 +258,7 @@ Definition transl_cond_int32s (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: co
   | Cge => Psltw rd r1 r2 :: Pxoriw rd rd Int.one :: k
   end.
 
-Definition transl_cond_int32u (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: code) :=
+Definition transl_cond_int32u (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
   match cmp with
   | Ceq => Pseqw rd r1 r2 :: k
   | Cne => Psnew rd r1 r2 :: k
@@ -268,7 +268,7 @@ Definition transl_cond_int32u (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: co
   | Cge => Psltuw rd r1 r2 :: Pxoriw rd rd Int.one :: k
   end.
 
-Definition transl_cond_int64s (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: code) :=
+Definition transl_cond_int64s (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
   match cmp with
   | Ceq => Pseql rd r1 r2 :: k
   | Cne => Psnel rd r1 r2 :: k
@@ -278,7 +278,7 @@ Definition transl_cond_int64s (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: co
   | Cge => Psltl rd r1 r2 :: Pxoriw rd rd Int.one :: k
   end.
 
-Definition transl_cond_int64u (cmp: comparison) (rd: ireg) (r1 r2: ireg0) (k: code) :=
+Definition transl_cond_int64u (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
   match cmp with
   | Ceq => Pseql rd r1 r2 :: k
   | Cne => Psnel rd r1 r2 :: k
