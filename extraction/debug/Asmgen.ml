@@ -179,7 +179,7 @@ let thereal_transl_instr f i _ k =
       (msg
         ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('i'::('n'::('s'::('t'::('r'::[]))))))))))))))))))))
 
-let transl_instr f i _ k =
+let transl_instr f i x k =
   match i with
   | Mgetstack _ -> (Printf.eprintf "Mgetstack\n"; thereal_transl_instr f i x k)
   | Msetstack _ -> (Printf.eprintf "Msetstack\n"; thereal_transl_instr f i x k)
@@ -194,5 +194,4 @@ let transl_instr f i _ k =
   | Mgoto _ -> (Printf.eprintf "Mgoto\n"; thereal_transl_instr f i x k)
   | Mcond _ -> (Printf.eprintf "Mcond\n"; thereal_transl_instr f i x k)
   | Mjumptable _ -> (Printf.eprintf "Mjumptable\n"; thereal_transl_instr f i x k)
-  | Mreturn _ -> (Printf.eprintf "Mreturn\n"; thereal_transl_instr f i x k)
-  | _ -> (Printf.eprintf "UNKNOWN\n"; thereal_transl_instr f i x k)
+  | Mreturn -> (Printf.eprintf "Mreturn\n"; thereal_transl_instr f i x k)
