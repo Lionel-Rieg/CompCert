@@ -362,6 +362,8 @@ Lemma transl_instr_label:
 Proof.
   unfold transl_instr; intros; destruct i; TailNoLabel.
 - eapply transl_op_label; eauto.
+- destruct s0; monadInv H; eapply tail_nolabel_trans
+  ; [eapply make_epilogue_label|TailNoLabel]. 
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
 Qed.
 (*
@@ -372,7 +374,6 @@ Qed.
 - eapply transl_op_label; eauto.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
-- destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; (eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel]).
 - eapply transl_cbranch_label; eauto.
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
@@ -829,6 +830,7 @@ Local Transparent destroyed_by_op.
   econstructor; eauto.
   apply agree_set_other; auto with asmgen.
   Simpl. rewrite Z by (rewrite <- (ireg_of_eq _ _ EQ1); eauto with asmgen). assumption. 
+*)
 + (* Direct call *)
   exploit make_epilogue_correct; eauto. intros (rs1 & m1 & U & V & W & X & Y & Z). 
   exploit exec_straight_steps_2; eauto using functions_transl.                      
@@ -843,7 +845,7 @@ Local Transparent destroyed_by_op.
   econstructor; eauto.
   apply agree_set_other; auto with asmgen.
   Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H. auto.
-*)
+
 - (* Mbuiltin *)
   inv AT. monadInv H4.
   exploit functions_transl; eauto. intro FN.

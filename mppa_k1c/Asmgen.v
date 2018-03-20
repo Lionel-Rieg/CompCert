@@ -831,10 +831,10 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       OK (Pjal_s symb sig :: k)
   | Mtailcall sig (inl r) =>
       do r1 <- ireg_of r;
-      OK (make_epilogue f (Pj_r r1 sig :: k))
-  | Mtailcall sig (inr symb) =>
-      OK (make_epilogue f (Pj_s symb sig :: k))
-*)| Mbuiltin ef args res =>
+      OK (make_epilogue f (Pcall :: k))
+*)| Mtailcall sig (inr symb) =>
+      OK (make_epilogue f ((Pcall symb) :: k))
+  | Mbuiltin ef args res =>
       OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) :: k)
   | Mlabel lbl =>
       OK (Plabel lbl :: k)
