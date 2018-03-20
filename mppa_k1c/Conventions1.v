@@ -46,7 +46,7 @@ Definition int_caller_save_regs :=
   :: R52 :: R53 :: R54 :: R55 :: R56 :: R57 :: R58 :: R59 :: R60 :: R61
   :: R62 :: R63 :: nil.
 
-Definition float_caller_save_regs := @nil mreg.
+Definition float_caller_save_regs := R62 :: nil. (* FIXME - for the dummy_float_reg *)
 
 Definition int_callee_save_regs :=
      R15 :: R16 :: R17 :: R18 :: R19 :: R20 :: R21 :: R22
@@ -57,8 +57,8 @@ Definition float_callee_save_regs := @nil mreg.
 Definition destroyed_at_call :=
   List.filter (fun r => negb (is_callee_save r)) all_mregs.
 
-Definition dummy_int_reg   := R0.    (**r Used in [Coloring]. *)
-Definition dummy_float_reg := R0.    (**r Used in [Coloring]. *)
+Definition dummy_int_reg   := R63.    (**r Used in [Coloring]. *)
+Definition dummy_float_reg := R62.    (**r Used in [Coloring]. *)
 
 Definition callee_save_type := mreg_type.
   
