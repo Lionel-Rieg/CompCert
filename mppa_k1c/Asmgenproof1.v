@@ -982,9 +982,9 @@ Proof.
 Opaque Int.eq.
   intros until c; intros TR EV.
   unfold transl_op in TR; destruct op; ArgsInv; simpl in EV; SimplEval EV; try TranslOpSimpl.
-(*
 - (* move *)
   destruct (preg_of res), (preg_of m0); inv TR; TranslOpSimpl.
+(*
 - (* intconst *)
   exploit loadimm32_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.

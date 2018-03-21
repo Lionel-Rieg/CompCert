@@ -277,7 +277,11 @@ Remark transl_op_label:
 Proof.
 Opaque Int.eq.
   unfold transl_op; intros; destruct op; TailNoLabel.
+(* Omove *)
+- destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
+(* ? *)
 - apply opimm32_label; intros; exact I.
+(* ? *)
 - apply opimm64_label; intros; exact I.
 Qed.
 

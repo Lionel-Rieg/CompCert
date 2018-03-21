@@ -378,12 +378,12 @@ Definition transl_cond_op
 Definition transl_op
               (op: operation) (args: list mreg) (res: mreg) (k: code) :=
   match op, args with
-(*| Omove, a1 :: nil =>
+  | Omove, a1 :: nil =>
       match preg_of res, preg_of a1 with
       | IR r, IR a => OK (Pmv r a :: k)
       |  _  ,  _   => Error(msg "Asmgen.Omove")
       end
-*)| Ointconst n, nil =>
+  | Ointconst n, nil =>
       do rd <- ireg_of res;
       OK (loadimm32 rd n k)
   | Olongconst n, nil =>
