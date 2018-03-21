@@ -159,9 +159,9 @@ module Target : TARGET =
 (* Printing of instructions *)
     let print_instruction oc = function
       | Pcall(s) ->
-         fprintf oc "	call	%a\n" symbol s
+         fprintf oc "	call	%a\n;;\n" symbol s
       | Pgoto(s) ->
-         fprintf oc "	goto	%a\n" symbol s
+         fprintf oc "	goto	%a\n;;\n" symbol s
       | Pret ->
          fprintf oc "	ret\n;;\n"
       | Pget (rd, rs) ->
@@ -359,9 +359,9 @@ module Target : TARGET =
          fprintf oc "	sb	%a, %a(%a)\n" ireg rd offset ofs ireg ra
       | Psh(rd, ra, ofs) ->
          fprintf oc "	sh	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-      | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) ->
-         fprintf oc "	sw	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-    *)| Psd(rd, ra, ofs) (*| Psd_a(rd, ra, ofs)*) -> assert Archi.ptr64;
+    *)| Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
+         fprintf oc "	sw	%a[%a] = %a\n" offset ofs ireg ra ireg rd
+      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
          fprintf oc "	sd	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
 
 

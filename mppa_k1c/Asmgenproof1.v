@@ -1218,7 +1218,7 @@ Proof.
   destruct A as (mk_instr & B & C). subst c. 
   eapply indexed_load_access_correct; eauto with asmgen. 
 Qed.
-(*
+
 Lemma storeind_correct:
   forall (base: ireg) ofs ty src k c (rs: regset) m m',
   storeind src base ofs ty k = OK c ->
@@ -1238,7 +1238,7 @@ Proof.
   destruct A as (mk_instr & B & C). subst c. 
   eapply indexed_store_access_correct; eauto with asmgen. 
 Qed.
-*)
+
 
 Lemma Pget_correct:
   forall (dst: gpreg) (src: preg) k (rs: regset) m,

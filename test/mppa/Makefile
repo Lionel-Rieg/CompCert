@@ -1,4 +1,4 @@
-ELF=simple.bin
+ELF=simple.bin call.bin
 DEBUG:=$(if $(DEBUG),"-dall",)
 
 all: $(ELF)

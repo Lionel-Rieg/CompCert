@@ -707,7 +707,7 @@ Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs k)
   | _, _           => Error (msg "Asmgen.loadind")
   end.
-(*
+  
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :=
   match ty, preg_of src with
   | Tint,    IR rd => OK (indexed_memory_access (Psw rd) base ofs k)
@@ -719,7 +719,7 @@ Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :
   | _, _           => Error (msg "Asmgen.storeind")
   end.
 
-*)
+  
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) (k: code) :=
   indexed_memory_access (Pld dst) base ofs k.
 
@@ -812,9 +812,9 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
   match i with
   | Mgetstack ofs ty dst =>
       loadind SP ofs ty dst k
-(*| Msetstack src ofs ty =>
+  | Msetstack src ofs ty =>
       storeind src SP ofs ty k
-  | Mgetparam ofs ty dst =>
+(*| Mgetparam ofs ty dst =>
       (* load via the frame pointer if it is valid *)
       do c <- loadind GPR30 ofs ty dst k;
       OK (if ep then c
