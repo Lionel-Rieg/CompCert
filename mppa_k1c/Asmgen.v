@@ -827,13 +827,13 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       transl_store chunk addr args src k
   | Mcall sig (inl r) =>
       do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)
-  | Mcall sig (inr symb) =>
-      OK (Pjal_s symb sig :: k)
-  | Mtailcall sig (inl r) =>
+*)| Mcall sig (inr symb) =>
+      OK ((Pcall symb) :: k)
+(*| Mtailcall sig (inl r) =>
       do r1 <- ireg_of r;
       OK (make_epilogue f (Pcall :: k))
 *)| Mtailcall sig (inr symb) =>
-      OK (make_epilogue f ((Pcall symb) :: k))
+      OK (make_epilogue f ((Pgoto symb) :: k))
   | Mbuiltin ef args res =>
       OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) :: k)
   | Mlabel lbl =>

@@ -159,7 +159,9 @@ module Target : TARGET =
 (* Printing of instructions *)
     let print_instruction oc = function
       | Pcall(s) ->
-         fprintf oc "	j	%a\n" symbol s
+         fprintf oc "	call	%a\n" symbol s
+      | Pgoto(s) ->
+         fprintf oc "	goto	%a\n" symbol s
       | Pret ->
          fprintf oc "	ret\n;;\n"
       | Pget (rd, rs) ->

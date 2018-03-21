@@ -141,6 +141,7 @@ Inductive instruction : Type :=
   | Pset    (rd: preg) (rs: ireg)                    (**r set system register *)
   | Pret                                             (**r return *)
   | Pcall   (l: label)                               (**r function call *)
+  | Pgoto   (l: label)                               (**r goto *)
   | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
 
 (** 32-bit integer register-immediate instructions *)
@@ -636,6 +637,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
   | Pret =>
       Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
+      Next (rs#RA <- (Val.offset_ptr (rs#PC) Ptrofs.one)#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
+      (* Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m *)
+  | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pmv d s =>
       Next (nextinstr (rs#d <- (rs#s))) m

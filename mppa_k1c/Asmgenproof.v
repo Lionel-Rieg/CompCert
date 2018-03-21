@@ -363,6 +363,7 @@ Proof.
   unfold transl_instr; intros; destruct i; TailNoLabel.
 - eapply loadind_label; eauto.
 - eapply transl_op_label; eauto.
+- destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
   ; [eapply make_epilogue_label|TailNoLabel]. 
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
@@ -789,6 +790,7 @@ Local Transparent destroyed_by_op.
   eapply agree_sp_def; eauto.
   simpl. eapply agree_exten; eauto. intros. Simpl.
   Simpl. rewrite <- H2. auto.
+*)
 + (* Direct call *)
   generalize (code_tail_next_int _ _ _ _ NOOV H6). intro CT1.
   assert (TCA: transl_code_at_pc ge (Vptr fb (Ptrofs.add ofs Ptrofs.one)) fb f c false tf x).
@@ -803,7 +805,7 @@ Local Transparent destroyed_by_op.
   eapply agree_sp_def; eauto.
   simpl. eapply agree_exten; eauto. intros. Simpl.
   Simpl. rewrite <- H2. auto.
-*)
+
 - (* Mtailcall *)
   assert (f0 = f) by congruence.  subst f0.
   inversion AT; subst.
@@ -843,8 +845,12 @@ Local Transparent destroyed_by_op.
   traceEq.
   (* match states *)
   econstructor; eauto.
-  apply agree_set_other; auto with asmgen.
-  Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H. auto.
+  { apply agree_set_other.
+    - econstructor; auto with asmgen.
+      + apply V.
+      + intro r. destruct r; apply V; auto.
+    - eauto with asmgen. }
+  { Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H. auto. }
 
 - (* Mbuiltin *)
   inv AT. monadInv H4.
