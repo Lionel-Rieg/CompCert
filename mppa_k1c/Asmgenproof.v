@@ -311,7 +311,7 @@ Proof.
   destruct (make_immed64 (Ptrofs.to_int64 ofs)); TailNoLabel.
   (* destruct (make_immed32 (Ptrofs.to_int ofs)); TailNoLabel. *)
 Qed.
-(*
+
 Remark loadind_label:
   forall base ofs ty dst k c,
   loadind base ofs ty dst k = OK c -> tail_nolabel k c.
@@ -319,7 +319,7 @@ Proof.
   unfold loadind; intros.
   destruct ty, (preg_of dst); inv H; apply indexed_memory_access_label; intros; exact I.
 Qed.
-
+(*
 Remark storeind_label:
   forall src base ofs ty k c,
   storeind src base ofs ty k = OK c -> tail_nolabel k c.
@@ -361,13 +361,13 @@ Lemma transl_instr_label:
   match i with Mlabel lbl => c = Plabel lbl :: k | _ => tail_nolabel k c end.
 Proof.
   unfold transl_instr; intros; destruct i; TailNoLabel.
+- eapply loadind_label; eauto.
 - eapply transl_op_label; eauto.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
   ; [eapply make_epilogue_label|TailNoLabel]. 
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
 Qed.
 (*
-- eapply loadind_label; eauto.
 - eapply storeind_label; eauto.
 - destruct ep. eapply loadind_label; eauto.
   eapply tail_nolabel_trans. apply loadind_ptr_label. eapply loadind_label; eauto. 
@@ -661,15 +661,15 @@ Proof.
   exploit Mem.loadv_extends; eauto. intros [v' [A B]].
   rewrite (sp_val _ _ _ AG) in A.
   left; eapply exec_straight_steps; eauto. intros. simpl in TR.
+(*  
   inversion TR.
-(*
   intros [rs' [P [Q R]]].
-
+*)
   exploit loadind_correct; eauto with asmgen. intros [rs' [P [Q R]]].
   exists rs'; split. eauto.
   split. eapply agree_set_mreg; eauto with asmgen. congruence.
   simpl; congruence.
-*)
+
 
 - (* Msetstack *)
   unfold store_stack in H.

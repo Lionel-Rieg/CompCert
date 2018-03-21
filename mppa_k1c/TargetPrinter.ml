@@ -348,9 +348,9 @@ module Target : TARGET =
          fprintf oc "	lh	%a, %a(%a)\n" ireg rd offset ofs ireg ra
       | Plhu(rd, ra, ofs) ->
          fprintf oc "	lhu	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-      | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) ->
-         fprintf oc "	lw	%a, %a(%a)\n" ireg rd offset ofs ireg ra
-    *)| Pld(rd, ra, ofs) (*| Pld_a(rd, ra, ofs)*) -> assert Archi.ptr64;
+    *)| Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
+         fprintf oc "	lws	%a = %a[%a]\n" ireg rd offset ofs ireg ra
+      | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
          fprintf oc "	ld	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
 
     (*| Psb(rd, ra, ofs) ->

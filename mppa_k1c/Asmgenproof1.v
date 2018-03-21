@@ -1196,7 +1196,7 @@ Proof.
   unfold exec_store. rewrite B, C, STORE by auto. eauto. auto. 
   intros; Simpl.
 Qed.
-(*
+
 Lemma loadind_correct:
   forall (base: ireg) ofs ty dst k c (rs: regset) m v,
   loadind base ofs ty dst k = OK c ->
@@ -1213,11 +1213,12 @@ Proof.
              /\ forall base' ofs' rs',
                    exec_instr ge fn (mk_instr base' ofs') rs' m =
                    exec_load ge (chunk_of_type ty) rs' m (preg_of dst) base' ofs').
-  { unfold loadind in TR. destruct ty, (preg_of dst); inv TR; econstructor; split; eauto. }
+  { unfold loadind in TR. 
+    destruct ty, (preg_of dst); inv TR; econstructor; split; eauto. }
   destruct A as (mk_instr & B & C). subst c. 
   eapply indexed_load_access_correct; eauto with asmgen. 
 Qed.
-
+(*
 Lemma storeind_correct:
   forall (base: ireg) ofs ty src k c (rs: regset) m m',
   storeind src base ofs ty k = OK c ->

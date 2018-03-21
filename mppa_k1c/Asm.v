@@ -242,12 +242,12 @@ Inductive instruction : Type :=
   | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load unsigned int8 *)
   | Plh     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load signed int16 *)
   | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load unsigned int16 *)
-  | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
+*)| Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
   | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
-*)| Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
-(*| Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
+  | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
+  | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
 
-  | Psb     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int8 *)
+(*| Psb     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int8 *)
   | Psh     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int16 *)
   | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
   | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
@@ -263,8 +263,8 @@ Inductive instruction : Type :=
   | Pfmvxd   (rd: ireg) (rs: freg)                  (**r move FP double to integer register *)
 
   (* 32-bit (single-precision) floating point *)
-  | Pfls     (rd: freg) (ra: ireg) (ofs: offset)    (**r load float *)
-  | Pfss     (rs: freg) (ra: ireg) (ofs: offset)    (**r store float *)
+*)| Pfls     (rd: freg) (ra: ireg) (ofs: offset)    (**r load float *)
+(*| Pfss     (rs: freg) (ra: ireg) (ofs: offset)    (**r store float *)
 
   | Pfnegs   (rd: freg) (rs: freg)                  (**r negation *)
   | Pfabss   (rd: freg) (rs: freg)                  (**r absolute value *)
@@ -298,8 +298,8 @@ Inductive instruction : Type :=
   | Pfcvtslu (rd: freg) (rs: ireg)                 (**r unsigned int 64-> float32 conversion *)
 
   (* 64-bit (double-precision) floating point *)
-  | Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
-  | Pfld_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r load any64 *)
+*)| Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
+(*| Pfld_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r load any64 *)
   | Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
   | Pfsd_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r store any64 *)
 
@@ -825,15 +825,15 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       exec_load Mint16signed rs m d a ofs
   | Plhu d a ofs =>
       exec_load Mint16unsigned rs m d a ofs
-  | Plw d a ofs =>
+*)| Plw d a ofs =>
       exec_load Mint32 rs m d a ofs
   | Plw_a d a ofs =>
       exec_load Many32 rs m d a ofs
-*)| Pld d a ofs =>
+  | Pld d a ofs =>
       exec_load Mint64 rs m d a ofs
-(*| Pld_a d a ofs =>
+  | Pld_a d a ofs =>
       exec_load Many64 rs m d a ofs
-  | Psb s a ofs =>
+(*| Psb s a ofs =>
       exec_store Mint8unsigned rs m s a ofs
   | Psh s a ofs =>
       exec_store Mint16unsigned rs m s a ofs
@@ -851,9 +851,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (rs#s))) m
 
 (** 32-bit (single-precision) floating point *)
-  | Pfls d a ofs =>
+*)| Pfls d a ofs =>
       exec_load Mfloat32 rs m d a ofs
-  | Pfss s a ofs =>
+(*| Pfss s a ofs =>
       exec_store Mfloat32 rs m s a ofs
 
   | Pfnegs d s =>
@@ -895,9 +895,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.maketotal (Val.singleoflongu rs###s)))) m
 
 (** 64-bit (double-precision) floating point *)
-  | Pfld d a ofs =>
+*)| Pfld d a ofs =>
       exec_load Mfloat64 rs m d a ofs
-  | Pfld_a d a ofs =>
+(*| Pfld_a d a ofs =>
       exec_load Many64 rs m d a ofs
   | Pfsd s a ofs =>
       exec_store Mfloat64 rs m s a ofs

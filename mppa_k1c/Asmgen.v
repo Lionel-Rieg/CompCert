@@ -696,7 +696,7 @@ Definition indexed_memory_access
   | Imm64_large imm =>
       Pmake GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
 *)end.
-(*
+
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   match ty, preg_of dst with
   | Tint,    IR rd => OK (indexed_memory_access (Plw rd) base ofs k)
@@ -707,7 +707,7 @@ Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs k)
   | _, _           => Error (msg "Asmgen.loadind")
   end.
-
+(*
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :=
   match ty, preg_of src with
   | Tint,    IR rd => OK (indexed_memory_access (Psw rd) base ofs k)
@@ -810,9 +810,9 @@ Definition make_epilogue (f: Mach.function) (k: code) :=
 Definition transl_instr (f: Mach.function) (i: Mach.instruction)
                         (ep: bool) (k: code) :=
   match i with
-(*| Mgetstack ofs ty dst =>
+  | Mgetstack ofs ty dst =>
       loadind SP ofs ty dst k
-  | Msetstack src ofs ty =>
+(*| Msetstack src ofs ty =>
       storeind src SP ofs ty k
   | Mgetparam ofs ty dst =>
       (* load via the frame pointer if it is valid *)
