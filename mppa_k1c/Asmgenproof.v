@@ -279,9 +279,9 @@ Opaque Int.eq.
   unfold transl_op; intros; destruct op; TailNoLabel.
 (* Omove *)
 - destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
-(* ? *)
+(* Oaddimm32 *)
 - apply opimm32_label; intros; exact I.
-(* ? *)
+(* Oaddimm64 *)
 - apply opimm64_label; intros; exact I.
 Qed.
 
@@ -372,7 +372,7 @@ Proof.
 - eapply transl_op_label; eauto.
 - destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
-  ; [eapply make_epilogue_label|TailNoLabel]. 
+  ; [eapply make_epilogue_label|TailNoLabel].
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
 Qed.
 (*
@@ -669,10 +669,6 @@ Proof.
   exploit Mem.loadv_extends; eauto. intros [v' [A B]].
   rewrite (sp_val _ _ _ AG) in A.
   left; eapply exec_straight_steps; eauto. intros. simpl in TR.
-(*  
-  inversion TR.
-  intros [rs' [P [Q R]]].
-*)
   exploit loadind_correct; eauto with asmgen. intros [rs' [P [Q R]]].
   exists rs'; split. eauto.
   split. eapply agree_set_mreg; eauto with asmgen. congruence.

@@ -568,17 +568,7 @@ Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) :=
       | _          => Stuck
       end
   end.
-(*
-Definition do_call (f: function) (lbl: label) (rs: regset) (m: mem) :=
-  match label_pos lbl 0 (fn_code f) with
-  | None => Stuck
-  | Some pos =>
-      match rs#PC with
-      | Vptr b ofs => Next (rs#PC <- (Vptr b (Ptrofs.repr pos))#RA <- (rs#PC)) m
-      | _          => Stuck
-      end
-  end.
-*)
+
 (** Auxiliaries for memory accesses *)
 
 Definition eval_offset (ofs: offset) : ptrofs :=
@@ -638,7 +628,6 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
       Next (rs#RA <- (Val.offset_ptr (rs#PC) Ptrofs.one)#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-      (* Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m *)
   | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pmv d s =>

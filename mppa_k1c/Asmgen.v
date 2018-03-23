@@ -707,7 +707,7 @@ Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: code) :=
   | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs k)
   | _, _           => Error (msg "Asmgen.loadind")
   end.
-  
+
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :=
   match ty, preg_of src with
   | Tint,    IR rd => OK (indexed_memory_access (Psw rd) base ofs k)
@@ -719,7 +719,6 @@ Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: code) :
   | _, _           => Error (msg "Asmgen.storeind")
   end.
 
-  
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) (k: code) :=
   indexed_memory_access (Pld dst) base ofs k.
 
