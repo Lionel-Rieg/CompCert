@@ -160,7 +160,7 @@ module Target : TARGET =
     let print_instruction oc = function
       | Pcall(s) ->
          fprintf oc "	call	%a\n;;\n" symbol s
-      | Pgoto(s) ->
+      | Pgoto(s) | Pj_l(s) ->
          fprintf oc "	goto	%a\n;;\n" symbol s
       | Pret ->
          fprintf oc "	ret\n;;\n"

@@ -884,7 +884,6 @@ Local Transparent destroyed_by_op.
 - (* Mgoto *)
   assert (f0 = f) by congruence. subst f0.
   inv AT. monadInv H4.
-(*
   exploit find_label_goto_label; eauto. intros [tc' [rs' [GOTO [AT2 INV]]]].
   left; exists (State rs' m'); split.
   apply plus_one. econstructor; eauto.
@@ -894,7 +893,6 @@ Local Transparent destroyed_by_op.
   econstructor; eauto.
   eapply agree_exten; eauto with asmgen.
   congruence.
-*)
 - (* Mcond true *)
   assert (f0 = f) by congruence. subst f0.
   exploit eval_condition_lessdef. eapply preg_vals; eauto. eauto. eauto. intros EC.

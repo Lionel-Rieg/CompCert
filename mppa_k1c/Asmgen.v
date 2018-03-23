@@ -837,9 +837,9 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) :: k)
   | Mlabel lbl =>
       OK (Plabel lbl :: k)
-(*| Mgoto lbl =>
+  | Mgoto lbl =>
       OK (Pj_l lbl :: k)
-  | Mcond cond args lbl =>
+(*| Mcond cond args lbl =>
       transl_cbranch cond args lbl k
   | Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
 *)| Mreturn =>

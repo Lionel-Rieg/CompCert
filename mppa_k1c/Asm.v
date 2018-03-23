@@ -216,8 +216,8 @@ Inductive instruction : Type :=
   | Pcvtw2l (r: ireg)                                (**r int32 signed -> int64 (pseudo) *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
-  | Pj_l    (l: label)                              (**r jump to label *)
-  | Pj_s    (symb: ident) (sg: signature)           (**r jump to symbol *)
+*)| Pj_l    (l: label)                              (**r jump to label *)
+(*| Pj_s    (symb: ident) (sg: signature)           (**r jump to symbol *)
   | Pj_r    (r: ireg)     (sg: signature)           (**r jump register *)
   | Pjal_s  (symb: ident) (sg: signature)           (**r jump-and-link symbol *)
   | Pjal_r  (r: ireg)     (sg: signature)           (**r jump-and-link register *)
@@ -767,9 +767,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#r <- (Val.longofint rs#r))) m
 
 (** Unconditional jumps.  Links are always to X1/RA. *)
-  | Pj_l l =>
+*)| Pj_l l =>
       goto_label f l rs m
-  | Pj_s s sg =>
+(*| Pj_s s sg =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pj_r r sg =>
       Next (rs#PC <- (rs#r)) m
