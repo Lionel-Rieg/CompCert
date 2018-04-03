@@ -92,6 +92,44 @@ Module Pregmap := EMap(PregEq).
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
+Notation "'RTMP'" := GPR31 (only parsing) : asm.
+
+Inductive btest: Type :=
+(*| BTdnez                              (**r Double Not Equal to Zero *)
+  | BTdeqz                              (**r Double Equal to Zero *)
+  | BTdltz                              (**r Double Less Than Zero *)
+  | BTdgez                              (**r Double Greater Than or Equal to Zero *)
+  | BTdlez                              (**r Double Less Than or Equal to Zero *)
+  | BTdgtz                              (**r Double Greater Than Zero *)
+  | BTodd                               (**r Odd (LSB Set) *)
+  | BTeven                              (**r Even (LSB Clear) *)
+*)| BTwnez                              (**r Word Not Equal to Zero *)
+  | BTweqz                              (**r Word Equal to Zero *)
+(*| BTwltz                              (**r Word Less Than Zero *)
+  | BTwgez                              (**r Word Greater Than or Equal to Zero *)
+  | BTwlez                              (**r Word Less Than or Equal to Zero *)
+  | BTwgtz                              (**r Word Greater Than Zero *)
+*).
+
+Inductive itest: Type :=
+  | ITne                                (**r Not Equal *)
+  | ITeq                                (**r Equal *)
+  | ITlt                                (**r Less Than *)
+  | ITge                                (**r Greater Than or Equal *)
+  | ITle                                (**r Less Than or Equal *)
+  | ITgt                                (**r Greater Than *)
+  | ITneu                               (**r Unsigned Not Equal *)
+  | ITequ                               (**r Unsigned Equal *)
+  | ITltu                               (**r Less Than Unsigned *)
+  | ITgeu                               (**r Greater Than or Equal Unsigned *)
+  | ITleu                               (**r Less Than or Equal Unsigned *)
+  | ITgtu                               (**r Greater Than Unsigned *)
+  (* Not used yet *)
+  | ITall                               (**r All Bits Set in Mask *)
+  | ITnall                              (**r Not All Bits Set in Mask *)
+  | ITany                               (**r Any Bits Set in Mask *)
+  | ITnone                              (**r Not Any Bits Set in Mask *)
+  .
 
 (** Offsets for load and store instructions.  An offset is either an
   immediate integer or the low part of a symbol. *)
@@ -136,121 +174,46 @@ Definition label := positive.
   [Asmgen]) is careful to respect this range. *)
 
 Inductive instruction : Type :=
+(** System Registers *)
+  | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
+  | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
 (** Branch Control Unit instructions *)
-  | Pget    (rd: ireg) (rs: preg)                    (**r get system register *)
-  | Pset    (rd: preg) (rs: ireg)                    (**r set system register *)
-  | Pret                                             (**r return *)
-  | Pcall   (l: label)                               (**r function call *)
-  | Pgoto   (l: label)                               (**r goto *)
-  | Pmv     (rd: ireg) (rs: ireg)                    (**r integer move *)
+  | Pret                                            (**r return *)
+  | Pcall   (l: label)                              (**r function call *)
+  | Pgoto   (l: label)                              (**r goto *)
+
+(** Register move *)
+  | Pmv     (rd: ireg) (rs: ireg)                   (**r integer move *)
+
+(** Comparisons *)
+  | Pcompw  (it: itest) (rd rs1 rs2: ireg)      (**r integer comparison *)
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
-(*| Psltiw  (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than immediate *)
-  | Psltiuw (rd: ireg) (rs: ireg) (imm: int)        (**r set-less-than unsigned immediate *)
-  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
-  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or immediate *)
-  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor immediate *)
-  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-left-logical immediate *)
-  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-logical immediate *)
-  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-arith immediate *)
-  | Pluiw   (rd: ireg)             (imm: int)        (**r load upper-immediate *)
-(** 32-bit integer register-register instructions *)
-*)| Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
-(*| Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
 
-  | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply low *)
-  | Pmulhw  (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high signed *)
-  | Pmulhuw (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high unsigned *)
-  | Pdivw   (rd: ireg) (rs1 rs2: ireg)              (**r integer division *)
-  | Pdivuw  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer division *)
-  | Premw   (rd: ireg) (rs1 rs2: ireg)              (**r integer remainder *)
-  | Premuw  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer remainder *)
-  | Psltw   (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than *)
-  | Psltuw  (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than unsigned *)
-  | Pseqw   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 == rs2] (pseudo) *)
-  | Psnew   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 != rs2] (pseudo) *)
-  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise and *)
-  | Porw    (rd: ireg) (rs1 rs2: ireg)              (**r bitwise or *)
-  | Pxorw   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise xor *)
-  | Psllw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-left-logical *)
-  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-logical *)
-  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-arith *)
+(** 32-bit integer register-register instructions *)
+  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
 
 (** 64-bit integer register-immediate instructions *)
-*)| Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) (*
-  | Psltil  (rd: ireg) (rs: ireg) (imm: int64)      (**r set-less-than immediate *)
-  | Psltiul (rd: ireg) (rs: ireg) (imm: int64)      (**r set-less-than unsigned immediate *)
-  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *)
-  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or immediate *)
-  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor immediate *)
-  | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-left-logical immediate *)
-  | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-logical immediate *)
-  | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift-right-arith immediate *)
-  | Pluil   (rd: ireg)             (imm: int64)      (**r FIXME - remove it ; load upper-immediate *)
-*)| Pmake   (rd: ireg)             (imm: int)        (**r load immediate *)
-  | Pmakel  (rd: ireg)             (imm: int64)      (**r load immediate long *)
+  | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
+  | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
+  | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
+
 (** 64-bit integer register-register instructions *)
-  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *) (*
-  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r integer subtraction *)
-
-  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply low *)
-  | Pmulhl  (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high signed *)
-  | Pmulhul (rd: ireg) (rs1 rs2: ireg)              (**r integer multiply high unsigned *)
-  | Pdivl   (rd: ireg) (rs1 rs2: ireg)              (**r integer division *)
-  | Pdivul  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer division *)
-  | Preml   (rd: ireg) (rs1 rs2: ireg)              (**r integer remainder *)
-  | Premul  (rd: ireg) (rs1 rs2: ireg)              (**r unsigned integer remainder *)
-  | Psltl   (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than *)
-  | Psltul  (rd: ireg) (rs1 rs2: ireg)              (**r set-less-than unsigned *)
-  | Pseql   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 == rs2] (pseudo) *)
-  | Psnel   (rd: ireg) (rs1 rs2: ireg)              (**r [rd <- rs1 != rs2] (pseudo) *)
-  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise and *)
-  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r bitwise or *)
-  | Pxorl   (rd: ireg) (rs1 rs2: ireg)              (**r bitwise xor *)
-  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift-left-logical *)
-  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-logical *)
-  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift-right-arith *)
-
-  | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r int64->int32 (pseudo) *)
-  | Pcvtw2l (r: ireg)                                (**r int32 signed -> int64 (pseudo) *)
+  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
-*)| Pj_l    (l: label)                              (**r jump to label *)
-(*| Pj_s    (symb: ident) (sg: signature)           (**r jump to symbol *)
-  | Pj_r    (r: ireg)     (sg: signature)           (**r jump register *)
-  | Pjal_s  (symb: ident) (sg: signature)           (**r jump-and-link symbol *)
-  | Pjal_r  (r: ireg)     (sg: signature)           (**r jump-and-link register *)
+  | Pj_l    (l: label)                              (**r jump to label *)
 
-  (* Conditional branches, 32-bit comparisons *)
-  | Pbeqw   (rs1 rs2: ireg) (l: label)             (**r branch-if-equal *)
-  | Pbnew   (rs1 rs2: ireg) (l: label)             (**r branch-if-not-equal signed *)
-  | Pbltw   (rs1 rs2: ireg) (l: label)             (**r branch-if-less signed *)
-  | Pbltuw  (rs1 rs2: ireg) (l: label)             (**r branch-if-less unsigned *)
-  | Pbgew   (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal signed *)
-  | Pbgeuw  (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal unsigned *)
+  (* Conditional branches *)
+  | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
 
-  (* Conditional branches, 64-bit comparisons *)
-  | Pbeql   (rs1 rs2: ireg) (l: label)             (**r branch-if-equal *)
-  | Pbnel   (rs1 rs2: ireg) (l: label)             (**r branch-if-not-equal signed *)
-  | Pbltl   (rs1 rs2: ireg) (l: label)             (**r branch-if-less signed *)
-  | Pbltul  (rs1 rs2: ireg) (l: label)             (**r branch-if-less unsigned *)
-  | Pbgel   (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal signed *)
-  | Pbgeul  (rs1 rs2: ireg) (l: label)             (**r branch-if-greater-or-equal unsigned *)
-
-  (* Loads and stores *)
-  | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load signed int8 *)
-  | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load unsigned int8 *)
-  | Plh     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load signed int16 *)
-  | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load unsigned int16 *)
-*)| Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
+  | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
   | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
   | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
   | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
 
-(*| Psb     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int8 *)
-  | Psh     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int16 *)
-*)| Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
+  | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
   | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
   | Psd     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int64 *)
   | Psd_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any64 *)
@@ -600,6 +563,45 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
     | None => Stuck
   end.
 
+Inductive signedness: Type := Signed | Unsigned.
+
+Definition itest_for_cmp (c: comparison) (s: signedness) :=
+  match c, s with
+  | Cne, Signed => ITne
+  | Ceq, Signed => ITeq
+  | Clt, Signed => ITlt
+  | Cge, Signed => ITge
+  | Cle, Signed => ITle
+  | Cgt, Signed => ITgt
+  | Cne, Unsigned => ITneu
+  | Ceq, Unsigned => ITequ
+  | Clt, Unsigned => ITltu
+  | Cge, Unsigned => ITgeu
+  | Cle, Unsigned => ITleu
+  | Cgt, Unsigned => ITgtu
+  end.
+
+(** Comparing integers *)
+Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
+  match t with
+  | ITne  => Val.cmp Cne v1 v2
+  | ITeq  => Val.cmp Ceq v1 v2
+  | ITlt  => Val.cmp Clt v1 v2
+  | ITge  => Val.cmp Cge v1 v2
+  | ITle  => Val.cmp Cle v1 v2
+  | ITgt  => Val.cmp Cgt v1 v2
+  | ITneu => Val.cmpu (Mem.valid_pointer m) Cne v1 v2
+  | ITequ => Val.cmpu (Mem.valid_pointer m) Ceq v1 v2
+  | ITltu => Val.cmpu (Mem.valid_pointer m) Clt v1 v2
+  | ITgeu => Val.cmpu (Mem.valid_pointer m) Cge v1 v2
+  | ITleu => Val.cmpu (Mem.valid_pointer m) Cle v1 v2
+  | ITgtu => Val.cmpu (Mem.valid_pointer m) Cgt v1 v2
+  | ITall
+  | ITnall
+  | ITany
+  | ITnone => Vundef
+  end.
+
 (** Execution of a single instruction [i] in initial state [rs] and
     [m].  Return updated state.  For instructions that correspond to
     actual RISC-V instructions, the cases are straightforward
@@ -633,90 +635,23 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
   | Pmv d s =>
       Next (nextinstr (rs#d <- (rs#s))) m
 
+(** Comparisons *)
+  | Pcompw c d s1 s2 => 
+      (* Next (nextinstr (rs#d <- (Val.cmp Cne rs##s1 rs##s2))) m *)
+      Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
+
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
-(*| Psltiw d s i =>
-      Next (nextinstr (rs#d <- (Val.cmp Clt rs##s (Vint i)))) m
-  | Psltiuw d s i =>
-      Next (nextinstr (rs#d <- (Val.cmpu (Mem.valid_pointer m) Clt rs##s (Vint i)))) m
-  | Pandiw d s i =>
-      Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
-  | Poriw d s i =>
-      Next (nextinstr (rs#d <- (Val.or rs##s (Vint i)))) m
-  | Pxoriw d s i =>
-      Next (nextinstr (rs#d <- (Val.xor rs##s (Vint i)))) m
-  | Pslliw d s i =>
-      Next (nextinstr (rs#d <- (Val.shl rs##s (Vint i)))) m
-  | Psrliw d s i =>
-      Next (nextinstr (rs#d <- (Val.shru rs##s (Vint i)))) m
-  | Psraiw d s i =>
-      Next (nextinstr (rs#d <- (Val.shr rs##s (Vint i)))) m
-  | Pluiw d i =>
-      Next (nextinstr (rs#d <- (Vint (Int.shl i (Int.repr 12))))) m
 
 (** 32-bit integer register-register instructions *)
-*)| Paddw d s1 s2 =>
+  | Paddw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.add rs##s1 rs##s2))) m
-(*| Psubw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.sub rs##s1 rs##s2))) m
-  | Pmulw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mul rs##s1 rs##s2))) m
-  | Pmulhw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mulhs rs##s1 rs##s2))) m
-  | Pmulhuw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mulhu rs##s1 rs##s2))) m
-  | Pdivw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.divs rs##s1 rs##s2)))) m
-  | Pdivuw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.divu rs##s1 rs##s2)))) m
-  | Premw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.mods rs##s1 rs##s2)))) m
-  | Premuw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.modu rs##s1 rs##s2)))) m
-  | Psltw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.cmp Clt rs##s1 rs##s2))) m
-  | Psltuw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.cmpu (Mem.valid_pointer m) Clt rs##s1 rs##s2))) m
-  | Pseqw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.cmpu (Mem.valid_pointer m) Ceq rs##s1 rs##s2))) m
-  | Psnew d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.cmpu (Mem.valid_pointer m) Cne rs##s1 rs##s2))) m
-  | Pandw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.and rs##s1 rs##s2))) m
-  | Porw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.or rs##s1 rs##s2))) m
-  | Pxorw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.xor rs##s1 rs##s2))) m
-  | Psllw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shl rs##s1 rs##s2))) m
-  | Psrlw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shru rs##s1 rs##s2))) m
-  | Psraw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shr rs##s1 rs##s2))) m
 
 (** 64-bit integer register-immediate instructions *)
-*)| Paddil d s i =>
+  | Paddil d s i =>
       Next (nextinstr (rs#d <- (Val.addl rs###s (Vlong i)))) m
-(*| Psltil d s i =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmpl Clt rs###s (Vlong i))))) m
-  | Psltiul d s i =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmplu (Mem.valid_pointer m) Clt rs###s (Vlong i))))) m
-  | Pandil d s i =>
-      Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
-  | Poril d s i =>
-      Next (nextinstr (rs#d <- (Val.orl rs###s (Vlong i)))) m
-  | Pxoril d s i =>
-      Next (nextinstr (rs#d <- (Val.xorl rs###s (Vlong i)))) m
-  | Psllil d s i =>
-      Next (nextinstr (rs#d <- (Val.shll rs###s (Vint i)))) m
-  | Psrlil d s i =>
-      Next (nextinstr (rs#d <- (Val.shrlu rs###s (Vint i)))) m
-  | Psrail d s i =>
-      Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
-  | Pluil d i =>
-      Next (nextinstr (rs#d <- (Vlong (Int64.sign_ext 32 (Int64.shl i (Int64.repr 12)))))) m
-*)| Pmakel d i =>
+  | Pmakel d i =>
       Next (nextinstr (rs#d <- (Vlong i))) m
   | Pmake d i =>
       Next (nextinstr (rs#d <- (Vint i))) m
@@ -724,63 +659,18 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
-(*| Psubl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.subl rs###s1 rs###s2))) m
-  | Pmull d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mull rs###s1 rs###s2))) m
-  | Pmulhl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mullhs rs###s1 rs###s2))) m
-  | Pmulhul d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mullhu rs###s1 rs###s2))) m
-  | Pdivl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.divls rs###s1 rs###s2)))) m
-  | Pdivul d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.divlu rs###s1 rs###s2)))) m
-  | Preml d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.modls rs###s1 rs###s2)))) m
-  | Premul d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.modlu rs###s1 rs###s2)))) m
-  | Psltl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmpl Clt rs###s1 rs###s2)))) m
-  | Psltul d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmplu (Mem.valid_pointer m) Clt rs###s1 rs###s2)))) m
-  | Pseql d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmplu (Mem.valid_pointer m) Ceq rs###s1 rs###s2)))) m
-  | Psnel d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.maketotal (Val.cmplu (Mem.valid_pointer m) Cne rs###s1 rs###s2)))) m
-  | Pandl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.andl rs###s1 rs###s2))) m
-  | Porl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.orl rs###s1 rs###s2))) m
-  | Pxorl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.xorl rs###s1 rs###s2))) m
-  | Pslll d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shll rs###s1 rs###s2))) m
-  | Psrll d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shrlu rs###s1 rs###s2))) m
-  | Psral d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shrl rs###s1 rs###s2))) m
 
-  | Pcvtl2w d s =>
-      Next (nextinstr (rs#d <- (Val.loword rs##s))) m
-  | Pcvtw2l r =>
-      Next (nextinstr (rs#r <- (Val.longofint rs#r))) m
-
-(** Unconditional jumps.  Links are always to X1/RA. *)
-*)| Pj_l l =>
+(** Unconditional jumps. *)
+  | Pj_l l =>
       goto_label f l rs m
-(*| Pj_s s sg =>
-      Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-  | Pj_r r sg =>
-      Next (rs#PC <- (rs#r)) m
-  | Pjal_s s sg =>
-      Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)
-              #RA <- (Val.offset_ptr rs#PC Ptrofs.one)
-           ) m
-  | Pjal_r r sg =>
-      Next (rs#PC <- (rs#r)
-              #RA <- (Val.offset_ptr rs#PC Ptrofs.one)
-           ) m
+
+(** Conditional branches *)
+  | Pcb bt r l =>
+      match bt with
+      | BTwnez => eval_branch f l rs m (Val.cmp_bool Cne rs##r (Vint (Int.repr 0)))
+      | _ => Stuck
+      end
+(*
 (** Conditional branches, 32-bit comparisons *)
   | Pbeqw s1 s2 l =>
       eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) Ceq rs##s1 rs##s2)

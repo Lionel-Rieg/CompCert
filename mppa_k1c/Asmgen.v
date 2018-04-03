@@ -122,212 +122,18 @@ Definition addptrofs (rd rs: ireg) (n: ptrofs) (k: code) :=
   else
     addimm64 rd rs (Ptrofs.to_int64 n) k.
 
-(*
 (** Translation of conditional branches. *)
 
-Definition transl_cbranch_int32s (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
-  match cmp with
-  | Ceq => Pbeqw r1 r2 lbl
-  | Cne => Pbnew r1 r2 lbl
-  | Clt => Pbltw r1 r2 lbl
-  | Cle => Pbgew r2 r1 lbl
-  | Cgt => Pbltw r2 r1 lbl
-  | Cge => Pbgew r1 r2 lbl
-  end.
+Definition transl_comp
+    (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
+  Pcompw (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
 
-Definition transl_cbranch_int32u (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
-  match cmp with
-  | Ceq => Pbeqw  r1 r2 lbl
-  | Cne => Pbnew  r1 r2 lbl
-  | Clt => Pbltuw r1 r2 lbl
-  | Cle => Pbgeuw r2 r1 lbl
-  | Cgt => Pbltuw r2 r1 lbl
-  | Cge => Pbgeuw r1 r2 lbl
-  end.
-
-Definition transl_cbranch_int64s (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
-  match cmp with
-  | Ceq => Pbeql r1 r2 lbl
-  | Cne => Pbnel r1 r2 lbl
-  | Clt => Pbltl r1 r2 lbl
-  | Cle => Pbgel r2 r1 lbl
-  | Cgt => Pbltl r2 r1 lbl
-  | Cge => Pbgel r1 r2 lbl
-  end.
-
-Definition transl_cbranch_int64u (cmp: comparison) (r1 r2: ireg) (lbl: label) :=
-  match cmp with
-  | Ceq => Pbeql  r1 r2 lbl
-  | Cne => Pbnel  r1 r2 lbl
-  | Clt => Pbltul r1 r2 lbl
-  | Cle => Pbgeul r2 r1 lbl
-  | Cgt => Pbltul r2 r1 lbl
-  | Cge => Pbgeul r1 r2 lbl
-  end.
-
-Definition transl_cond_float (cmp: comparison) (rd: ireg) (fs1 fs2: freg) :=
-  match cmp with
-  | Ceq => (Pfeqd rd fs1 fs2, true)
-  | Cne => (Pfeqd rd fs1 fs2, false)
-  | Clt => (Pfltd rd fs1 fs2, true)
-  | Cle => (Pfled rd fs1 fs2, true)
-  | Cgt => (Pfltd rd fs2 fs1, true)
-  | Cge => (Pfled rd fs2 fs1, true)
-  end.
-  
-Definition transl_cond_single (cmp: comparison) (rd: ireg) (fs1 fs2: freg) :=
-  match cmp with
-  | Ceq => (Pfeqs rd fs1 fs2, true)
-  | Cne => (Pfeqs rd fs1 fs2, false)
-  | Clt => (Pflts rd fs1 fs2, true)
-  | Cle => (Pfles rd fs1 fs2, true)
-  | Cgt => (Pflts rd fs2 fs1, true)
-  | Cge => (Pfles rd fs2 fs1, true)
-  end.
-  
 Definition transl_cbranch
-           (cond: condition) (args: list mreg) (lbl: label) (k: code) :=
+    (cond: condition) (args: list mreg) (lbl: label) (k: code) : res (list instruction ) :=
   match cond, args with
-  | Ccomp c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cbranch_int32s c r1 r2 lbl :: k)
-  | Ccompu c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cbranch_int32u c r1 r2 lbl :: k)
-  | Ccompimm c n, a1 :: nil =>
-      do r1 <- ireg_of a1;
-      OK (if Int.eq n Int.zero then
-            transl_cbranch_int32s c r1 GPR0 lbl :: k
-          else
-            loadimm32 GPR31 n (transl_cbranch_int32s c r1 GPR31 lbl :: k))
   | Ccompuimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (if Int.eq n Int.zero then
-            transl_cbranch_int32u c r1 GPR0 lbl :: k
-          else
-            loadimm32 GPR31 n (transl_cbranch_int32u c r1 GPR31 lbl :: k))
-  | Ccompl c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cbranch_int64s c r1 r2 lbl :: k)
-  | Ccomplu c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cbranch_int64u c r1 r2 lbl :: k)
-  | Ccomplimm c n, a1 :: nil =>
-      do r1 <- ireg_of a1;
-      OK (if Int64.eq n Int64.zero then
-            transl_cbranch_int64s c r1 GPR0 lbl :: k
-          else
-            loadimm64 GPR31 n (transl_cbranch_int64s c r1 GPR31 lbl :: k))
-  | Ccompluimm c n, a1 :: nil =>
-      do r1 <- ireg_of a1;
-      OK (if Int64.eq n Int64.zero then
-            transl_cbranch_int64u c r1 GPR0 lbl :: k
-          else
-            loadimm64 GPR31 n (transl_cbranch_int64u c r1 GPR31 lbl :: k))
-  | Ccompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c GPR31 r1 r2 in
-      OK (insn :: (if normal then Pbnew GPR31 GPR0 lbl else Pbeqw GPR31 GPR0 lbl) :: k)
-  | Cnotcompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c GPR31 r1 r2 in
-      OK (insn :: (if normal then Pbeqw GPR31 GPR0 lbl else Pbnew GPR31 GPR0 lbl) :: k)
-  | Ccompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c GPR31 r1 r2 in
-      OK (insn :: (if normal then Pbnew GPR31 GPR0 lbl else Pbeqw GPR31 GPR0 lbl) :: k)
-  | Cnotcompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c GPR31 r1 r2 in
-      OK (insn :: (if normal then Pbeqw GPR31 GPR0 lbl else Pbnew GPR31 GPR0 lbl) :: k)
-  | _, _ =>
-      Error(msg "Asmgen.transl_cond_branch")
-  end.
-
-(** Translation of a condition operator.  The generated code sets the
-  [rd] target register to 0 or 1 depending on the truth value of the
-  condition. *)
-
-Definition transl_cond_int32s (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
-  match cmp with
-  | Ceq => Pseqw rd r1 r2 :: k
-  | Cne => Psnew rd r1 r2 :: k
-  | Clt => Psltw rd r1 r2 :: k
-  | Cle => Psltw rd r2 r1 :: Pxoriw rd rd Int.one :: k
-  | Cgt => Psltw rd r2 r1 :: k
-  | Cge => Psltw rd r1 r2 :: Pxoriw rd rd Int.one :: k
-  end.
-
-Definition transl_cond_int32u (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
-  match cmp with
-  | Ceq => Pseqw rd r1 r2 :: k
-  | Cne => Psnew rd r1 r2 :: k
-  | Clt => Psltuw rd r1 r2 :: k
-  | Cle => Psltuw rd r2 r1 :: Pxoriw rd rd Int.one :: k
-  | Cgt => Psltuw rd r2 r1 :: k
-  | Cge => Psltuw rd r1 r2 :: Pxoriw rd rd Int.one :: k
-  end.
-
-Definition transl_cond_int64s (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
-  match cmp with
-  | Ceq => Pseql rd r1 r2 :: k
-  | Cne => Psnel rd r1 r2 :: k
-  | Clt => Psltl rd r1 r2 :: k
-  | Cle => Psltl rd r2 r1 :: Pxoriw rd rd Int.one :: k
-  | Cgt => Psltl rd r2 r1 :: k
-  | Cge => Psltl rd r1 r2 :: Pxoriw rd rd Int.one :: k
-  end.
-
-Definition transl_cond_int64u (cmp: comparison) (rd: ireg) (r1 r2: ireg) (k: code) :=
-  match cmp with
-  | Ceq => Pseql rd r1 r2 :: k
-  | Cne => Psnel rd r1 r2 :: k
-  | Clt => Psltul rd r1 r2 :: k
-  | Cle => Psltul rd r2 r1 :: Pxoriw rd rd Int.one :: k
-  | Cgt => Psltul rd r2 r1 :: k
-  | Cge => Psltul rd r1 r2 :: Pxoriw rd rd Int.one :: k
-  end.
-
-Definition transl_condimm_int32s (cmp: comparison) (rd: ireg) (r1: ireg) (n: int) (k: code) :=
-  if Int.eq n Int.zero then transl_cond_int32s cmp rd r1 GPR0 k else
-  match cmp with
-  | Ceq | Cne => xorimm32 rd r1 n (transl_cond_int32s cmp rd rd GPR0 k)
-  | Clt => sltimm32 rd r1 n k
-  | Cle => if Int.eq n (Int.repr Int.max_signed)
-           then loadimm32 rd Int.one k
-           else sltimm32 rd r1 (Int.add n Int.one) k
-  | _   => loadimm32 GPR31 n (transl_cond_int32s cmp rd r1 GPR31 k)
-  end.
-
-Definition transl_condimm_int32u (cmp: comparison) (rd: ireg) (r1: ireg) (n: int) (k: code) :=
-  if Int.eq n Int.zero then transl_cond_int32u cmp rd r1 GPR0 k else
-  match cmp with
-  | Clt => sltuimm32 rd r1 n k
-  | _   => loadimm32 GPR31 n (transl_cond_int32u cmp rd r1 GPR31 k)
-  end.
-
-Definition transl_condimm_int64s (cmp: comparison) (rd: ireg) (r1: ireg) (n: int64) (k: code) :=
-  if Int64.eq n Int64.zero then transl_cond_int64s cmp rd r1 GPR0 k else
-  match cmp with
-  | Ceq | Cne => xorimm64 rd r1 n (transl_cond_int64s cmp rd rd GPR0 k)
-  | Clt => sltimm64 rd r1 n k
-  | Cle => if Int64.eq n (Int64.repr Int64.max_signed)
-           then loadimm32 rd Int.one k
-           else sltimm64 rd r1 (Int64.add n Int64.one) k
-  | _   => loadimm64 GPR31 n (transl_cond_int64s cmp rd r1 GPR31 k)
-  end.
-
-Definition transl_condimm_int64u (cmp: comparison) (rd: ireg) (r1: ireg) (n: int64) (k: code) :=
-  if Int64.eq n Int64.zero then transl_cond_int64u cmp rd r1 GPR0 k else
-  match cmp with
-  | Clt => sltuimm64 rd r1 n k
-  | _   => loadimm64 GPR31 n (transl_cond_int64u cmp rd r1 GPR31 k)
-  end.
-*)
-
-Definition transl_cond_op
-           (cond: condition) (rd: ireg) (args: list mreg) (k: code) : res (list instruction) :=
-  match cond, args with
+      OK (loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k))
 (*| Ccomp c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_cond_int32s c rd r1 r2 k)
@@ -337,9 +143,6 @@ Definition transl_cond_op
   | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (transl_condimm_int32s c rd r1 n k)
-  | Ccompuimm c n, a1 :: nil =>
-      do r1 <- ireg_of a1;
-      OK (transl_condimm_int32u c rd r1 n k)
   | Ccompl c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_cond_int64s c rd r1 r2 k)
@@ -369,7 +172,7 @@ Definition transl_cond_op
       let (insn, normal) := transl_cond_single c rd r1 r2 in
       OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
 *)| _, _ =>
-      Error(msg "Asmgen.transl_cond_op")
+      Error(msg "Asmgen.transl_cbranch")
   end.
 
 (** Translation of the arithmetic operation [r <- op(args)].
@@ -839,9 +642,9 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       OK (Plabel lbl :: k)
   | Mgoto lbl =>
       OK (Pj_l lbl :: k)
-(*| Mcond cond args lbl =>
+  | Mcond cond args lbl =>
       transl_cbranch cond args lbl k
-  | Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
+(*| Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
 *)| Mreturn =>
       OK (make_epilogue f (Pret :: k))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)

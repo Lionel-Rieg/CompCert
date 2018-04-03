@@ -21,16 +21,16 @@ Require Import Op Locations Mach Conventions.
 Require Import Asm Asmgen Asmgenproof0.
 
 (** Decomposition of integer constants. *)
-(*
+
 Lemma make_immed32_sound:
   forall n,
   match make_immed32 n with
   | Imm32_single imm => n = imm
-  | Imm32_pair hi lo => n = Int.add (Int.shl hi (Int.repr 12)) lo
   end.
 Proof.
   intros; unfold make_immed32. set (lo := Int.sign_ext 12 n).
-  predSpec Int.eq Int.eq_spec n lo.
+  predSpec Int.eq Int.eq_spec n lo; auto.
+(*
 - auto.
 - set (m := Int.sub n lo).
   assert (A: Int.eqmod (two_p 12) (Int.unsigned lo) (Int.unsigned n)) by (apply Int.eqmod_sign_ext'; compute; auto).
@@ -54,8 +54,9 @@ Proof.
   rewrite Int.add_neg_zero. rewrite Int.add_zero. auto.
   rewrite (Int.modu_divu_Euclid m (Int.repr 4096)) at 1 by (vm_compute; congruence).
   rewrite D. apply Int.add_zero.
-Qed.
 *)
+Qed.
+
 Lemma make_immed64_sound:
   forall n,
   match make_immed64 n with
@@ -128,7 +129,7 @@ Proof.
   split. Simpl. 
   intros; Simpl.
 Qed.
-
+*)
 Lemma loadimm32_correct:
   forall rd n k rs m,
   exists rs',
@@ -140,11 +141,10 @@ Proof.
   destruct (make_immed32 n). 
 - subst imm. econstructor; split. 
   apply exec_straight_one. simpl; eauto. auto.
-  split. rewrite Int.add_zero_l; Simpl. 
+  split. Simpl.
   intros; Simpl.
-- rewrite E. apply load_hilo32_correct.
 Qed.
-
+(*
 Lemma opimm32_correct:
   forall (op: ireg -> ireg0 -> ireg0 -> instruction)
          (opi: ireg -> ireg0 -> int -> instruction)
@@ -281,7 +281,8 @@ Qed.
 
 Lemma addptrofs_correct_2:
   forall rd r1 n k (rs: regset) m b ofs,
-  r1 <> GPR31 -> rs#r1 = Vptr b ofs ->
+  r1 <> GPR31 -> rs#r1 = Vptr b of
+s ->
   exists rs',
      exec_straight ge fn (addptrofs rd r1 n k) rs m k rs' m
   /\ rs'#rd = Vptr b (Ptrofs.add ofs n)
@@ -294,91 +295,6 @@ Qed.
 
 (** Translation of conditional branches *)
 
-Lemma transl_cbranch_int32s_correct:
-  forall cmp r1 r2 lbl (rs: regset) m b,
-  Val.cmp_bool cmp rs##r1 rs##r2 = Some b ->
-  exec_instr ge fn (transl_cbranch_int32s cmp r1 r2 lbl) rs m =
-  eval_branch fn lbl rs m (Some b).
-Proof.
-  intros. destruct cmp; simpl; rewrite ? H.
-- destruct rs##r1; simpl in H; try discriminate. destruct rs##r2; inv H.
-  simpl; auto.
-- destruct rs##r1; simpl in H; try discriminate. destruct rs##r2; inv H.
-  simpl; auto.
-- auto.
-- rewrite <- Val.swap_cmp_bool. simpl. rewrite H; auto.
-- rewrite <- Val.swap_cmp_bool. simpl. rewrite H; auto.
-- auto.
-Qed.
-
-Lemma transl_cbranch_int32u_correct:
-  forall cmp r1 r2 lbl (rs: regset) m b,
-  Val.cmpu_bool (Mem.valid_pointer m) cmp rs##r1 rs##r2 = Some b ->
-  exec_instr ge fn (transl_cbranch_int32u cmp r1 r2 lbl) rs m =
-  eval_branch fn lbl rs m (Some b).
-Proof.
-  intros. destruct cmp; simpl; rewrite ? H; auto.
-- rewrite <- Val.swap_cmpu_bool. simpl. rewrite H; auto.
-- rewrite <- Val.swap_cmpu_bool. simpl. rewrite H; auto.
-Qed.
-
-Lemma transl_cbranch_int64s_correct:
-  forall cmp r1 r2 lbl (rs: regset) m b,
-  Val.cmpl_bool cmp rs###r1 rs###r2 = Some b ->
-  exec_instr ge fn (transl_cbranch_int64s cmp r1 r2 lbl) rs m =
-  eval_branch fn lbl rs m (Some b).
-Proof.
-  intros. destruct cmp; simpl; rewrite ? H.
-- destruct rs###r1; simpl in H; try discriminate. destruct rs###r2; inv H.
-  simpl; auto.
-- destruct rs###r1; simpl in H; try discriminate. destruct rs###r2; inv H.
-  simpl; auto.
-- auto.
-- rewrite <- Val.swap_cmpl_bool. simpl. rewrite H; auto.
-- rewrite <- Val.swap_cmpl_bool. simpl. rewrite H; auto.
-- auto.
-Qed.
-
-Lemma transl_cbranch_int64u_correct:
-  forall cmp r1 r2 lbl (rs: regset) m b,
-  Val.cmplu_bool (Mem.valid_pointer m) cmp rs###r1 rs###r2 = Some b ->
-  exec_instr ge fn (transl_cbranch_int64u cmp r1 r2 lbl) rs m =
-  eval_branch fn lbl rs m (Some b).
-Proof.
-  intros. destruct cmp; simpl; rewrite ? H; auto.
-- rewrite <- Val.swap_cmplu_bool. simpl. rewrite H; auto.
-- rewrite <- Val.swap_cmplu_bool. simpl. rewrite H; auto.
-Qed.
-
-Lemma transl_cond_float_correct:
-  forall (rs: regset) m cmp rd r1 r2 insn normal v,
-  transl_cond_float cmp rd r1 r2 = (insn, normal) ->
-  v = (if normal then Val.cmpf cmp rs#r1 rs#r2 else Val.notbool (Val.cmpf cmp rs#r1 rs#r2)) ->
-  exec_instr ge fn insn rs m = Next (nextinstr (rs#rd <- v)) m.
-Proof.
-  intros. destruct cmp; simpl in H; inv H; auto. 
-- rewrite Val.negate_cmpf_eq. auto.
-- simpl. f_equal. f_equal. f_equal. destruct (rs r2), (rs r1); auto. unfold Val.cmpf, Val.cmpf_bool.
-  rewrite <- Float.cmp_swap. auto.
-- simpl. f_equal. f_equal. f_equal. destruct (rs r2), (rs r1); auto. unfold Val.cmpf, Val.cmpf_bool.
-  rewrite <- Float.cmp_swap. auto.
-Qed.
-
-Lemma transl_cond_single_correct:
-  forall (rs: regset) m cmp rd r1 r2 insn normal v,
-  transl_cond_single cmp rd r1 r2 = (insn, normal) ->
-  v = (if normal then Val.cmpfs cmp rs#r1 rs#r2 else Val.notbool (Val.cmpfs cmp rs#r1 rs#r2)) ->
-  exec_instr ge fn insn rs m = Next (nextinstr (rs#rd <- v)) m.
-Proof.
-  intros. destruct cmp; simpl in H; inv H; auto. 
-- simpl. f_equal. f_equal. f_equal. destruct (rs r2), (rs r1); auto. unfold Val.cmpfs, Val.cmpfs_bool.
-  rewrite Float32.cmp_ne_eq. destruct (Float32.cmp Ceq f0 f); auto.
-- simpl. f_equal. f_equal. f_equal. destruct (rs r2), (rs r1); auto. unfold Val.cmpfs, Val.cmpfs_bool.
-  rewrite <- Float32.cmp_swap. auto.
-- simpl. f_equal. f_equal. f_equal. destruct (rs r2), (rs r1); auto. unfold Val.cmpfs, Val.cmpfs_bool.
-  rewrite <- Float32.cmp_swap. auto.
-Qed.
-
 Remark branch_on_GPR31:
   forall normal lbl (rs: regset) m b,
   rs#GPR31 = Val.of_bool (eqb normal b) ->
@@ -388,6 +304,7 @@ Proof.
   intros. destruct normal; simpl; rewrite H; simpl; destruct b; reflexivity. 
 Qed.
 *)
+
 Ltac ArgsInv :=
   repeat (match goal with
   | [ H: Error _ = OK _ |- _ ] => discriminate
@@ -417,7 +334,63 @@ Remark exec_straight_opt_right:
 Proof.
   destruct 1; intros. auto. eapply exec_straight_trans; eauto. 
 Qed.
-(*
+
+Lemma transl_comp_correct:
+  forall cmp r1 r2 lbl k rs m b,
+  exists rs',
+     exec_straight ge fn (transl_comp cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmp_bool cmp rs##r1 rs##r2 = Some b ->
+       exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_comp. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (nextinstr rs # GPR31 <- (compare_int (itest_for_cmp cmp Signed) rs ## r1 rs ## r2 m)) as rs'.
+    simpl. assert (Val.cmp_bool Cne rs' ## GPR31 (Vint (Int.repr 0)) = Some b).
+    { 
+      assert (rs' ## GPR31 = (compare_int (itest_for_cmp cmp Signed) rs ## r1 rs ## r2 m)).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val.cmp_bool cmp rs##r1 rs##r2) as cmpbool.
+      destruct cmp; simpl;
+      unfold Val.cmp; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
+Lemma transl_compu_correct:
+  forall cmp r1 r2 lbl k rs m b,
+  exists rs',
+     exec_straight ge fn (transl_comp cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs##r1 rs##r2 = Some b ->
+       exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_comp. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (nextinstr rs # GPR31 <- (compare_int (itest_for_cmp cmp Unsigned) rs ## r1 rs ## r2 m)) as rs'.
+    simpl. assert (Val.cmp_bool Cne rs' ## GPR31 (Vint (Int.repr 0)) = Some b).
+    { 
+      assert (rs' ## GPR31 = (compare_int (itest_for_cmp cmp Unsigned) rs ## r1 rs ## r2 m)).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val.cmpu_bool (Mem.valid_pointer m) cmp rs##r1 rs##r2) as cmpubool.
+      destruct cmp; simpl; unfold Val.cmpu; rewrite <- Heqcmpubool; destruct cmpubool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
+
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m',
   transl_cbranch cond args lbl k = OK c ->
@@ -427,7 +400,7 @@ Lemma transl_cbranch_correct_1:
   exists rs', exists insn,
      exec_straight_opt c rs m' (insn :: k) rs' m'
   /\ exec_instr ge fn insn rs' m' = eval_branch fn lbl rs' m' (Some b)
-  /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TRANSL EVAL AG MEXT.
   set (vl' := map rs (map preg_of args)). 
@@ -435,83 +408,18 @@ Proof.
   { apply eval_condition_lessdef with (map ms args) m; auto. eapply preg_vals; eauto. }
   clear EVAL MEXT AG.
   destruct cond; simpl in TRANSL; ArgsInv.
-- exists rs, (transl_cbranch_int32s c0 x x0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int32s_correct; auto.
-- exists rs, (transl_cbranch_int32u c0 x x0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int32u_correct; auto.
-- predSpec Int.eq Int.eq_spec n Int.zero.
-+ subst n. exists rs, (transl_cbranch_int32s c0 x X0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int32s_correct; auto.
-+ exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exists rs', (transl_cbranch_int32s c0 x GPR31 lbl).
-  split. constructor; eexact A. split; auto.
-  apply transl_cbranch_int32s_correct; auto.
-  simpl; rewrite B, C; eauto with asmgen.
-- predSpec Int.eq Int.eq_spec n Int.zero.
-+ subst n. exists rs, (transl_cbranch_int32u c0 x X0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int32u_correct; auto.
-+ exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exists rs', (transl_cbranch_int32u c0 x GPR31 lbl).
-  split. constructor; eexact A. split; auto.
-  apply transl_cbranch_int32u_correct; auto.
-  simpl; rewrite B, C; eauto with asmgen.
-- exists rs, (transl_cbranch_int64s c0 x x0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int64s_correct; auto.
-- exists rs, (transl_cbranch_int64u c0 x x0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int64u_correct; auto.
-- predSpec Int64.eq Int64.eq_spec n Int64.zero.
-+ subst n. exists rs, (transl_cbranch_int64s c0 x X0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int64s_correct; auto.
-+ exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exists rs', (transl_cbranch_int64s c0 x GPR31 lbl).
-  split. constructor; eexact A. split; auto.
-  apply transl_cbranch_int64s_correct; auto.
-  simpl; rewrite B, C; eauto with asmgen.
-- predSpec Int64.eq Int64.eq_spec n Int64.zero.
-+ subst n. exists rs, (transl_cbranch_int64u c0 x X0 lbl).
-  intuition auto. constructor. apply transl_cbranch_int64u_correct; auto.
-+ exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exists rs', (transl_cbranch_int64u c0 x GPR31 lbl).
-  split. constructor; eexact A. split; auto.
-  apply transl_cbranch_int64u_correct; auto.
-  simpl; rewrite B, C; eauto with asmgen.
-- destruct (transl_cond_float c0 GPR31 x x0) as [insn normal] eqn:TC; inv EQ2.
-  set (v := if normal then Val.cmpf c0 rs#x rs#x0 else Val.notbool (Val.cmpf c0 rs#x rs#x0)).
-  assert (V: v = Val.of_bool (eqb normal b)).
-  { unfold v, Val.cmpf. rewrite EVAL'. destruct normal, b; reflexivity. }
-  econstructor; econstructor.
-  split. constructor. apply exec_straight_one. eapply transl_cond_float_correct with (v := v); eauto. auto.
-  split. rewrite V; destruct normal, b; reflexivity.
-  intros; Simpl.
-- destruct (transl_cond_float c0 GPR31 x x0) as [insn normal] eqn:TC; inv EQ2.
-  assert (EVAL'': Val.cmpf_bool c0 (rs x) (rs x0) = Some (negb b)).
-  { destruct (Val.cmpf_bool c0 (rs x) (rs x0)) as [[]|]; inv EVAL'; auto. }
-  set (v := if normal then Val.cmpf c0 rs#x rs#x0 else Val.notbool (Val.cmpf c0 rs#x rs#x0)).
-  assert (V: v = Val.of_bool (xorb normal b)).
-  { unfold v, Val.cmpf. rewrite EVAL''. destruct normal, b; reflexivity. }
-  econstructor; econstructor.
-  split. constructor. apply exec_straight_one. eapply transl_cond_float_correct with (v := v); eauto. auto.
-  split. rewrite V; destruct normal, b; reflexivity.
-  intros; Simpl.
-- destruct (transl_cond_single c0 GPR31 x x0) as [insn normal] eqn:TC; inv EQ2.
-  set (v := if normal then Val.cmpfs c0 rs#x rs#x0 else Val.notbool (Val.cmpfs c0 rs#x rs#x0)).
-  assert (V: v = Val.of_bool (eqb normal b)).
-  { unfold v, Val.cmpfs. rewrite EVAL'. destruct normal, b; reflexivity. }
-  econstructor; econstructor.
-  split. constructor. apply exec_straight_one. eapply transl_cond_single_correct with (v := v); eauto. auto.
-  split. rewrite V; destruct normal, b; reflexivity.
-  intros; Simpl.
-- destruct (transl_cond_single c0 GPR31 x x0) as [insn normal] eqn:TC; inv EQ2.
-  assert (EVAL'': Val.cmpfs_bool c0 (rs x) (rs x0) = Some (negb b)).
-  { destruct (Val.cmpfs_bool c0 (rs x) (rs x0)) as [[]|]; inv EVAL'; auto. }
-  set (v := if normal then Val.cmpfs c0 rs#x rs#x0 else Val.notbool (Val.cmpfs c0 rs#x rs#x0)).
-  assert (V: v = Val.of_bool (xorb normal b)).
-  { unfold v, Val.cmpfs. rewrite EVAL''. destruct normal, b; reflexivity. }
-  econstructor; econstructor.
-  split. constructor. apply exec_straight_one. eapply transl_cond_single_correct with (v := v); eauto. auto.
-  split. rewrite V; destruct normal, b; reflexivity.
-  intros; Simpl.
+- exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
+  exploit (transl_compu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+  exists rs'2, (Pcb BTwnez GPR31 lbl).
+  split.
+  + constructor. apply exec_straight_trans 
+       with (c2 := (transl_comp c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+    eexact A. eexact A'.
+  + split; auto.
+    * apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen.
+    * intros. rewrite B'; eauto with asmgen.
 Qed.
+
 
 Lemma transl_cbranch_correct_true:
   forall cond args lbl k c m ms sp rs m',
@@ -543,7 +451,7 @@ Proof.
   split. eapply exec_straight_opt_right; eauto. apply exec_straight_one; auto.
   intros; Simpl. 
 Qed.
-
+(*
 (** Translation of condition operators *)
 
 Lemma transl_cond_int32s_correct:

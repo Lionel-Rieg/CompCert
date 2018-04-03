@@ -195,3 +195,19 @@ let transl_instr f i x k =
   | Mcond _ -> (Printf.eprintf "Mcond\n"; thereal_transl_instr f i x k)
   | Mjumptable _ -> (Printf.eprintf "Mjumptable\n"; thereal_transl_instr f i x k)
   | Mreturn -> (Printf.eprintf "Mreturn\n"; thereal_transl_instr f i x k)
+
+let transl_cbranch c a l k =
+  match c, a with
+  | Ccomp       _, _ :: _ :: [] -> (Printf.eprintf "Ccomp\n"; thereal_transl_cbranch c a l k)
+  | Ccompu      _, _ :: _ :: [] -> (Printf.eprintf "Ccompu\n"; thereal_transl_cbranch c a l k)
+  | Ccompimm    (_, _), _ :: [] -> (Printf.eprintf "Ccompimm\n"; thereal_transl_cbranch c a l k)
+  | Ccompuimm   (_, _), _ :: [] -> (Printf.eprintf "Ccompuimm\n"; thereal_transl_cbranch c a l k)
+  | Ccompl      _, _ :: _ :: [] -> (Printf.eprintf "Ccompl\n"; thereal_transl_cbranch c a l k)
+  | Ccomplu     _, _ :: _ :: [] -> (Printf.eprintf "Ccomplu\n"; thereal_transl_cbranch c a l k)
+  | Ccomplimm   (_, _), _ :: [] -> (Printf.eprintf "Ccomplimm\n"; thereal_transl_cbranch c a l k)
+  | Ccompluimm  (_, _), _ :: [] -> (Printf.eprintf "Ccompulimm\n"; thereal_transl_cbranch c a l k)
+  | Ccompf      _, _ :: _ :: [] -> (Printf.eprintf "Ccompf\n"; thereal_transl_cbranch c a l k)
+  | Cnotcompf   _, _ :: _ :: [] -> (Printf.eprintf "Cnotcompf\n"; thereal_transl_cbranch c a l k)
+  | Ccompfs      _, _ :: _ :: [] -> (Printf.eprintf "Ccomps\n"; thereal_transl_cbranch c a l k)
+  | Cnotcompfs   _, _ :: _ :: [] -> (Printf.eprintf "Cnotcomps\n"; thereal_transl_cbranch c a l k)
+  | _                           -> (Printf.eprintf "OOPS\n"; thereal_transl_cbranch c a l k)

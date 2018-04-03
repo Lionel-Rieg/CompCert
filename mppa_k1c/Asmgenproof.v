@@ -174,12 +174,16 @@ Remark transl_cond_single_nolabel:
 Proof.
   unfold transl_cond_single; intros. destruct c; inv H; exact I.
 Qed.
-
+*)
 Remark transl_cbranch_label:
   forall cond args lbl k c,
   transl_cbranch cond args lbl k = OK c -> tail_nolabel k c.
 Proof.
-  intros. unfold transl_cbranch in H; destruct cond; TailNoLabel.
+  intros. unfold transl_cbranch in H. (* unfold transl_cond_op in H. *) destruct cond; TailNoLabel.
+  - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
+Qed.
+
+(*
 - destruct c0; simpl; TailNoLabel.
 - destruct c0; simpl; TailNoLabel.
 - destruct (Int.eq n Int.zero).
@@ -212,8 +216,8 @@ Proof.
 - destruct (transl_cond_single c0 X31 x x0) as [insn normal] eqn:F; inv EQ2.
   apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
   destruct normal; TailNoLabel.
-Qed.
 *)
+(*
 Remark transl_cond_op_label:
   forall cond args r k c,
   transl_cond_op cond r args k = OK c -> tail_nolabel k c.
@@ -270,7 +274,7 @@ Proof.
   destruct normal; TailNoLabel.
 *)
 Qed.
-
+*)
 Remark transl_op_label:
   forall op args r k c,
   transl_op op args r k = OK c -> tail_nolabel k c.
@@ -373,6 +377,7 @@ Proof.
 - destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
   ; [eapply make_epilogue_label|TailNoLabel].
+- eapply transl_cbranch_label; eauto.
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
 Qed.
 (*
@@ -383,7 +388,6 @@ Qed.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct s0; monadInv H; (eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel]).
-- eapply transl_cbranch_label; eauto.
 - eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
 *)
 
@@ -899,24 +903,20 @@ Local Transparent destroyed_by_op.
   left; eapply exec_straight_opt_steps_goto; eauto.
   intros. simpl in TR.
   inversion TR.
-(*
   exploit transl_cbranch_correct_true; eauto. intros (rs' & jmp & A & B & C).
   exists jmp; exists k; exists rs'.
   split. eexact A. 
   split. apply agree_exten with rs0; auto with asmgen.
   exact B. 
-*)
 - (* Mcond false *)
   exploit eval_condition_lessdef. eapply preg_vals; eauto. eauto. eauto. intros EC.
   left; eapply exec_straight_steps; eauto. intros. simpl in TR.
   inversion TR.
-(*
   exploit transl_cbranch_correct_false; eauto. intros (rs' & A & B).
   exists rs'.
   split. eexact A.
   split. apply agree_exten with rs0; auto with asmgen.
   simpl. congruence.
-*)
 - (* Mjumptable *)
   assert (f0 = f) by congruence. subst f0.
   inv AT. monadInv H6.

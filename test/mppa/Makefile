@@ -1,4 +1,4 @@
-ELF=simple.bin call.bin
+ELF=simple.bin call.bin branch.bin
 DEBUG:=$(if $(DEBUG),"-dall",)
 
 all: $(ELF)
@@ -8,7 +8,7 @@ all: $(ELF)
 
 .SECONDARY:
 %.s: %.c
-	ccomp $(DEBUG) -v -S $< -o $@
+	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
 .PHONY:
 clean:
