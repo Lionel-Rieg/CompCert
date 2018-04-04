@@ -1,7 +1,10 @@
-ELF=simple.bin call.bin branch.bin
+ELF=simple.bin call.bin branch.bin for.bin
+ASM=$(subst .bin,.s,$(ELF))
 DEBUG:=$(if $(DEBUG),"-dall",)
 
 all: $(ELF)
+
+nobin: $(ASM)
 
 %.bin: %.s
 	k1-gcc $< -o $@

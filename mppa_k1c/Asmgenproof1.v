@@ -408,6 +408,18 @@ Proof.
   { apply eval_condition_lessdef with (map ms args) m; auto. eapply preg_vals; eauto. }
   clear EVAL MEXT AG.
   destruct cond; simpl in TRANSL; ArgsInv.
+(* Ccompimm *)
+- exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
+  exploit (transl_comp_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+  exists rs'2, (Pcb BTwnez GPR31 lbl).
+  split.
+  + constructor. apply exec_straight_trans 
+       with (c2 := (transl_comp c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+    eexact A. eexact A'.
+  + split; auto.
+    * apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen.
+    * intros. rewrite B'; eauto with asmgen.
+(* Ccompuimm *)
 - exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
   exploit (transl_compu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
   exists rs'2, (Pcb BTwnez GPR31 lbl).

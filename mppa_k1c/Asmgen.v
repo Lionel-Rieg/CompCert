@@ -140,10 +140,10 @@ Definition transl_cbranch
   | Ccompu c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_cond_int32u c rd r1 r2 k)
-  | Ccompimm c n, a1 :: nil =>
+*)| Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (transl_condimm_int32s c rd r1 n k)
-  | Ccompl c, a1 :: a2 :: nil =>
+      OK (loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k))
+(*| Ccompl c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_cond_int64s c rd r1 r2 k)
   | Ccomplu c, a1 :: a2 :: nil =>
