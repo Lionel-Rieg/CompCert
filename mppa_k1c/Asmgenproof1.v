@@ -408,6 +408,18 @@ Proof.
   { apply eval_condition_lessdef with (map ms args) m; auto. eapply preg_vals; eauto. }
   clear EVAL MEXT AG.
   destruct cond; simpl in TRANSL; ArgsInv.
+(* Ccomp *)
+- exploit (transl_comp_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez GPR31 lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+(* Ccompu *)
+- exploit (transl_compu_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez GPR31 lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
 (* Ccompimm *)
 - exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
   exploit (transl_comp_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').

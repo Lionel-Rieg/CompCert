@@ -179,7 +179,11 @@ Remark transl_cbranch_label:
   forall cond args lbl k c,
   transl_cbranch cond args lbl k = OK c -> tail_nolabel k c.
 Proof.
-  intros. unfold transl_cbranch in H. (* unfold transl_cond_op in H. *) destruct cond; TailNoLabel.
+  intros. unfold transl_cbranch in H. destruct cond; TailNoLabel.
+(* Ccomp *)
+  - unfold transl_comp; TailNoLabel.
+(* Ccompu *)
+  - unfold transl_comp; TailNoLabel.
 (* Ccompimm *)
   - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
 (* Ccompuimm *)

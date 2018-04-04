@@ -1,5 +1,7 @@
-ELF=simple.bin call.bin branch.bin for.bin
-ASM=$(subst .bin,.s,$(ELF))
+TESTS=simple call branch for forvar
+
+ELF=$(addsuffix .bin,$(TESTS))
+ASM=$(addsuffix .s,$(TESTS))
 DEBUG:=$(if $(DEBUG),"-dall",)
 
 all: $(ELF)

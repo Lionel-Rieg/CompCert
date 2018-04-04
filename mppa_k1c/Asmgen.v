@@ -134,13 +134,13 @@ Definition transl_cbranch
   | Ccompuimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k))
-(*| Ccomp c, a1 :: a2 :: nil =>
+  | Ccomp c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_int32s c rd r1 r2 k)
+      OK (transl_comp c Signed r1 r2 lbl k)
   | Ccompu c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_int32u c rd r1 r2 k)
-*)| Ccompimm c n, a1 :: nil =>
+      OK (transl_comp c Unsigned r1 r2 lbl k)
+  | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k))
 (*| Ccompl c, a1 :: a2 :: nil =>
