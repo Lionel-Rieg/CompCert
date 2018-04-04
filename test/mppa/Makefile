@@ -1,4 +1,4 @@
-TESTS=simple call branch for forvar
+TESTS=simple call branch for forvar forvarl
 
 ELF=$(addsuffix .bin,$(TESTS))
 ASM=$(addsuffix .s,$(TESTS))
