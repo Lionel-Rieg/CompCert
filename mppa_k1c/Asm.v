@@ -187,6 +187,7 @@ Inductive instruction : Type :=
 
 (** Comparisons *)
   | Pcompw  (it: itest) (rd rs1 rs2: ireg)      (**r integer comparison *)
+  | Pcompd  (it: itest) (rd rs1 rs2: ireg)      (**r integer comparison *)
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
@@ -602,6 +603,31 @@ Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
   | ITnone => Vundef
   end.
 
+Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
+  let res := match t with
+  | ITne  => Val.cmpl Cne v1 v2
+  | ITeq  => Val.cmpl Ceq v1 v2
+  | ITlt  => Val.cmpl Clt v1 v2
+  | ITge  => Val.cmpl Cge v1 v2
+  | ITle  => Val.cmpl Cle v1 v2
+  | ITgt  => Val.cmpl Cgt v1 v2
+  | ITneu => Val.cmplu (Mem.valid_pointer m) Cne v1 v2
+  | ITequ => Val.cmplu (Mem.valid_pointer m) Ceq v1 v2
+  | ITltu => Val.cmplu (Mem.valid_pointer m) Clt v1 v2
+  | ITgeu => Val.cmplu (Mem.valid_pointer m) Cge v1 v2
+  | ITleu => Val.cmplu (Mem.valid_pointer m) Cle v1 v2
+  | ITgtu => Val.cmplu (Mem.valid_pointer m) Cgt v1 v2
+  | ITall
+  | ITnall
+  | ITany
+  | ITnone => Some Vundef
+  end in 
+  match res with
+  | Some v => v
+  | None => Vundef
+  end
+  .
+
 (** Execution of a single instruction [i] in initial state [rs] and
     [m].  Return updated state.  For instructions that correspond to
     actual RISC-V instructions, the cases are straightforward
@@ -637,8 +663,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 
 (** Comparisons *)
   | Pcompw c d s1 s2 => 
-      (* Next (nextinstr (rs#d <- (Val.cmp Cne rs##s1 rs##s2))) m *)
       Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
+  | Pcompd c d s1 s2 => 
+      Next (nextinstr (rs#d <- (compare_long c rs###s1 rs###s2 m))) m
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>

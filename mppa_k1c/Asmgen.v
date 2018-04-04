@@ -128,6 +128,10 @@ Definition transl_comp
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompw (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
 
+Definition transl_compl
+    (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
+  Pcompd (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
+
 Definition transl_cbranch
     (cond: condition) (args: list mreg) (lbl: label) (k: code) : res (list instruction ) :=
   match cond, args with
@@ -143,19 +147,19 @@ Definition transl_cbranch
   | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k))
-(*| Ccompl c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_int64s c rd r1 r2 k)
-  | Ccomplu c, a1 :: a2 :: nil =>
-      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_int64u c rd r1 r2 k)
-  | Ccomplimm c n, a1 :: nil =>
-      do r1 <- ireg_of a1;
-      OK (transl_condimm_int64s c rd r1 n k)
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (transl_condimm_int64u c rd r1 n k)
-  | Ccompf c, f1 :: f2 :: nil =>
+      OK (loadimm64 RTMP n (transl_compl c Unsigned r1 RTMP lbl k))
+  | Ccompl c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_compl c Signed r1 r2 lbl k)
+  | Ccomplu c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_compl c Unsigned r1 r2 lbl k)
+  | Ccomplimm c n, a1 :: nil =>
+      do r1 <- ireg_of a1;
+      OK (loadimm64 RTMP n (transl_compl c Signed r1 RTMP lbl k))
+(*| Ccompf c, f1 :: f2 :: nil =>
       do r1 <- freg_of f1; do r2 <- freg_of f2;
       let (insn, normal) := transl_cond_float c rd r1 r2 in
       OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)

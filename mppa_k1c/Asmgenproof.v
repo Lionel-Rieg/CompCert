@@ -188,6 +188,14 @@ Proof.
   - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
 (* Ccompuimm *)
   - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
+(* Ccompl *)
+  - unfold transl_compl; TailNoLabel.
+(* Ccomplu *)
+  - unfold transl_compl; TailNoLabel.
+(* Ccomplimm *)
+  - unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
+(* Ccompluimm *)
+  - unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
 Qed.
 
 (*

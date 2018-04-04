@@ -210,6 +210,8 @@ module Target : TARGET =
 
       | Pcompw (it, rd, rs1, rs2) ->
          fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
+      | Pcompd (it, rd, rs1, rs2) ->
+         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
       | Pcb (bt, r, lbl) ->
          fprintf oc "	cb.%a	%a?%a\n;;\n" bcond bt ireg r print_label lbl
 
