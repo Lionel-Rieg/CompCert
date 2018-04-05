@@ -1,5 +1,7 @@
-TESTS=simple call branch for forvar forvarl
+DIR=general
+TESTNAMES=simple call branch for forvar forvarl
 
+TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
 ELF=$(addsuffix .bin,$(TESTS))
 ASM=$(addsuffix .s,$(TESTS))
 DEBUG:=$(if $(DEBUG),"-dall",)
@@ -8,24 +10,29 @@ all: $(ELF)
 
 nobin: $(ASM)
 
-%.bin: %.s
+$(DIR)/%.bin: $(DIR)/%.s
 	k1-gcc $< -o $@
 
 .SECONDARY:
-%.s: %.c
+$(DIR)/%.s: $(DIR)/%.c
 	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
 .PHONY:
+check: $(ELF)
+	bash check.sh $(ELF)
+
+.PHONY:
 clean:
-	rm -f *.alloctrace
-	rm -f *.cm
-	rm -f *.compcert.c
-	rm -f *.i
-	rm -f *.light.c
-	rm -f *.ltl
-	rm -f *.mach
-	rm -f *.parsed.c
-	rm -f *.rtl.?
-	rm -f *.s
-	rm -rf profile/
+	rm -f $(DIR)/*.alloctrace
+	rm -f $(DIR)/*.cm
+	rm -f $(DIR)/*.compcert.c
+	rm -f $(DIR)/*.i
+	rm -f $(DIR)/*.light.c
+	rm -f $(DIR)/*.ltl
+	rm -f $(DIR)/*.mach
+	rm -f $(DIR)/*.parsed.c
+	rm -f $(DIR)/*.rtl.?
+	rm -f $(DIR)/*.s
+	rm -f $(DIR)/output/*.out
+	rm -rf $(DIR)/profile/
 	rm -f $(ELF)
