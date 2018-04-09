@@ -209,7 +209,12 @@ Proof.
   - destruct (Int64.eq n Int64.zero); TailNoLabel.
     unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
 (* Ccompluimm *)
-  - unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
+  - unfold transl_opt_compluimm.
+    remember (select_compl n c0) as selcomp; destruct selcomp.
+    + destruct c; TailNoLabel; contradict Heqselcomp; unfold select_compl;
+      destruct (Int64.eq n Int64.zero); destruct c0; discriminate.
+    + unfold loadimm64;
+      destruct (make_immed64 n); TailNoLabel; unfold transl_compl; TailNoLabel.
 Qed.
 
 (*

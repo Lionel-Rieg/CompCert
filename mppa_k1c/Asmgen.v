@@ -152,10 +152,31 @@ Definition select_comp (n: int) (c: comparison) : option comparison :=
 Definition transl_opt_compuimm
     (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
   match select_comp n c with
-  | Some Ceq => Pcb BTweqz r1 lbl :: k
-  | Some Cne => Pcb BTwnez r1 lbl :: k
+  | Some Ceq => Pcbu BTweqz r1 lbl :: k
+  | Some Cne => Pcbu BTwnez r1 lbl :: k
   | Some _   => nil (* Never happens *)
   | None     => loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k)
+  end
+  .
+
+Definition select_compl (n: int64) (c: comparison) : option comparison :=
+  if Int64.eq n Int64.zero then
+    match c with
+    | Ceq => Some Ceq
+    | Cne => Some Cne
+    | _   => None
+    end
+  else
+    None
+  .
+
+Definition transl_opt_compluimm
+    (n: int64) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
+  match select_compl n c with
+  | Some Ceq => Pcbu BTdeqz r1 lbl :: k
+  | Some Cne => Pcbu BTdnez r1 lbl :: k
+  | Some _   => nil (* Never happens *)
+  | None     => loadimm64 RTMP n (transl_compl c Unsigned r1 RTMP lbl k)
   end
   .
 
@@ -180,7 +201,7 @@ Definition transl_cbranch
          )
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (loadimm64 RTMP n (transl_compl c Unsigned r1 RTMP lbl k))
+      OK (transl_opt_compluimm n c r1 lbl k)
   | Ccompl c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_compl c Signed r1 r2 lbl k)

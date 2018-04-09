@@ -474,14 +474,15 @@ Proof.
       intros; contradict H; discriminate.
     }
 
-    exists rs, (Pcb BTweqz r1 lbl).
+    exists rs, (Pcbu BTweqz r1 lbl).
     split.
     * constructor.
     * split; auto. simpl. intros.
-      assert (Val.cmp_bool Ceq (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
-      { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }
+      (*assert (Val.cmp_bool Ceq (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
+      { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }*)
       auto;
-      unfold eval_branch. unfold getw. rewrite EVAL'S; auto.
+      unfold eval_branch. unfold getw. rewrite H0 in H2. unfold getw in H2.
+      rewrite H1. rewrite H2; auto.
   - (* c = Cne *)
     assert (Int.eq n Int.zero = true) as H'. 
     { remember (Int.eq n Int.zero) as termz. destruct termz; auto.
@@ -497,14 +498,12 @@ Proof.
       rewrite H'; simpl; auto;
       intros; contradict H; discriminate.
     }
-    exists rs, (Pcb BTwnez r1 lbl).
+    exists rs, (Pcbu BTwnez r1 lbl).
     split.
     * constructor.
     * split; auto. simpl. intros.
-      assert (Val.cmp_bool Cne (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
-      { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }
       auto;
-      unfold eval_branch. unfold getw. rewrite EVAL'S; auto.
+      unfold eval_branch. rewrite <- H0. rewrite H1. rewrite H2. auto.
   - (* c = Clt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
     destruct cmp; discriminate.
   - (* c = Cle *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
@@ -512,6 +511,73 @@ Proof.
   - (* c = Cgt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
     destruct cmp; discriminate.
   - (* c = Cge *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
+    destruct cmp; discriminate.
+Qed.
+
+Lemma transl_opt_compluimm_correct:
+  forall n cmp r1 lbl k rs m b c,
+  select_compl n cmp = Some c ->
+  exists rs', exists insn,
+     exec_straight_opt (transl_opt_compluimm n cmp r1 lbl k) rs m (insn :: k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs###r1 (Vlong n) = Some b ->
+       exec_instr ge fn insn rs' m = eval_branch fn lbl rs' m (Some b))
+  .
+Proof.
+  intros.
+  unfold transl_opt_compluimm; rewrite H; simpl.
+  remember c as c'.
+  destruct c'.
+  - (* c = Ceq *)
+    assert (Int64.eq n Int64.zero = true) as H'. 
+    { remember (Int64.eq n Int64.zero) as termz. destruct termz; auto.
+      generalize H. unfold select_compl; rewrite <- Heqtermz; simpl.
+      discriminate. }
+    assert (n = (Int64.repr 0)) as H0. { 
+      destruct (Int64.eq_dec n (Int64.repr 0)) as [Ha|Ha]; auto. 
+      generalize (Int64.eq_false _ _ Ha).  unfold Int64.zero in H'.
+      rewrite H'. discriminate.
+    }
+    assert (Ceq = cmp). { 
+      remember cmp as c0'. destruct c0'; auto; generalize H; unfold select_compl;
+      rewrite H'; simpl; auto;
+      intros; contradict H; discriminate.
+    }
+
+    exists rs, (Pcbu BTdeqz r1 lbl).
+    split.
+    * constructor.
+    * split; auto. simpl. intros.
+      auto;
+      unfold eval_branch. rewrite H1. rewrite <- H0. destruct b; rewrite H2; auto.
+  - (* c = Cne *)
+    assert (Int64.eq n Int64.zero = true) as H'. 
+    { remember (Int64.eq n Int64.zero) as termz. destruct termz; auto.
+      generalize H. unfold select_compl; rewrite <- Heqtermz; simpl.
+      discriminate. }
+    assert (n = (Int64.repr 0)) as H0. { 
+      destruct (Int64.eq_dec n (Int64.repr 0)) as [Ha|Ha]; auto. 
+      generalize (Int64.eq_false _ _ Ha).  unfold Int64.zero in H'.
+      rewrite H'. discriminate.
+    }
+    assert (Cne = cmp). { 
+      remember cmp as c0'. destruct c0'; auto; generalize H; unfold select_compl;
+      rewrite H'; simpl; auto;
+      intros; contradict H; discriminate.
+    }
+    exists rs, (Pcbu BTdnez r1 lbl).
+    split.
+    * constructor.
+    * split; auto. simpl. intros.
+      auto;
+      unfold eval_branch. rewrite H1. rewrite <- H0. destruct b; rewrite H2; auto.
+  - (* c = Clt *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
+    destruct cmp; discriminate.
+  - (* c = Cle *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
+    destruct cmp; discriminate.
+  - (* c = Cgt *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
+    destruct cmp; discriminate.
+  - (* c = Cge *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
     destruct cmp; discriminate.
 Qed.
 
@@ -626,16 +692,25 @@ Proof.
       { intros. rewrite B'; eauto with asmgen. }
 
 (* Ccompluimm *)
-- exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exploit (transl_complu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
-  exists rs'2, (Pcb BTwnez GPR31 lbl).
-  split.
-  + constructor. apply exec_straight_trans 
-       with (c2 := (transl_compl c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
-    eexact A. eexact A'.
-  + split; auto.
-    * apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen.
-    * intros. rewrite B'; eauto with asmgen.
+- remember (select_compl n c0) as selcomp.
+  destruct selcomp.
+  + exploit (transl_opt_compluimm_correct n c0 x lbl k). apply eq_sym. apply Heqselcomp.
+    intros (rs' & i & A & B & C).
+    exists rs', i.
+    split.
+    * apply A.
+    * split; auto. apply C. apply EVAL'.
+  + unfold transl_opt_compluimm. rewrite <- Heqselcomp; simpl.
+    exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
+    exploit (transl_complu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+    exists rs'2, (Pcb BTwnez GPR31 lbl).
+    split.
+    * constructor. apply exec_straight_trans 
+         with (c2 := (transl_compl c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+      eexact A. eexact A'.
+    * split; auto.
+      { apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen. }
+      { intros. rewrite B'; eauto with asmgen. }
 Qed.
 
 Lemma transl_cbranch_correct_true:

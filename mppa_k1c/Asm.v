@@ -226,6 +226,7 @@ Inductive instruction : Type :=
 
   (* Conditional branches *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
+  | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
 
   | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
   | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
@@ -646,6 +647,15 @@ Definition cmp_for_btest (bt: btest) :=
   | BTdgtz => (Some Cgt, Long)
   end.
 
+Definition cmpu_for_btest (bt: btest) :=
+  match bt with
+  | BTwnez => (Some Cne, Int)
+  | BTweqz => (Some Ceq, Int)
+  | BTdnez => (Some Cne, Long)
+  | BTdeqz => (Some Ceq, Long)
+  | _ => (None, Int)
+  end.
+
 (** Comparing integers *)
 Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
   match t with
@@ -794,6 +804,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       match cmp_for_btest bt with
       | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
       | (Some c, Long) => eval_branch f l rs m (Val.cmpl_bool c rs###r (Vlong (Int64.repr 0)))
+      | (None, _) => Stuck
+      end
+  | Pcbu bt r l => 
+      match cmpu_for_btest bt with
+      | (Some c, Int) => eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) c rs##r (Vint (Int.repr 0)))
+      | (Some c, Long) => eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) c rs###r (Vlong (Int64.repr 0)))
       | (None, _) => Stuck
       end
 (*
