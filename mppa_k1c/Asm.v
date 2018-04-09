@@ -95,13 +95,13 @@ Notation "'SP'" := GPR12 (only parsing) : asm.
 Notation "'RTMP'" := GPR31 (only parsing) : asm.
 
 Inductive btest: Type :=
-(*| BTdnez                              (**r Double Not Equal to Zero *)
+  | BTdnez                              (**r Double Not Equal to Zero *)
   | BTdeqz                              (**r Double Equal to Zero *)
   | BTdltz                              (**r Double Less Than Zero *)
   | BTdgez                              (**r Double Greater Than or Equal to Zero *)
   | BTdlez                              (**r Double Less Than or Equal to Zero *)
   | BTdgtz                              (**r Double Greater Than Zero *)
-  | BTodd                               (**r Odd (LSB Set) *)
+(*| BTodd                               (**r Odd (LSB Set) *)
   | BTeven                              (**r Even (LSB Clear) *)
 *)| BTwnez                              (**r Word Not Equal to Zero *)
   | BTweqz                              (**r Word Equal to Zero *)
@@ -566,6 +566,8 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
 
 Inductive signedness: Type := Signed | Unsigned.
 
+Inductive intsize: Type := Int | Long.
+
 Definition itest_for_cmp (c: comparison) (s: signedness) :=
   match c, s with
   | Cne, Signed => ITne
@@ -582,7 +584,7 @@ Definition itest_for_cmp (c: comparison) (s: signedness) :=
   | Cgt, Unsigned => ITgtu
   end.
 
-(* CoMParing Signed Words to Zero *)
+(* CoMPare Signed Words to Zero *)
 Definition btest_for_cmpswz (c: comparison) :=
   match c with
   | Cne => BTwnez
@@ -593,14 +595,32 @@ Definition btest_for_cmpswz (c: comparison) :=
   | Cgt => BTwgtz
   end.
 
+(* CoMPare Signed Doubles to Zero *)
+Definition btest_for_cmpsdz (c: comparison) :=
+  match c with
+  | Cne => BTdnez
+  | Ceq => BTdeqz
+  | Clt => BTdltz
+  | Cge => BTdgez
+  | Cle => BTdlez
+  | Cgt => BTdgtz
+  end.
+
 Definition cmp_for_btest (bt: btest) :=
   match bt with
-  | BTwnez => Some Cne
-  | BTweqz => Some Ceq
-  | BTwltz => Some Clt
-  | BTwgez => Some Cge
-  | BTwlez => Some Cle
-  | BTwgtz => Some Cgt
+  | BTwnez => (Some Cne, Int)
+  | BTweqz => (Some Ceq, Int)
+  | BTwltz => (Some Clt, Int)
+  | BTwgez => (Some Cge, Int)
+  | BTwlez => (Some Cle, Int)
+  | BTwgtz => (Some Cgt, Int)
+
+  | BTdnez => (Some Cne, Long)
+  | BTdeqz => (Some Ceq, Long)
+  | BTdltz => (Some Clt, Long)
+  | BTdgez => (Some Cge, Long)
+  | BTdlez => (Some Cle, Long)
+  | BTdgtz => (Some Cgt, Long)
   end.
 
 (** Comparing integers *)
@@ -715,8 +735,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** Conditional branches *)
   | Pcb bt r l =>
       match cmp_for_btest bt with
-      | Some c => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
-      | None => Stuck
+      | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
+      | (Some c, Long) => eval_branch f l rs m (Val.cmpl_bool c rs###r (Vlong (Int64.repr 0)))
+      | (None, _) => Stuck
       end
 (*
 (** Conditional branches, 32-bit comparisons *)

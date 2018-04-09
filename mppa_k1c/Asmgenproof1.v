@@ -601,16 +601,30 @@ Proof.
   + constructor. eexact A.
   + split; auto. apply C; auto.
 (* Ccomplimm *)
-- exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exploit (transl_compl_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
-  exists rs'2, (Pcb BTwnez GPR31 lbl).
-  split.
-  + constructor. apply exec_straight_trans 
-       with (c2 := (transl_compl c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
-    eexact A. eexact A'.
-  + split; auto.
-    * apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen.
-    * intros. rewrite B'; eauto with asmgen.
+- remember (Int64.eq n Int64.zero) as eqz.
+  destruct eqz.
+  + assert (n = (Int64.repr 0)). { 
+        destruct (Int64.eq_dec n (Int64.repr 0)) as [H|H]; auto. 
+        generalize (Int64.eq_false _ _ H).  unfold Int64.zero in Heqeqz.
+        rewrite <- Heqeqz. discriminate.
+    }
+    exists rs, (Pcb (btest_for_cmpsdz c0) x lbl).
+    split. 
+    * constructor.
+    * split; auto.
+      destruct c0; simpl; auto;
+      unfold eval_branch; rewrite <- H; unfold getl; rewrite EVAL'; auto.
+  + exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
+    exploit (transl_compl_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+    exists rs'2, (Pcb BTwnez GPR31 lbl).
+    split.
+    * constructor. apply exec_straight_trans 
+         with (c2 := (transl_compl c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+      eexact A. eexact A'.
+    * split; auto.
+      { apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen. }
+      { intros. rewrite B'; eauto with asmgen. }
+
 (* Ccompluimm *)
 - exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
   exploit (transl_complu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').

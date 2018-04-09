@@ -181,6 +181,12 @@ module Target : TARGET =
       | BTwgez -> "wgez"
       | BTwlez -> "wlez"
       | BTwgtz -> "wgtz"
+      | BTdnez -> "dnez"
+      | BTdeqz -> "deqz"
+      | BTdltz -> "dltz"
+      | BTdgez -> "dgez"
+      | BTdlez -> "dlez"
+      | BTdgtz -> "dgtz"
 
     let bcond oc c = fprintf oc "%s" (bcond_name c)
 

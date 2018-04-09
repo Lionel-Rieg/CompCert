@@ -199,7 +199,8 @@ Proof.
 (* Ccomplu *)
   - unfold transl_compl; TailNoLabel.
 (* Ccomplimm *)
-  - unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
+  - destruct (Int64.eq n Int64.zero); TailNoLabel.
+    unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
 (* Ccompluimm *)
   - unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
 Qed.

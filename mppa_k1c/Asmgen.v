@@ -183,7 +183,11 @@ Definition transl_cbranch
       OK (transl_compl c Unsigned r1 r2 lbl k)
   | Ccomplimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (loadimm64 RTMP n (transl_compl c Signed r1 RTMP lbl k))
+      OK (if Int64.eq n Int64.zero then
+            Pcb (btest_for_cmpsdz c) r1 lbl :: k
+          else
+            loadimm64 RTMP n (transl_compl c Signed r1 RTMP lbl k)
+         )
 (*| Ccompf c, f1 :: f2 :: nil =>
       do r1 <- freg_of f1; do r2 <- freg_of f2;
       let (insn, normal) := transl_cond_float c rd r1 r2 in
