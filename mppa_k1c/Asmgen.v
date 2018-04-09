@@ -132,12 +132,33 @@ Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompd (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
 
+Definition select_comp (n: int) (c: comparison) : option comparison :=
+  if Int.eq n Int.zero then
+    match c with
+    | Ceq => Some Ceq
+    | Cne => Some Cne
+    | _   => None
+    end
+  else
+    None
+  .
+
+Definition transl_opt_compuimm
+    (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
+  match select_comp n c with
+  | Some Ceq => Pcb BTweqz r1 lbl :: k
+  | Some Cne => Pcb BTwnez r1 lbl :: k
+  | Some _   => nil (* Never happens *)
+  | None     => loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k)
+  end
+  .
+
 Definition transl_cbranch
     (cond: condition) (args: list mreg) (lbl: label) (k: code) : res (list instruction ) :=
   match cond, args with
   | Ccompuimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k))
+      OK (transl_opt_compuimm n c r1 lbl k)
   | Ccomp c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_comp c Signed r1 r2 lbl k)
@@ -146,7 +167,11 @@ Definition transl_cbranch
       OK (transl_comp c Unsigned r1 r2 lbl k)
   | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
-      OK (loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k))
+      OK (if Int.eq n Int.zero then
+            Pcb (btest_for_cmpswz c) r1 lbl :: k
+          else
+            loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k)
+         )
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (loadimm64 RTMP n (transl_compl c Unsigned r1 RTMP lbl k))

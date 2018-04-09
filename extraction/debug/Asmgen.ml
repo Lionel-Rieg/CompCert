@@ -1,79 +1,5 @@
 (* Replace transl_op by this wrapper to print the op *)
 
-let thereal_transl_op op args res0 k =
-  match op with
-  | Ointconst n ->
-    (match args with
-     | [] ->
-       (match ireg_of res0 with
-        | OK x -> OK (loadimm32 x n k)
-        | Error msg0 -> Error msg0)
-     | _ :: _ ->
-       Error
-         (msg
-           ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[]))))))))))))))))))
-  | Olongconst n ->
-    (match args with
-     | [] ->
-       (match ireg_of res0 with
-        | OK x -> OK (loadimm64 x n k)
-        | Error msg0 -> Error msg0)
-     | _ :: _ ->
-       Error
-         (msg
-           ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[]))))))))))))))))))
-  | Oaddl ->
-    (match args with
-     | [] ->
-       Error
-         (msg
-           ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[])))))))))))))))))
-     | a1 :: l ->
-       (match l with
-        | [] ->
-          Error
-            (msg
-              ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[])))))))))))))))))
-        | a2 :: l0 ->
-          (match l0 with
-           | [] ->
-             (match ireg_of res0 with
-              | OK x ->
-                (match ireg_of a1 with
-                 | OK x0 ->
-                   (match ireg_of a2 with
-                    | OK x1 -> OK ((Paddl (x, x0, x1)) :: k)
-                    | Error msg0 -> Error msg0)
-                 | Error msg0 -> Error msg0)
-              | Error msg0 -> Error msg0)
-           | _ :: _ ->
-             Error
-               (msg
-                 ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[]))))))))))))))))))))
-  | Oaddlimm n ->
-    (match args with
-     | [] ->
-       Error
-         (msg
-           ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[])))))))))))))))))
-     | a1 :: l ->
-       (match l with
-        | [] ->
-          (match ireg_of res0 with
-           | OK x ->
-             (match ireg_of a1 with
-              | OK x0 -> OK (addimm64 x x0 n k)
-              | Error msg0 -> Error msg0)
-           | Error msg0 -> Error msg0)
-        | _ :: _ ->
-          Error
-            (msg
-              ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[])))))))))))))))))))
-  | _ ->
-    Error
-      (msg
-        ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('o'::('p'::[])))))))))))))))))
-
 let transl_op op args res0 k =
   match op with
   | Omove -> (Printf.eprintf "Omove\n"; thereal_transl_op op args res0 k)
@@ -165,19 +91,6 @@ let transl_op op args res0 k =
   | Osingleoflongu -> (Printf.eprintf "Osingleoflongu\n"; thereal_transl_op op args res0 k)
   | Ocmp _ -> (Printf.eprintf "Ocmp _\n"; thereal_transl_op op args res0 k)
   | _ -> (Printf.eprintf "_\n"; thereal_transl_op op args res0 k)
-
-let thereal_transl_instr f i _ k =
-  match i with
-  | Mop (op, args, res0) -> transl_op op args res0 k
-  | Mbuiltin (ef, args, res0) ->
-    OK ((Pbuiltin (ef, (map (map_builtin_arg preg_of) args),
-      (map_builtin_res preg_of res0))) :: k)
-  | Mlabel lbl -> OK ((Plabel lbl) :: k)
-  | Mreturn -> OK (make_epilogue f (Pret :: k))
-  | _ ->
-    Error
-      (msg
-        ('A'::('s'::('m'::('g'::('e'::('n'::('.'::('t'::('r'::('a'::('n'::('s'::('l'::('_'::('i'::('n'::('s'::('t'::('r'::[]))))))))))))))))))))
 
 let transl_instr f i x k =
   match i with

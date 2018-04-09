@@ -444,6 +444,77 @@ Proof.
     rewrite H0. simpl; auto.
 Qed.
 
+Lemma transl_opt_compuimm_correct:
+  forall n cmp r1 lbl k rs m b c,
+  select_comp n cmp = Some c ->
+  exists rs', exists insn,
+     exec_straight_opt (transl_opt_compuimm n cmp r1 lbl k) rs m (insn :: k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs##r1 (Vint n) = Some b ->
+       exec_instr ge fn insn rs' m = eval_branch fn lbl rs' m (Some b))
+  .
+Proof.
+  intros.
+  unfold transl_opt_compuimm; rewrite H; simpl.
+  remember c as c'.
+  destruct c'.
+  - (* c = Ceq *)
+    assert (Int.eq n Int.zero = true) as H'. 
+    { remember (Int.eq n Int.zero) as termz. destruct termz; auto.
+      generalize H. unfold select_comp; rewrite <- Heqtermz; simpl.
+      discriminate. }
+    assert (n = (Int.repr 0)) as H0. { 
+      destruct (Int.eq_dec n (Int.repr 0)) as [Ha|Ha]; auto. 
+      generalize (Int.eq_false _ _ Ha).  unfold Int.zero in H'.
+      rewrite H'. discriminate.
+    }
+    assert (Ceq = cmp). { 
+      remember cmp as c0'. destruct c0'; auto; generalize H; unfold select_comp;
+      rewrite H'; simpl; auto;
+      intros; contradict H; discriminate.
+    }
+
+    exists rs, (Pcb BTweqz r1 lbl).
+    split.
+    * constructor.
+    * split; auto. simpl. intros.
+      assert (Val.cmp_bool Ceq (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
+      { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }
+      auto;
+      unfold eval_branch. unfold getw. rewrite EVAL'S; auto.
+  - (* c = Cne *)
+    assert (Int.eq n Int.zero = true) as H'. 
+    { remember (Int.eq n Int.zero) as termz. destruct termz; auto.
+      generalize H. unfold select_comp; rewrite <- Heqtermz; simpl.
+      discriminate. }
+    assert (n = (Int.repr 0)) as H0. { 
+      destruct (Int.eq_dec n (Int.repr 0)) as [Ha|Ha]; auto. 
+      generalize (Int.eq_false _ _ Ha).  unfold Int.zero in H'.
+      rewrite H'. discriminate.
+    }
+    assert (Cne = cmp). { 
+      remember cmp as c0'. destruct c0'; auto; generalize H; unfold select_comp;
+      rewrite H'; simpl; auto;
+      intros; contradict H; discriminate.
+    }
+    exists rs, (Pcb BTwnez r1 lbl).
+    split.
+    * constructor.
+    * split; auto. simpl. intros.
+      assert (Val.cmp_bool Cne (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
+      { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }
+      auto;
+      unfold eval_branch. unfold getw. rewrite EVAL'S; auto.
+  - (* c = Clt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
+    destruct cmp; discriminate.
+  - (* c = Cle *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
+    destruct cmp; discriminate.
+  - (* c = Cgt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
+    destruct cmp; discriminate.
+  - (* c = Cge *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
+    destruct cmp; discriminate.
+Qed.
+
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m',
   transl_cbranch cond args lbl k = OK c ->
@@ -474,27 +545,49 @@ Proof.
   + constructor. eexact A.
   + split; auto. apply C; auto.
 (* Ccompimm *)
-- exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exploit (transl_comp_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
-  exists rs'2, (Pcb BTwnez GPR31 lbl).
-  split.
-  + constructor. apply exec_straight_trans 
-       with (c2 := (transl_comp c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
-    eexact A. eexact A'.
-  + split; auto.
-    * apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen.
-    * intros. rewrite B'; eauto with asmgen.
+- remember (Int.eq n Int.zero) as eqz.
+  destruct eqz.
+  + assert (n = (Int.repr 0)). { 
+        destruct (Int.eq_dec n (Int.repr 0)) as [H|H]; auto. 
+        generalize (Int.eq_false _ _ H).  unfold Int.zero in Heqeqz.
+        rewrite <- Heqeqz. discriminate.
+    }
+    exists rs, (Pcb (btest_for_cmpswz c0) x lbl).
+    split. 
+    * constructor.
+    * split; auto.
+      destruct c0; simpl; auto;
+      unfold eval_branch; rewrite <- H; unfold getw; rewrite EVAL'; auto.
+  + exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
+    exploit (transl_comp_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+    exists rs'2, (Pcb BTwnez GPR31 lbl).
+    split.
+    * constructor. apply exec_straight_trans 
+         with (c2 := (transl_comp c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+      eexact A. eexact A'.
+    * split; auto.
+      { apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen. }
+      { intros. rewrite B'; eauto with asmgen. }
 (* Ccompuimm *)
-- exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
-  exploit (transl_compu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
-  exists rs'2, (Pcb BTwnez GPR31 lbl).
-  split.
-  + constructor. apply exec_straight_trans 
-       with (c2 := (transl_comp c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
-    eexact A. eexact A'.
-  + split; auto.
-    * apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen.
-    * intros. rewrite B'; eauto with asmgen.
+- remember (select_comp n c0) as selcomp.
+  destruct selcomp.
+  + exploit (transl_opt_compuimm_correct n c0 x lbl k). apply eq_sym. apply Heqselcomp.
+    intros (rs' & i & A & B & C).
+    exists rs', i.
+    split.
+    * apply A.
+    * split; auto. apply C. apply EVAL'.
+  + unfold transl_opt_compuimm. rewrite <- Heqselcomp; simpl.
+    exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
+    exploit (transl_compu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
+    exists rs'2, (Pcb BTwnez GPR31 lbl).
+    split.
+    * constructor. apply exec_straight_trans 
+         with (c2 := (transl_comp c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
+      eexact A. eexact A'.
+    * split; auto.
+      { apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen. }
+      { intros. rewrite B'; eauto with asmgen. }
 (* Ccompl *)
 - exploit (transl_compl_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
   exists rs', (Pcb BTwnez GPR31 lbl).
@@ -530,7 +623,6 @@ Proof.
     * apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen.
     * intros. rewrite B'; eauto with asmgen.
 Qed.
-
 
 Lemma transl_cbranch_correct_true:
   forall cond args lbl k c m ms sp rs m',

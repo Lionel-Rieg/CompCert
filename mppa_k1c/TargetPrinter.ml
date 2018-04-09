@@ -177,6 +177,10 @@ module Target : TARGET =
     let bcond_name = function
       | BTwnez -> "wnez"
       | BTweqz -> "weqz"
+      | BTwltz -> "wltz"
+      | BTwgez -> "wgez"
+      | BTwlez -> "wlez"
+      | BTwgtz -> "wgtz"
 
     let bcond oc c = fprintf oc "%s" (bcond_name c)
 

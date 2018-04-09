@@ -1,5 +1,5 @@
 DIR=general
-TESTNAMES=simple call branch for forvar forvarl
+TESTNAMES=simple call branch for forvar forvarl branchz branchzu
 
 TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
 ELF=$(addsuffix .bin,$(TESTS))

@@ -185,9 +185,15 @@ Proof.
 (* Ccompu *)
   - unfold transl_comp; TailNoLabel.
 (* Ccompimm *)
-  - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
+  - destruct (Int.eq n Int.zero); TailNoLabel.
+    unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
 (* Ccompuimm *)
-  - unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
+  - unfold transl_opt_compuimm.
+    remember (select_comp n c0) as selcomp; destruct selcomp.
+    + destruct c; TailNoLabel; contradict Heqselcomp; unfold select_comp;
+      destruct (Int.eq n Int.zero); destruct c0; discriminate.
+    + unfold loadimm32;
+      destruct (make_immed32 n); TailNoLabel; unfold transl_comp; TailNoLabel.
 (* Ccompl *)
   - unfold transl_compl; TailNoLabel.
 (* Ccomplu *)

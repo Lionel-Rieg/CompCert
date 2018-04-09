@@ -105,11 +105,11 @@ Inductive btest: Type :=
   | BTeven                              (**r Even (LSB Clear) *)
 *)| BTwnez                              (**r Word Not Equal to Zero *)
   | BTweqz                              (**r Word Equal to Zero *)
-(*| BTwltz                              (**r Word Less Than Zero *)
+  | BTwltz                              (**r Word Less Than Zero *)
   | BTwgez                              (**r Word Greater Than or Equal to Zero *)
   | BTwlez                              (**r Word Less Than or Equal to Zero *)
   | BTwgtz                              (**r Word Greater Than Zero *)
-*).
+  .
 
 Inductive itest: Type :=
   | ITne                                (**r Not Equal *)
@@ -582,6 +582,27 @@ Definition itest_for_cmp (c: comparison) (s: signedness) :=
   | Cgt, Unsigned => ITgtu
   end.
 
+(* CoMParing Signed Words to Zero *)
+Definition btest_for_cmpswz (c: comparison) :=
+  match c with
+  | Cne => BTwnez
+  | Ceq => BTweqz
+  | Clt => BTwltz
+  | Cge => BTwgez
+  | Cle => BTwlez
+  | Cgt => BTwgtz
+  end.
+
+Definition cmp_for_btest (bt: btest) :=
+  match bt with
+  | BTwnez => Some Cne
+  | BTweqz => Some Ceq
+  | BTwltz => Some Clt
+  | BTwgez => Some Cge
+  | BTwlez => Some Cle
+  | BTwgtz => Some Cgt
+  end.
+
 (** Comparing integers *)
 Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
   match t with
@@ -693,9 +714,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 
 (** Conditional branches *)
   | Pcb bt r l =>
-      match bt with
-      | BTwnez => eval_branch f l rs m (Val.cmp_bool Cne rs##r (Vint (Int.repr 0)))
-      | _ => Stuck
+      match cmp_for_btest bt with
+      | Some c => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
+      | None => Stuck
       end
 (*
 (** Conditional branches, 32-bit comparisons *)
