@@ -159,15 +159,15 @@ Proof.
 (*unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.*)
 Qed.
 Hint Resolve opimm64_label: labels.
-(*
+
 Remark addptrofs_label:
   forall r1 r2 n k, tail_nolabel k (addptrofs r1 r2 n k).
 Proof.
   unfold addptrofs; intros. destruct (Ptrofs.eq_dec n Ptrofs.zero). TailNoLabel.
-  destruct Archi.ptr64. apply opimm64_label; TailNoLabel. apply opimm32_label; TailNoLabel.
+  apply opimm64_label; TailNoLabel.
 Qed.
 Hint Resolve addptrofs_label: labels.
-
+(*
 Remark transl_cond_float_nolabel:
   forall c r1 r2 r3 insn normal,
   transl_cond_float c r1 r2 r3 = (insn, normal) -> nolabel insn.

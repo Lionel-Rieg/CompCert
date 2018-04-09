@@ -267,11 +267,11 @@ Definition transl_op
       OK (if Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)
           then Ploadsymbol rd s Ptrofs.zero :: addptrofs rd rd ofs k
           else Ploadsymbol rd s ofs :: k)
-  | Oaddrstack n, nil =>
+*)| Oaddrstack n, nil =>
       do rd <- ireg_of res;
       OK (addptrofs rd SP n k)
 
-  | Ocast8signed, a1 :: nil =>
+(*| Ocast8signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs (Int.repr 24) :: Psraiw rd rd (Int.repr 24) :: k)
   | Ocast16signed, a1 :: nil =>

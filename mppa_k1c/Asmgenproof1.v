@@ -247,7 +247,7 @@ Proof.
 Qed.
 
 (** Add offset to pointer *)
-(*
+
 Lemma addptrofs_correct:
   forall rd r1 n k rs m,
   r1 <> GPR31 ->
@@ -262,19 +262,13 @@ Proof.
   apply exec_straight_one. simpl; eauto. auto.
   split. Simpl. destruct (rs r1); simpl; auto. rewrite Ptrofs.add_zero; auto.
   intros; Simpl.
-- destruct Archi.ptr64 eqn:SF.
-+ unfold addimm64.
+- unfold addimm64.
   exploit (opimm64_correct Paddl Paddil Val.addl); eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. split; auto.
-  rewrite B. simpl. destruct (rs r1); simpl; auto. rewrite SF.
+  rewrite B. unfold getw. destruct (rs r1); simpl; auto.
   rewrite Ptrofs.of_int64_to_int64 by auto. auto.
-+ unfold addimm32.
-  exploit (opimm32_correct Paddw Paddiw Val.add); eauto. intros (rs' & A & B & C).
-  exists rs'; split. eexact A. split; auto.
-  rewrite B. simpl. destruct (rs r1); simpl; auto. rewrite SF.
-  rewrite Ptrofs.of_int_to_int by auto. auto.
 Qed.
-
+(*
 Lemma addptrofs_correct_2:
   forall rd r1 n k (rs: regset) m b ofs,
   r1 <> GPR31 -> rs#r1 = Vptr b of
@@ -1202,8 +1196,11 @@ Proof.
 Opaque Int.eq.
   intros until c; intros TR EV.
   unfold transl_op in TR; destruct op; ArgsInv; simpl in EV; SimplEval EV; try TranslOpSimpl.
-- (* move *)
+- (* Omove *)
   destruct (preg_of res), (preg_of m0); inv TR; TranslOpSimpl.
+- (* Oaddrstack *)
+  exploit addptrofs_correct. instantiate (1 := GPR12); auto with asmgen. intros (rs' & A & B & C).
+  exists rs'; split; eauto. auto with asmgen.
 - (* Ocast32signed *)
   exploit cast32signed_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split; eauto. split. apply B.
