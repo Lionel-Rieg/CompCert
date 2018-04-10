@@ -345,10 +345,10 @@ Definition transl_op
   | Oaddlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm64 rd rs n k)
-(*| Onegl, a1 :: nil =>
+  | Onegl, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psubl rd GPR0 rs :: k)
-  | Osubl, a1 :: a2 :: nil =>
+      OK (Pnegl rd rs :: k)
+(*| Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 :: k)
   | Omull, a1 :: a2 :: nil =>

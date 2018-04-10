@@ -1,6 +1,7 @@
 DIR=general
 TESTNAMES=simple call branch for forvar forvarl branchz branchzu
 
+CCOMP=../../ccomp
 TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
 ELF=$(addsuffix .bin,$(TESTS))
 TOK=$(addsuffix .tok,$(TESTS))
@@ -15,10 +16,10 @@ $(DIR)/%.bin: $(DIR)/%.s
 	k1-gcc $< -o $@
 
 .SECONDARY:
-$(DIR)/%.s: $(DIR)/%.c
+$(DIR)/%.s: $(DIR)/%.c $(CCOMP)
 	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
-$(DIR)/%.tok: $(DIR)/%.bin FORCE
+$(DIR)/%.tok: $(DIR)/%.bin
 	@bash check.sh $< $@
 
 .PHONY: FORCE

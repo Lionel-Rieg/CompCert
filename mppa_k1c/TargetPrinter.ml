@@ -217,6 +217,8 @@ module Target : TARGET =
          fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
       | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pnegl(rd, rs) -> assert Archi.ptr64;
+         fprintf oc "	negd	%a = %a\n;;\n" ireg rd ireg rs
 
       | Pcompw (it, rd, rs1, rs2) ->
          fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2

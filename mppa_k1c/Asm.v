@@ -202,6 +202,7 @@ Inductive instruction : Type :=
 
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
   | Pj_l    (l: label)                              (**r jump to label *)
@@ -727,6 +728,8 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
+  | Pnegl d s =>
+      Next (nextinstr (rs#d <- (Val.negl rs###s))) m
 
 (** Unconditional jumps. *)
   | Pj_l l =>

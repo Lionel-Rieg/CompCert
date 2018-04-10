@@ -9,11 +9,6 @@ if [ ! -f $elffile ]; then
 	shift; continue
 fi
 
-if [ -f $token ]; then
-	echo "ALREADY PASSED: $elffile"
-	exit
-fi
-
 dir="$(dirname $elffile)"
 elf="$(basename $elffile)"
 exp="$dir/output/$elf.exp"
