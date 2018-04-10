@@ -194,6 +194,7 @@ Inductive instruction : Type :=
 
 (** 32-bit integer register-register instructions *)
   | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
@@ -716,6 +717,8 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 32-bit integer register-register instructions *)
   | Paddw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.add rs##s1 rs##s2))) m
+  | Pnegw d s =>
+      Next (nextinstr (rs#d <- (Val.neg rs###s))) m
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil d s i =>

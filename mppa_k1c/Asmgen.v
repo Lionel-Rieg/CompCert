@@ -256,10 +256,10 @@ Definition transl_op
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n k)
-(*| Oneg, a1 :: nil =>
+  | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psubw rd GPR0 rs :: k)
-  | Osub, a1 :: a2 :: nil =>
+      OK (Pnegw rd rs :: k)
+(*| Osub, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubw rd rs1 rs2 :: k)
   | Omul, a1 :: a2 :: nil =>
