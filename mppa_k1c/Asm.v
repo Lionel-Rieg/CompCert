@@ -222,11 +222,16 @@ Inductive instruction : Type :=
   (* Conditional branches *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
 
+  | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
+  | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
+  | Plh    (rd: ireg) (ra: ireg) (ofs: offset)      (**r load half word *)
+  | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word unsigned *)
   | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
   | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
   | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
   | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
-
+  | Psb    (rd: ireg) (ra: ireg) (ofs: offset)      (**r store byte *)
+  | Psh    (rd: ireg) (ra: ireg) (ofs: offset)      (**r store half byte *)
   | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
   | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
   | Psd     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int64 *)
@@ -319,8 +324,8 @@ Inductive instruction : Type :=
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
   | Plabel  (lbl: label)                            (**r define a code label *)
-(*| Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
-  | Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
+  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
+(*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
   | Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
   | Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
   | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
@@ -806,7 +811,7 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) Cge rs###s1 rs###s2)
 
 (** Loads and stores *)
-  | Plb d a ofs =>
+*)| Plb d a ofs =>
       exec_load Mint8signed rs m d a ofs
   | Plbu d a ofs =>
       exec_load Mint8unsigned rs m d a ofs
@@ -814,7 +819,7 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       exec_load Mint16signed rs m d a ofs
   | Plhu d a ofs =>
       exec_load Mint16unsigned rs m d a ofs
-*)| Plw d a ofs =>
+  | Plw d a ofs =>
       exec_load Mint32 rs m d a ofs
   | Plw_a d a ofs =>
       exec_load Many32 rs m d a ofs
@@ -822,11 +827,11 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       exec_load Mint64 rs m d a ofs
   | Pld_a d a ofs =>
       exec_load Many64 rs m d a ofs
-(*| Psb s a ofs =>
+  | Psb s a ofs =>
       exec_store Mint8unsigned rs m s a ofs
   | Psh s a ofs =>
       exec_store Mint16unsigned rs m s a ofs
-*)| Psw s a ofs =>
+  | Psw s a ofs =>
       exec_store Mint32 rs m s a ofs
   | Psw_a s a ofs =>
       exec_store Many32 rs m s a ofs
@@ -959,9 +964,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       end
   | Plabel lbl =>
       Next (nextinstr rs) m
-(*| Ploadsymbol rd s ofs =>
+  | Ploadsymbol rd s ofs =>
       Next (nextinstr (rs#rd <- (Genv.symbol_address ge s ofs))) m
-  | Ploadsymbol_high rd s ofs =>
+(*| Ploadsymbol_high rd s ofs =>
       Next (nextinstr (rs#rd <- (high_half ge s ofs))) m
   | Ploadli rd i =>
       Next (nextinstr (rs#GPR31 <- Vundef #rd <- (Vlong i))) m

@@ -567,21 +567,21 @@ Definition transl_memory_access
      (mk_instr: ireg -> offset -> instruction)
      (addr: addressing) (args: list mreg) (k: code) : res (list instruction) :=
   match addr, args with
-(*| Aindexed ofs, a1 :: nil =>
+  | Aindexed ofs, a1 :: nil =>
       do rs <- ireg_of a1;
       OK (indexed_memory_access mk_instr rs ofs k)
   | Aglobal id ofs, nil =>
-      OK (Ploadsymbol_high GPR31 id ofs :: mk_instr GPR31 (Ofslow id ofs) :: k)
+      OK (Ploadsymbol GPR31 id ofs :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k)
   | Ainstack ofs, nil =>
       OK (indexed_memory_access mk_instr SP ofs k)
-*)| _, _ =>
+  | _, _ =>
       Error(msg "Asmgen.transl_memory_access")
   end.
 
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: code) : res (list instruction) :=
   match chunk with
-(*| Mint8signed =>
+  | Mint8signed =>
       do r <- ireg_of dst;
       transl_memory_access (Plb r)  addr args k
   | Mint8unsigned =>
@@ -605,7 +605,7 @@ Definition transl_load (chunk: memory_chunk) (addr: addressing)
   | Mfloat64 =>
       do r <- freg_of dst;
       transl_memory_access (Pfld r) addr args k
-*)| _ =>
+  | _ =>
       Error (msg "Asmgen.transl_load")
   end.
 

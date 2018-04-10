@@ -1431,16 +1431,27 @@ Lemma transl_memory_access_correct:
 Proof.
   intros until v; intros TR EV. 
   unfold transl_memory_access in TR; destruct addr; ArgsInv.
-(*
 - (* indexed *)
   inv EV. apply indexed_memory_access_correct; eauto with asmgen.
 - (* global *)
   simpl in EV. inv EV. inv TR.  econstructor; econstructor; econstructor; split.
   constructor. apply exec_straight_one. simpl; eauto. auto. 
-  split; intros; Simpl. unfold eval_offset. apply low_high_half.
+  split; intros; Simpl. unfold eval_offset.
+  assert (Val.lessdef (Val.offset_ptr (Genv.symbol_address ge i i0) Ptrofs.zero) (Genv.symbol_address ge i i0)).
+  { apply Val.offset_ptr_zero. }
+  remember (Genv.symbol_address ge i i0) as symbol.
+  destruct symbol; auto.
+  + contradict Heqsymbol; unfold Genv.symbol_address;
+    destruct (Genv.find_symbol ge i); discriminate.
+  + contradict Heqsymbol; unfold Genv.symbol_address;
+    destruct (Genv.find_symbol ge i); discriminate.
+  + contradict Heqsymbol; unfold Genv.symbol_address;
+    destruct (Genv.find_symbol ge i); discriminate.
+  + contradict Heqsymbol; unfold Genv.symbol_address;
+    destruct (Genv.find_symbol ge i); discriminate.
+  + simpl. rewrite Ptrofs.add_zero; auto.
 - (* stack *)
   inv TR. inv EV. apply indexed_memory_access_correct; eauto with asmgen.
-*)
 Qed.
 
 Lemma transl_load_access_correct:

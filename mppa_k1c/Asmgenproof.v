@@ -401,7 +401,10 @@ Proof.
 - eapply loadind_label; eauto.
 (* storeind *)
 - eapply storeind_label; eauto.
+(* transl_op *)
 - eapply transl_op_label; eauto.
+(* transl_load *)
+- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
   ; [eapply make_epilogue_label|TailNoLabel].
@@ -776,13 +779,13 @@ Local Transparent destroyed_by_op.
   exploit Mem.loadv_extends; eauto. intros [v' [C D]].
   left; eapply exec_straight_steps; eauto; intros. simpl in TR.
   inversion TR.
-(*exploit transl_load_correct; eauto.
+  exploit transl_load_correct; eauto.
   intros [rs2 [P [Q R]]].
   exists rs2; split. eauto.
   split. eapply agree_set_undef_mreg; eauto. congruence.
   intros; auto with asmgen.
   simpl; congruence.
-*)
+
 
 - (* Mstore *)
   assert (eval_addressing tge sp addr (map rs args) = Some a).

@@ -124,17 +124,14 @@ module Target : TARGET =
 
 (* Generate code to load the address of id + ofs in register r *)
 
-  (*let loadsymbol oc r id ofs =
+    let loadsymbol oc r id ofs =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
-        fprintf oc "	la	%a, %s\n" ireg r (extern_atom id)
+        fprintf oc "	make	%a = %s\n;;\n" ireg r (extern_atom id)
       end else begin
-        fprintf oc "	lui	%a, %%hi(%a)\n"
-                                ireg r symbol_offset (id, ofs);
-        fprintf oc "	addi	%a, %a, %%lo(%a)\n"
-                                ireg r ireg r symbol_offset (id, ofs)
+        fprintf oc "	make	%a = %a\n;;\n" ireg r symbol_offset (id, ofs)
       end
-  *)
+    
 (* Emit .file / .loc debugging directives *)
 
     let print_file_line oc file line =
@@ -250,10 +247,22 @@ module Target : TARGET =
       | Pcb (bt, r, lbl) ->
          fprintf oc "	cb.%a	%a?%a\n;;\n" bcond bt ireg r print_label lbl
 
+      | Plb(rd, ra, ofs) ->
+         fprintf oc "	lbs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plbu(rd, ra, ofs) ->
+         fprintf oc "	lbz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plh(rd, ra, ofs) ->
+         fprintf oc "	lhs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plhu(rd, ra, ofs) ->
+         fprintf oc "	lhz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
       | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
          fprintf oc "	lws	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
       | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
          fprintf oc "	ld	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Psb(rd, ra, ofs) ->
+         fprintf oc "	sb	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
+      | Psh(rd, ra, ofs) ->
+         fprintf oc "	sh	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
       | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
          fprintf oc "	sw	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
       | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
@@ -269,10 +278,10 @@ module Target : TARGET =
       (* Pseudo-instructions that remain *)
       | Plabel lbl ->
          fprintf oc "%a:\n" print_label lbl
-    (*| Ploadsymbol(rd, id, ofs) ->
+      | Ploadsymbol(rd, id, ofs) ->
          loadsymbol oc rd id ofs
-      | Ploadsymbol_high(rd, id, ofs) ->
-         fprintf oc "	lui	%a, %%hi(%a)\n" ireg rd symbol_offset (id, ofs)
+    (*| Ploadsymbol_high(rd, id, ofs) ->
+         fprintf oc "	lui	%a, %%hi[%a]\n" ireg rd symbol_offset (id, ofs)
       | Ploadli(rd, n) ->
          let d = camlint64_of_coqint n in
          let lbl = label_literal64 d in
