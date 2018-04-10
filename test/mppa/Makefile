@@ -3,6 +3,7 @@ TESTNAMES=simple call branch for forvar forvarl branchz branchzu
 
 TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
 ELF=$(addsuffix .bin,$(TESTS))
+TOK=$(addsuffix .tok,$(TESTS))
 ASM=$(addsuffix .s,$(TESTS))
 DEBUG:=$(if $(DEBUG),"-dall",)
 
@@ -17,9 +18,14 @@ $(DIR)/%.bin: $(DIR)/%.s
 $(DIR)/%.s: $(DIR)/%.c
 	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
+$(DIR)/%.tok: $(DIR)/%.bin FORCE
+	@bash check.sh $< $@
+
+.PHONY: FORCE
+FORCE:
+
 .PHONY:
-check: $(ELF)
-	bash check.sh $(ELF)
+check: $(TOK)
 
 .PHONY:
 clean:
@@ -33,6 +39,7 @@ clean:
 	rm -f $(DIR)/*.parsed.c
 	rm -f $(DIR)/*.rtl.?
 	rm -f $(DIR)/*.s
+	rm -f $(DIR)/*.tok
 	rm -f $(DIR)/output/*.out
 	rm -rf $(DIR)/profile/
 	rm -f $(ELF)

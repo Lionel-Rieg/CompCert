@@ -1,6 +1,7 @@
 # Object files, in general
 **.bin
 **.out
+**.tok
 *.vo
 *.glob
 *.o
