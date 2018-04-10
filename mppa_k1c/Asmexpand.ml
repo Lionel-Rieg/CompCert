@@ -548,10 +548,10 @@ let expand_instruction instr =
       end else begin
         emit (Pxorl(rd, rs1, rs2)); emit (Psltul(rd, X0, X rd))
       end
-  | Pcvtl2w(rd, rs) ->
+*)| Pcvtl2w(rd, rs) ->
       assert Archi.ptr64;
       emit (Paddiw(rd, rs, Int.zero))  (* 32-bit sign extension *)
-  | Pcvtw2l(r) ->
+(*| Pcvtw2l(r) ->
       assert Archi.ptr64
       (* no-operation because the 32-bit integer was kept sign extended already *)
 

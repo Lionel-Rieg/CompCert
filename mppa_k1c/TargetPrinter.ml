@@ -211,12 +211,33 @@ module Target : TARGET =
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+      | Psrliw (rd, rs, imm) ->
+         fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psrlil (rd, rs, imm) ->
+         fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+
+      | Poril (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Porl(rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+      | Pandiw (rd, rs, imm) ->
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pandw(rd, rs1, rs2) ->
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pandil (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pandl(rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
       | Pmake (rd, imm) ->
          fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint imm
       | Pmakel (rd, imm) ->
          fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
-      | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
       | Pnegl(rd, rs) -> assert Archi.ptr64;
          fprintf oc "	negd	%a = %a\n;;\n" ireg rd ireg rs
       | Pnegw(rd, rs) ->
@@ -243,6 +264,7 @@ module Target : TARGET =
          assert false
       | Pfreeframe(sz, ofs) ->
          assert false
+      | Pcvtl2w _ -> assert false
 
       (* Pseudo-instructions that remain *)
       | Plabel lbl ->

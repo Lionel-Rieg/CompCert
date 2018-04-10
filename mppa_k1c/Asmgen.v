@@ -82,8 +82,8 @@ Definition opimm32 (op: ireg -> ireg -> ireg -> instruction)
   end.
 
 Definition addimm32 := opimm32 Paddw Paddiw.
-(*
 Definition andimm32 := opimm32 Pandw Pandiw.
+(*
 Definition orimm32  := opimm32 Porw  Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
 Definition sltimm32 := opimm32 Psltw Psltiw.
@@ -107,10 +107,10 @@ Definition opimm64 (op: ireg -> ireg -> ireg -> instruction)
 end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
+Definition orimm64  := opimm64 Porl  Poril.
+Definition andimm64 := opimm64 Pandl Pandil.
 
 (*
-Definition andimm64 := opimm64 Pandl Pandil.
-Definition orimm64  := opimm64 Porl  Poril.
 Definition xorimm64 := opimm64 Pxorl  Pxoril.
 Definition sltimm64 := opimm64 Psltl Psltil.
 Definition sltuimm64 := opimm64 Psltul Psltiul.
@@ -286,10 +286,10 @@ Definition transl_op
   | Oand, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandw rd rs1 rs2 :: k)
-  | Oandimm n, a1 :: nil =>
+*)| Oandimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm32 rd rs n k)
-  | Oor, a1 :: a2 :: nil =>
+(*| Oor, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porw rd rs1 rs2 :: k)
   | Oorimm n, a1 :: nil =>
@@ -316,10 +316,10 @@ Definition transl_op
   | Oshru, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psrlw rd rs1 rs2 :: k)
-  | Oshruimm n, a1 :: nil =>
+*)| Oshruimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psrliw rd rs n :: k)
-  | Oshrximm n, a1 :: nil =>
+(*| Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (if Int.eq n Int.zero then Pmv rd rs :: k else
           Psraiw GPR31 rs (Int.repr 31) ::
@@ -328,10 +328,10 @@ Definition transl_op
           Psraiw rd GPR31 n :: k)
 
   (* [Omakelong], [Ohighlong]  should not occur *)
-  | Olowlong, a1 :: nil =>
+*)| Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pcvtl2w rd rs :: k)  
-  | Ocast32signed, a1 :: nil =>
+(*| Ocast32signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       assertion (ireg_eq rd rs);
       OK (Pcvtw2l rd :: k)
@@ -375,16 +375,16 @@ Definition transl_op
   | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 :: k)
-  | Oandlimm n, a1 :: nil =>
+*)| Oandlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm64 rd rs n k)
-  | Oorl, a1 :: a2 :: nil =>
+(*| Oorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porl rd rs1 rs2 :: k)
-  | Oorlimm n, a1 :: nil =>
+*)| Oorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (orimm64 rd rs n k)
-  | Oxorl, a1 :: a2 :: nil =>
+(*| Oxorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pxorl rd rs1 rs2 :: k)
   | Oxorlimm n, a1 :: nil =>
@@ -405,10 +405,10 @@ Definition transl_op
   | Oshrlu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psrll rd rs1 rs2 :: k)
-  | Oshrluimm n, a1 :: nil =>
+*)| Oshrluimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psrlil rd rs n :: k)
-  | Oshrxlimm n, a1 :: nil =>
+(*| Oshrxlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (if Int.eq n Int.zero then Pmv rd rs :: k else
           Psrail GPR31 rs (Int.repr 63) ::
@@ -656,9 +656,9 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
                 else loadind_ptr SP f.(fn_link_ofs) GPR30 c)
 *)| Mop op args res =>
       transl_op op args res k
-(*| Mload chunk addr args dst =>
+  | Mload chunk addr args dst =>
       transl_load chunk addr args dst k
-  | Mstore chunk addr args src =>
+(*| Mstore chunk addr args src =>
       transl_store chunk addr args src k
   | Mcall sig (inl r) =>
       do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)

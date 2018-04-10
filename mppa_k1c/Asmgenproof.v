@@ -307,7 +307,13 @@ Opaque Int.eq.
 - destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
 (* Oaddimm32 *)
 - apply opimm32_label; intros; exact I.
+(* Oandimm32 *)
+- apply opimm32_label; intros; exact I.
 (* Oaddimm64 *)
+- apply opimm64_label; intros; exact I.
+(* Oandimm64  *)
+- apply opimm64_label; intros; exact I.
+(* Oorimm64  *)
 - apply opimm64_label; intros; exact I.
 Qed.
 

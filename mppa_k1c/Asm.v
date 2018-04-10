@@ -191,18 +191,29 @@ Inductive instruction : Type :=
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
+  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
+  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate *)
 
 (** 32-bit integer register-register instructions *)
   | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
+  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *) 
+  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or long immediate *) 
+  | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate long *)
   | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
   | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
 
+(** Conversions *)
+  | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r Convert Long to Word *)
+
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
+  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
   | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
@@ -713,16 +724,28 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
+  | Pandiw d s i =>
+      Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
+  | Psrliw d s i =>
+      Next (nextinstr (rs#d <- (Val.shru rs##s (Vint i)))) m
 
 (** 32-bit integer register-register instructions *)
   | Paddw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.add rs##s1 rs##s2))) m
+  | Pandw d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.and rs##s1 rs##s2))) m
   | Pnegw d s =>
       Next (nextinstr (rs#d <- (Val.neg rs###s))) m
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil d s i =>
       Next (nextinstr (rs#d <- (Val.addl rs###s (Vlong i)))) m
+  | Pandil d s i =>
+      Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
+  | Poril  d s i =>
+      Next (nextinstr (rs#d <- (Val.orl  rs###s (Vlong i)))) m
+  | Psrlil  d s i =>
+      Next (nextinstr (rs#d <- (Val.shrlu  rs###s (Vint i)))) m
   | Pmakel d i =>
       Next (nextinstr (rs#d <- (Vlong i))) m
   | Pmake d i =>
@@ -731,8 +754,16 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
+  | Pandl d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.andl rs###s1 rs###s2))) m
+  | Porl  d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
   | Pnegl d s =>
       Next (nextinstr (rs#d <- (Val.negl rs###s))) m
+
+(** Conversions *)
+  | Pcvtl2w d s =>
+      Next (nextinstr (rs#d <- (Val.loword rs###s))) m
 
 (** Unconditional jumps. *)
   | Pj_l l =>
