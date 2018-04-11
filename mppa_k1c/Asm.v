@@ -286,8 +286,8 @@ Inductive instruction : Type :=
 *)| Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
 (*| Pfsd_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r store any64 *)
 
-  | Pfnegd   (rd: freg) (rs: freg)                  (**r negation *)
-  | Pfabsd   (rd: freg) (rs: freg)                  (**r absolute value *)
+*)| Pfnegd   (rd: freg) (rs: freg)                  (**r negation *)
+(*| Pfabsd   (rd: freg) (rs: freg)                  (**r absolute value *)
 
   | Pfaddd   (rd: freg) (rs1 rs2: freg)             (**r addition *)
   | Pfsubd   (rd: freg) (rs1 rs2: freg)             (**r subtraction *)
@@ -898,9 +898,9 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (*| Pfsd_a s a ofs =>
       exec_store Many64 rs m s a ofs
 
-  | Pfnegd d s =>
+*)| Pfnegd d s =>
       Next (nextinstr (rs#d <- (Val.negf rs#s))) m
-  | Pfabsd d s =>
+(*| Pfabsd d s =>
       Next (nextinstr (rs#d <- (Val.absf rs#s))) m
 
   | Pfaddd d s1 s2 =>

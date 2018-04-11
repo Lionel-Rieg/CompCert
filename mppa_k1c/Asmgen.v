@@ -416,10 +416,10 @@ Definition transl_op
           Paddl GPR31 rs GPR31 ::
           Psrail rd GPR31 n :: k)
 
-  | Onegf, a1 :: nil =>
+*)| Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs :: k)
-  | Oabsf, a1 :: nil =>
+(*| Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs :: k)
   | Oaddf, a1 :: a2 :: nil =>
@@ -612,7 +612,7 @@ Definition transl_load (chunk: memory_chunk) (addr: addressing)
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: code) : res (list instruction) :=
   match chunk with
-(*| Mint8signed | Mint8unsigned =>
+  | Mint8signed | Mint8unsigned =>
       do r <- ireg_of src;
       transl_memory_access (Psb r)  addr args k
   | Mint16signed | Mint16unsigned =>
@@ -630,7 +630,7 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
   | Mfloat64 =>
       do r <- freg_of src;
       transl_memory_access (Pfsd r) addr args k
-*)| _ =>
+  | _ =>
       Error (msg "Asmgen.transl_store")
   end.
 
@@ -658,9 +658,9 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       transl_op op args res k
   | Mload chunk addr args dst =>
       transl_load chunk addr args dst k
-(*| Mstore chunk addr args src =>
+  | Mstore chunk addr args src =>
       transl_store chunk addr args src k
-  | Mcall sig (inl r) =>
+(*| Mcall sig (inl r) =>
       do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)
 *)| Mcall sig (inr symb) =>
       OK ((Pcall symb) :: k)

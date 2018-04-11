@@ -405,6 +405,8 @@ Proof.
 - eapply transl_op_label; eauto.
 (* transl_load *)
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
+(* transl store *)
+- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; eapply tail_nolabel_trans
   ; [eapply make_epilogue_label|TailNoLabel].
@@ -797,11 +799,11 @@ Local Transparent destroyed_by_op.
   left; eapply exec_straight_steps; eauto.
   intros. simpl in TR.
   inversion TR.
-(*exploit transl_store_correct; eauto. intros [rs2 [P Q]].
+  exploit transl_store_correct; eauto. intros [rs2 [P Q]].
   exists rs2; split. eauto.
   split. eapply agree_undef_regs; eauto with asmgen.
   simpl; congruence.
-*)
+
 - (* Mcall *)
   assert (f0 = f) by congruence.  subst f0.
   inv AT.

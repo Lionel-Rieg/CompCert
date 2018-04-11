@@ -1534,10 +1534,8 @@ Proof.
    /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src)).
   { unfold transl_store in TR; destruct chunk; ArgsInv;
     (econstructor; econstructor; split; [eassumption | split; [ intros; simpl; reflexivity | auto]]).
-(*
     destruct a; auto. apply Mem.store_signed_unsigned_8. 
     destruct a; auto. apply Mem.store_signed_unsigned_16. 
-*)
   }
   destruct A as (mk_instr & chunk' & B & C & D).
   rewrite D in STORE; clear D. 

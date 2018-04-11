@@ -268,6 +268,9 @@ module Target : TARGET =
       | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
          fprintf oc "	sd	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
 
+      | Pfnegd(rd, ra) ->
+         fprintf oc "	fnegd	%a = %a\n;;\n" ireg ra ireg rd
+
       (* Pseudo-instructions expanded in Asmexpand *)
       | Pallocframe(sz, ofs) ->
          assert false
