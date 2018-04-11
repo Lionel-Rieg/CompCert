@@ -265,13 +265,13 @@ Definition transl_op
   | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pnegw rd rs :: k)
-(*| Osub, a1 :: a2 :: nil =>
+  | Osub, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubw rd rs1 rs2 :: k)
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 :: k)
-  | Omulhs, a1 :: a2 :: nil =>
+(*| Omulhs, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulhw rd rs1 rs2 :: k)
   | Omulhu, a1 :: a2 :: nil =>

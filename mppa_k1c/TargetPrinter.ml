@@ -211,6 +211,12 @@ module Target : TARGET =
       | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
+      | Psubw(rd, rs1, rs2) ->
+         fprintf oc "	sbfwd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+      | Pmulw(rd, rs1, rs2) ->
+         fprintf oc "	mulw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
       | Psrliw (rd, rs, imm) ->
          fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Psrlil (rd, rs, imm) ->
