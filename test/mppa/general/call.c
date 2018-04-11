@@ -14,3 +14,5 @@ int main(void){
     return sum(make_42(), make_18());
     //return make_42() + make_18();
 }
+
+/* RETURN VALUE: 60 */

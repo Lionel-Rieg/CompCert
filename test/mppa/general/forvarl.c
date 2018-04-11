@@ -9,3 +9,5 @@ int main(void)
 
     return 0;
 }
+
+/* RETURN VALUE: 0 */

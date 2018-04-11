@@ -8,3 +8,5 @@ int main(void){
 
     return a;
 }
+
+/* RETURN VALUE: 16 */

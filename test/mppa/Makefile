@@ -23,9 +23,12 @@ $(DIR)/$(ASMDIR)/%.s: $(DIR)/%.c $(CCOMP)
 	@mkdir -p $(@D)
 	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
-$(DIR)/$(BINDIR)/%.tok: $(DIR)/$(BINDIR)/%.bin
+$(DIR)/$(BINDIR)/%.tok: $(DIR)/$(BINDIR)/%.bin $(DIR)/output/%.bin.exp
 	@mkdir -p $(@D)
 	@bash check.sh $< $@
+
+$(DIR)/output/%.bin.exp: $(DIR)/%.c
+	@bash generate.sh $< $@
 
 .PHONY: FORCE
 FORCE:
@@ -45,7 +48,9 @@ clean:
 	rm -f $(DIR)/*.parsed.c
 	rm -f $(DIR)/*.rtl.?
 	rm -f $(DIR)/$(ASMDIR)/*.s
-	rm -f $(DIR)/$(BINDIR)/*.[bin,tok]
+	rm -f $(DIR)/$(BINDIR)/*.bin
+	rm -f $(DIR)/$(BINDIR)/*.tok
 	rm -f $(DIR)/output/*.out
+	rm -f $(DIR)/output/*.exp
 	rm -rf $(DIR)/profile/
 	rm -f $(ELF)

@@ -10,3 +10,4 @@ int main(void){
 
     return b;
 }
+/* RETURN VALUE: 5 */

@@ -4,3 +4,5 @@ int main(void){
 
     return (a+b);
 }
+
+/* RETURN VALUE: 7 */
