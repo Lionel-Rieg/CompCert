@@ -215,6 +215,8 @@ module Target : TARGET =
          fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Psrlil (rd, rs, imm) ->
          fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psraw  (rd, rs1, rs2) ->
+         fprintf oc "	sraw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Poril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm

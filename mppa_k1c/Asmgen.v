@@ -313,10 +313,10 @@ Definition transl_op
   | Oshlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs n :: k)
-  | Oshr, a1 :: a2 :: nil =>
+*)| Oshr, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psraw rd rs1 rs2 :: k)
-  | Oshrimm n, a1 :: nil =>
+(*| Oshrimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psraiw rd rs n :: k)
   | Oshru, a1 :: a2 :: nil =>
