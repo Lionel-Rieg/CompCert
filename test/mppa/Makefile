@@ -1,25 +1,30 @@
 DIR=general
+BINDIR=bin
+ASMDIR=asm
 TESTNAMES=simple call branch for forvar forvarl branchz branchzu
 
 CCOMP=../../ccomp
-TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
-ELF=$(addsuffix .bin,$(TESTS))
-TOK=$(addsuffix .tok,$(TESTS))
-ASM=$(addsuffix .s,$(TESTS))
+#TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
+ELF=$(addprefix $(DIR)/$(BINDIR)/,$(addsuffix .bin,$(TESTNAMES)))
+TOK=$(addprefix $(DIR)/$(BINDIR)/,$(addsuffix .tok,$(TESTNAMES)))
+ASM=$(addprefix $(DIR)/$(ASMDIR)/,$(addsuffix .s,$(TESTNAMES)))
 DEBUG:=$(if $(DEBUG),"-dall",)
 
 all: $(ELF)
 
 nobin: $(ASM)
 
-$(DIR)/%.bin: $(DIR)/%.s
+$(DIR)/$(BINDIR)/%.bin: $(DIR)/$(ASMDIR)/%.s
+	@mkdir -p $(@D)
 	k1-gcc $< -o $@
 
 .SECONDARY:
-$(DIR)/%.s: $(DIR)/%.c $(CCOMP)
+$(DIR)/$(ASMDIR)/%.s: $(DIR)/%.c $(CCOMP)
+	@mkdir -p $(@D)
 	ccomp $(DEBUG) -O0 -v -S $< -o $@
 
-$(DIR)/%.tok: $(DIR)/%.bin
+$(DIR)/$(BINDIR)/%.tok: $(DIR)/$(BINDIR)/%.bin
+	@mkdir -p $(@D)
 	@bash check.sh $< $@
 
 .PHONY: FORCE
@@ -39,8 +44,8 @@ clean:
 	rm -f $(DIR)/*.mach
 	rm -f $(DIR)/*.parsed.c
 	rm -f $(DIR)/*.rtl.?
-	rm -f $(DIR)/*.s
-	rm -f $(DIR)/*.tok
+	rm -f $(DIR)/$(ASMDIR)/*.s
+	rm -f $(DIR)/$(BINDIR)/*.[bin,tok]
 	rm -f $(DIR)/output/*.out
 	rm -rf $(DIR)/profile/
 	rm -f $(ELF)
