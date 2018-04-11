@@ -209,6 +209,8 @@ Inductive instruction : Type :=
 
 (** Conversions *)
   | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r Convert Long to Word *)
+  | Pcvtw2l (r : ireg)                              (**r Convert Word to Long *)
+  | Pmvw2l  (rd: ireg) (rs: ireg)                   (**r Move Convert Word to Long *)
 
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
@@ -769,6 +771,10 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** Conversions *)
   | Pcvtl2w d s =>
       Next (nextinstr (rs#d <- (Val.loword rs###s))) m
+  | Pcvtw2l r   =>
+      Next (nextinstr (rs#r <- (Val.longofint rs#r))) m
+  | Pmvw2l d s =>
+      Next (nextinstr (rs#d <- (Val.longofint rs#s))) m
 
 (** Unconditional jumps. *)
   | Pj_l l =>

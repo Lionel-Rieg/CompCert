@@ -142,6 +142,13 @@ Proof.
 Qed.
 Hint Resolve loadimm64_label: labels.
 
+Remark cast32signed_label:
+  forall rd rs k, tail_nolabel k (cast32signed rd rs k).
+Proof.
+  intros; unfold cast32signed. destruct (ireg_eq rd rs); TailNoLabel.
+Qed.
+Hint Resolve cast32signed_label: labels.
+
 Remark opimm64_label:
   forall op opimm r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->

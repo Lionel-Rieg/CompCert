@@ -199,7 +199,7 @@ module Target : TARGET =
          fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs
       | Pset (rd, rs) ->
          fprintf oc "	set	%a = %a\n;;\n" preg rd ireg rs
-      | Pmv(rd, rs) ->
+      | Pmv(rd, rs) | Pmvw2l(rd, rs) ->
          fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
 
       | Paddiw (rd, rs, imm) ->
@@ -276,7 +276,7 @@ module Target : TARGET =
          assert false
       | Pfreeframe(sz, ofs) ->
          assert false
-      | Pcvtl2w _ -> assert false
+      | Pcvtl2w _ | Pcvtw2l _ -> assert false
 
       (* Pseudo-instructions that remain *)
       | Plabel lbl ->

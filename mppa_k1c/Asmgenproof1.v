@@ -1080,6 +1080,26 @@ Proof.
   destruct (zlt i0 32). auto. apply Int.bits_above. auto.
 Qed.
 
+Lemma cast32signed_correct:
+  forall (d s: ireg) (k: code) (rs: regset) (m: mem),
+  exists rs': regset,
+    exec_straight ge fn (cast32signed d s k) rs m k rs' m
+ /\ Val.lessdef (Val.longofint (rs s)) (rs' d)
+ /\ (forall r: preg, r <> PC -> r <> d -> rs' r = rs r).
+Proof.
+  intros. unfold cast32signed. destruct (ireg_eq d s).
+- econstructor; split.
+  + apply exec_straight_one. simpl. eauto with asmgen. Simpl.
+  + split.
+    * rewrite e. Simpl.
+    * intros. destruct r; Simpl.
+- econstructor; split.
+  + apply exec_straight_one. simpl. eauto with asmgen. Simpl.
+  + split.
+    * Simpl.
+    * intros. destruct r; Simpl.
+Qed.
+
 (* Translation of arithmetic operations *)
 
 Ltac SimplEval H :=
@@ -1109,6 +1129,11 @@ Opaque Int.eq.
   unfold transl_op in TR; destruct op; ArgsInv; simpl in EV; SimplEval EV; try TranslOpSimpl.
 - (* move *)
   destruct (preg_of res), (preg_of m0); inv TR; TranslOpSimpl.
+- (* Ocast32signed *)
+  exploit cast32signed_correct; eauto. intros (rs' & A & B & C).
+  exists rs'; split; eauto. split. apply B.
+  intros. assert (r <> PC). { destruct r; auto; contradict H; discriminate. }
+  apply C; auto.
 (*
 - (* intconst *)
   exploit loadimm32_correct; eauto. intros (rs' & A & B & C).
@@ -1232,6 +1257,7 @@ Opaque Int.eq.
   exists rs'; split. eexact A. eauto with asmgen.
 *)
 Qed.
+
 
 (** Memory accesses *)
 
