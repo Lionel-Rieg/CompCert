@@ -192,7 +192,9 @@ Inductive instruction : Type :=
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
   | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
+  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate *)
   | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate *)
+  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate *)
 
 (** 32-bit integer register-register instructions *)
   | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
@@ -201,6 +203,8 @@ Inductive instruction : Type :=
   | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
   | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic *)
+  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical *)
+  | Psllw   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical word *)
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
@@ -751,8 +755,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
   | Pandiw d s i =>
       Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
+  | Psraiw d s i =>
+      Next (nextinstr (rs#d <- (Val.shr rs##s (Vint i)))) m
   | Psrliw d s i =>
       Next (nextinstr (rs#d <- (Val.shru rs##s (Vint i)))) m
+  | Pslliw d s i =>
+      Next (nextinstr (rs#d <- (Val.shl rs##s (Vint i)))) m
 
 (** 32-bit integer register-register instructions *)
   | Paddw d s1 s2 =>
@@ -765,8 +773,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.and rs##s1 rs##s2))) m
   | Pnegw d s =>
       Next (nextinstr (rs#d <- (Val.neg rs###s))) m
+  | Psrlw d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.shru rs##s1 rs##s2))) m
   | Psraw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.shr rs##s1 rs##s2))) m
+  | Psllw d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.shl rs##s1 rs##s2))) m
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil d s i =>

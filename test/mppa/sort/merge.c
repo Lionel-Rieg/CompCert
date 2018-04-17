@@ -13,7 +13,7 @@ int min(int a, int b){
     return (a < b)?a:b;
 }
 
-void BottomUpMerge(const uint64_t *A, int iLeft, int iRight, int iEnd, int64_t *B)
+void BottomUpMerge(const uint64_t *A, int iLeft, int iRight, int iEnd, uint64_t *B)
 {
     int i = iLeft, j = iRight;
     for (int k = iLeft; k < iEnd; k++) {
@@ -59,6 +59,8 @@ int merge_sort(uint64_t *res, const uint64_t *T){
         A[i] = T[i];
 
     BottomUpMergeSort(A, B);
+
+    return 0;
 }
 
 #ifdef __UNIT_TEST_MERGE__

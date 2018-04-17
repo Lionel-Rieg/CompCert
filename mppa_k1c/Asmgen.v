@@ -328,22 +328,22 @@ Definition transl_op
   | Oxorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm32 rd rs n k)
-  | Oshl, a1 :: a2 :: nil =>
+*)| Oshl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psllw rd rs1 rs2 :: k)
   | Oshlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs n :: k)
-*)| Oshr, a1 :: a2 :: nil =>
+  | Oshr, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psraw rd rs1 rs2 :: k)
-(*| Oshrimm n, a1 :: nil =>
+  | Oshrimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psraiw rd rs n :: k)
   | Oshru, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psrlw rd rs1 rs2 :: k)
-*)| Oshruimm n, a1 :: nil =>
+  | Oshruimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psrliw rd rs n :: k)
 (*| Oshrximm n, a1 :: nil =>
