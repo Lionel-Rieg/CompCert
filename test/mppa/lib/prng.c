@@ -16,7 +16,7 @@ uint64_t randlong(void){
     return (current = MULTIPLIER * current + INCREMENT);
 }
 
-#ifdef __UNIT_TEST__
+#ifdef __UNIT_TEST_PRNG__
 char bytewise_sum(uint64_t to_check){
     char sum = 0;
 
@@ -39,4 +39,4 @@ int main(void){
 
     return !((unsigned char)bytewise_sum(last) == 251);
 }
-#endif // __UNIT_TEST__
+#endif // __UNIT_TEST_PRNG__
