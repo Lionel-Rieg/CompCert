@@ -377,10 +377,10 @@ Definition transl_op
 (*| Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 :: k)
-  | Omull, a1 :: a2 :: nil =>
+*)| Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 :: k)
-  | Omullhs, a1 :: a2 :: nil =>
+(*| Omullhs, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulhl rd rs1 rs2 :: k)
   | Omullhu, a1 :: a2 :: nil =>

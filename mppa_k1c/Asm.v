@@ -226,6 +226,7 @@ Inductive instruction : Type :=
   | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
   | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
+  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition long (low part) *)
   | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
   | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical long *)
   | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic long *)
@@ -807,6 +808,8 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
   | Pnegl d s =>
       Next (nextinstr (rs#d <- (Val.negl rs###s))) m
+  | Pmull d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.mull rs###s1 rs###s2))) m
   | Pslll d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.shll rs###s1 rs###s2))) m
   | Psrll d s1 s2 =>

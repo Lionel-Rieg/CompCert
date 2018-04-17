@@ -34,7 +34,11 @@ $(DIR)/output/%.bin.exp: $(DIR)/%.c
 FORCE:
 
 .PHONY:
-check: $(TOK)
+check: $(TOK) sort
+
+.PHONY:
+sort: FORCE
+	(cd sort && make compc-check)
 
 .PHONY:
 clean:

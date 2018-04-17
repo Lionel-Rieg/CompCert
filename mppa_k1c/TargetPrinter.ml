@@ -216,6 +216,8 @@ module Target : TARGET =
 
       | Pmulw(rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pmull(rd, rs1, rs2) ->
+         fprintf oc "	muld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Psrliw (rd, rs, imm) ->
          fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm

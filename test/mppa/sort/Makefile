@@ -35,9 +35,9 @@ check: check-x86 check-k1c
 .PHONY:
 compc-check: test-ccomp
 	@if ! k1-cluster -- ./$<; then\
-		>&2 echo "ERROR k1c: $< failed";\
+		>&2 echo "ERROR k1c: sort $< failed";\
 	else\
-		echo "k1c: Test $< succeeded";\
+		echo "k1c: Test sort $< succeeded";\
 	fi
 
 .PHONY:
