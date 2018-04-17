@@ -3,7 +3,8 @@ PRNG=../lib/prng.c
 ALL= insertion-test-x86 insertion-test-k1c\
      selection-test-x86 selection-test-k1c\
      merge-test-x86     merge-test-k1c\
-     test-x86           test-k1c
+     test-x86           test-k1c\
+     test-ccomp
 
 all: $(ALL)
 
@@ -19,11 +20,25 @@ test-x86: selection.c merge.c insertion.c test.c $(PRNG)
 test-k1c: selection.c merge.c insertion.c test.c $(PRNG)
 	k1-gcc -g -O2 -std=c99 $^ -o $@
 
+%.s: %.c
+	ccomp -O2 -S $< -o $@
+
+test-ccomp: selection.s merge.s insertion.s test.s $(subst .c,.s,$(PRNG))
+	k1-gcc $^ -o $@
+
 .PHONY:
 unittest: unittest-x86 unittest-k1c
 
 .PHONY:
 check: check-x86 check-k1c
+
+.PHONY:
+compc-check: test-ccomp
+	@if ! k1-cluster -- ./$<; then\
+		>&2 echo "ERROR k1c: $< failed";\
+	else\
+		echo "k1c: Test $< succeeded";\
+	fi
 
 .PHONY:
 check-x86: test-x86
