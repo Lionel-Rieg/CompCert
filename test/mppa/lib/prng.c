@@ -9,11 +9,13 @@
 static uint64_t current;
 
 void srand(uint64_t seed){
-    seed = current;
+    //seed = current;
+    current=100;
 }
 
 uint64_t randlong(void){
-    return (current = MULTIPLIER * current + INCREMENT);
+    //return (current = MULTIPLIER * current + INCREMENT);
+    return current--;
 }
 
 #ifdef __UNIT_TEST_PRNG__

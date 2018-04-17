@@ -1,36 +1,40 @@
 #include "../lib/prng.h"
 #include "../lib/types.h"
 
-void swap(uint64_t *a, uint64_t *b){
+#ifdef __UNIT_TEST_SELECTION__
+#define SIZE 100
+#else
+#include "test.h"
+#endif
+
+void swap_sel(uint64_t *a, uint64_t *b){
     uint64_t tmp = *a;
     *a = *b;
     *b = tmp;
 }
 
-int selection_sort(uint64_t *res, const uint64_t *T, int size){
-    if (size <= 0)
+int select_sort(uint64_t *res, const uint64_t *T){
+    if (SIZE <= 0)
         return -1;
 
-    for (int i = 0 ; i < size ; i++)
+    for (int i = 0 ; i < SIZE ; i++)
         res[i] = T[i];
 
-    for (int j = 0 ; j < size ; j++){
+    for (int j = 0 ; j < SIZE ; j++){
         int i;
         int iMin = j;
-        for (i = j+1 ; i < size ; i++)
+        for (i = j+1 ; i < SIZE ; i++)
             if (res[i] < res[iMin])
                 iMin = i;
 
         if (iMin != j)
-            swap (&res[j], &res[iMin]);
+            swap_sel (&res[j], &res[iMin]);
     }
 
     return 0;
 }
 
 #ifdef __UNIT_TEST_SELECTION__
-#define SIZE 100
-
 int main(void){
     uint64_t T[SIZE];
     uint64_t res[SIZE];
@@ -40,7 +44,7 @@ int main(void){
         T[i] = randlong();
 
     /* Sorting the table */
-    if (selection_sort(res, T, SIZE) < 0) return -1;
+    if (select_sort(res, T) < 0) return -1;
 
     /* Computing max(T) */
     uint64_t max = T[0];
