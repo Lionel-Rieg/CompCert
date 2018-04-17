@@ -416,7 +416,7 @@ Definition transl_op
   | Oxorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm64 rd rs n k)
-  | Oshll, a1 :: a2 :: nil =>
+*)| Oshll, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pslll rd rs1 rs2 :: k)
   | Oshllimm n, a1 :: nil =>
@@ -431,7 +431,7 @@ Definition transl_op
   | Oshrlu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psrll rd rs1 rs2 :: k)
-*)| Oshrluimm n, a1 :: nil =>
+  | Oshrluimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psrlil rd rs n :: k)
 (*| Oshrxlimm n, a1 :: nil =>

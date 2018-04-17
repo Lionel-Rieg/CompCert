@@ -193,7 +193,6 @@ Inductive instruction : Type :=
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
   | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
   | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate *)
-  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic *)
 
 (** 32-bit integer register-register instructions *)
   | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
@@ -201,12 +200,15 @@ Inductive instruction : Type :=
   | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition *)
   | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
+  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic *)
 
 (** 64-bit integer register-immediate instructions *)
   | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
   | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *) 
   | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or long immediate *) 
+  | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate long *)
   | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate long *)
+  | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate long *)
   | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
   | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
 
@@ -220,6 +222,9 @@ Inductive instruction : Type :=
   | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
   | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
+  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
+  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical long *)
+  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic long *)
 
   (* Unconditional jumps.  Links are always to X1/RA. *)
   | Pj_l    (l: label)                              (**r jump to label *)
@@ -770,8 +775,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
   | Poril  d s i =>
       Next (nextinstr (rs#d <- (Val.orl  rs###s (Vlong i)))) m
+  | Psllil  d s i =>
+      Next (nextinstr (rs#d <- (Val.shll  rs###s (Vint i)))) m
   | Psrlil  d s i =>
       Next (nextinstr (rs#d <- (Val.shrlu  rs###s (Vint i)))) m
+  | Psrail d s i =>
+      Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
   | Pmakel d i =>
       Next (nextinstr (rs#d <- (Vlong i))) m
   | Pmake d i =>
@@ -786,6 +795,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
   | Pnegl d s =>
       Next (nextinstr (rs#d <- (Val.negl rs###s))) m
+  | Pslll d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.shll rs###s1 rs###s2))) m
+  | Psrll d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.shrlu rs###s1 rs###s2))) m
+  | Psral d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.shrl rs###s1 rs###s2))) m
 
 (** Conversions *)
   | Pcvtl2w d s =>
