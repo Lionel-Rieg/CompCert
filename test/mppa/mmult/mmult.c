@@ -1,6 +1,8 @@
 #include "../lib/types.h"
 #include "../lib/prng.h"
 
+#define __UNIT_TEST_MMULT__
+
 #ifdef __UNIT_TEST_MMULT__
 #define SIZE 50
 #else

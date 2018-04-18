@@ -317,6 +317,8 @@ Opaque Int.eq.
   unfold transl_op; intros; destruct op; TailNoLabel.
 (* Omove *)
 - destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
+(* Oaddrsymbol *)
+- destruct (Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)); TailNoLabel.
 (* Oaddimm32 *)
 - apply opimm32_label; intros; exact I.
 (* Oandimm32 *)

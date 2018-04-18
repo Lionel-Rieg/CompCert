@@ -1198,6 +1198,19 @@ Opaque Int.eq.
   unfold transl_op in TR; destruct op; ArgsInv; simpl in EV; SimplEval EV; try TranslOpSimpl.
 - (* Omove *)
   destruct (preg_of res), (preg_of m0); inv TR; TranslOpSimpl.
+- (* Oaddrsymbol *)
+  destruct (Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)).
++ set (rs1 := nextinstr (rs#x <- (Genv.symbol_address ge id Ptrofs.zero))).
+  exploit (addptrofs_correct x x ofs k rs1 m); eauto with asmgen. 
+  intros (rs2 & A & B & C).
+  exists rs2; split. 
+  apply exec_straight_step with rs1 m; auto.
+  split. replace ofs with (Ptrofs.add Ptrofs.zero ofs) by (apply Ptrofs.add_zero_l). 
+  rewrite Genv.shift_symbol_address.
+  replace (rs1 x) with (Genv.symbol_address ge id Ptrofs.zero) in B by (unfold rs1; Simpl).
+  exact B.
+  intros. rewrite C by eauto with asmgen. unfold rs1; Simpl.  
++ TranslOpSimpl.
 - (* Oaddrstack *)
   exploit addptrofs_correct. instantiate (1 := GPR12); auto with asmgen. intros (rs' & A & B & C).
   exists rs'; split; eauto. auto with asmgen.
@@ -1229,19 +1242,6 @@ Opaque Int.eq.
 + econstructor; split. 
   apply exec_straight_one. simpl; eauto. auto.
   split; intros; Simpl. 
-- (* addrsymbol *)
-  destruct (Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)).
-+ set (rs1 := nextinstr (rs#x <- (Genv.symbol_address ge id Ptrofs.zero))).
-  exploit (addptrofs_correct x x ofs k rs1 m); eauto with asmgen. 
-  intros (rs2 & A & B & C).
-  exists rs2; split. 
-  apply exec_straight_step with rs1 m; auto.
-  split. replace ofs with (Ptrofs.add Ptrofs.zero ofs) by (apply Ptrofs.add_zero_l). 
-  rewrite Genv.shift_symbol_address.
-  replace (rs1 x) with (Genv.symbol_address ge id Ptrofs.zero) in B by (unfold rs1; Simpl).
-  exact B.
-  intros. rewrite C by eauto with asmgen. unfold rs1; Simpl.  
-+ TranslOpSimpl.
 - (* stackoffset *)
   exploit addptrofs_correct. instantiate (1 := X2); auto with asmgen. intros (rs' & A & B & C).
   exists rs'; split; eauto. auto with asmgen.

@@ -262,12 +262,12 @@ Definition transl_op
       OK (if Float32.eq_dec f Float32.zero
           then Pfcvtsw rd GPR0 :: k
           else Ploadsi rd f :: k)
-  | Oaddrsymbol s ofs, nil =>
+*)| Oaddrsymbol s ofs, nil =>
       do rd <- ireg_of res;
       OK (if Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)
           then Ploadsymbol rd s Ptrofs.zero :: addptrofs rd rd ofs k
           else Ploadsymbol rd s ofs :: k)
-*)| Oaddrstack n, nil =>
+  | Oaddrstack n, nil =>
       do rd <- ireg_of res;
       OK (addptrofs rd SP n k)
 
