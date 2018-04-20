@@ -271,13 +271,13 @@ Definition transl_op
       do rd <- ireg_of res;
       OK (addptrofs rd SP n k)
 
-(*| Ocast8signed, a1 :: nil =>
+  | Ocast8signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs (Int.repr 24) :: Psraiw rd rd (Int.repr 24) :: k)
   | Ocast16signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pslliw rd rs (Int.repr 16) :: Psraiw rd rd (Int.repr 16) :: k)
-*)| Oadd, a1 :: a2 :: nil =>
+  | Oadd, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Paddw rd rs1 rs2 :: k)
   | Oaddimm n, a1 :: nil =>

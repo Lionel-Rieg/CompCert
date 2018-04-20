@@ -1214,6 +1214,20 @@ Opaque Int.eq.
 - (* Oaddrstack *)
   exploit addptrofs_correct. instantiate (1 := GPR12); auto with asmgen. intros (rs' & A & B & C).
   exists rs'; split; eauto. auto with asmgen.
+- (* Ocast8signed *)
+  econstructor; split.
+  eapply exec_straight_two. simpl;eauto. simpl;eauto. auto. auto.
+  split; intros; Simpl.
+  assert (A: Int.ltu (Int.repr 24) Int.iwordsize = true) by auto. unfold getw.
+  destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A.
+  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
+- (* Ocast16signed *)
+  econstructor; split.
+  eapply exec_straight_two. simpl;eauto. simpl;eauto. auto. auto.
+  split; intros; Simpl.
+  assert (A: Int.ltu (Int.repr 16) Int.iwordsize = true) by auto. unfold getw.
+  destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A. 
+  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Oshrximm *)
   clear H. exploit Val.shrx_shr_2; eauto. intros E; subst v; clear EV.
   destruct (Int.eq n Int.zero).
@@ -1257,20 +1271,6 @@ Opaque Int.eq.
 - (* stackoffset *)
   exploit addptrofs_correct. instantiate (1 := X2); auto with asmgen. intros (rs' & A & B & C).
   exists rs'; split; eauto. auto with asmgen.
-- (* cast8signed *)
-  econstructor; split.
-  eapply exec_straight_two. simpl;eauto. simpl;eauto. auto. auto.
-  split; intros; Simpl.
-  assert (A: Int.ltu (Int.repr 24) Int.iwordsize = true) by auto.
-  destruct (rs x0); auto; simpl. rewrite A; simpl. rewrite A. 
-  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
-- (* cast16signed *)
-  econstructor; split.
-  eapply exec_straight_two. simpl;eauto. simpl;eauto. auto. auto.
-  split; intros; Simpl.
-  assert (A: Int.ltu (Int.repr 16) Int.iwordsize = true) by auto.
-  destruct (rs x0); auto; simpl. rewrite A; simpl. rewrite A. 
-  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* addimm *)
   exploit (opimm32_correct Paddw Paddiw Val.add); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
