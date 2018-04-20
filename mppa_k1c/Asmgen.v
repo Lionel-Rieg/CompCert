@@ -346,7 +346,7 @@ Definition transl_op
   | Oshruimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Psrliw rd rs n :: k)
-(*| Oshrximm n, a1 :: nil =>
+  | Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (if Int.eq n Int.zero then Pmv rd rs :: k else
           Psraiw GPR31 rs (Int.repr 31) ::
@@ -355,7 +355,7 @@ Definition transl_op
           Psraiw rd GPR31 n :: k)
 
   (* [Omakelong], [Ohighlong]  should not occur *)
-*)| Olowlong, a1 :: nil =>
+  | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Pcvtl2w rd rs :: k)  
   | Ocast32signed, a1 :: nil =>
@@ -675,12 +675,12 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       loadind SP ofs ty dst k
   | Msetstack src ofs ty =>
       storeind src SP ofs ty k
-(*| Mgetparam ofs ty dst =>
+  | Mgetparam ofs ty dst =>
       (* load via the frame pointer if it is valid *)
-      do c <- loadind GPR30 ofs ty dst k;
+      do c <- loadind FP ofs ty dst k;
       OK (if ep then c
-                else loadind_ptr SP f.(fn_link_ofs) GPR30 c)
-*)| Mop op args res =>
+                else loadind_ptr SP f.(fn_link_ofs) FP c)
+  | Mop op args res =>
       transl_op op args res k
   | Mload chunk addr args dst =>
       transl_load chunk addr args dst k
@@ -716,8 +716,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
 Definition it1_is_parent (before: bool) (i: Mach.instruction) : bool :=
   match i with
   | Msetstack src ofs ty => before
-  | Mgetparam ofs ty dst => negb (mreg_eq dst R32)
-  | Mop op args res => before && negb (mreg_eq res R32)
+  | Mgetparam ofs ty dst => negb (mreg_eq dst R10)
+  | Mop op args res => before && negb (mreg_eq res R10)
   | _ => false
   end.
 

@@ -323,6 +323,8 @@ Opaque Int.eq.
 - apply opimm32_label; intros; exact I.
 (* Oandimm32 *)
 - apply opimm32_label; intros; exact I.
+(* Oshrximm *)
+- destruct (Int.eq n Int.zero); TailNoLabel.
 (* Oaddimm64 *)
 - apply opimm64_label; intros; exact I.
 (* Oandimm64  *)
@@ -415,6 +417,9 @@ Proof.
 - eapply loadind_label; eauto.
 (* storeind *)
 - eapply storeind_label; eauto.
+(* Mgetparam *)
+- destruct ep. eapply loadind_label; eauto.
+  eapply tail_nolabel_trans. apply loadind_ptr_label. eapply loadind_label; eauto. 
 (* transl_op *)
 - eapply transl_op_label; eauto.
 (* transl_load *)
@@ -429,8 +434,7 @@ Proof.
 Qed.
 (*
 
-- destruct ep. eapply loadind_label; eauto.
-  eapply tail_nolabel_trans. apply loadind_ptr_label. eapply loadind_label; eauto. 
+
 - eapply transl_op_label; eauto.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
@@ -552,7 +556,7 @@ Inductive match_states: Mach.state -> Asm.state -> Prop :=
         (MEXT: Mem.extends m m')
         (AT: transl_code_at_pc ge (rs PC) fb f c ep tf tc)
         (AG: agree ms sp rs)
-        (DXP: ep = true -> rs#GPR32 = parent_sp s),
+        (DXP: ep = true -> rs#FP = parent_sp s),
       match_states (Mach.State s fb sp c ms m)
                    (Asm.State rs m')
   | match_states_call:
@@ -583,7 +587,7 @@ Lemma exec_straight_steps:
    exists rs2,
        exec_straight tge tf c rs1 m1' k rs2 m2'
     /\ agree ms2 sp rs2
-    /\ (it1_is_parent ep i = true -> rs2#GPR32 = parent_sp s)) ->
+    /\ (it1_is_parent ep i = true -> rs2#FP = parent_sp s)) ->
   exists st',
   plus step tge (State rs1 m1') E0 st' /\
   match_states (Mach.State s fb sp c ms2 m2) st'.
@@ -694,9 +698,9 @@ Definition measure (s: Mach.state) : nat :=
   | Mach.Returnstate _ _ _ => 1%nat
   end.
 
-Remark preg_of_not_GPR32: forall r, negb (mreg_eq r R32) = true -> IR GPR32 <> preg_of r.
+Remark preg_of_not_FP: forall r, negb (mreg_eq r R10) = true -> IR FP <> preg_of r.
 Proof.
-  intros. change (IR GPR32) with (preg_of R32). red; intros.
+  intros. change (IR FP) with (preg_of R10). red; intros.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
 Qed.
 
@@ -748,16 +752,15 @@ Proof.
   intros [v' [C D]].
 (* Opaque loadind. *)
   left; eapply exec_straight_steps; eauto; intros. monadInv TR.
-(*
   destruct ep.
-(* X30 contains parent *)
+(* GPR31 contains parent *)
   exploit loadind_correct. eexact EQ.
   instantiate (2 := rs0). rewrite DXP; eauto. congruence.
   intros [rs1 [P [Q R]]].
   exists rs1; split. eauto.
   split. eapply agree_set_mreg. eapply agree_set_mreg; eauto. congruence. auto with asmgen.
   simpl; intros. rewrite R; auto with asmgen.
-  apply preg_of_not_X30; auto.
+  apply preg_of_not_FP; auto.
 (* GPR11 does not contain parent *)
   rewrite chunk_of_Tptr in A. 
   exploit loadind_ptr_correct. eexact A. congruence. intros [rs1 [P [Q R]]].
@@ -765,13 +768,12 @@ Proof.
   intros [rs2 [S [T U]]].
   exists rs2; split. eapply exec_straight_trans; eauto.
   split. eapply agree_set_mreg. eapply agree_set_mreg. eauto. eauto.
-  instantiate (1 := rs1#X30 <- (rs2#X30)). intros.
+  instantiate (1 := rs1#FP <- (rs2#FP)). intros.
   rewrite Pregmap.gso; auto with asmgen.
   congruence.
-  intros. unfold Pregmap.set. destruct (PregEq.eq r' X30). congruence. auto with asmgen.
+  intros. unfold Pregmap.set. destruct (PregEq.eq r' FP). congruence. auto with asmgen.
   simpl; intros. rewrite U; auto with asmgen.
-  apply preg_of_not_X30; auto.
-*)
+  apply preg_of_not_FP; auto.
 - (* Mop *)
   assert (eval_operation tge sp op (map rs args) m = Some v).
     rewrite <- H. apply eval_operation_preserved. exact symbols_preserved.
@@ -783,7 +785,7 @@ Proof.
   apply agree_set_undef_mreg with rs0; auto. 
   apply Val.lessdef_trans with v'; auto.
   simpl; intros. destruct (andb_prop _ _ H1); clear H1.
-  rewrite R; auto. apply preg_of_not_GPR32; auto.
+  rewrite R; auto. apply preg_of_not_FP; auto.
 Local Transparent destroyed_by_op.
   destruct op; simpl; auto; congruence.
 
@@ -1021,7 +1023,7 @@ Local Transparent destroyed_by_op.
                  Pget GPR8 RA ::
                  storeind_ptr GPR8 SP (fn_retaddr_ofs f) x0) in *.
   set (tf := {| fn_sig := Mach.fn_sig f; fn_code := tfbody |}) in *.
-  set (rs2 := nextinstr (rs0#GPR32 <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
+  set (rs2 := nextinstr (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
   exploit (Pget_correct tge tf GPR8 RA (storeind_ptr GPR8 SP (fn_retaddr_ofs f) x0) rs2 m2'); auto.
   intros (rs' & U' & V').
   exploit (storeind_ptr_correct tge tf SP (fn_retaddr_ofs f) GPR8 x0 rs' m2').
