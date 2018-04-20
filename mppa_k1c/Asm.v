@@ -193,6 +193,8 @@ Inductive instruction : Type :=
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
   | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
+  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or immediate *)
+  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor immediate *)
   | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate *)
   | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate *)
   | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate *)
@@ -202,6 +204,8 @@ Inductive instruction : Type :=
   | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subition *)
   | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition *)
   | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
+  | Porw    (rd: ireg) (rs1 rs2: ireg)              (**r or word *)
+  | Pxorw   (rd: ireg) (rs1 rs2: ireg)              (**r xor word *)
   | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
   | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic *)
   | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical *)
@@ -211,6 +215,7 @@ Inductive instruction : Type :=
   | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
   | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *) 
   | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or long immediate *) 
+  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor long immediate *) 
   | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate long *)
   | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate long *)
   | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate long *)
@@ -224,8 +229,10 @@ Inductive instruction : Type :=
 
 (** 64-bit integer register-register instructions *)
   | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
+  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r integer long subition *)
   | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
   | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
+  | Pxorl    (rd: ireg) (rs1 rs2: ireg)              (**r xor long *)
   | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
   | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition long (low part) *)
   | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
@@ -755,6 +762,10 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
+  | Poriw  d s i =>
+      Next (nextinstr (rs#d <- (Val.or  rs##s (Vint i)))) m
+  | Pxoriw  d s i =>
+      Next (nextinstr (rs#d <- (Val.xor  rs##s (Vint i)))) m
   | Pandiw d s i =>
       Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
   | Psraiw d s i =>
@@ -773,6 +784,10 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.mul rs##s1 rs##s2))) m
   | Pandw d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.and rs##s1 rs##s2))) m
+  | Porw  d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.or  rs##s1 rs##s2))) m
+  | Pxorw  d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.xor rs##s1 rs##s2))) m
   | Pnegw d s =>
       Next (nextinstr (rs#d <- (Val.neg rs###s))) m
   | Psrlw d s1 s2 =>
@@ -789,6 +804,8 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
   | Poril  d s i =>
       Next (nextinstr (rs#d <- (Val.orl  rs###s (Vlong i)))) m
+  | Pxoril  d s i =>
+      Next (nextinstr (rs#d <- (Val.xorl  rs###s (Vlong i)))) m
   | Psllil  d s i =>
       Next (nextinstr (rs#d <- (Val.shll  rs###s (Vint i)))) m
   | Psrlil  d s i =>
@@ -803,10 +820,14 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
+  | Psubl d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.subl rs###s1 rs###s2))) m
   | Pandl d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.andl rs###s1 rs###s2))) m
   | Porl  d s1 s2 =>
       Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
+  | Pxorl  d s1 s2 =>
+      Next (nextinstr (rs#d <- (Val.xorl  rs###s1 rs###s2))) m
   | Pnegl d s =>
       Next (nextinstr (rs#d <- (Val.negl rs###s))) m
   | Pmull d s1 s2 =>

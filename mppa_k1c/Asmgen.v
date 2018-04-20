@@ -83,9 +83,9 @@ Definition opimm32 (op: ireg -> ireg -> ireg -> instruction)
 
 Definition addimm32 := opimm32 Paddw Paddiw.
 Definition andimm32 := opimm32 Pandw Pandiw.
-(*
-Definition orimm32  := opimm32 Porw  Poriw.
+Definition orimm32  := opimm32 Porw Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
+(*
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
 
@@ -109,9 +109,9 @@ end.
 Definition addimm64 := opimm64 Paddl Paddil.
 Definition orimm64  := opimm64 Porl  Poril.
 Definition andimm64 := opimm64 Pandl Pandil.
+Definition xorimm64 := opimm64 Pxorl  Pxoril.
 
 (*
-Definition xorimm64 := opimm64 Pxorl  Pxoril.
 Definition sltimm64 := opimm64 Psltl Psltil.
 Definition sltuimm64 := opimm64 Psltul Psltiul.
 *)
@@ -310,13 +310,13 @@ Definition transl_op
   | Omodu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Premuw rd rs1 rs2 :: k)
-  | Oand, a1 :: a2 :: nil =>
+*)| Oand, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandw rd rs1 rs2 :: k)
-*)| Oandimm n, a1 :: nil =>
+  | Oandimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm32 rd rs n k)
-(*| Oor, a1 :: a2 :: nil =>
+  | Oor, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porw rd rs1 rs2 :: k)
   | Oorimm n, a1 :: nil =>
@@ -328,7 +328,7 @@ Definition transl_op
   | Oxorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm32 rd rs n k)
-*)| Oshl, a1 :: a2 :: nil =>
+  | Oshl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psllw rd rs1 rs2 :: k)
   | Oshlimm n, a1 :: nil =>
@@ -374,10 +374,10 @@ Definition transl_op
   | Onegl, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pnegl rd rs :: k)
-(*| Osubl, a1 :: a2 :: nil =>
+  | Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 :: k)
-*)| Omull, a1 :: a2 :: nil =>
+  | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 :: k)
 (*| Omullhs, a1 :: a2 :: nil =>
@@ -398,25 +398,25 @@ Definition transl_op
   | Omodlu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Premul rd rs1 rs2 :: k)
-  | Oandl, a1 :: a2 :: nil =>
+*)| Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 :: k)
-*)| Oandlimm n, a1 :: nil =>
+  | Oandlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm64 rd rs n k)
-(*| Oorl, a1 :: a2 :: nil =>
+  | Oorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porl rd rs1 rs2 :: k)
-*)| Oorlimm n, a1 :: nil =>
+  | Oorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (orimm64 rd rs n k)
-(*| Oxorl, a1 :: a2 :: nil =>
+  | Oxorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pxorl rd rs1 rs2 :: k)
   | Oxorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm64 rd rs n k)
-*)| Oshll, a1 :: a2 :: nil =>
+  | Oshll, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pslll rd rs1 rs2 :: k)
   | Oshllimm n, a1 :: nil =>

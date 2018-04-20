@@ -214,6 +214,8 @@ module Target : TARGET =
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Psubw(rd, rs1, rs2) ->
+         fprintf oc "	sbfw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psubl(rd, rs1, rs2) ->
          fprintf oc "	sbfwd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Pmulw(rd, rs1, rs2) ->
@@ -250,6 +252,19 @@ module Target : TARGET =
          fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Porl(rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Poriw (rd, rs, imm) -> 
+         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Porw(rd, rs1, rs2) -> 
+         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+      | Pxoriw (rd, rs, imm) -> 
+         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pxorw(rd, rs1, rs2) -> 
+         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pxoril (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pxorl(rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Pandiw (rd, rs, imm) ->
          fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm

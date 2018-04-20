@@ -323,6 +323,10 @@ Opaque Int.eq.
 - apply opimm32_label; intros; exact I.
 (* Oandimm32 *)
 - apply opimm32_label; intros; exact I.
+(* Oorimm32 *)
+- apply opimm32_label; intros; exact I.
+(* Oxorimm32 *)
+- apply opimm32_label; intros; exact I.
 (* Oshrximm *)
 - destruct (Int.eq n Int.zero); TailNoLabel.
 (* Oaddimm64 *)
@@ -330,6 +334,8 @@ Opaque Int.eq.
 (* Oandimm64  *)
 - apply opimm64_label; intros; exact I.
 (* Oorimm64  *)
+- apply opimm64_label; intros; exact I.
+(* Oxorimm64  *)
 - apply opimm64_label; intros; exact I.
 Qed.
 
