@@ -214,9 +214,9 @@ module Target : TARGET =
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Psubw(rd, rs1, rs2) ->
-         fprintf oc "	sbfw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	sbfw	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
       | Psubl(rd, rs1, rs2) ->
-         fprintf oc "	sbfwd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	sbfd	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
 
       | Pmulw(rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
