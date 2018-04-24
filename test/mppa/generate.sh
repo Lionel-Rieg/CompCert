@@ -9,4 +9,6 @@ if [ ! -f $cfile ]; then
 	shift; continue
 fi
 
+mkdir -p $(dirname $writefile)
+
 sed -n "s/^.*\/\*\s*RETURN VALUE:\s*\([0-9]*\)\s*\*\//\1/p" $1 > $2
