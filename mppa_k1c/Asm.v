@@ -187,8 +187,10 @@ Inductive instruction : Type :=
   | Pmv     (rd: ireg) (rs: ireg)                   (**r integer move *)
 
 (** Comparisons *)
-  | Pcompw  (it: itest) (rd rs1 rs2: ireg)      (**r integer comparison *)
-  | Pcompd  (it: itest) (rd rs1 rs2: ireg)      (**r integer comparison *)
+  | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r integer comparison *)
+  | Pcompiw (it: itest) (rd rs1: ireg) (imm: int)   (**r integer comparison imm *)
+  | Pcompd  (it: itest) (rd rs1 rs2: ireg)          (**r integer comparison double *)
+  | Pcompid (it: itest) (rd rs1: ireg) (imm: int64) (**r integer comparison double imm *)
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
@@ -756,8 +758,12 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (** Comparisons *)
   | Pcompw c d s1 s2 => 
       Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
+  | Pcompiw c d s i => 
+      Next (nextinstr (rs#d <- (compare_int c rs##s (Vint i) m))) m
   | Pcompd c d s1 s2 => 
       Next (nextinstr (rs#d <- (compare_long c rs###s1 rs###s2 m))) m
+  | Pcompid c d s i => 
+      Next (nextinstr (rs#d <- (compare_long c rs###s (Vlong i) m))) m
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>

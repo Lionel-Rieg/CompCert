@@ -235,6 +235,81 @@ Definition transl_cbranch
       Error(msg "Asmgen.transl_cbranch")
   end.
 
+(** Translation of a condition operator.  The generated code sets the
+  [rd] target register to 0 or 1 depending on the truth value of the
+  condition. *)
+
+Definition transl_cond_int32s (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
+  Pcompw (itest_for_cmp cmp Signed) rd r1 r2 :: k.
+
+Definition transl_cond_int32u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
+  Pcompw (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
+
+Definition transl_cond_int64s (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
+  Pcompd (itest_for_cmp cmp Signed) rd r1 r2 :: k.
+
+Definition transl_cond_int64u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
+  Pcompd (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
+
+Definition transl_condimm_int32s (cmp: comparison) (rd r1: ireg) (n: int) (k: code) :=
+  Pcompiw (itest_for_cmp cmp Signed) rd r1 n :: k.
+
+Definition transl_condimm_int32u (cmp: comparison) (rd r1: ireg) (n: int) (k: code) :=
+  Pcompiw (itest_for_cmp cmp Unsigned) rd r1 n :: k.
+
+Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
+  Pcompid (itest_for_cmp cmp Signed) rd r1 n :: k.
+
+Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
+  Pcompid (itest_for_cmp cmp Unsigned) rd r1 n :: k.
+
+Definition transl_cond_op
+           (cond: condition) (rd: ireg) (args: list mreg) (k: code) :=
+  match cond, args with
+  | Ccomp c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_int32s c rd r1 r2 k)
+  | Ccompu c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_int32u c rd r1 r2 k)
+  | Ccompimm c n, a1 :: nil =>
+      do r1 <- ireg_of a1;
+      OK (transl_condimm_int32s c rd r1 n k)
+  | Ccompuimm c n, a1 :: nil =>
+      do r1 <- ireg_of a1;
+      OK (transl_condimm_int32u c rd r1 n k)
+  | Ccompl c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_int64s c rd r1 r2 k)
+  | Ccomplu c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_int64u c rd r1 r2 k)
+  | Ccomplimm c n, a1 :: nil =>
+      do r1 <- ireg_of a1;
+      OK (transl_condimm_int64s c rd r1 n k)
+  | Ccompluimm c n, a1 :: nil =>
+      do r1 <- ireg_of a1;
+      OK (transl_condimm_int64u c rd r1 n k)
+(*| Ccompf c, f1 :: f2 :: nil =>
+      do r1 <- freg_of f1; do r2 <- freg_of f2;
+      let (insn, normal) := transl_cond_float c rd r1 r2 in
+      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
+  | Cnotcompf c, f1 :: f2 :: nil =>
+      do r1 <- freg_of f1; do r2 <- freg_of f2;
+      let (insn, normal) := transl_cond_float c rd r1 r2 in
+      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
+  | Ccompfs c, f1 :: f2 :: nil =>
+      do r1 <- freg_of f1; do r2 <- freg_of f2;
+      let (insn, normal) := transl_cond_single c rd r1 r2 in
+      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
+  | Cnotcompfs c, f1 :: f2 :: nil =>
+      do r1 <- freg_of f1; do r2 <- freg_of f2;
+      let (insn, normal) := transl_cond_single c rd r1 r2 in
+      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
+*)| _, _ =>
+      Error(msg "Asmgen.transl_cond_op")
+end.
+
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
 
@@ -537,10 +612,10 @@ Definition transl_op
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfcvtslu rd rs :: k)
 
-  | Ocmp cmp, _ =>
+*)| Ocmp cmp, _ =>
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
-*)
+  
   | _, _ =>
       Error(msg "Asmgen.transl_op")
   end.

@@ -251,64 +251,22 @@ Qed.
   apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
   destruct normal; TailNoLabel.
 *)
-(*
+
 Remark transl_cond_op_label:
   forall cond args r k c,
   transl_cond_op cond r args k = OK c -> tail_nolabel k c.
 Proof.
   intros. unfold transl_cond_op in H; destruct cond; TailNoLabel.
-(*
-- destruct c0; simpl; TailNoLabel.
-- destruct c0; simpl; TailNoLabel. 
-- unfold transl_condimm_int32s.
-  destruct (Int.eq n Int.zero).
-+ destruct c0; simpl; TailNoLabel.
-+ destruct c0; simpl.
-* eapply tail_nolabel_trans; [apply opimm32_label; intros; exact I | TailNoLabel].
-* eapply tail_nolabel_trans; [apply opimm32_label; intros; exact I | TailNoLabel].
-* apply opimm32_label; intros; exact I.
-* destruct (Int.eq n (Int.repr Int.max_signed)). apply loadimm32_label. apply opimm32_label; intros; exact I.
-* eapply tail_nolabel_trans. apply loadimm32_label. TailNoLabel.
-* eapply tail_nolabel_trans. apply loadimm32_label. TailNoLabel.
-- unfold transl_condimm_int32u.
-  destruct (Int.eq n Int.zero).
-+ destruct c0; simpl; TailNoLabel.
-+ destruct c0; simpl; 
-  try (eapply tail_nolabel_trans; [apply loadimm32_label | TailNoLabel]).
-  apply opimm32_label; intros; exact I.
-- destruct c0; simpl; TailNoLabel.
-- destruct c0; simpl; TailNoLabel. 
-- unfold transl_condimm_int64s.
-  destruct (Int64.eq n Int64.zero).
-+ destruct c0; simpl; TailNoLabel.
-+ destruct c0; simpl.
-* eapply tail_nolabel_trans; [apply opimm64_label; intros; exact I | TailNoLabel].
-* eapply tail_nolabel_trans; [apply opimm64_label; intros; exact I | TailNoLabel].
-* apply opimm64_label; intros; exact I.
-* destruct (Int64.eq n (Int64.repr Int64.max_signed)). apply loadimm32_label. apply opimm64_label; intros; exact I.
-* eapply tail_nolabel_trans. apply loadimm64_label. TailNoLabel.
-* eapply tail_nolabel_trans. apply loadimm64_label. TailNoLabel.
-- unfold transl_condimm_int64u.
-  destruct (Int64.eq n Int64.zero).
-+ destruct c0; simpl; TailNoLabel.
-+ destruct c0; simpl; 
-  try (eapply tail_nolabel_trans; [apply loadimm64_label | TailNoLabel]).
-  apply opimm64_label; intros; exact I.
-- destruct (transl_cond_float c0 r x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_float_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_float c0 r x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_float_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_single c0 r x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_single c0 r x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-*)
+- unfold transl_cond_int32s; destruct c0; simpl; TailNoLabel.
+- unfold transl_cond_int32u; destruct c0; simpl; TailNoLabel. 
+- unfold transl_condimm_int32s; destruct c0; simpl; TailNoLabel.
+- unfold transl_condimm_int32u; destruct c0; simpl; TailNoLabel.
+- unfold transl_cond_int64s; destruct c0; simpl; TailNoLabel.
+- unfold transl_cond_int64u; destruct c0; simpl; TailNoLabel. 
+- unfold transl_condimm_int64s; destruct c0; simpl; TailNoLabel.
+- unfold transl_condimm_int64u; destruct c0; simpl; TailNoLabel.
 Qed.
-*)
+
 Remark transl_op_label:
   forall op args r k c,
   transl_op op args r k = OK c -> tail_nolabel k c.
@@ -337,6 +295,8 @@ Opaque Int.eq.
 - apply opimm64_label; intros; exact I.
 (* Oxorimm64  *)
 - apply opimm64_label; intros; exact I.
+(* Ocmp *)
+- eapply transl_cond_op_label; eauto.
 Qed.
 
 (*
