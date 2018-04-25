@@ -1,7 +1,7 @@
 DIR=general
 BINDIR=bin
 ASMDIR=asm
-TESTNAMES=simple call branch for forvar forvarl branchz branchzu
+TESTNAMES=simple call branch for forvar forvarl branchz branchzu div2
 
 CCOMP=../../ccomp
 #TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
