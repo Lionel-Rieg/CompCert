@@ -1,0 +1,3 @@
+[submodule "test/mppa/asm_coverage"]
+	path = test/mppa/asm_coverage
+	url = git@gricad-gitlab.univ-grenoble-alpes.fr:sixcy/asm-scanner.git

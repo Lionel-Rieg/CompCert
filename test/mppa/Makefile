@@ -37,6 +37,11 @@ FORCE:
 check: $(TOK) sort mmult
 
 .PHONY:
+coverage: $(ASM)
+	bash coverage.sh $(DIR)/$(ASMDIR)
+
+
+.PHONY:
 sort: FORCE
 	(cd sort && make compc-check)
 

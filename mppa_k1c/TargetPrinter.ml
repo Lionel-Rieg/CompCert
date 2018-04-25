@@ -196,7 +196,7 @@ module Target : TARGET =
       | Pj_l(s) ->
          fprintf oc "	goto	%a\n;;\n" print_label s
       | Pret ->
-         fprintf oc "	ret\n;;\n"
+         fprintf oc "	ret	\n;;\n"
       | Pget (rd, rs) ->
          fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs
       | Pset (rd, rs) ->
@@ -288,11 +288,11 @@ module Target : TARGET =
       | Pcompw (it, rd, rs1, rs2) ->
          fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
       | Pcompiw (it, rd, rs1, imm) ->
-         fprintf oc "	compiw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
+         fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
       | Pcompd (it, rd, rs1, rs2) ->
          fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
       | Pcompid (it, rd, rs1, imm) ->
-         fprintf oc "	compid.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
+         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
          fprintf oc "	cb.%a	%a?%a\n;;\n" bcond bt ireg r print_label lbl
 
