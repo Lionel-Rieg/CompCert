@@ -11,4 +11,7 @@ fi
 
 mkdir -p $(dirname $writefile)
 
-sed -n "s/^.*\/\*\s*RETURN VALUE:\s*\([0-9]*\)\s*\*\//\1/p" $1 > $2
+#sed -n "s/^.*\/\*\s*RETURN VALUE:\s*\([0-9]*\)\s*\*\//\1/p" $1 > $2
+tmpbin=/tmp/k1-$(basename $1)-bin 
+k1-gcc -O0 $1 -o $tmpbin
+(k1-cluster -- $tmpbin; echo $? > $2)

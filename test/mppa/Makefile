@@ -10,6 +10,7 @@ TOK=$(addprefix $(DIR)/$(BINDIR)/,$(addsuffix .tok,$(TESTNAMES)))
 ASM=$(addprefix $(DIR)/$(ASMDIR)/,$(addsuffix .s,$(TESTNAMES)))
 DEBUG:=$(if $(DEBUG),"-dall",)
 
+.PHONY: all
 all: $(ELF)
 
 nobin: $(ASM)
@@ -33,23 +34,23 @@ $(DIR)/output/%.bin.exp: $(DIR)/%.c
 .PHONY: FORCE
 FORCE:
 
-.PHONY:
+.PHONY: check
 check: $(TOK) sort mmult
 
-.PHONY:
+.PHONY: coverage
 coverage: $(ASM)
 	bash coverage.sh $(DIR)/$(ASMDIR)
 
 
-.PHONY:
+.PHONY: sort
 sort: FORCE
 	(cd sort && make compc-check)
 
-.PHONY:
+.PHONY: mmult
 mmult: FORCE
 	(cd mmult && make compc-check)
 
-.PHONY:
+.PHONY: clean
 clean:
 	rm -f $(DIR)/*.alloctrace
 	rm -f $(DIR)/*.cm
