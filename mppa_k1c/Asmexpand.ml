@@ -495,20 +495,20 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (GPR32, GPR12));
+      emit (Pmv (GPR10, GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
         expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg full_sz));
-        expand_storeind_ptr GPR32 GPR12 ofs;
+        expand_storeind_ptr GPR10 GPR12 ofs;
         let va_ofs =
           Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
         expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg sz));
-        expand_storeind_ptr GPR32 GPR12 ofs;
+        expand_storeind_ptr GPR10 GPR12 ofs;
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
