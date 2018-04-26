@@ -225,7 +225,8 @@ let rv64 =
                    struct_return_style = SR_ref } (* to check *)
 
 let mppa_k1c =
-  { ilp32ll64 with name = "k1c";
+  { ilp32ll64 with sizeof_ptr = 8;
+                   name = "k1c";
                    char_signed = true;
                    supports_unaligned_accesses = true }
 
