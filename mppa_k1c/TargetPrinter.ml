@@ -205,9 +205,9 @@ module Target : TARGET =
          fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
 
       | Paddiw (rd, rs, imm) ->
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Paddw(rd, rs1, rs2) ->
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
@@ -267,9 +267,9 @@ module Target : TARGET =
          fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
 
       | Pandiw (rd, rs, imm) ->
-         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Pandw(rd, rs1, rs2) ->
-         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
       | Pandl(rd, rs1, rs2) -> assert Archi.ptr64;
@@ -332,36 +332,7 @@ module Target : TARGET =
          fprintf oc "%a:\n" print_label lbl
       | Ploadsymbol(rd, id, ofs) ->
          loadsymbol oc rd id ofs
-    (*| Ploadsymbol_high(rd, id, ofs) ->
-         fprintf oc "	lui	%a, %%hi[%a]\n" ireg rd symbol_offset (id, ofs)
-      | Ploadli(rd, n) ->
-         let d = camlint64_of_coqint n in
-         let lbl = label_literal64 d in
-         fprintf oc "	ld	%a, %a %s %Lx\n" ireg rd label lbl comment d
-      | Ploadfi(rd, f) ->
-         let d   = camlint64_of_coqint(Floats.Float.to_bits f) in
-         let lbl = label_literal64 d in
-         fprintf oc "	fld	%a, %a, x31 %s %.18g\n"
-                    freg rd label lbl comment (camlfloat_of_coqfloat f)
-      | Ploadsi(rd, f) ->
-         let s   = camlint_of_coqint(Floats.Float32.to_bits f) in
-         let lbl = label_literal32 s in
-         fprintf oc "	flw	%a, %a, x31 %s %.18g\n"
-                    freg rd label lbl comment (camlfloat_of_coqfloat32 f)
-      | Pbtbl(r, tbl) ->
-         let lbl = new_label() in
-         fprintf oc "%s jumptable [ " comment;
-         List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
-         fprintf oc "]\n";
-         fprintf oc "	sll	x5, %a, 2\n" ireg r;
-         fprintf oc "	la	x31, %a\n" label lbl;
-         fprintf oc "	add	x5, x31, x5\n";
-         fprintf oc "	lw	x5, 0(x5)\n";
-         fprintf oc "	add	x5, x31, x5\n";
-         fprintf oc "	jr	x5\n";
-         jumptables := (lbl, tbl) :: !jumptables;
-         fprintf oc "%s end pseudoinstr btbl\n" comment
-    *)| Pbuiltin(ef, args, res) ->
+      | Pbuiltin(ef, args, res) ->
          begin match ef with
           | EF_annot(kind,txt, targs) ->
             begin match (P.to_int kind) with
