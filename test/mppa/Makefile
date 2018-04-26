@@ -1,7 +1,7 @@
 DIR=general
 BINDIR=bin
 ASMDIR=asm
-TESTNAMES=simple call branch for forvar forvarl branchz branchzu div2
+TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
 
 CCOMP=../../ccomp
 #TESTS=$(addprefix $(DIR)/,$(TESTNAMES))

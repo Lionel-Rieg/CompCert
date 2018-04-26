@@ -24,7 +24,7 @@ for inst in occurs:
             pruned_occurs[inst_no_a + "." + mod] = 1
     elif inst_no_a in ("cb"):
         del pruned_occurs[inst]
-        for mod in ("wnez", "weqz", "wltz", "wgez", "wlez", "wgtz", "dnez",
+        for mod in ("wnez", "weqz", "wltz", "wgez", "wlez", "wgtz", "deqz", "dnez",
                     "dltz", "dgez", "dlez", "dgtz"):
             pruned_occurs[inst_no_a + "." + mod] = 1
     else:
