@@ -1,4 +1,5 @@
 PRNG=../lib/prng.c
+CCOMP=../../../ccomp
 
 ALL= mmult-test-x86 mmult-test-k1c\
 
@@ -16,11 +17,11 @@ test-x86: mmult.c $(PRNG)
 test-k1c: mmult.c $(PRNG)
 	k1-gcc -g -O2 -std=c99 $^ -o $@
 
-%.s: %.c
-	ccomp -O2 -S $< -o $@
+%.s: %.c $(CCOMP)
+	ccomp -O0 -g -S $< -o $@
 
 test-ccomp: mmult.s $(subst .c,.s,$(PRNG))
-	k1-gcc $^ -o $@
+	k1-gcc $^ -g -o $@
 
 .PHONY:
 unittest: unittest-x86 unittest-k1c

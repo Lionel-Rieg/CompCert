@@ -1,4 +1,5 @@
 PRNG=../lib/prng.c
+CCOMP=../../../ccomp
 
 ALL= insertion-test-x86 insertion-test-k1c\
      selection-test-x86 selection-test-k1c\
@@ -20,7 +21,7 @@ test-x86: selection.c merge.c insertion.c test.c $(PRNG)
 test-k1c: selection.c merge.c insertion.c test.c $(PRNG)
 	k1-gcc -g -O2 -std=c99 $^ -o $@
 
-%.s: %.c
+%.s: %.c $(CCOMP)
 	ccomp -O2 -S $< -o $@
 
 test-ccomp: selection.s merge.s insertion.s test.s $(subst .c,.s,$(PRNG))
