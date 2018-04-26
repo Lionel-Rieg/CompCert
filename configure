@@ -414,7 +414,7 @@ fi
 if test "$arch" = "mppa_k1c"; then
   #model_options="-march=rv64imafd -mabi=lp64d"
   # FIXME - maybe later add it for NodeOS & cie
-  model_options=
+  model_options=-m64
   abi="standard"
   casm="${toolprefix}gcc"
   casm_options="$model_options -c"
