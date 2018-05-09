@@ -64,11 +64,6 @@ Definition make_immed64 (val: int64) := Imm64_single val.
   are generated as required to perform the operation
   and prepended to the given instruction sequence [k]. *)
 
-(*
-Definition load_hilo32 (r: ireg) (hi lo: int) k :=
-  if Int.eq lo Int.zero then Pluiw r hi :: k
-  else Pluiw r hi :: Paddiw r r lo :: k.
-*)
 Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   match make_immed32 n with
   | Imm32_single imm => Pmake r imm :: k
@@ -88,10 +83,6 @@ Definition xorimm32 := opimm32 Pxorw Pxoriw.
 (*
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
-
-Definition load_hilo64 (r: ireg) (hi lo: int64) k :=
-  if Int64.eq lo Int64.zero then Pluil r hi :: k
-  else Pluil r hi :: Paddil r r lo :: k.
 *)
 
 Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
@@ -136,7 +127,7 @@ Definition transl_comp
 
 Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
-  Pcompd (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
+  Pcompl (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
 
 Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
@@ -246,10 +237,10 @@ Definition transl_cond_int32u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
   Pcompw (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
 
 Definition transl_cond_int64s (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompd (itest_for_cmp cmp Signed) rd r1 r2 :: k.
+  Pcompl (itest_for_cmp cmp Signed) rd r1 r2 :: k.
 
 Definition transl_cond_int64u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompd (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
+  Pcompl (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
 
 Definition transl_condimm_int32s (cmp: comparison) (rd r1: ireg) (n: int) (k: code) :=
   Pcompiw (itest_for_cmp cmp Signed) rd r1 n :: k.
@@ -258,10 +249,10 @@ Definition transl_condimm_int32u (cmp: comparison) (rd r1: ireg) (n: int) (k: co
   Pcompiw (itest_for_cmp cmp Unsigned) rd r1 n :: k.
 
 Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
-  Pcompid (itest_for_cmp cmp Signed) rd r1 n :: k.
+  Pcompil (itest_for_cmp cmp Signed) rd r1 n :: k.
 
 Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
-  Pcompid (itest_for_cmp cmp Unsigned) rd r1 n :: k.
+  Pcompil (itest_for_cmp cmp Unsigned) rd r1 n :: k.
 
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: code) :=

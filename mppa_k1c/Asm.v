@@ -51,15 +51,6 @@ Inductive gpreg: Type :=
   | GPR60: gpreg | GPR61: gpreg | GPR62: gpreg | GPR63: gpreg.
 
 Definition ireg := gpreg.
-
-(*
-(* FIXME - placeholder definitions to make sure the Risc-V instruction definitions work *)
-Inductive ireg0: Type :=
-  | GPR: gpreg -> ireg0.
-
-Coercion GPR: gpreg >-> ireg0.
-*)
-
 Definition freg := gpreg.
 
 Lemma ireg_eq: forall (x y: ireg), {x=y} + {x<>y}.
@@ -139,115 +130,104 @@ Inductive offset : Type :=
   | Ofsimm (ofs: ptrofs)
   | Ofslow (id: ident) (ofs: ptrofs).
 
-(** The RISC-V instruction set is composed of several subsets.  We model
-  the "32I" (32-bit integers), "64I" (64-bit integers),
-  "M" (multiplication and division), 
-  "F" (single-precision floating-point)
-  and "D" (double-precision floating-point) subsets.  
+(** We model a subset of the K1c instruction set. In particular, we do not
+  support floats yet.
 
-  For 32- and 64-bit integer arithmetic, the RISC-V instruction set comprises
-  generic integer operations such as ADD that operate over the full width
-  of an integer register (either 32 or 64 bit), plus specific instructions
-  such as ADDW that normalize their results to signed 32-bit integers.
-  Other instructions such as AND work equally well over 32- and 64-bit
-  integers, with the convention that 32-bit integers are represented
-  sign-extended in 64-bit registers.
+  Although it is possible to use the 32-bits mode, for now we don't support it.
 
-  This clever design is challenging to formalize in the CompCert value
-  model.  As a first step, we follow a more traditional approach,
-  also used in the x86 port, whereas we have two sets of (pseudo-)
-  instructions, one for 32-bit integer arithmetic, with suffix W,
-  the other for 64-bit integer arithmetic, with suffix L.  The mapping
-  to actual instructions is done when printing assembly code, as follows:
-  - In 32-bit mode:
-    ADDW becomes ADD, ADDL is an error, ANDW becomes AND, ANDL is an error.
-  - In 64-bit mode:
-    ADDW becomes ADDW, ADDL becomes ADD, ANDW and ANDL both become AND.
+  We follow a design close to the one used for the Risc-V port: one set of
+  pseudo-instructions for 32-bit integer arithmetic, with suffix W, another
+  set for 64-bit integer arithmetic, with suffix L.
+
+  When mapping to actual instructions, the OCaml code in TargetPrinter.ml
+  throws an error if we are not in 64-bits mode.
 *)
 
 Definition label := positive.
 
 (** A note on immediates: there are various constraints on immediate
-  operands to RISC-V instructions.  We do not attempt to capture these
+  operands to K1c instructions.  We do not attempt to capture these
   restrictions in the abstract syntax nor in the semantics.  The
   assembler will emit an error if immediate operands exceed the
-  representable range.  Of course, our RISC-V generator (file
+  representable range.  Of course, our K1c generator (file
   [Asmgen]) is careful to respect this range. *)
 
 Inductive instruction : Type :=
-(** System Registers *)
+(** Get/Set System Registers *)
   | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
+
 (** Branch Control Unit instructions *)
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
+  (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
+  | Pj_l    (l: label)                              (**r jump to label *)
+  (* Conditional branches *)
+  | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
+  | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
+
+(** Integer Comparisons *)
+  | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r comparison word *)
+  | Pcompiw (it: itest) (rd rs1: ireg) (imm: int)   (**r comparison imm word *)
+  | Pcompl  (it: itest) (rd rs1 rs2: ireg)          (**r comparison long *)
+  | Pcompil (it: itest) (rd rs1: ireg) (imm: int64) (**r comparison imm long *)
+
+(** Load immediates *)
+  | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
+  | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
 
 (** Register move *)
-  | Pmv     (rd: ireg) (rs: ireg)                   (**r integer move *)
-
-(** Comparisons *)
-  | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r integer comparison *)
-  | Pcompiw (it: itest) (rd rs1: ireg) (imm: int)   (**r integer comparison imm *)
-  | Pcompd  (it: itest) (rd rs1 rs2: ireg)          (**r integer comparison double *)
-  | Pcompid (it: itest) (rd rs1: ireg) (imm: int64) (**r integer comparison double imm *)
+  | Pmv     (rd: ireg) (rs: ireg)                   (**r register move *)
 
 (** 32-bit integer register-immediate instructions *)
-  | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add immediate *)
-  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and immediate *)
-  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or immediate *)
-  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor immediate *)
-  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate *)
-  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate *)
-  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate *)
+  | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add imm word *)
+  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and imm word *)
+  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or imm word *)
+  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor imm word *)
+  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic imm word *)
+  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical imm word *)
+  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical imm word *)
 
 (** 32-bit integer register-register instructions *)
-  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
-  | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r integer subition *)
-  | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition *)
-  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
+  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r add word *)
+  | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r sub word *)
+  | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r mul word *)
+  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r and word *)
   | Porw    (rd: ireg) (rs1 rs2: ireg)              (**r or word *)
   | Pxorw   (rd: ireg) (rs1 rs2: ireg)              (**r xor word *)
   | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
-  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic *)
-  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical *)
+  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic word *)
+  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical word *)
   | Psllw   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical word *)
 
 (** 64-bit integer register-immediate instructions *)
-  | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate *) 
-  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate *) 
-  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or long immediate *) 
-  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor long immediate *) 
+  | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate long *) 
+  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate long *) 
+  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or immediate long *) 
+  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor immediate long *) 
   | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate long *)
   | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate long *)
   | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate long *)
-  | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
-  | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
+
+(** 64-bit integer register-register instructions *)
+  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r add long *)
+  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r sub long *)
+  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r and long *)
+  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
+  | Pxorl    (rd: ireg) (rs1 rs2: ireg)             (**r xor long *)
+  | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
+  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r mul long (low part) *)
+  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
+  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical long *)
+  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic long *)
 
 (** Conversions *)
   | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r Convert Long to Word *)
   | Pcvtw2l (r : ireg)                              (**r Convert Word to Long *)
   | Pmvw2l  (rd: ireg) (rs: ireg)                   (**r Move Convert Word to Long *)
 
-(** 64-bit integer register-register instructions *)
-  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r integer addition *)
-  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r integer long subition *)
-  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r integer andition *)
-  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
-  | Pxorl    (rd: ireg) (rs1 rs2: ireg)              (**r xor long *)
-  | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
-  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r integer mulition long (low part) *)
-  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
-  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical long *)
-  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic long *)
-
-  (* Unconditional jumps.  Links are always to X1/RA. *)
-  | Pj_l    (l: label)                              (**r jump to label *)
-
-  (* Conditional branches *)
-  | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
-  | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
-
+(** Loads and Stores *)
   | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
   | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
   | Plh    (rd: ireg) (ra: ireg) (ofs: offset)      (**r load half word *)
@@ -735,6 +715,7 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
     survive the execution of the pseudo-instruction. *)
 
 Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : outcome :=
+(** Get/Set system registers *)
   match i with
   | Pget rd ra =>
     match ra with
@@ -746,34 +727,58 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
     | RA => Next (nextinstr (rs#ra <- (rs#rd))) m
     | _  => Stuck
     end
+
+(** Branch Control Unit instructions *)
   | Pret =>
       Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
       Next (rs#RA <- (Val.offset_ptr (rs#PC) Ptrofs.one)#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-  | Pmv d s =>
-      Next (nextinstr (rs#d <- (rs#s))) m
+  | Pj_l l =>
+      goto_label f l rs m
+  | Pcb bt r l =>
+      match cmp_for_btest bt with
+      | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
+      | (Some c, Long) => eval_branch f l rs m (Val.cmpl_bool c rs###r (Vlong (Int64.repr 0)))
+      | (None, _) => Stuck
+      end
+  | Pcbu bt r l => 
+      match cmpu_for_btest bt with
+      | (Some c, Int) => eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) c rs##r (Vint (Int.repr 0)))
+      | (Some c, Long) => eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) c rs###r (Vlong (Int64.repr 0)))
+      | (None, _) => Stuck
+      end
 
 (** Comparisons *)
   | Pcompw c d s1 s2 => 
       Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
   | Pcompiw c d s i => 
       Next (nextinstr (rs#d <- (compare_int c rs##s (Vint i) m))) m
-  | Pcompd c d s1 s2 => 
+  | Pcompl c d s1 s2 => 
       Next (nextinstr (rs#d <- (compare_long c rs###s1 rs###s2 m))) m
-  | Pcompid c d s i => 
+  | Pcompil c d s i => 
       Next (nextinstr (rs#d <- (compare_long c rs###s (Vlong i) m))) m
+
+(** Load immediates *)
+  | Pmakel d i =>
+      Next (nextinstr (rs#d <- (Vlong i))) m
+  | Pmake d i =>
+      Next (nextinstr (rs#d <- (Vint i))) m
+
+(** Register move *)
+  | Pmv d s =>
+      Next (nextinstr (rs#d <- (rs#s))) m
 
 (** 32-bit integer register-immediate instructions *)
   | Paddiw d s i =>
       Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
+  | Pandiw d s i =>
+      Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
   | Poriw  d s i =>
       Next (nextinstr (rs#d <- (Val.or  rs##s (Vint i)))) m
   | Pxoriw  d s i =>
       Next (nextinstr (rs#d <- (Val.xor  rs##s (Vint i)))) m
-  | Pandiw d s i =>
-      Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
   | Psraiw d s i =>
       Next (nextinstr (rs#d <- (Val.shr rs##s (Vint i)))) m
   | Psrliw d s i =>
@@ -818,10 +823,6 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       Next (nextinstr (rs#d <- (Val.shrlu  rs###s (Vint i)))) m
   | Psrail d s i =>
       Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
-  | Pmakel d i =>
-      Next (nextinstr (rs#d <- (Vlong i))) m
-  | Pmake d i =>
-      Next (nextinstr (rs#d <- (Vint i))) m
 
 (** 64-bit integer register-register instructions *)
   | Paddl d s1 s2 =>
@@ -853,54 +854,8 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
   | Pmvw2l d s =>
       Next (nextinstr (rs#d <- (Val.longofint rs#s))) m
 
-(** Unconditional jumps. *)
-  | Pj_l l =>
-      goto_label f l rs m
-
-(** Conditional branches *)
-  | Pcb bt r l =>
-      match cmp_for_btest bt with
-      | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs##r (Vint (Int.repr 0)))
-      | (Some c, Long) => eval_branch f l rs m (Val.cmpl_bool c rs###r (Vlong (Int64.repr 0)))
-      | (None, _) => Stuck
-      end
-  | Pcbu bt r l => 
-      match cmpu_for_btest bt with
-      | (Some c, Int) => eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) c rs##r (Vint (Int.repr 0)))
-      | (Some c, Long) => eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) c rs###r (Vlong (Int64.repr 0)))
-      | (None, _) => Stuck
-      end
-(*
-(** Conditional branches, 32-bit comparisons *)
-  | Pbeqw s1 s2 l =>
-      eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) Ceq rs##s1 rs##s2)
-  | Pbnew s1 s2 l =>
-      eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) Cne rs##s1 rs##s2)
-  | Pbltw s1 s2 l =>
-      eval_branch f l rs m (Val.cmp_bool Clt rs##s1 rs##s2)
-  | Pbltuw s1 s2 l =>
-      eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) Clt rs##s1 rs##s2)
-  | Pbgew s1 s2 l =>
-      eval_branch f l rs m (Val.cmp_bool Cge rs##s1 rs##s2)
-  | Pbgeuw s1 s2 l =>
-      eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) Cge rs##s1 rs##s2)
-
-(** Conditional branches, 64-bit comparisons *)
-  | Pbeql s1 s2 l =>
-      eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) Ceq rs###s1 rs###s2)
-  | Pbnel s1 s2 l =>
-      eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) Cne rs###s1 rs###s2)
-  | Pbltl s1 s2 l =>
-      eval_branch f l rs m (Val.cmpl_bool Clt rs###s1 rs###s2)
-  | Pbltul s1 s2 l =>
-      eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) Clt rs###s1 rs###s2)
-  | Pbgel s1 s2 l =>
-      eval_branch f l rs m (Val.cmpl_bool Cge rs###s1 rs###s2)
-  | Pbgeul s1 s2 l =>
-      eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) Cge rs###s1 rs###s2)
-
 (** Loads and stores *)
-*)| Plb d a ofs =>
+  | Plb d a ofs =>
       exec_load Mint8signed rs m d a ofs
   | Plbu d a ofs =>
       exec_load Mint8unsigned rs m d a ofs
@@ -1275,8 +1230,8 @@ Qed.
 Definition data_preg (r: preg) : bool :=
   match r with
   | RA  => false
-  | IR GPR31 => false (* FIXME - GPR31 is used as temporary in some instructions.. ??? *)
-  | IR GPR8 => false (* FIXME - idem *)
+  | IR GPR31 => false
+  | IR GPR8 => false
   | IR _   => true
   | FR _   => true
   | PC     => false

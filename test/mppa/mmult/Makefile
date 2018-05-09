@@ -12,16 +12,16 @@ all: $(ALL)
 	k1-gcc -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
 
 test-x86: mmult.c $(PRNG)
-	gcc -g -O2 -std=c99 $^ -o $@
+	gcc -O2 -std=c99 $^ -o $@
 
 test-k1c: mmult.c $(PRNG)
-	k1-gcc -g -O2 -std=c99 $^ -o $@
+	k1-gcc -O2 -std=c99 $^ -o $@
 
 %.s: %.c $(CCOMP)
-	ccomp -O0 -g -S $< -o $@
+	ccomp -O2 -S $< -o $@
 
 test-ccomp: mmult.s $(subst .c,.s,$(PRNG))
-	k1-gcc $^ -g -o $@
+	k1-gcc $^ -o $@
 
 .PHONY:
 unittest: unittest-x86 unittest-k1c
