@@ -739,7 +739,7 @@ Lemma tail_nolabel_cons:
 Proof.
   intros. destruct H0. split.
   constructor; auto.
-  intros. simpl. rewrite <- H1. destruct i; reflexivity || contradiction.
+  intros. simpl. rewrite <- H1. destruct i; destruct i; reflexivity || contradiction.
 Qed.
 
 Hint Resolve tail_nolabel_refl: labels.

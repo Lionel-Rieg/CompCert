@@ -188,144 +188,12 @@ module Target : TARGET =
     let bcond oc c = fprintf oc "%s" (bcond_name c)
 
 (* Printing of instructions *)
-    let print_instruction oc = function
-      | Pcall(s) ->
-         fprintf oc "	call	%a\n;;\n" symbol s
-      | Pgoto(s) ->
-         fprintf oc "	goto	%a\n;;\n" symbol s
-      | Pj_l(s) ->
-         fprintf oc "	goto	%a\n;;\n" print_label s
-      | Pret ->
-         fprintf oc "	ret	\n;;\n"
-      | Pget (rd, rs) ->
-         fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs
-      | Pset (rd, rs) ->
-         fprintf oc "	set	%a = %a\n;;\n" preg rd ireg rs
-      | Pmv(rd, rs) | Pmvw2l(rd, rs) ->
-         fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
-
-      | Paddiw (rd, rs, imm) ->
-         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Paddw(rd, rs1, rs2) ->
-         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Paddil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Paddl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-
-      | Psubw(rd, rs1, rs2) ->
-         fprintf oc "	sbfw	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
-      | Psubl(rd, rs1, rs2) ->
-         fprintf oc "	sbfd	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
-
-      | Pmulw(rd, rs1, rs2) ->
-         fprintf oc "	mulw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Pmull(rd, rs1, rs2) ->
-         fprintf oc "	muld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-
-      | Psrliw (rd, rs, imm) ->
-         fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Psrlil (rd, rs, imm) ->
-         fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Psrll (rd, rs1, rs2) ->
-         fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Psrlw (rd, rs1, rs2) ->
-         fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Pslliw (rd, rs, imm) ->
-         fprintf oc "	sllw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Psllw (rd, rs1, rs2) ->
-         fprintf oc "	sllw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Psllil (rd, rs, imm) ->
-         fprintf oc "	slld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Pslll (rd, rs1, rs2) ->
-         fprintf oc "	slld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Psraw  (rd, rs1, rs2) ->
-         fprintf oc "	sraw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Psraiw  (rd, rs1, imm) ->
-         fprintf oc "	sraw	%a = %a, %a\n;;\n" ireg rd ireg rs1 coqint64 imm
-      | Psral  (rd, rs1, rs2) ->
-         fprintf oc "	srad	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Psrail  (rd, rs1, imm) ->
-         fprintf oc "	srad	%a = %a, %a\n;;\n" ireg rd ireg rs1 coqint64 imm
-
-      | Poril (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Porl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Poriw (rd, rs, imm) -> 
-         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Porw(rd, rs1, rs2) -> 
-         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-
-      | Pxoriw (rd, rs, imm) -> 
-         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Pxorw(rd, rs1, rs2) -> 
-         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Pxoril (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Pxorl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-
-      | Pandiw (rd, rs, imm) ->
-         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Pandw(rd, rs1, rs2) ->
-         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-      | Pandil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
-      | Pandl(rd, rs1, rs2) -> assert Archi.ptr64;
-         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
-
-      | Pmake (rd, imm) ->
-         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint imm
-      | Pmakel (rd, imm) ->
-         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
-
-      | Pnegl(rd, rs) -> assert Archi.ptr64;
-         fprintf oc "	negd	%a = %a\n;;\n" ireg rd ireg rs
-      | Pnegw(rd, rs) ->
-         fprintf oc "	negw	%a = %a\n;;\n" ireg rd ireg rs
-
-      | Pcompw (it, rd, rs1, rs2) ->
-         fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
-      | Pcompiw (it, rd, rs1, imm) ->
-         fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
-      | Pcompl (it, rd, rs1, rs2) ->
-         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
-      | Pcompil (it, rd, rs1, imm) ->
-         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 coqint64 imm
-      | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
-         fprintf oc "	cb.%a	%a?%a\n;;\n" bcond bt ireg r print_label lbl
-
-      | Plb(rd, ra, ofs) ->
-         fprintf oc "	lbs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Plbu(rd, ra, ofs) ->
-         fprintf oc "	lbz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Plh(rd, ra, ofs) ->
-         fprintf oc "	lhs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Plhu(rd, ra, ofs) ->
-         fprintf oc "	lhz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
-         fprintf oc "	lws	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
-      | Psb(rd, ra, ofs) ->
-         fprintf oc "	sb	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
-      | Psh(rd, ra, ofs) ->
-         fprintf oc "	sh	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
-      | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
-         fprintf oc "	sw	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
-      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
-
-      | Pfnegd(rd, ra) ->
-         fprintf oc "	fnegd	%a = %a\n;;\n" ireg ra ireg rd
-
+    let print_ex_instruction oc = function
       (* Pseudo-instructions expanded in Asmexpand *)
       | Pallocframe(sz, ofs) ->
          assert false
       | Pfreeframe(sz, ofs) ->
          assert false
-      | Pcvtl2w _ | Pcvtw2l _ -> assert false
 
       (* Pseudo-instructions that remain *)
       | Plabel lbl ->
@@ -353,6 +221,164 @@ module Target : TARGET =
           | _ ->
               assert false
          end
+
+      let print_cf_instruction oc = function
+      | Pget (rd, rs) ->
+         fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs
+      | Pset (rd, rs) ->
+         fprintf oc "	set	%a = %a\n;;\n" preg rd ireg rs
+      | Pret ->
+         fprintf oc "	ret	\n;;\n"
+      | Pcall(s) ->
+         fprintf oc "	call	%a\n;;\n" symbol s
+      | Pgoto(s) ->
+         fprintf oc "	goto	%a\n;;\n" symbol s
+      | Pj_l(s) ->
+         fprintf oc "	goto	%a\n;;\n" print_label s
+      | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
+         fprintf oc "	cb.%a	%a?%a\n;;\n" bcond bt ireg r print_label lbl
+
+      let print_ld_instruction oc = function
+      | Plb(rd, ra, ofs) ->
+         fprintf oc "	lbs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plbu(rd, ra, ofs) ->
+         fprintf oc "	lbz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plh(rd, ra, ofs) ->
+         fprintf oc "	lhs	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plhu(rd, ra, ofs) ->
+         fprintf oc "	lhz	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
+         fprintf oc "	lws	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+      | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
+         fprintf oc "	ld	%a = %a[%a]\n;;\n" ireg rd offset ofs ireg ra
+
+      let print_st_instruction oc = function
+      | Psb(rd, ra, ofs) ->
+         fprintf oc "	sb	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
+      | Psh(rd, ra, ofs) ->
+         fprintf oc "	sh	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
+      | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
+         fprintf oc "	sw	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
+      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
+         fprintf oc "	sd	%a[%a] = %a\n;;\n" offset ofs ireg ra ireg rd
+
+      let print_ar_r_instruction oc rd = (* function
+      | Pcvtw2l ->*) assert false
+
+      let print_ar_rr_instruction oc rd rs = function
+      | Pmv | Pmvw2l ->
+         fprintf oc "	addd	%a = %a, 0\n;;\n"     ireg rd ireg rs
+      | Pcvtl2w -> assert false
+      | Pnegl -> assert Archi.ptr64;
+         fprintf oc "	negd	%a = %a\n;;\n" ireg rd ireg rs
+      | Pnegw ->
+         fprintf oc "	negw	%a = %a\n;;\n" ireg rd ireg rs
+      | Pfnegd ->
+         fprintf oc "	fnegd	%a = %a\n;;\n" ireg rs ireg rd
+
+      let print_ar_ri32_instruction oc rd imm = (* function  
+         | Pmake (rd, imm) -> *)
+         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint imm
+
+      let print_ar_ri64_instruction oc rd imm = (* function
+         | Pmakel (rd, imm) -> *)
+         fprintf oc "	make	%a, %a\n;;\n" ireg rd coqint64 imm
+
+      let print_ar_rrr_instruction oc rd rs1 rs2 = function
+      | Pcompw (it) ->
+         fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
+      | Pcompl (it) ->
+         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs1 ireg rs2
+
+      | Paddw ->
+         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psubw ->
+         fprintf oc "	sbfw	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
+      | Pmulw ->
+         fprintf oc "	mulw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pandw ->
+         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Porw -> 
+         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pxorw -> 
+         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psraw ->
+         fprintf oc "	sraw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psrlw ->
+         fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psllw ->
+         fprintf oc "	sllw	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+      | Paddl -> assert Archi.ptr64;
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psubl ->
+         fprintf oc "	sbfd	%a = %a, %a\n;;\n" ireg rd ireg rs2 ireg rs1
+      | Pandl -> assert Archi.ptr64;
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Porl -> assert Archi.ptr64;
+         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pxorl -> assert Archi.ptr64;
+         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pmull ->
+         fprintf oc "	muld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Pslll  ->
+         fprintf oc "	slld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psrll  ->
+         fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+      | Psral   ->
+         fprintf oc "	srad	%a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+    let print_ar_rri32_instruction oc rd rs imm = function
+      | Pcompiw (it) ->
+         fprintf oc "	compw.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs coqint64 imm
+      | Paddiw ->
+         fprintf oc "	addw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pandiw ->
+         fprintf oc "	andw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Poriw -> 
+         fprintf oc "	orw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pxoriw -> 
+         fprintf oc "	xorw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psraiw ->
+         fprintf oc "	sraw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psrliw ->
+         fprintf oc "	srlw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pslliw ->
+         fprintf oc "	sllw	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psllil ->
+         fprintf oc "	slld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psrlil ->
+         fprintf oc "	srld	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Psrail ->
+         fprintf oc "	srad	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+
+    let print_ar_rri64_instruction oc rd rs imm = function
+      | Pcompil (it) ->
+         fprintf oc "	compd.%a	%a = %a, %a\n;;\n" icond it ireg rd ireg rs coqint64 imm
+      | Paddil -> assert Archi.ptr64;
+         fprintf oc "	addd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pandil -> assert Archi.ptr64;
+         fprintf oc "	andd	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Poril -> assert Archi.ptr64;
+         fprintf oc "	ord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+      | Pxoril -> assert Archi.ptr64;
+         fprintf oc "	xord	%a = %a, %a\n;;\n" ireg rd ireg rs coqint64 imm
+
+    let print_ar_instruction oc = function
+      | PArithR(d) -> print_ar_r_instruction oc d
+      | PArithRR(ins, d, s) -> print_ar_rr_instruction oc d s ins
+      | PArithRI32(d, i) -> print_ar_ri32_instruction oc d i
+      | PArithRI64(d, i) -> print_ar_ri64_instruction oc d i
+      | PArithRRR(ins, d, s1, s2) -> print_ar_rrr_instruction oc d s1 s2 ins
+      | PArithRRI32(ins, d, s, i) -> print_ar_rri32_instruction oc d s i ins
+      | PArithRRI64(ins, d, s, i) -> print_ar_rri64_instruction oc d s i ins
+
+    let print_instruction oc = function
+      | PExpand(i) -> print_ex_instruction oc i
+      | PControlFlow(i) -> print_cf_instruction oc i
+      | PLoad(i) -> print_ld_instruction oc i
+      | PStore(i) -> print_st_instruction oc i
+      | PArith(i) -> print_ar_instruction oc i
 
     let get_section_names name =
       let (text, lit) =

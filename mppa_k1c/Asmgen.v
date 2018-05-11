@@ -58,6 +58,8 @@ Inductive immed64 : Type :=
 (* For now, let's suppose all instructions of K1c can handle 64-bits immediate *)
 Definition make_immed64 (val: int64) := Imm64_single val.
 
+Notation "a ::i b" := (cons (A:=instruction) a b) (at level 49, right associativity).
+
 (** Smart constructors for arithmetic operations involving
   a 32-bit or 64-bit integer constant.  Depending on whether the
   constant fits in 12 bits or not, one or several instructions
@@ -66,14 +68,14 @@ Definition make_immed64 (val: int64) := Imm64_single val.
 
 Definition loadimm32 (r: ireg) (n: int) (k: code) :=
   match make_immed32 n with
-  | Imm32_single imm => Pmake r imm :: k
+  | Imm32_single imm => Pmake r imm ::i k
   end.
 
-Definition opimm32 (op: ireg -> ireg -> ireg -> instruction)
-                   (opimm: ireg -> ireg -> int -> instruction)
+Definition opimm32 (op: arith_name_rrr)
+                   (opimm: arith_name_rri32)
                    (rd rs: ireg) (n: int) (k: code) :=
   match make_immed32 n with
-  | Imm32_single imm => opimm rd rs imm :: k
+  | Imm32_single imm => opimm rd rs imm ::i k
   end.
 
 Definition addimm32 := opimm32 Paddw Paddiw.
@@ -87,14 +89,14 @@ Definition sltuimm32 := opimm32 Psltuw Psltiuw.
 
 Definition loadimm64 (r: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
-  | Imm64_single imm => Pmakel r imm :: k
+  | Imm64_single imm => Pmakel r imm ::i k
   end.
 
-Definition opimm64 (op: ireg -> ireg -> ireg -> instruction)
-                   (opimm: ireg -> ireg -> int64 -> instruction)
+Definition opimm64 (op: arith_name_rrr)
+                   (opimm: arith_name_rri64)
                    (rd rs: ireg) (n: int64) (k: code) :=
   match make_immed64 n with
-  | Imm64_single imm => opimm rd rs imm :: k
+  | Imm64_single imm => opimm rd rs imm ::i k
 end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
@@ -109,13 +111,13 @@ Definition sltuimm64 := opimm64 Psltul Psltiul.
 
 Definition cast32signed (rd rs: ireg) (k: code) := 
   if (ireg_eq rd rs)
-    then Pcvtw2l rd :: k
-    else Pmvw2l rd rs :: k
+    then Pcvtw2l rd ::i k
+    else Pmvw2l rd rs ::i k
   .
 
 Definition addptrofs (rd rs: ireg) (n: ptrofs) (k: code) :=
   if Ptrofs.eq_dec n Ptrofs.zero then
-    Pmv rd rs :: k
+    Pmv rd rs ::i k
   else
     addimm64 rd rs (Ptrofs.to_int64 n) k.
 
@@ -123,11 +125,11 @@ Definition addptrofs (rd rs: ireg) (n: ptrofs) (k: code) :=
 
 Definition transl_comp
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
-  Pcompw (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
+  Pcompw (itest_for_cmp c s) RTMP r1 r2 ::i Pcb BTwnez RTMP lbl ::i k.
 
 Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
-  Pcompl (itest_for_cmp c s) RTMP r1 r2 :: Pcb BTwnez RTMP lbl :: k.
+  Pcompl (itest_for_cmp c s) RTMP r1 r2 ::i Pcb BTwnez RTMP lbl ::i k.
 
 Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
@@ -143,8 +145,8 @@ Definition select_comp (n: int) (c: comparison) : option comparison :=
 Definition transl_opt_compuimm
     (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
   match select_comp n c with
-  | Some Ceq => Pcbu BTweqz r1 lbl :: k
-  | Some Cne => Pcbu BTwnez r1 lbl :: k
+  | Some Ceq => Pcbu BTweqz r1 lbl ::i k
+  | Some Cne => Pcbu BTwnez r1 lbl ::i k
   | Some _   => nil (* Never happens *)
   | None     => loadimm32 RTMP n (transl_comp c Unsigned r1 RTMP lbl k)
   end
@@ -164,8 +166,8 @@ Definition select_compl (n: int64) (c: comparison) : option comparison :=
 Definition transl_opt_compluimm
     (n: int64) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
   match select_compl n c with
-  | Some Ceq => Pcbu BTdeqz r1 lbl :: k
-  | Some Cne => Pcbu BTdnez r1 lbl :: k
+  | Some Ceq => Pcbu BTdeqz r1 lbl ::i k
+  | Some Cne => Pcbu BTdnez r1 lbl ::i k
   | Some _   => nil (* Never happens *)
   | None     => loadimm64 RTMP n (transl_compl c Unsigned r1 RTMP lbl k)
   end
@@ -186,7 +188,7 @@ Definition transl_cbranch
   | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (if Int.eq n Int.zero then
-            Pcb (btest_for_cmpswz c) r1 lbl :: k
+            Pcb (btest_for_cmpswz c) r1 lbl ::i k
           else
             loadimm32 RTMP n (transl_comp c Signed r1 RTMP lbl k)
          )
@@ -202,7 +204,7 @@ Definition transl_cbranch
   | Ccomplimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (if Int64.eq n Int64.zero then
-            Pcb (btest_for_cmpsdz c) r1 lbl :: k
+            Pcb (btest_for_cmpsdz c) r1 lbl ::i k
           else
             loadimm64 RTMP n (transl_compl c Signed r1 RTMP lbl k)
          )
@@ -231,28 +233,28 @@ Definition transl_cbranch
   condition. *)
 
 Definition transl_cond_int32s (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompw (itest_for_cmp cmp Signed) rd r1 r2 :: k.
+  Pcompw (itest_for_cmp cmp Signed) rd r1 r2 ::i k.
 
 Definition transl_cond_int32u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompw (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
+  Pcompw (itest_for_cmp cmp Unsigned) rd r1 r2 ::i k.
 
 Definition transl_cond_int64s (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompl (itest_for_cmp cmp Signed) rd r1 r2 :: k.
+  Pcompl (itest_for_cmp cmp Signed) rd r1 r2 ::i k.
 
 Definition transl_cond_int64u (cmp: comparison) (rd r1 r2: ireg) (k: code) :=
-  Pcompl (itest_for_cmp cmp Unsigned) rd r1 r2 :: k.
+  Pcompl (itest_for_cmp cmp Unsigned) rd r1 r2 ::i k.
 
 Definition transl_condimm_int32s (cmp: comparison) (rd r1: ireg) (n: int) (k: code) :=
-  Pcompiw (itest_for_cmp cmp Signed) rd r1 n :: k.
+  Pcompiw (itest_for_cmp cmp Signed) rd r1 n ::i k.
 
 Definition transl_condimm_int32u (cmp: comparison) (rd r1: ireg) (n: int) (k: code) :=
-  Pcompiw (itest_for_cmp cmp Unsigned) rd r1 n :: k.
+  Pcompiw (itest_for_cmp cmp Unsigned) rd r1 n ::i k.
 
 Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
-  Pcompil (itest_for_cmp cmp Signed) rd r1 n :: k.
+  Pcompil (itest_for_cmp cmp Signed) rd r1 n ::i k.
 
 Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: code) :=
-  Pcompil (itest_for_cmp cmp Unsigned) rd r1 n :: k.
+  Pcompil (itest_for_cmp cmp Unsigned) rd r1 n ::i k.
 
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: code) :=
@@ -309,7 +311,7 @@ Definition transl_op
   match op, args with
   | Omove, a1 :: nil =>
       match preg_of res, preg_of a1 with
-      | IR r, IR a => OK (Pmv r a :: k)
+      | IR r, IR a => OK (Pmv r a ::i k)
       |  _  ,  _   => Error(msg "Asmgen.Omove")
       end
   | Ointconst n, nil =>
@@ -331,33 +333,33 @@ Definition transl_op
 *)| Oaddrsymbol s ofs, nil =>
       do rd <- ireg_of res;
       OK (if Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)
-          then Ploadsymbol rd s Ptrofs.zero :: addptrofs rd rd ofs k
-          else Ploadsymbol rd s ofs :: k)
+          then Ploadsymbol rd s Ptrofs.zero ::i addptrofs rd rd ofs k
+          else Ploadsymbol rd s ofs ::i k)
   | Oaddrstack n, nil =>
       do rd <- ireg_of res;
       OK (addptrofs rd SP n k)
 
   | Ocast8signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pslliw rd rs (Int.repr 24) :: Psraiw rd rd (Int.repr 24) :: k)
+      OK (Pslliw rd rs (Int.repr 24) ::i Psraiw rd rd (Int.repr 24) ::i k)
   | Ocast16signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pslliw rd rs (Int.repr 16) :: Psraiw rd rd (Int.repr 16) :: k)
+      OK (Pslliw rd rs (Int.repr 16) ::i Psraiw rd rd (Int.repr 16) ::i k)
   | Oadd, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Paddw rd rs1 rs2 :: k)
+      OK (Paddw rd rs1 rs2 ::i k)
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n k)
   | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pnegw rd rs :: k)
+      OK (Pnegw rd rs ::i k)
   | Osub, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psubw rd rs1 rs2 :: k)
+      OK (Psubw rd rs1 rs2 ::i k)
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulw rd rs1 rs2 :: k)
+      OK (Pmulw rd rs1 rs2 ::i k)
 (*| Omulhs, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulhw rd rs1 rs2 :: k)
@@ -378,52 +380,52 @@ Definition transl_op
       OK (Premuw rd rs1 rs2 :: k)
 *)| Oand, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pandw rd rs1 rs2 :: k)
+      OK (Pandw rd rs1 rs2 ::i k)
   | Oandimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm32 rd rs n k)
   | Oor, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Porw rd rs1 rs2 :: k)
+      OK (Porw rd rs1 rs2 ::i k)
   | Oorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (orimm32 rd rs n k)
   | Oxor, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pxorw rd rs1 rs2 :: k)
+      OK (Pxorw rd rs1 rs2 ::i k)
   | Oxorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm32 rd rs n k)
   | Oshl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psllw rd rs1 rs2 :: k)
+      OK (Psllw rd rs1 rs2 ::i k)
   | Oshlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pslliw rd rs n :: k)
+      OK (Pslliw rd rs n ::i k)
   | Oshr, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psraw rd rs1 rs2 :: k)
+      OK (Psraw rd rs1 rs2 ::i k)
   | Oshrimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psraiw rd rs n :: k)
+      OK (Psraiw rd rs n ::i k)
   | Oshru, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psrlw rd rs1 rs2 :: k)
+      OK (Psrlw rd rs1 rs2 ::i k)
   | Oshruimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psrliw rd rs n :: k)
+      OK (Psrliw rd rs n ::i k)
   | Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs :: k else
-          Psraiw GPR31 rs (Int.repr 31) ::
-          Psrliw GPR31 GPR31 (Int.sub Int.iwordsize n) ::
-          Paddw GPR31 rs GPR31 ::
-          Psraiw rd GPR31 n :: k)
+      OK (if Int.eq n Int.zero then Pmv rd rs ::i k else
+          Psraiw GPR31 rs (Int.repr 31) ::i
+          Psrliw GPR31 GPR31 (Int.sub Int.iwordsize n) ::i
+          Paddw GPR31 rs GPR31 ::i
+          Psraiw rd GPR31 n ::i k)
 
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pcvtl2w rd rs :: k)  
+      OK (Pcvtl2w rd rs ::i k)  
   | Ocast32signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (cast32signed rd rs k)
@@ -433,19 +435,19 @@ Definition transl_op
       OK (Pcvtw2l rd :: Psllil rd rd (Int.repr 32) :: Psrlil rd rd (Int.repr 32) :: k)
 *)| Oaddl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Paddl rd rs1 rs2 :: k)
+      OK (Paddl rd rs1 rs2 ::i k)
   | Oaddlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm64 rd rs n k)
   | Onegl, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
-      OK (Pnegl rd rs :: k)
+      OK (Pnegl rd rs ::i k)
   | Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psubl rd rs1 rs2 :: k)
+      OK (Psubl rd rs1 rs2 ::i k)
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmull rd rs1 rs2 :: k)
+      OK (Pmull rd rs1 rs2 ::i k)
 (*| Omullhs, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulhl rd rs1 rs2 :: k)
@@ -466,40 +468,40 @@ Definition transl_op
       OK (Premul rd rs1 rs2 :: k)
 *)| Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pandl rd rs1 rs2 :: k)
+      OK (Pandl rd rs1 rs2 ::i k)
   | Oandlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm64 rd rs n k)
   | Oorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Porl rd rs1 rs2 :: k)
+      OK (Porl rd rs1 rs2 ::i k)
   | Oorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (orimm64 rd rs n k)
   | Oxorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pxorl rd rs1 rs2 :: k)
+      OK (Pxorl rd rs1 rs2 ::i k)
   | Oxorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm64 rd rs n k)
   | Oshll, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pslll rd rs1 rs2 :: k)
+      OK (Pslll rd rs1 rs2 ::i k)
   | Oshllimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psllil rd rs n :: k)
+      OK (Psllil rd rs n ::i k)
   | Oshrl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psral rd rs1 rs2 :: k)
+      OK (Psral rd rs1 rs2 ::i k)
   | Oshrlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psrail rd rs n :: k)
+      OK (Psrail rd rs n ::i k)
   | Oshrlu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Psrll rd rs1 rs2 :: k)
+      OK (Psrll rd rs1 rs2 ::i k)
   | Oshrluimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (Psrlil rd rs n :: k)
+      OK (Psrlil rd rs n ::i k)
 (*| Oshrxlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (if Int.eq n Int.zero then Pmv rd rs :: k else
@@ -510,7 +512,7 @@ Definition transl_op
 
 *)| Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfnegd rd rs :: k)
+      OK (Pfnegd rd rs ::i k)
 (*| Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs :: k)
@@ -618,7 +620,7 @@ Definition indexed_memory_access
         (base: ireg) (ofs: ptrofs) (k: code) :=
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
-      mk_instr base (Ofsimm (Ptrofs.of_int64 imm)) :: k
+      mk_instr base (Ofsimm (Ptrofs.of_int64 imm)) ::i k
 (*| Imm64_pair hi lo =>
       Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
   | Imm64_large imm =>
@@ -663,7 +665,7 @@ Definition transl_memory_access
       do rs <- ireg_of a1;
       OK (indexed_memory_access mk_instr rs ofs k)
   | Aglobal id ofs, nil =>
-      OK (Ploadsymbol GPR31 id ofs :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k)
+      OK (Ploadsymbol GPR31 id ofs ::i (mk_instr GPR31 (Ofsimm Ptrofs.zero) ::i k))
   | Ainstack ofs, nil =>
       OK (indexed_memory_access mk_instr SP ofs k)
   | _, _ =>
@@ -730,7 +732,7 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
 
 Definition make_epilogue (f: Mach.function) (k: code) :=
   loadind_ptr SP f.(fn_retaddr_ofs) GPR8 
-  (Pset RA GPR8 :: Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) :: k).
+  (Pset RA GPR8 ::i Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) ::i k).
 
 (** Translation of a Mach instruction. *)
 
@@ -755,23 +757,23 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
 (*| Mcall sig (inl r) =>
       do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)
 *)| Mcall sig (inr symb) =>
-      OK ((Pcall symb) :: k)
+      OK ((Pcall symb) ::i k)
 (*| Mtailcall sig (inl r) =>
       do r1 <- ireg_of r;
       OK (make_epilogue f (Pcall :: k))
 *)| Mtailcall sig (inr symb) =>
-      OK (make_epilogue f ((Pgoto symb) :: k))
+      OK (make_epilogue f ((Pgoto symb) ::i k))
   | Mbuiltin ef args res =>
-      OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) :: k)
+      OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) ::i k)
   | Mlabel lbl =>
-      OK (Plabel lbl :: k)
+      OK (Plabel lbl ::i k)
   | Mgoto lbl =>
-      OK (Pj_l lbl :: k)
+      OK (Pj_l lbl ::i k)
   | Mcond cond args lbl =>
       transl_cbranch cond args lbl k
 (*| Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
 *)| Mreturn =>
-      OK (make_epilogue f (Pret :: k))
+      OK (make_epilogue f (Pret ::i k))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)
   | _ =>
       Error (msg "Asmgen.transl_instr")
@@ -821,8 +823,8 @@ Definition transl_code' (f: Mach.function) (il: list Mach.instruction) (it1p: bo
 Definition transl_function (f: Mach.function) :=
   do c <- transl_code' f f.(Mach.fn_code) true;
   OK (mkfunction f.(Mach.fn_sig)
-        (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::
-         Pget GPR8 RA ::
+        (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::i
+         Pget GPR8 RA ::i
          storeind_ptr GPR8 SP f.(fn_retaddr_ofs) c)).
 
 Definition transf_function (f: Mach.function) : res Asm.function :=

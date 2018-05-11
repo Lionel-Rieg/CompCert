@@ -124,7 +124,7 @@ Qed.
 Hint Resolve loadimm32_label: labels.
 
 Remark opimm32_label:
-  forall op opimm r1 r2 n k,
+  forall (op: arith_name_rrr) (opimm: arith_name_rri32) r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
   (forall r1 r2 n, nolabel (opimm r1 r2 n)) ->
   tail_nolabel k (opimm32 op opimm r1 r2 n k).
@@ -150,7 +150,7 @@ Qed.
 Hint Resolve cast32signed_label: labels.
 
 Remark opimm64_label:
-  forall op opimm r1 r2 n k,
+  forall (op: arith_name_rrr) (opimm: arith_name_rri64) r1 r2 n k,
   (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
   (forall r1 r2 n, nolabel (opimm r1 r2 n)) ->
   tail_nolabel k (opimm64 op opimm r1 r2 n k).
@@ -376,7 +376,7 @@ Qed.
 Lemma transl_instr_label:
   forall f i ep k c,
   transl_instr f i ep k = OK c ->
-  match i with Mlabel lbl => c = Plabel lbl :: k | _ => tail_nolabel k c end.
+  match i with Mlabel lbl => c = Plabel lbl ::i k | _ => tail_nolabel k c end.
 Proof.
   unfold transl_instr; intros; destruct i; TailNoLabel.
 (* loadind *)
@@ -985,8 +985,8 @@ Local Transparent destroyed_by_op.
   intros [m3' [P Q]].
   (* Execution of function prologue *)
   monadInv EQ0. rewrite transl_code'_transl_code in EQ1.
-  set (tfbody := Pallocframe (fn_stacksize f) (fn_link_ofs f) ::
-                 Pget GPR8 RA ::
+  set (tfbody := Pallocframe (fn_stacksize f) (fn_link_ofs f) ::i
+                 Pget GPR8 RA ::i
                  storeind_ptr GPR8 SP (fn_retaddr_ofs f) x0) in *.
   set (tf := {| fn_sig := Mach.fn_sig f; fn_code := tfbody |}) in *.
   set (rs2 := nextinstr (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).

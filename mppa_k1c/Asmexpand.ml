@@ -493,9 +493,9 @@ let expand_builtin_inline name args res =
 
 let expand_instruction instr =
   match instr with
-  | Pallocframe (sz, ofs) ->
+  | PExpand Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (GPR10, GPR12));
+      emit (PArith (PArithRR (Pmv, GPR10, GPR12)));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
@@ -511,7 +511,7 @@ let expand_instruction instr =
         expand_storeind_ptr GPR10 GPR12 ofs;
         vararg_start_ofs := None
       end
-  | Pfreeframe (sz, ofs) ->
+  | PExpand Pfreeframe (sz, ofs) ->
      let sg = get_current_function_sig() in
      let extra_sz =
       if sg.sig_cc.cc_vararg then begin
@@ -548,10 +548,10 @@ let expand_instruction instr =
       end else begin
         emit (Pxorl(rd, rs1, rs2)); emit (Psltul(rd, X0, X rd))
       end
-*)| Pcvtl2w(rd, rs) ->
+*)| PArith PArithRR (Pcvtl2w,rd, rs) ->
       assert Archi.ptr64;
-      emit (Paddiw(rd, rs, Int.zero))  (* 32-bit sign extension *)
-  | Pcvtw2l(r) ->
+      emit (PArith (PArithRRI32 (Paddiw,rd, rs, Int.zero)))  (* 32-bit sign extension *)
+  | PArith PArithR r -> (* Pcvtw2l *)
       assert Archi.ptr64
       (* no-operation because the 32-bit integer was kept sign extended already *)
       (* FIXME - is it really the case on the MPPA ? *)

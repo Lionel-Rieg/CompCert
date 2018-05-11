@@ -152,180 +152,8 @@ Definition label := positive.
   representable range.  Of course, our K1c generator (file
   [Asmgen]) is careful to respect this range. *)
 
-Inductive instruction : Type :=
-(** Get/Set System Registers *)
-  | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
-  | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
-
-(** Branch Control Unit instructions *)
-  | Pret                                            (**r return *)
-  | Pcall   (l: label)                              (**r function call *)
-  (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
-  | Pgoto   (l: label)                              (**r goto *)
-  | Pj_l    (l: label)                              (**r jump to label *)
-  (* Conditional branches *)
-  | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
-  | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
-
-(** Integer Comparisons *)
-  | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r comparison word *)
-  | Pcompiw (it: itest) (rd rs1: ireg) (imm: int)   (**r comparison imm word *)
-  | Pcompl  (it: itest) (rd rs1 rs2: ireg)          (**r comparison long *)
-  | Pcompil (it: itest) (rd rs1: ireg) (imm: int64) (**r comparison imm long *)
-
-(** Load immediates *)
-  | Pmake   (rd: ireg)            (imm: int)        (**r load immediate *)
-  | Pmakel  (rd: ireg)            (imm: int64)      (**r load immediate long *)
-
-(** Register move *)
-  | Pmv     (rd: ireg) (rs: ireg)                   (**r register move *)
-
-(** 32-bit integer register-immediate instructions *)
-  | Paddiw  (rd: ireg) (rs: ireg) (imm: int)        (**r add imm word *)
-  | Pandiw  (rd: ireg) (rs: ireg) (imm: int)        (**r and imm word *)
-  | Poriw   (rd: ireg) (rs: ireg) (imm: int)        (**r or imm word *)
-  | Pxoriw  (rd: ireg) (rs: ireg) (imm: int)        (**r xor imm word *)
-  | Psraiw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic imm word *)
-  | Psrliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical imm word *)
-  | Pslliw  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical imm word *)
-
-(** 32-bit integer register-register instructions *)
-  | Paddw   (rd: ireg) (rs1 rs2: ireg)              (**r add word *)
-  | Psubw   (rd: ireg) (rs1 rs2: ireg)              (**r sub word *)
-  | Pmulw   (rd: ireg) (rs1 rs2: ireg)              (**r mul word *)
-  | Pandw   (rd: ireg) (rs1 rs2: ireg)              (**r and word *)
-  | Porw    (rd: ireg) (rs1 rs2: ireg)              (**r or word *)
-  | Pxorw   (rd: ireg) (rs1 rs2: ireg)              (**r xor word *)
-  | Pnegw   (rd: ireg) (rs: ireg)                   (**r negate word *)
-  | Psraw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic word *)
-  | Psrlw   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical word *)
-  | Psllw   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical word *)
-
-(** 64-bit integer register-immediate instructions *)
-  | Paddil  (rd: ireg) (rs: ireg) (imm: int64)      (**r add immediate long *) 
-  | Pandil  (rd: ireg) (rs: ireg) (imm: int64)      (**r and immediate long *) 
-  | Poril   (rd: ireg) (rs: ireg) (imm: int64)      (**r or immediate long *) 
-  | Pxoril  (rd: ireg) (rs: ireg) (imm: int64)      (**r xor immediate long *) 
-  | Psllil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift left logical immediate long *)
-  | Psrlil  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right logical immediate long *)
-  | Psrail  (rd: ireg) (rs: ireg) (imm: int)        (**r shift right arithmetic immediate long *)
-
-(** 64-bit integer register-register instructions *)
-  | Paddl   (rd: ireg) (rs1 rs2: ireg)              (**r add long *)
-  | Psubl   (rd: ireg) (rs1 rs2: ireg)              (**r sub long *)
-  | Pandl   (rd: ireg) (rs1 rs2: ireg)              (**r and long *)
-  | Porl    (rd: ireg) (rs1 rs2: ireg)              (**r or long *)
-  | Pxorl    (rd: ireg) (rs1 rs2: ireg)             (**r xor long *)
-  | Pnegl   (rd: ireg) (rs: ireg)                   (**r negate long *)
-  | Pmull   (rd: ireg) (rs1 rs2: ireg)              (**r mul long (low part) *)
-  | Pslll   (rd: ireg) (rs1 rs2: ireg)              (**r shift left logical long *)
-  | Psrll   (rd: ireg) (rs1 rs2: ireg)              (**r shift right logical long *)
-  | Psral   (rd: ireg) (rs1 rs2: ireg)              (**r shift right arithmetic long *)
-
-(** Conversions *)
-  | Pcvtl2w (rd: ireg) (rs: ireg)                   (**r Convert Long to Word *)
-  | Pcvtw2l (r : ireg)                              (**r Convert Word to Long *)
-  | Pmvw2l  (rd: ireg) (rs: ireg)                   (**r Move Convert Word to Long *)
-
-(** Loads and Stores *)
-  | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
-  | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
-  | Plh    (rd: ireg) (ra: ireg) (ofs: offset)      (**r load half word *)
-  | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word unsigned *)
-  | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
-  | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
-  | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
-  | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
-  | Psb    (rd: ireg) (ra: ireg) (ofs: offset)      (**r store byte *)
-  | Psh    (rd: ireg) (ra: ireg) (ofs: offset)      (**r store half byte *)
-  | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
-  | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
-  | Psd     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int64 *)
-  | Psd_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any64 *)
-
-  (* Synchronization *)
-(*| Pfence                                          (**r fence *)
-
-  (* floating point register move *)
-  | Pfmv     (rd: freg) (rs: freg)                  (**r move *)
-  | Pfmvxs   (rd: ireg) (rs: freg)                  (**r move FP single to integer register *)
-  | Pfmvxd   (rd: ireg) (rs: freg)                  (**r move FP double to integer register *)
-
-  (* 32-bit (single-precision) floating point *)
-*)| Pfls     (rd: freg) (ra: ireg) (ofs: offset)    (**r load float *)
-  | Pfss     (rs: freg) (ra: ireg) (ofs: offset)    (**r store float *)
-
-(*| Pfnegs   (rd: freg) (rs: freg)                  (**r negation *)
-  | Pfabss   (rd: freg) (rs: freg)                  (**r absolute value *)
-
-  | Pfadds   (rd: freg) (rs1 rs2: freg)             (**r addition *)
-  | Pfsubs   (rd: freg) (rs1 rs2: freg)             (**r subtraction *)
-  | Pfmuls   (rd: freg) (rs1 rs2: freg)             (**r multiplication *)
-  | Pfdivs   (rd: freg) (rs1 rs2: freg)             (**r division *)
-  | Pfmins   (rd: freg) (rs1 rs2: freg)             (**r minimum *)
-  | Pfmaxs   (rd: freg) (rs1 rs2: freg)             (**r maximum *)
-
-  | Pfeqs    (rd: ireg) (rs1 rs2: freg)             (**r compare equal *)
-  | Pflts    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than *)
-  | Pfles    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than/equal *)
-
-  | Pfsqrts  (rd: freg) (rs: freg)                  (**r square-root *)
-
-  | Pfmadds  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-add *)
-  | Pfmsubs  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-sub *)
-  | Pfnmadds (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-add *)
-  | Pfnmsubs (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-sub *)
-
-  | Pfcvtws  (rd: ireg) (rs: freg)                  (**r float32 -> int32 conversion *)
-  | Pfcvtwus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int32 conversion *)
-  | Pfcvtsw  (rd: freg) (rs: ireg)                 (**r int32 -> float32 conversion *)
-  | Pfcvtswu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float32 conversion *)
-
-  | Pfcvtls  (rd: ireg) (rs: freg)                  (**r float32 -> int64 conversion *)
-  | Pfcvtlus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int64 conversion *)
-  | Pfcvtsl  (rd: freg) (rs: ireg)                 (**r int64 -> float32 conversion *)
-  | Pfcvtslu (rd: freg) (rs: ireg)                 (**r unsigned int 64-> float32 conversion *)
-
-  (* 64-bit (double-precision) floating point *)
-*)| Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
-(*| Pfld_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r load any64 *)
-*)| Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
-(*| Pfsd_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r store any64 *)
-
-*)| Pfnegd   (rd: freg) (rs: freg)                  (**r negation *)
-(*| Pfabsd   (rd: freg) (rs: freg)                  (**r absolute value *)
-
-  | Pfaddd   (rd: freg) (rs1 rs2: freg)             (**r addition *)
-  | Pfsubd   (rd: freg) (rs1 rs2: freg)             (**r subtraction *)
-  | Pfmuld   (rd: freg) (rs1 rs2: freg)             (**r multiplication *)
-  | Pfdivd   (rd: freg) (rs1 rs2: freg)             (**r division *)
-  | Pfmind   (rd: freg) (rs1 rs2: freg)             (**r minimum *)
-  | Pfmaxd   (rd: freg) (rs1 rs2: freg)             (**r maximum *)
-
-  | Pfeqd    (rd: ireg) (rs1 rs2: freg)             (**r compare equal *)
-  | Pfltd    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than *)
-  | Pfled    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than/equal *)
-
-  | Pfsqrtd  (rd: freg) (rs: freg)                  (**r square-root *)
-
-  | Pfmaddd  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-add *)
-  | Pfmsubd  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-sub *)
-  | Pfnmaddd (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-add *)
-  | Pfnmsubd (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-sub *)
-
-  | Pfcvtwd  (rd: ireg) (rs: freg)                  (**r float -> int32 conversion *)
-  | Pfcvtwud (rd: ireg) (rs: freg)                  (**r float -> unsigned int32 conversion *)
-  | Pfcvtdw  (rd: freg) (rs: ireg)                 (**r int32 -> float conversion *)
-  | Pfcvtdwu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float conversion *)
-
-  | Pfcvtld  (rd: ireg) (rs: freg)                  (**r float -> int64 conversion *)
-  | Pfcvtlud (rd: ireg) (rs: freg)                  (**r float -> unsigned int64 conversion *)
-  | Pfcvtdl  (rd: freg) (rs: ireg)                 (**r int64 -> float conversion *)
-  | Pfcvtdlu (rd: freg) (rs: ireg)                 (**r unsigned int64 -> float conversion *)
-
-  | Pfcvtds  (rd: freg) (rs: freg)                  (**r float32 -> float   *)
-  | Pfcvtsd  (rd: freg) (rs: freg)                  (**r float   -> float32 *)
-*)
+(** Instructions to be expanded *)
+Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
@@ -337,7 +165,8 @@ Inductive instruction : Type :=
   | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
-              -> builtin_res preg -> instruction.   (**r built-in function (pseudo) *)
+              -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
+.
 
 (** The pseudo-instructions are the following:
 
@@ -413,6 +242,227 @@ table:  .long   table[0], table[1], ...
         sltu    rd, x0, rd
 >>
 *)
+
+(** Control Flow instructions *)
+Inductive cf_instruction : Type :=
+  | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
+  | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
+  | Pret                                            (**r return *)
+  | Pcall   (l: label)                              (**r function call *)
+  (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
+  | Pgoto   (l: label)                              (**r goto *)
+  | Pj_l    (l: label)                              (**r jump to label *)
+  (* Conditional branches *)
+  | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
+  | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
+.
+
+(** Loads **)
+Inductive ld_instruction : Type :=
+  | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
+  | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
+  | Plh     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word *)
+  | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word unsigned *)
+  | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
+  | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
+  | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
+  | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
+  | Pfls    (rd: freg) (ra: ireg) (ofs: offset)     (**r load float *)
+  | Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
+.
+
+(** Stores **)
+Inductive st_instruction : Type :=
+  | Psb     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store byte *)
+  | Psh     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store half byte *)
+  | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
+  | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
+  | Psd     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int64 *)
+  | Psd_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any64 *)
+  | Pfss    (rs: freg) (ra: ireg) (ofs: offset)     (**r store float *)
+  | Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
+.
+
+(** Arithmetic instructions **)
+Inductive arith_name_r : Type :=
+  | Pcvtw2l                                         (**r Convert Word to Long *)
+.
+
+Inductive arith_name_rr : Type :=
+  | Pmv                                             (**r register move *)
+  | Pnegw                                           (**r negate word *)
+  | Pnegl                                           (**r negate long *)
+  | Pfnegd                                          (**r float negate double *)
+  | Pcvtl2w                                         (**r Convert Long to Word *)
+  | Pmvw2l                                          (**r Move Convert Word to Long *)
+.
+
+Inductive arith_name_ri32 : Type :=
+  | Pmake                                           (**r load immediate *)
+.
+
+Inductive arith_name_ri64 : Type :=
+  | Pmakel                                          (**r load immediate long *)
+.
+
+Inductive arith_name_rrr : Type :=
+  | Pcompw  (it: itest)                             (**r comparison word *)
+  | Pcompl  (it: itest)                             (**r comparison long *)
+
+  | Paddw                                           (**r add word *)
+  | Psubw                                           (**r sub word *)
+  | Pmulw                                           (**r mul word *)
+  | Pandw                                           (**r and word *)
+  | Porw                                            (**r or word *)
+  | Pxorw                                           (**r xor word *)
+  | Psraw                                           (**r shift right arithmetic word *)
+  | Psrlw                                           (**r shift right logical word *)
+  | Psllw                                           (**r shift left logical word *)
+
+  | Paddl                                           (**r add long *)
+  | Psubl                                           (**r sub long *)
+  | Pandl                                           (**r and long *)
+  | Porl                                            (**r or long *)
+  | Pxorl                                           (**r xor long *)
+  | Pmull                                           (**r mul long (low part) *)
+  | Pslll                                           (**r shift left logical long *)
+  | Psrll                                           (**r shift right logical long *)
+  | Psral                                           (**r shift right arithmetic long *)
+.
+
+Inductive arith_name_rri32 : Type :=
+  | Pcompiw (it: itest)                             (**r comparison imm word *)
+
+  | Paddiw                                          (**r add imm word *)
+  | Pandiw                                          (**r and imm word *)
+  | Poriw                                           (**r or imm word *)
+  | Pxoriw                                          (**r xor imm word *)
+  | Psraiw                                          (**r shift right arithmetic imm word *)
+  | Psrliw                                          (**r shift right logical imm word *)
+  | Pslliw                                          (**r shift left logical imm word *)
+
+  | Psllil                                          (**r shift left logical immediate long *)
+  | Psrlil                                          (**r shift right logical immediate long *)
+  | Psrail                                          (**r shift right arithmetic immediate long *)
+.
+
+Inductive arith_name_rri64 : Type :=
+  | Pcompil (it: itest)                             (**r comparison imm long *)
+  | Paddil                                          (**r add immediate long *) 
+  | Pandil                                          (**r and immediate long *) 
+  | Poril                                           (**r or immediate long *) 
+  | Pxoril                                          (**r xor immediate long *) 
+.
+
+Inductive ar_instruction : Type :=
+  | PArithR     (i: arith_name_r)     (rd: ireg)
+  | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
+  | PArithRI32  (i: arith_name_ri32)  (rd: ireg) (imm: int)
+  | PArithRI64  (i: arith_name_ri64)  (rd: ireg) (imm: int64)
+  | PArithRRR   (i: arith_name_rrr)   (rd rs1 rs2: ireg)
+  | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
+  | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
+.
+
+Coercion PArithR:       arith_name_r        >-> Funclass.
+Coercion PArithRR:      arith_name_rr       >-> Funclass.
+Coercion PArithRI32:    arith_name_ri32     >-> Funclass.
+Coercion PArithRI64:    arith_name_ri64     >-> Funclass.
+Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
+Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
+Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
+
+(*| Pfence                                          (**r fence *)
+
+  (* floating point register move *)
+  | Pfmv     (rd: freg) (rs: freg)                  (**r move *)
+  | Pfmvxs   (rd: ireg) (rs: freg)                  (**r move FP single to integer register *)
+  | Pfmvxd   (rd: ireg) (rs: freg)                  (**r move FP double to integer register *)
+
+*)(* 32-bit (single-precision) floating point *)
+
+(*| Pfnegs   (rd: freg) (rs: freg)                  (**r negation *)
+  | Pfabss   (rd: freg) (rs: freg)                  (**r absolute value *)
+
+  | Pfadds   (rd: freg) (rs1 rs2: freg)             (**r addition *)
+  | Pfsubs   (rd: freg) (rs1 rs2: freg)             (**r subtraction *)
+  | Pfmuls   (rd: freg) (rs1 rs2: freg)             (**r multiplication *)
+  | Pfdivs   (rd: freg) (rs1 rs2: freg)             (**r division *)
+  | Pfmins   (rd: freg) (rs1 rs2: freg)             (**r minimum *)
+  | Pfmaxs   (rd: freg) (rs1 rs2: freg)             (**r maximum *)
+
+  | Pfeqs    (rd: ireg) (rs1 rs2: freg)             (**r compare equal *)
+  | Pflts    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than *)
+  | Pfles    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than/equal *)
+
+  | Pfsqrts  (rd: freg) (rs: freg)                  (**r square-root *)
+
+  | Pfmadds  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-add *)
+  | Pfmsubs  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-sub *)
+  | Pfnmadds (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-add *)
+  | Pfnmsubs (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-sub *)
+
+  | Pfcvtws  (rd: ireg) (rs: freg)                  (**r float32 -> int32 conversion *)
+  | Pfcvtwus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int32 conversion *)
+  | Pfcvtsw  (rd: freg) (rs: ireg)                 (**r int32 -> float32 conversion *)
+  | Pfcvtswu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float32 conversion *)
+
+  | Pfcvtls  (rd: ireg) (rs: freg)                  (**r float32 -> int64 conversion *)
+  | Pfcvtlus (rd: ireg) (rs: freg)                  (**r float32 -> unsigned int64 conversion *)
+  | Pfcvtsl  (rd: freg) (rs: ireg)                 (**r int64 -> float32 conversion *)
+  | Pfcvtslu (rd: freg) (rs: ireg)                 (**r unsigned int 64-> float32 conversion *)
+
+*)(* 64-bit (double-precision) floating point *)
+(*| Pfld_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r load any64 *)
+  | Pfsd_a   (rd: freg) (ra: ireg) (ofs: offset)    (**r store any64 *)
+
+  | Pfabsd   (rd: freg) (rs: freg)                  (**r absolute value *)
+
+  | Pfaddd   (rd: freg) (rs1 rs2: freg)             (**r addition *)
+  | Pfsubd   (rd: freg) (rs1 rs2: freg)             (**r subtraction *)
+  | Pfmuld   (rd: freg) (rs1 rs2: freg)             (**r multiplication *)
+  | Pfdivd   (rd: freg) (rs1 rs2: freg)             (**r division *)
+  | Pfmind   (rd: freg) (rs1 rs2: freg)             (**r minimum *)
+  | Pfmaxd   (rd: freg) (rs1 rs2: freg)             (**r maximum *)
+
+  | Pfeqd    (rd: ireg) (rs1 rs2: freg)             (**r compare equal *)
+  | Pfltd    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than *)
+  | Pfled    (rd: ireg) (rs1 rs2: freg)             (**r compare less-than/equal *)
+
+  | Pfsqrtd  (rd: freg) (rs: freg)                  (**r square-root *)
+
+  | Pfmaddd  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-add *)
+  | Pfmsubd  (rd: freg) (rs1 rs2 rs3: freg)         (**r fused multiply-sub *)
+  | Pfnmaddd (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-add *)
+  | Pfnmsubd (rd: freg) (rs1 rs2 rs3: freg)         (**r fused negated multiply-sub *)
+
+  | Pfcvtwd  (rd: ireg) (rs: freg)                  (**r float -> int32 conversion *)
+  | Pfcvtwud (rd: ireg) (rs: freg)                  (**r float -> unsigned int32 conversion *)
+  | Pfcvtdw  (rd: freg) (rs: ireg)                 (**r int32 -> float conversion *)
+  | Pfcvtdwu (rd: freg) (rs: ireg)                 (**r unsigned int32 -> float conversion *)
+
+  | Pfcvtld  (rd: ireg) (rs: freg)                  (**r float -> int64 conversion *)
+  | Pfcvtlud (rd: ireg) (rs: freg)                  (**r float -> unsigned int64 conversion *)
+  | Pfcvtdl  (rd: freg) (rs: ireg)                 (**r int64 -> float conversion *)
+  | Pfcvtdlu (rd: freg) (rs: ireg)                 (**r unsigned int64 -> float conversion *)
+
+  | Pfcvtds  (rd: freg) (rs: freg)                  (**r float32 -> float   *)
+  | Pfcvtsd  (rd: freg) (rs: freg)                  (**r float   -> float32 *)
+*)
+
+Inductive instruction : Type :=
+  | PExpand         (i: ex_instruction)
+  | PControlFlow    (i: cf_instruction)
+  | PLoad           (i: ld_instruction)
+  | PStore          (i: st_instruction)
+  | PArith          (i: ar_instruction)
+.
+
+Coercion PExpand:       ex_instruction >-> instruction.
+Coercion PControlFlow:  cf_instruction >-> instruction.
+Coercion PLoad:         ld_instruction >-> instruction.
+Coercion PStore:        st_instruction >-> instruction.
+Coercion PArith:        ar_instruction >-> instruction.
 
 Definition code := list instruction.
 Record function : Type := mkfunction { fn_sig: signature; fn_code: code }.
@@ -503,6 +553,7 @@ Lemma is_label_correct:
   if is_label lbl instr then instr = Plabel lbl else instr <> Plabel lbl.
 Proof.
   intros.  destruct instr; simpl; try discriminate.
+  destruct i; simpl; try discriminate.
   case (peq lbl lbl0); intro; congruence.
 Qed.
 
@@ -750,109 +801,81 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
       | (None, _) => Stuck
       end
 
-(** Comparisons *)
-  | Pcompw c d s1 s2 => 
-      Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
-  | Pcompiw c d s i => 
-      Next (nextinstr (rs#d <- (compare_int c rs##s (Vint i) m))) m
-  | Pcompl c d s1 s2 => 
-      Next (nextinstr (rs#d <- (compare_long c rs###s1 rs###s2 m))) m
-  | Pcompil c d s i => 
-      Next (nextinstr (rs#d <- (compare_long c rs###s (Vlong i) m))) m
+(** Arithmetic Instructions *)
+  | PArithR n d =>
+      match n with
+      | Pcvtw2l => Next (nextinstr (rs#d <- (Val.longofint rs#d))) m
+      end
+  
+  | PArithRR n d s =>
+      match n with
+      | Pmv => Next (nextinstr (rs#d <- (rs#s))) m
+      | Pnegw => Next (nextinstr (rs#d <- (Val.neg rs###s))) m
+      | Pnegl => Next (nextinstr (rs#d <- (Val.negl rs###s))) m
+      | Pfnegd => Next (nextinstr (rs#d <- (Val.negf rs#s))) m
+      | Pcvtl2w => Next (nextinstr (rs#d <- (Val.loword rs###s))) m
+      | Pmvw2l => Next (nextinstr (rs#d <- (Val.longofint rs#s))) m
+      end
 
-(** Load immediates *)
-  | Pmakel d i =>
-      Next (nextinstr (rs#d <- (Vlong i))) m
-  | Pmake d i =>
-      Next (nextinstr (rs#d <- (Vint i))) m
+  | PArithRI32 n d i =>
+      match n with
+      | Pmake => Next (nextinstr (rs#d <- (Vint i))) m
+      end
 
-(** Register move *)
-  | Pmv d s =>
-      Next (nextinstr (rs#d <- (rs#s))) m
+  | PArithRI64 n d i =>
+      match n with
+      | Pmakel => Next (nextinstr (rs#d <- (Vlong i))) m
+      end
 
-(** 32-bit integer register-immediate instructions *)
-  | Paddiw d s i =>
-      Next (nextinstr (rs#d <- (Val.add rs##s (Vint i)))) m
-  | Pandiw d s i =>
-      Next (nextinstr (rs#d <- (Val.and rs##s (Vint i)))) m
-  | Poriw  d s i =>
-      Next (nextinstr (rs#d <- (Val.or  rs##s (Vint i)))) m
-  | Pxoriw  d s i =>
-      Next (nextinstr (rs#d <- (Val.xor  rs##s (Vint i)))) m
-  | Psraiw d s i =>
-      Next (nextinstr (rs#d <- (Val.shr rs##s (Vint i)))) m
-  | Psrliw d s i =>
-      Next (nextinstr (rs#d <- (Val.shru rs##s (Vint i)))) m
-  | Pslliw d s i =>
-      Next (nextinstr (rs#d <- (Val.shl rs##s (Vint i)))) m
+  | PArithRRR n d s1 s2 =>
+      match n with
+      | Pcompw c => Next (nextinstr (rs#d <- (compare_int c rs##s1 rs##s2 m))) m
+      | Pcompl c => Next (nextinstr (rs#d <- (compare_long c rs###s1 rs###s2 m))) m
+      | Paddw  => Next (nextinstr (rs#d <- (Val.add  rs##s1 rs##s2))) m
+      | Psubw  => Next (nextinstr (rs#d <- (Val.sub  rs##s1 rs##s2))) m
+      | Pmulw  => Next (nextinstr (rs#d <- (Val.mul  rs##s1 rs##s2))) m
+      | Pandw  => Next (nextinstr (rs#d <- (Val.and  rs##s1 rs##s2))) m
+      | Porw   => Next (nextinstr (rs#d <- (Val.or   rs##s1 rs##s2))) m
+      | Pxorw  => Next (nextinstr (rs#d <- (Val.xor  rs##s1 rs##s2))) m
+      | Psrlw  => Next (nextinstr (rs#d <- (Val.shru rs##s1 rs##s2))) m
+      | Psraw  => Next (nextinstr (rs#d <- (Val.shr  rs##s1 rs##s2))) m
+      | Psllw  => Next (nextinstr (rs#d <- (Val.shl  rs##s1 rs##s2))) m
 
-(** 32-bit integer register-register instructions *)
-  | Paddw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.add rs##s1 rs##s2))) m
-  | Psubw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.sub rs##s1 rs##s2))) m
-  | Pmulw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mul rs##s1 rs##s2))) m
-  | Pandw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.and rs##s1 rs##s2))) m
-  | Porw  d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.or  rs##s1 rs##s2))) m
-  | Pxorw  d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.xor rs##s1 rs##s2))) m
-  | Pnegw d s =>
-      Next (nextinstr (rs#d <- (Val.neg rs###s))) m
-  | Psrlw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shru rs##s1 rs##s2))) m
-  | Psraw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shr rs##s1 rs##s2))) m
-  | Psllw d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shl rs##s1 rs##s2))) m
+      | Paddl => Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
+      | Psubl => Next (nextinstr (rs#d <- (Val.subl rs###s1 rs###s2))) m
+      | Pandl => Next (nextinstr (rs#d <- (Val.andl rs###s1 rs###s2))) m
+      | Porl  => Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
+      | Pxorl  => Next (nextinstr (rs#d <- (Val.xorl  rs###s1 rs###s2))) m
+      | Pmull => Next (nextinstr (rs#d <- (Val.mull rs###s1 rs###s2))) m
+      | Pslll => Next (nextinstr (rs#d <- (Val.shll rs###s1 rs###s2))) m
+      | Psrll => Next (nextinstr (rs#d <- (Val.shrlu rs###s1 rs###s2))) m
+      | Psral => Next (nextinstr (rs#d <- (Val.shrl rs###s1 rs###s2))) m
+      end
 
-(** 64-bit integer register-immediate instructions *)
-  | Paddil d s i =>
-      Next (nextinstr (rs#d <- (Val.addl rs###s (Vlong i)))) m
-  | Pandil d s i =>
-      Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
-  | Poril  d s i =>
-      Next (nextinstr (rs#d <- (Val.orl  rs###s (Vlong i)))) m
-  | Pxoril  d s i =>
-      Next (nextinstr (rs#d <- (Val.xorl  rs###s (Vlong i)))) m
-  | Psllil  d s i =>
-      Next (nextinstr (rs#d <- (Val.shll  rs###s (Vint i)))) m
-  | Psrlil  d s i =>
-      Next (nextinstr (rs#d <- (Val.shrlu  rs###s (Vint i)))) m
-  | Psrail d s i =>
-      Next (nextinstr (rs#d <- (Val.shrl rs###s (Vint i)))) m
+  | PArithRRI32 n d s i =>
+      match n with
+      | Pcompiw c => Next (nextinstr (rs#d <- (compare_int c rs##s (Vint i) m))) m
+      | Paddiw  => Next (nextinstr (rs#d <- (Val.add   rs##s (Vint i)))) m
+      | Pandiw  => Next (nextinstr (rs#d <- (Val.and   rs##s (Vint i)))) m
+      | Poriw   => Next (nextinstr (rs#d <- (Val.or    rs##s (Vint i)))) m
+      | Pxoriw  => Next (nextinstr (rs#d <- (Val.xor   rs##s (Vint i)))) m
+      | Psraiw  => Next (nextinstr (rs#d <- (Val.shr   rs##s (Vint i)))) m
+      | Psrliw  => Next (nextinstr (rs#d <- (Val.shru  rs##s (Vint i)))) m
+      | Pslliw  => Next (nextinstr (rs#d <- (Val.shl   rs##s (Vint i)))) m
 
-(** 64-bit integer register-register instructions *)
-  | Paddl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.addl rs###s1 rs###s2))) m
-  | Psubl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.subl rs###s1 rs###s2))) m
-  | Pandl d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.andl rs###s1 rs###s2))) m
-  | Porl  d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.orl  rs###s1 rs###s2))) m
-  | Pxorl  d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.xorl  rs###s1 rs###s2))) m
-  | Pnegl d s =>
-      Next (nextinstr (rs#d <- (Val.negl rs###s))) m
-  | Pmull d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.mull rs###s1 rs###s2))) m
-  | Pslll d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shll rs###s1 rs###s2))) m
-  | Psrll d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shrlu rs###s1 rs###s2))) m
-  | Psral d s1 s2 =>
-      Next (nextinstr (rs#d <- (Val.shrl rs###s1 rs###s2))) m
+      | Psllil  => Next (nextinstr (rs#d <- (Val.shll  rs###s (Vint i)))) m
+      | Psrlil  => Next (nextinstr (rs#d <- (Val.shrlu rs###s (Vint i)))) m
+      | Psrail  => Next (nextinstr (rs#d <- (Val.shrl  rs###s (Vint i)))) m
+      end
 
-(** Conversions *)
-  | Pcvtl2w d s =>
-      Next (nextinstr (rs#d <- (Val.loword rs###s))) m
-  | Pcvtw2l r   =>
-      Next (nextinstr (rs#r <- (Val.longofint rs#r))) m
-  | Pmvw2l d s =>
-      Next (nextinstr (rs#d <- (Val.longofint rs#s))) m
+  | PArithRRI64 n d s i =>
+      match n with
+      | Pcompil c => Next (nextinstr (rs#d <- (compare_long c rs###s (Vlong i) m))) m
+      | Paddil  => Next (nextinstr (rs#d <- (Val.addl rs###s (Vlong i)))) m
+      | Pandil  => Next (nextinstr (rs#d <- (Val.andl rs###s (Vlong i)))) m
+      | Poril   => Next (nextinstr (rs#d <- (Val.orl  rs###s (Vlong i)))) m
+      | Pxoril  => Next (nextinstr (rs#d <- (Val.xorl  rs###s (Vlong i)))) m
+      end
 
 (** Loads and stores *)
   | Plb d a ofs =>
@@ -942,9 +965,7 @@ Definition exec_instr (f: function) (i: instruction) (rs: regset) (m: mem) : out
 (*| Pfsd_a s a ofs =>
       exec_store Many64 rs m s a ofs
 
-*)| Pfnegd d s =>
-      Next (nextinstr (rs#d <- (Val.negf rs#s))) m
-(*| Pfabsd d s =>
+  | Pfabsd d s =>
       Next (nextinstr (rs#d <- (Val.absf rs#s))) m
 
   | Pfaddd d s1 s2 =>
@@ -1124,7 +1145,7 @@ Inductive step: state -> trace -> state -> Prop :=
       forall b ofs f ef args res rs m vargs t vres rs' m',
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_instr (Ptrofs.unsigned ofs) f.(fn_code) = Some (Pbuiltin ef args res) ->
+      find_instr (Ptrofs.unsigned ofs) f.(fn_code) = Some (A:=instruction) (Pbuiltin ef args res) ->
       eval_builtin_args ge rs (rs SP) m args vargs ->
       external_call ef ge vargs m t vres m' ->
       rs' = nextinstr

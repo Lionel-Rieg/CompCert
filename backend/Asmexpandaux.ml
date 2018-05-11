@@ -39,7 +39,7 @@ let new_label () =
         List.fold_left
           (fun next instr ->
             match instr with
-            | Plabel l -> if P.lt l next then next else P.succ l
+            | PExpand (Plabel l) -> if P.lt l next then next else P.succ l
             | _ -> next)
           P.one (!current_function).fn_code
   in
@@ -100,17 +100,17 @@ let expand_debug id sp preg simple l =
   let get_lbl = function
     | None ->
         let lbl = new_label () in
-        emit (Plabel lbl);
+        emit (PExpand (Plabel lbl));
         lbl
     | Some lbl -> lbl in
   let rec  aux lbl scopes = function
     | [] -> ()
-    | (Pbuiltin(EF_debug (kind,txt,_x),args,_) as i)::rest ->
+    | (PExpand (Pbuiltin(EF_debug (kind,txt,_x),args,_) as i))::rest ->
         let kind = (P.to_int kind) in
         begin
           match kind with
           | 1->
-              emit i;aux lbl scopes rest
+              emit (PExpand i);aux lbl scopes rest
           | 2 ->
               aux  lbl scopes rest
           | 3 ->
@@ -142,11 +142,11 @@ let expand_debug id sp preg simple l =
           | _ ->
               aux None scopes rest
         end
-    | (Plabel lbl)::rest -> simple (Plabel lbl); aux (Some lbl) scopes rest
+    | (PExpand (Plabel lbl))::rest -> simple (PExpand (Plabel lbl)); aux (Some lbl) scopes rest
     | i::rest -> simple i; aux None scopes rest in
   (* We need to move all closing debug annotations before the last real statement *)
   let rec move_debug acc bcc = function
-    | (Pbuiltin(EF_debug (kind,_,_),_,_) as i)::rest ->
+    | (PExpand (Pbuiltin(EF_debug (kind,_,_),_,_)) as i)::rest ->
         let kind = (P.to_int kind) in
         if kind = 1 then
           move_debug acc (i::bcc) rest (* Do not move debug line *)

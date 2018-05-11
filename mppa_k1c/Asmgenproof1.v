@@ -213,8 +213,8 @@ Qed.
 *)
 
 Lemma opimm64_correct:
-  forall (op: ireg -> ireg -> ireg -> instruction)
-         (opi: ireg -> ireg -> int64 -> instruction)
+  forall (op: arith_name_rrr)
+         (opi: arith_name_rri64)
          (sem: val -> val -> val) m,
   (forall d s1 s2 rs,
    exec_instr ge fn (op d s1 s2) rs m = Next (nextinstr (rs#d <- (sem rs###s1 rs###s2))) m) ->
@@ -328,7 +328,7 @@ Qed.
 Lemma transl_comp_correct:
   forall cmp r1 r2 lbl k rs m b,
   exists rs',
-     exec_straight ge fn (transl_comp cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+     exec_straight ge fn (transl_comp cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::i k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmp_bool cmp rs##r1 rs##r2 = Some b ->
        exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
@@ -356,7 +356,7 @@ Qed.
 Lemma transl_compu_correct:
   forall cmp r1 r2 lbl k rs m b,
   exists rs',
-     exec_straight ge fn (transl_comp cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+     exec_straight ge fn (transl_comp cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::i k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs##r1 rs##r2 = Some b ->
        exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
@@ -383,7 +383,7 @@ Qed.
 Lemma transl_compl_correct:
   forall cmp r1 r2 lbl k rs m b,
   exists rs',
-     exec_straight ge fn (transl_compl cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+     exec_straight ge fn (transl_compl cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::i k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmpl_bool cmp rs###r1 rs###r2 = Some b ->
        exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
@@ -412,7 +412,7 @@ Qed.
 Lemma transl_complu_correct:
   forall cmp r1 r2 lbl k rs m b,
   exists rs',
-     exec_straight ge fn (transl_compl cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl :: k) rs' m
+     exec_straight ge fn (transl_compl cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::i k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs###r1 rs###r2 = Some b ->
        exec_instr ge fn (Pcb BTwnez GPR31 lbl) rs' m = eval_branch fn lbl rs' m (Some b))
@@ -1347,7 +1347,7 @@ Lemma Pget_correct:
   forall (dst: gpreg) (src: preg) k (rs: regset) m,
   src = RA ->
   exists rs',
-     exec_straight ge fn (Pget dst src :: k) rs m k rs' m
+     exec_straight ge fn (Pget dst src ::i k) rs m k rs' m
   /\ rs'#dst = rs#src
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
@@ -1362,7 +1362,7 @@ Lemma Pset_correct:
   forall (dst: preg) (src: gpreg) k (rs: regset) m,
   dst = RA ->
   exists rs',
-     exec_straight ge fn (Pset dst src :: k) rs m k rs' m
+     exec_straight ge fn (Pset dst src ::i k) rs m k rs' m
   /\ rs'#dst = rs#src
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
@@ -1546,7 +1546,7 @@ Proof.
   rewrite chunk_of_Tptr in *.
 
   exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) GPR8 (Pset RA GPR8
-           :: Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs tm).
+           ::i Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::i k) rs tm).
   - rewrite <- (sp_val _ _ rs AG). simpl. eexact LRA'.
   - congruence.
   - intros (rs1 & A1 & B1 & C1).
@@ -1555,7 +1555,7 @@ Proof.
       apply mkagree; auto.
       rewrite C1; discriminate || auto.
       intro. rewrite C1; auto; destruct r; simpl; try discriminate.
-    + exploit (Pset_correct RA GPR8 (Pfreeframe (fn_stacksize f) (fn_link_ofs f) :: k) rs1 tm). auto.
+    + exploit (Pset_correct RA GPR8 (Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::i k) rs1 tm). auto.
       intros (rs2 & A2 & B2 & C2).
       econstructor; econstructor; split.
       * eapply exec_straight_trans.
