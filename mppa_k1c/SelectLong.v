@@ -706,14 +706,10 @@ Definition notl (e: expr) :=
 
 (** ** Integer division and modulus *)
 
-Definition divlu_base (e1: expr) (e2: expr) :=
-  if Archi.splitlong then SplitLong.divlu_base e1 e2 else Eop Odivlu (e1:::e2:::Enil).
-Definition modlu_base (e1: expr) (e2: expr) :=
-  if Archi.splitlong then SplitLong.modlu_base e1 e2 else Eop Omodlu (e1:::e2:::Enil).
-Definition divls_base (e1: expr) (e2: expr) :=
-  if Archi.splitlong then SplitLong.divls_base e1 e2 else Eop Odivl (e1:::e2:::Enil).
-Definition modls_base (e1: expr) (e2: expr) :=
-  if Archi.splitlong then SplitLong.modls_base e1 e2 else Eop Omodl (e1:::e2:::Enil).
+Definition divlu_base (e1: expr) (e2: expr) := SplitLong.divlu_base e1 e2.
+Definition modlu_base (e1: expr) (e2: expr) := SplitLong.modlu_base e1 e2.
+Definition divls_base (e1: expr) (e2: expr) := SplitLong.divls_base e1 e2.
+Definition modls_base (e1: expr) (e2: expr) := SplitLong.modls_base e1 e2.
 
 Definition shrxlimm (e: expr) (n: int) :=
   if Archi.splitlong then SplitLong.shrxlimm e n else

@@ -447,30 +447,26 @@ Qed.
 
 Theorem eval_divls_base: partial_binary_constructor_sound divls_base Val.divls.
 Proof.
-  unfold divls_base; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold divls_base; red; intros.
   eapply SplitLongproof.eval_divls_base; eauto.
-  TrivialExists.
 Qed.
 
 Theorem eval_modls_base: partial_binary_constructor_sound modls_base Val.modls.
 Proof.
-  unfold modls_base; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold modls_base; red; intros.
   eapply SplitLongproof.eval_modls_base; eauto.
-  TrivialExists.
 Qed.
 
 Theorem eval_divlu_base: partial_binary_constructor_sound divlu_base Val.divlu.
 Proof.
-  unfold divlu_base; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold divlu_base; red; intros.
   eapply SplitLongproof.eval_divlu_base; eauto.
-  TrivialExists.
 Qed.
 
 Theorem eval_modlu_base: partial_binary_constructor_sound modlu_base Val.modlu.
 Proof.
-  unfold modlu_base; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold modlu_base; red; intros.
   eapply SplitLongproof.eval_modlu_base; eauto.
-  TrivialExists.
 Qed.
 
 Theorem eval_shrxlimm:

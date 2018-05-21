@@ -17,7 +17,7 @@ nobin: $(ASM)
 
 $(DIR)/$(BINDIR)/%.bin: $(DIR)/$(ASMDIR)/%.s
 	@mkdir -p $(@D)
-	k1-gcc $< -o $@
+	ccomp $< -o $@
 
 .SECONDARY:
 $(DIR)/$(ASMDIR)/%.s: $(DIR)/%.c $(CCOMP)

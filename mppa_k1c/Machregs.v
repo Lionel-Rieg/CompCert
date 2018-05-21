@@ -208,11 +208,11 @@ Global Opaque
   integers as their 64-bit sign extension; and [Ocast32unsigned],
   because it builds on the same magic no-op. *)
 
-Definition two_address_op (op: operation) : bool := false.
-  (* match op with
-  | Ocast32signed | Ocast32unsigned => true
+Definition two_address_op (op: operation) : bool :=
+  match op with
+  | Ocast32unsigned => true
   | _ => false
-  end. *)
+  end.
 
 (** Constraints on constant propagation for builtins *)
 

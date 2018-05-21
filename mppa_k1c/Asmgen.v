@@ -429,11 +429,11 @@ Definition transl_op
   | Ocast32signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (cast32signed rd rs k)
-(*| Ocast32unsigned, a1 :: nil =>
+  | Ocast32unsigned, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
       assertion (ireg_eq rd rs);
-      OK (Pcvtw2l rd :: Psllil rd rd (Int.repr 32) :: Psrlil rd rd (Int.repr 32) :: k)
-*)| Oaddl, a1 :: a2 :: nil =>
+      OK (Pcvtw2l rd ::i Psllil rd rd (Int.repr 32) ::i Psrlil rd rd (Int.repr 32) ::i k)
+  | Oaddl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Paddl rd rs1 rs2 ::i k)
   | Oaddlimm n, a1 :: nil =>

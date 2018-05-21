@@ -1124,6 +1124,15 @@ Opaque Int.eq.
   exists rs'; split; eauto. split. apply B.
   intros. assert (r <> PC). { destruct r; auto; contradict H; discriminate. }
   apply C; auto.
+- (* longofintu *)
+  econstructor; split.
+  eapply exec_straight_three. simpl; eauto. simpl; eauto. simpl; eauto. auto. auto. auto.
+  split; intros; Simpl. unfold getl; unfold Pregmap.set; Simpl. destruct (PregEq.eq x0 x0).
+  + destruct (rs x0); auto. simpl. 
+    assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
+    rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
+    rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
+  + contradict n. auto.
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
@@ -1170,13 +1179,7 @@ Opaque Int.eq.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
 
-- (* longofintu *)
-  econstructor; split.
-  eapply exec_straight_three. simpl; eauto. simpl; eauto. simpl; eauto. auto. auto. auto.
-  split; intros; Simpl. destruct (rs x0); auto. simpl. 
-  assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
-  rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
-  rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
+
 
 - (* addlimm *)
   exploit (opimm64_correct Paddl Paddil Val.addl); auto. instantiate (1 := x0); eauto with asmgen.
