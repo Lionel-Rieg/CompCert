@@ -2,7 +2,7 @@ unsigned long long
 udivmoddi4(unsigned long long num, unsigned long long den, int modwanted);
 
 long long
-__compcert_i64_smod (long long a, long long b)
+i64_smod (long long a, long long b)
 {
   int neg = 0;
   long long res;

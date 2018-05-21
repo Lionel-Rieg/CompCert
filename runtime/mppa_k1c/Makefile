@@ -5,4 +5,5 @@ all: $(SFILES)
 
 .SECONDARY:
 %.S: %.c
-	k1-gcc -O2 -S $< -o $@
+	ccomp -O2 -S $< -o $@
+	sed -i -e 's/i64_/__compcert_i64_/g' $@
