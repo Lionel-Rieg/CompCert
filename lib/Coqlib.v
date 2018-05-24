@@ -90,6 +90,13 @@ Ltac exploit x :=
  || refine (modusponens _ _ (x _ _) _)
  || refine (modusponens _ _ (x _) _).
 
+Ltac totologize H :=
+  match type of H with
+  | ( ?id = _ ) =>
+    let Hassert := fresh "Htoto" in (
+    assert (id = id) as Hassert; auto; rewrite H in Hassert at 2; simpl in Hassert; rewrite H in Hassert)
+  end.
+
 (** * Definitions and theorems over the type [positive] *)
 
 Definition peq: forall (x y: positive), {x = y} + {x <> y} := Pos.eq_dec.
