@@ -565,11 +565,11 @@ let expand_instruction instr =
   | Pj_s(symb, sg) ->
       fixup_call sg; emit instr
 
-  | Pbuiltin (ef,args,res) ->
+*)| PExpand Pbuiltin (ef,args,res) ->
      begin match ef with
      | EF_builtin (name,sg) ->
         expand_builtin_inline (camlstring_of_coqstring name) args res
-     | EF_vload chunk ->
+   (*| EF_vload chunk ->
         expand_builtin_vload chunk args res
      | EF_vstore chunk ->
         expand_builtin_vstore chunk args
@@ -579,10 +579,10 @@ let expand_instruction instr =
         expand_builtin_memcpy (Z.to_int sz) (Z.to_int al) args
      | EF_annot _ | EF_debug _ | EF_inline_asm _ ->
         emit instr
-     | _ ->
+   *)| _ ->
         assert false
      end
-*)| _ ->
+  | _ ->
      emit instr
 
 (* NOTE: Dwarf register maps for RV32G are not yet specified

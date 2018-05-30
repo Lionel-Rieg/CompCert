@@ -22,34 +22,39 @@ let builtins = {
     "__builtin_va_list", TPtr(TVoid [], [])
   ];
   Builtins.functions = [
+    "__builtin_clzll",
+      (TInt(IInt, []), 
+      [TInt(IULongLong, [])], false);
+    "__builtin_k1_stsud",
+      (TInt(IULongLong, []), 
+      [TInt(IULongLong, []); TInt(IULongLong, [])], false);
     (* Synchronization *)
-    "__builtin_fence",
+(*  "__builtin_fence",
       (TVoid [], [], false);
     (* Integer arithmetic *)
     "__builtin_bswap64",
-      (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
+      (TInt(IULongLong, []), 
+       [TInt(IULongLong, [])], false);
     (* Float arithmetic *)
     "__builtin_fmadd",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])],
-       false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fmsub",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])],
-       false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fnmadd",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])],
-       false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fnmsub",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])],
-       false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fmax",
-      (TFloat(FDouble, []), [TFloat(FDouble, []); TFloat(FDouble, [])], false);
+      (TFloat(FDouble, []),
+       [TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fmin",
-      (TFloat(FDouble, []), [TFloat(FDouble, []); TFloat(FDouble, [])], false);
-  ]
+      (TFloat(FDouble, []),
+       [TFloat(FDouble, []); TFloat(FDouble, [])], false);
+*)]
 }
 
 let va_list_type = TPtr(TVoid [], [])  (* to check! *)
