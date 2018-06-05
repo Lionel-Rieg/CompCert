@@ -1,4 +1,7 @@
-int main(void){
-    int a = 5, b = -2;
-    return (a == b);
+#include "framework.h"
+
+BEGIN_TEST(int)
+{
+    c = ((a & 0x1) == (b & 0x1));
 }
+END_TEST()

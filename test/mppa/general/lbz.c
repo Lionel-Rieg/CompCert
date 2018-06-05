@@ -1,5 +1,9 @@
-int main(void){
-    unsigned char s[] = "Tom and Jerry at the playa\n";
-    int a = s[10];
-    return a;
+#include "framework.h"
+
+BEGIN_TEST(int)
+{
+    unsigned char s[] = "Tim is sorry at the playa\n";
+
+    c = s[a & (sizeof(s) - 1)];
 }
+END_TEST()

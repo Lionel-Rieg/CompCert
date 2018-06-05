@@ -1,6 +1,7 @@
-int main(void){
-    long long a = 5;
-    long long b = -2;
-    long long c = -a;
-    return c;
+#include "framework.h"
+
+BEGIN_TEST(long long)
+{
+    c = -a;
 }
+END_TEST()

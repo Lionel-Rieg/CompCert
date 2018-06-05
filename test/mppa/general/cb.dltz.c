@@ -1,9 +1,10 @@
-#define TYPE long long
+#include "framework.h"
 
-int main(void){
-    TYPE a = 6;
-    TYPE b = -4;
-    if (a >= 0)
-      return 42;
-    return 0;
+BEGIN_TEST(long long)
+{
+    if ((a & 0x1LL) - 1 >= 0)
+        c = 1;
+    else
+        c = 0;
 }
+END_TEST()

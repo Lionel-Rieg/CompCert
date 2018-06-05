@@ -1,13 +1,10 @@
-int main(void){
-    int a=1;
-    int b;
+#include "framework.h"
 
-    if(a==0){
-        b = a+4;
-    } else {
-        b = a+2;
-    }
-
-    return b;
+BEGIN_TEST(int)
+{
+    if (a & 0x1 == 0)
+        c = 0;
+    else
+        c = 1;
 }
-/* RETURN VALUE: 3 */
+END_TEST()

@@ -1,5 +1,7 @@
-int main(void){
-    unsigned long long a = 5;
-    long long b = -3;
-    return __builtin_k1_stsud(a, b);
+#include "framework.h"
+
+BEGIN_TEST(unsigned long long)
+{
+    c = __builtin_k1_stsud(a, b);
 }
+END_TEST()

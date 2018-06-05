@@ -1,5 +1,7 @@
-int main(void){
-    unsigned long long a = 3, b = -4;
-    unsigned long long c = a >> b;
-    return c;
+#include "framework.h"
+
+BEGIN_TEST(unsigned long long)
+{
+    c = a >> (b & 0x8ULL);
 }
+END_TEST()

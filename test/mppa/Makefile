@@ -1,7 +1,8 @@
 DIR=general
 BINDIR=bin
 ASMDIR=asm
-TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
+#TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
+TESTNAMES=branch
 
 CCOMP=../../ccomp
 #TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
@@ -35,7 +36,8 @@ $(DIR)/output/%.bin.exp: $(DIR)/%.c
 FORCE:
 
 .PHONY: check
-check: $(TOK) sort mmult
+check: $(TOK)
+#check: $(TOK) sort mmult
 
 .PHONY: coverage
 coverage: $(ASM)

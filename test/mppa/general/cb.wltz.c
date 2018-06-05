@@ -1,9 +1,10 @@
-#define TYPE int
+#include "framework.h"
 
-int main(void){
-    TYPE a = 6;
-    TYPE b = -4;
-    if (a >= 0)
-      return 42;
-    return 0;
+BEGIN_TEST(int)
+{
+    if ((a & 0x1) - 1 >= 0)
+        c = 1;
+    else
+        c = 0;
 }
+END_TEST()

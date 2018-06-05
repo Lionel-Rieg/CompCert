@@ -1,4 +1,7 @@
-int main(void){
-    unsigned int a = 5, b = -2;
-    return (a > b);
+#include "framework.h"
+
+BEGIN_TEST(unsigned int)
+{
+    c = (a > b);
 }
+END_TEST()

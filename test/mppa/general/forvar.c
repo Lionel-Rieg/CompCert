@@ -1,12 +1,9 @@
-int main(void){
-    int i;
-    int a = 4;
-    int b = 12;
+#include "framework.h"
 
-    for (i = 0 ; i < b ; i++)
-        a++;
-
-    return a;
+BEGIN_TEST(int)
+{
+    int j;
+    for (j = 0 ; j < (b & 0x8) ; j++)
+        c += a;
 }
-
-/* RETURN VALUE: 16 */
+END_TEST()

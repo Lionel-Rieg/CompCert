@@ -1,8 +1,7 @@
-int main(void){
-    int a = 4;
-    int b = 3;
+#include "framework.h"
 
-    return (a+b);
+BEGIN_TEST(int)
+{
+    c = a+b;
 }
-
-/* RETURN VALUE: 7 */
+END_TEST()

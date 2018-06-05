@@ -1,5 +1,5 @@
-int main(void){
-    long long a = 5;
-    long long b = -3;
+#include "framework.h"
+
+BEGIN_TEST(long long)
     return a&b;
-}
+END_TEST()

@@ -1,4 +1,7 @@
-int main(void){
-    long long a = -5;
-    return __builtin_clzll(a);
+#include "framework.h"
+
+BEGIN_TEST(long long)
+{
+    c = __builtin_clzll(a);
 }
+END_TEST()

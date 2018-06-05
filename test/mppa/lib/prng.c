@@ -9,7 +9,7 @@
 static uint64_t current;
 
 void srand(uint64_t seed){
-    seed = current;
+    current = seed;
 }
 
 uint64_t randlong(void){

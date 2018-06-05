@@ -1,5 +1,9 @@
-int main(void){
-    char s[] = "Tom and Jerry at the playa\n";
-    int a = s[10];
-    return a;
+#include "framework.h"
+
+BEGIN_TEST(int)
+{
+    char s[] = "Tome and Cherry at the playa\n";
+
+    c = s[(a & (sizeof(s)-1))];
 }
+END_TEST()

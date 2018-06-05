@@ -1,4 +1,7 @@
-int main(void){
-    long long a = 5, b = -2;
-    return (a <= b);
+#include "framework.h"
+
+BEGIN_TEST(long long)
+{
+    c = (a <= b);
 }
+END_TEST()

@@ -1,13 +1,10 @@
-int main(void)
+#include "framework.h"
+
+BEGIN_TEST(long long int)
 {
-    long long int a = 42;
-    long long int b = 84;
-    long long int i;
+    int j;
 
-    for (i = 0 ; i < a ; i++)
-        b++;
-
-    return 0;
+    for (j = 0 ; j < (b & 0x8LL) ; j++)
+        c += a;
 }
-
-/* RETURN VALUE: 0 */
+END_TEST()

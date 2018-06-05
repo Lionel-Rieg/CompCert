@@ -1,8 +1,7 @@
-#define TYPE unsigned long long
+#include "framework.h"
 
-int main(void){
-    TYPE a = 6;
-    TYPE b = -4;
-    
-    return a%b;
+BEGIN_TEST(unsigned long long)
+{
+    c = a%b;
 }
+END_TEST()
