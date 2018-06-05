@@ -417,73 +417,18 @@ let expand_builtin_inline name args res =
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
      ()
-(*| "__builtin_fence", [], _ ->
-     emit Pfence
-*)(* Vararg stuff *)
+  (* Vararg stuff *)
   | "__builtin_va_start", [BA(IR a)], _ ->
      expand_builtin_va_start a
+  | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
+     emit (PExpand (Pclzll(res, a)))
+  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
+     emit (PExpand (Pstsud(res, a1, a2)))
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1
-  | ("__builtin_bswap"| "__builtin_bswap32"), [BA(IR a1)], BR(IR res) ->
-     expand_bswap32 res a1
-  | "__builtin_bswap64", [BA(IR a1)], BR(IR res) ->
-     expand_bswap64 res a1
-  | "__builtin_bswap64", [BA_splitlong(BA(IR ah), BA(IR al))],
-                         BR_splitlong(BR(IR rh), BR(IR rl)) ->
-     assert (ah = X6 && al = X5 && rh = X5 && rl = X6);
-     expand_bswap32 X5 X5;
-     expand_bswap32 X6 X6
-  (* Float arithmetic *)
   | "__builtin_fabs",  [BA(FR a1)], BR(FR res) ->
      emit (Pfabsd(res, a1))
-  | "__builtin_fsqrt", [BA(FR a1)], BR(FR res) ->
-     emit (Pfsqrtd(res, a1))
-  | "__builtin_fmadd", [BA(FR a1); BA(FR a2); BA(FR a3)], BR(FR res) ->
-      emit (Pfmaddd(res, a1, a2, a3))
-  | "__builtin_fmsub", [BA(FR a1); BA(FR a2); BA(FR a3)], BR(FR res) ->
-      emit (Pfmsubd(res, a1, a2, a3))
-  | "__builtin_fnmadd", [BA(FR a1); BA(FR a2); BA(FR a3)], BR(FR res) ->
-      emit (Pfnmaddd(res, a1, a2, a3))
-  | "__builtin_fnmsub", [BA(FR a1); BA(FR a2); BA(FR a3)], BR(FR res) ->
-      emit (Pfnmsubd(res, a1, a2, a3))
-  | "__builtin_fmin", [BA(FR a1); BA(FR a2)], BR(FR res) ->
-      emit (Pfmind(res, a1, a2))
-  | "__builtin_fmax", [BA(FR a1); BA(FR a2)], BR(FR res) ->
-      emit (Pfmaxd(res, a1, a2))
-  (* 64-bit integer arithmetic for a 32-bit platform *)
-  | "__builtin_negl", [BA_splitlong(BA(IR ah), BA(IR al))],
-                      BR_splitlong(BR(IR rh), BR(IR rl)) ->
-     expand_int64_arith (rl = ah) rl
-			(fun rl ->
-                         emit (Psltuw (X1, X0, X al));
-			 emit (Psubw (rl, X0, X al));
-			 emit (Psubw (rh, X0, X ah));
-			 emit (Psubw (rh, X rh, X X1)))
-  | "__builtin_addl", [BA_splitlong(BA(IR ah), BA(IR al));
-                       BA_splitlong(BA(IR bh), BA(IR bl))],
-                      BR_splitlong(BR(IR rh), BR(IR rl)) ->
-     expand_int64_arith (rl = bl || rl = ah || rl = bh) rl
-			(fun rl ->
-			 emit (Paddw (rl, X al, X bl));
-                         emit (Psltuw (X1, X rl, X bl));
-			 emit (Paddw (rh, X ah, X bh));
-			 emit (Paddw (rh, X rh, X X1)))
-  | "__builtin_subl", [BA_splitlong(BA(IR ah), BA(IR al));
-                       BA_splitlong(BA(IR bh), BA(IR bl))],
-                      BR_splitlong(BR(IR rh), BR(IR rl)) ->
-     expand_int64_arith (rl = ah || rl = bh) rl
-			(fun rl ->
-                         emit (Psltuw (X1, X al, X bl));
-			 emit (Psubw (rl, X al, X bl));
-			 emit (Psubw (rh, X ah, X bh));
-			 emit (Psubw (rh, X rh, X X1)))
-  | "__builtin_mull", [BA(IR a); BA(IR b)],
-                      BR_splitlong(BR(IR rh), BR(IR rl)) ->
-     expand_int64_arith (rl = a || rl = b) rl
-                        (fun rl ->
-                          emit (Pmulw (rl, X a, X b));
-                          emit (Pmulhuw (rh, X a, X b)))
 *)
   (* Catch-all *)
   | _ ->
