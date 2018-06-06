@@ -1,8 +1,7 @@
 DIR=general
 BINDIR=bin
 ASMDIR=asm
-#TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
-TESTNAMES=branch
+TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
 
 CCOMP=../../ccomp
 #TESTS=$(addprefix $(DIR)/,$(TESTNAMES))

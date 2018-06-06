@@ -7,7 +7,9 @@
     int main(void){\
         type a, b, c, i, S;\
         srand(0);\
+        S = 0;\
         for (i = 0 ; i < 100 ; i++){\
+            c = randlong();\
             a = randlong();\
             b = randlong();
     /* END BEGIN_TEST */
