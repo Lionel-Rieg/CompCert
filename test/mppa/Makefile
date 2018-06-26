@@ -35,8 +35,7 @@ $(DIR)/output/%.bin.exp: $(DIR)/%.c
 FORCE:
 
 .PHONY: check
-check: $(TOK)
-#check: $(TOK) sort mmult
+check: $(TOK) sort mmult
 
 .PHONY: coverage
 coverage: $(ASM)
