@@ -17,12 +17,11 @@ Require Import Machblock.
 Require Import Machblockgen.
 Require Import ForwardSimulationBlock.
 
-(* FIXME: put this section somewhere else. 
-   In "Smallstep" ? 
-
-TODO: also move "starN_last_step" in the same section ?
-
-*)
+(** FIXME: put this section somewhere else.
+ * In "Smallstep" ?
+ *
+ * also move "starN_last_step" in the same section ?
+ *)
 
 Section starN_lemma.
 (* Auxiliary Lemma on starN *)
@@ -35,16 +34,16 @@ Variable L: semantics.
 
 Local Hint Resolve starN_refl starN_step Eapp_assoc.
 
-Lemma starN_split n s t s': 
+Lemma starN_split n s t s':
   starN (step L) (globalenv L) n s t s' ->
-  forall m k, n=m+k -> 
+  forall m k, n=m+k ->
   exists (t1 t2:trace) s0, starN (step L) (globalenv L) m s t1 s0 /\ starN (step L) (globalenv L) k s0 t2 s' /\ t=t1**t2.
 Proof.
   induction 1; simpl.
   + intros m k H; assert (X: m=0); try omega.
     assert (X0: k=0); try omega.
     subst; repeat (eapply ex_intro); intuition eauto.
-  + intros m; destruct m as [| m']; simpl. 
+  + intros m; destruct m as [| m']; simpl.
     - intros k H2; subst; repeat (eapply ex_intro); intuition eauto.
     - intros k H2. inversion H2.
       exploit (IHstarN m' k); eauto. intro.
@@ -104,7 +103,7 @@ Proof (Genv.senv_match TRANSF).
 
 Lemma init_mem_preserved:
   forall m,
-  Genv.init_mem prog = Some m -> 
+  Genv.init_mem prog = Some m ->
   Genv.init_mem tprog = Some m.
 Proof (Genv.init_mem_transf TRANSF).
 
@@ -174,7 +173,7 @@ Proof.
 Qed.
 
 Lemma Mach_find_label_split l i c c':
-  Mach.find_label l (i :: c) = Some c' -> 
+  Mach.find_label l (i :: c) = Some c' ->
    (i=Mlabel l /\ c' = c) \/ (i <> Mlabel l /\ Mach.find_label l c = Some c').
 Proof.
   intros H.
@@ -270,7 +269,7 @@ Proof.
     symmetry. destruct i; try (simpl; auto).
     assert (l0 <> l); [ intro; subst; contradict H1; auto |].
     rewrite peq_false; auto.
-Qed. 
+Qed.
 
 Lemma to_bblock_body_find_label c2 bdy l c1:
   (bdy, c2) = to_bblock_body c1 ->
@@ -376,6 +375,13 @@ Ltac ExploitDistEndBlockCode :=
   | _ => idtac
   end.
 
+Ltac totologize H :=
+  match type of H with
+  | ( ?id = _ ) =>
+    let Hassert := fresh "Htoto" in (
+    assert (id = id) as Hassert; auto; rewrite H in Hassert at 2; simpl in Hassert; rewrite H in Hassert)
+  end.
+
 (* FIXME - refactoriser avec get_code_nature pour que ce soit plus joli *)
 Lemma dist_end_block_code_simu_mid_block i c:
   dist_end_block_code (i::c) <> 0%nat ->
@@ -420,7 +426,7 @@ Lemma step_simu_basic_step (i: Mach.instruction) (bi: basic_inst) (c: Mach.code)
   Mach.step (inv_trans_rao rao) ge (Mach.State s f sp (i::c) rs m) t s' ->
   exists rs' m', s'=Mach.State s f sp c rs' m' /\ t=E0 /\ basic_step tge (trans_stack s) f sp rs m bi rs' m'.
 Proof.
-  destruct i; simpl in * |-; 
+  destruct i; simpl in * |-;
    (discriminate
     || (intro H; inversion_clear H; intro X; inversion_clear X; eapply ex_intro; eapply ex_intro; intuition eauto)).
   - eapply exec_MBgetparam; eauto. exploit (functions_translated); eauto. intro.
@@ -435,14 +441,14 @@ Proof.
 Qed.
 
 
-Lemma star_step_simu_body_step s f sp c: 
+Lemma star_step_simu_body_step s f sp c:
  forall (p:bblock_body) c' rs m t s',
   to_bblock_body c = (p, c') ->
-  starN (Mach.step (inv_trans_rao rao)) ge (length p) (Mach.State s f sp c rs m) t s' -> 
+  starN (Mach.step (inv_trans_rao rao)) ge (length p) (Mach.State s f sp c rs m) t s' ->
   exists rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp p rs m rs' m'.
 Proof.
-  induction c as [ | i0 c0 Hc0]; simpl; intros p c' rs m t s' H. 
-  * (* nil *) 
+  induction c as [ | i0 c0 Hc0]; simpl; intros p c' rs m t s' H.
+  * (* nil *)
     inversion_clear H; simpl; intros X; inversion_clear X.
     eapply ex_intro; eapply ex_intro; intuition eauto.
   * (* cons *)
@@ -510,10 +516,10 @@ Lemma simu_end_block:
   step rao tge (trans_state s1) t (trans_state s1').
 Proof.
   destruct s1; simpl.
-  + (* State *) 
+  + (* State *)
     (* c cannot be nil *)
-    destruct c as [|i c]; simpl; try ( (* nil => absurd *) 
-      unfold dist_end_block_code; simpl; 
+    destruct c as [|i c]; simpl; try ( (* nil => absurd *)
+      unfold dist_end_block_code; simpl;
       intros t s1' H; inversion_clear H;
       inversion_clear H0; fail
     ).
@@ -526,7 +532,7 @@ Proof.
     ( exploit (trans_code_nonil c0); subst; auto; try discriminate; intro H0; contradict H0 ).
 
     assert (X: Datatypes.S (dist_end_block_code c0) = (size (fst (to_bblock c0)))).
-    { 
+    {
       unfold dist_end_block_code. remember (size _) as siz.
       assert (siz <> 0%nat). rewrite Heqsiz; apply to_bblock_nonil with (c0 := c) (i := i) (c := c0); auto.
       omega.
@@ -587,7 +593,7 @@ Proof.
     - simpl in H3. inversion H3; subst. simpl.
       destruct c2 as [|ei c2']; inversion Heqexb; subst; try eapply exec_None_exit.
       clear H3. destruct (to_cfi ei) as [cfi|] eqn:TOCFI; inversion H0.
-      subst. eapply exec_None_exit. 
+      subst. eapply exec_None_exit.
 
   + (* Callstate *)
     intros t s1' H; inversion_clear H.

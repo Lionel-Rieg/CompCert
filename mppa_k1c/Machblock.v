@@ -55,7 +55,7 @@ Proof.
 Qed.
 
 Definition length_opt {A} (o: option A) : nat :=
-  match o with 
+  match o with
   | Some o => 1
   | None => 0
   end.
@@ -110,10 +110,11 @@ Qed.
 
 Local Open Scope nat_scope.
 
+(* FIXME - avoir une définition un peu plus simple, au prix de la preuve Mach -> Machblock ? *)
 Fixpoint find_label (lbl: label) (c: code) {struct c} : option code :=
   match c with
   | nil => None
-  | bb1 :: bbl => if is_label lbl bb1 
+  | bb1 :: bbl => if is_label lbl bb1
       then let bb' := {| header := None ; body := body bb1 ; exit := exit bb1 |} in (
         Some (match size bb' with
         | O => bbl
@@ -191,7 +192,7 @@ Inductive basic_step (s: list stackframe) (fb: block) (sp: val) (rs: regset) (m:
   | exec_MBsetstack:
       forall src ofs ty m' rs',
       store_stack m sp ty ofs (rs src) = Some m' ->
-      rs' = undef_regs (destroyed_by_setstack ty) rs -> 
+      rs' = undef_regs (destroyed_by_setstack ty) rs ->
       basic_step s fb sp rs m (MBsetstack src ofs ty) rs' m'
   | exec_MBgetparam:
       forall ofs ty dst v rs' f,
@@ -225,8 +226,8 @@ Inductive body_step (s: list stackframe) (f: block) (sp: val): bblock_body -> re
        forall rs m,
        body_step s f sp nil rs m rs m
    | exec_cons_body:
-       forall rs m bi p rs' m' rs'' m'', 
-       basic_step s f sp rs m bi rs' m' -> 
+       forall rs m bi p rs' m' rs'' m'',
+       basic_step s f sp rs m bi rs' m' ->
        body_step s f sp p rs' m' rs'' m'' ->
        body_step s f sp (bi::p) rs m rs'' m''
    .
