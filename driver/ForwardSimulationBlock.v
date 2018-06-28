@@ -1,6 +1,7 @@
 (***
 
-Variante de Forward Simulation pour les blocks.
+Auxiliary lemmas on starN and forward_simulation 
+in order to prove the forward simulation of Mach -> Machblock. 
 
 ***)
 
@@ -15,16 +16,36 @@ Require Import Smallstep.
 Local Open Scope nat_scope.
 
 
-Section ForwardSimuBlock.
+(** Auxiliary lemma on starN *)
+Section starN_lemma.
 
-Variable L1 L2: semantics.
+Variable L: semantics.
 
-Local Hint Resolve starN_refl starN_step.
+Local Hint Resolve starN_refl starN_step Eapp_assoc.
+
+Lemma starN_split n s t s':
+  starN (step L) (globalenv L) n s t s' ->
+  forall m k, n=m+k ->
+  exists (t1 t2:trace) s0, starN (step L) (globalenv L) m s t1 s0 /\ starN (step L) (globalenv L) k s0 t2 s' /\ t=t1**t2.
+Proof.
+  induction 1; simpl.
+  + intros m k H; assert (X: m=0); try omega.
+    assert (X0: k=0); try omega.
+    subst; repeat (eapply ex_intro); intuition eauto.
+  + intros m; destruct m as [| m']; simpl.
+    - intros k H2; subst; repeat (eapply ex_intro); intuition eauto.
+    - intros k H2. inversion H2.
+      exploit (IHstarN m' k); eauto. intro.
+      destruct H3 as (t5 & t6 & s0 & H5 & H6 & H7).
+      repeat (eapply ex_intro).
+      instantiate (1 := t6); instantiate (1 := t1 ** t5); instantiate (1 := s0).
+      intuition eauto. subst. auto.
+Qed.
 
 Lemma starN_last_step n s t1 s': 
-  starN (step L1) (globalenv L1) n s t1 s' ->
+  starN (step L) (globalenv L) n s t1 s' ->
   forall (t t2:trace) s'',
-     Step L1 s' t2 s'' -> t = t1 ** t2 -> starN (step L1) (globalenv L1) (S n) s t s''.
+     Step L s' t2 s'' -> t = t1 ** t2 -> starN (step L) (globalenv L) (S n) s t s''.
 Proof.
   induction 1; simpl. 
   + intros t t1 s0; autorewrite with trace_rewrite.
@@ -33,6 +54,17 @@ Proof.
   + intros. eapply  starN_step; eauto.
     intros; subst; autorewrite with trace_rewrite; auto.
 Qed.
+
+End starN_lemma.
+
+
+
+(** General scheme from a "match_states" relation *)
+
+Section ForwardSimuBlock_REL.
+
+Variable L1 L2: semantics.
+
 
 (** Hypothèses de la preuve *)
 
@@ -60,6 +92,8 @@ Hypothesis simu_end_block:
 
 
 (** Introduction d'une sémantique par bloc sur L1 appelée "memoL1" *)
+
+Local Hint Resolve starN_refl starN_step.
 
 Definition star_in_block (head current: state L1): Prop :=
   dist_end_block head >= dist_end_block current 
@@ -216,7 +250,7 @@ Proof.
       * unfold head; rewrite H2; simpl. intuition eauto. 
 Qed.
 
-Lemma forward_simulation_block: forward_simulation L1 L2.
+Lemma forward_simulation_block_rel: forward_simulation L1 L2.
 Proof.
   eapply compose_forward_simulations.
   eapply forward_memo_simulation_1.
@@ -224,4 +258,65 @@ Proof.
 Qed.
 
 
-End ForwardSimuBlock.
+End ForwardSimuBlock_REL.
+
+
+
+(* An instance of the previous scheme, when there is a translation from L1 states to L2 states 
+
+Here, we do not require that the sequence of S2 states does exactly match the sequence of L1 states by trans_state.
+This is because the exact matching is broken in Machblock on "goto" instruction (due to the find_label).
+
+However, the Machblock state after a goto remains "equivalent" to the trans_state of the Mach state in the sense of "equiv_on_next_step" below...
+
+*)
+
+Section ForwardSimuBlock_TRANS.
+
+Variable L1 L2: semantics.
+
+Variable trans_state: state L1 -> state L2.
+
+Definition equiv_on_next_step (P Q: Prop) s2_a s2_b: Prop := 
+  (P -> (forall t s', Step L2 s2_a t s' <-> Step L2 s2_b t s')) /\ (Q -> (forall r, (final_state L2 s2_a r) <-> (final_state L2 s2_b r))).
+
+Definition match_states s1 s2: Prop :=
+  equiv_on_next_step (exists t s1', Step L1 s1 t s1') (exists r, final_state L1 s1 r) s2 (trans_state s1).
+
+Lemma match_states_trans_state s1: match_states s1 (trans_state s1).
+Proof.
+  unfold match_states, equiv_on_next_step. intuition.
+Qed.
+
+Variable dist_end_block: state L1 -> nat.
+
+Hypothesis simu_mid_block:
+  forall s1 t s1', Step L1 s1 t s1' -> (dist_end_block s1)<>0 -> t = E0 /\ dist_end_block s1=S (dist_end_block s1').
+
+Hypothesis public_preserved:
+  forall id, Senv.public_symbol (symbolenv L2) id = Senv.public_symbol (symbolenv L1) id.
+
+Hypothesis match_initial_states:
+  forall s1, initial_state L1 s1 -> exists s2, match_states s1 s2 /\ initial_state L2 s2.
+
+Hypothesis match_final_states:
+  forall s1 r, final_state L1 s1 r -> final_state L2 (trans_state s1) r.
+
+Hypothesis final_states_end_block:
+  forall s1 t s1' r, Step L1 s1 t s1' -> final_state L1 s1' r -> dist_end_block s1 = 0.
+
+Hypothesis simu_end_block:
+  forall s1 t s1', starN (step L1) (globalenv L1) (S (dist_end_block s1)) s1 t s1' -> exists s2', Step L2 (trans_state s1) t s2' /\ match_states s1' s2'.
+
+Lemma forward_simulation_block_trans: forward_simulation L1 L2.
+Proof.
+  eapply forward_simulation_block_rel with (dist_end_block:=dist_end_block) (match_states:=match_states); try tauto.
+  + (* final_states *) intros s1 s2 r H1 [H2 H3]. rewrite H3; eauto.
+  + (* simu_end_block *)
+    intros s1 t s1' s2 H1 [H2a H2b]. exploit simu_end_block; eauto.
+    intros (s2' & H3 & H4); econstructor 1; intuition eauto.
+    rewrite H2a; auto.
+    inversion_clear H1. eauto.
+Qed.
+
+End ForwardSimuBlock_TRANS.

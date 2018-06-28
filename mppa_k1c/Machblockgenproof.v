@@ -17,45 +17,6 @@ Require Import Machblock.
 Require Import Machblockgen.
 Require Import ForwardSimulationBlock.
 
-(** FIXME: put this section somewhere else.
- * In "Smallstep" ?
- *
- * also move "starN_last_step" in the same section ?
- *)
-
-Section starN_lemma.
-(* Auxiliary Lemma on starN *)
-
-Import Smallstep.
-Local Open Scope nat_scope.
-
-
-Variable L: semantics.
-
-Local Hint Resolve starN_refl starN_step Eapp_assoc.
-
-Lemma starN_split n s t s':
-  starN (step L) (globalenv L) n s t s' ->
-  forall m k, n=m+k ->
-  exists (t1 t2:trace) s0, starN (step L) (globalenv L) m s t1 s0 /\ starN (step L) (globalenv L) k s0 t2 s' /\ t=t1**t2.
-Proof.
-  induction 1; simpl.
-  + intros m k H; assert (X: m=0); try omega.
-    assert (X0: k=0); try omega.
-    subst; repeat (eapply ex_intro); intuition eauto.
-  + intros m; destruct m as [| m']; simpl.
-    - intros k H2; subst; repeat (eapply ex_intro); intuition eauto.
-    - intros k H2. inversion H2.
-      exploit (IHstarN m' k); eauto. intro.
-      destruct H3 as (t5 & t6 & s0 & H5 & H6 & H7).
-      repeat (eapply ex_intro).
-      instantiate (1 := t6); instantiate (1 := t1 ** t5); instantiate (1 := s0).
-      intuition eauto. subst. auto.
-Qed.
-
-End starN_lemma.
-
-
 Definition inv_trans_rao (rao: function -> code -> ptrofs -> Prop) (f: Mach.function) (c: Mach.code) :=
   rao (trans_function f) (trans_code c).
 
@@ -87,11 +48,26 @@ Definition trans_state (ms: Mach.state) : state :=
 
 Section PRESERVATION.
 
+Local Open Scope nat_scope.
+
 Variable prog: Mach.program.
 Variable tprog: Machblock.program.
 Hypothesis TRANSF: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
+
+
+Variable rao: function -> code -> ptrofs -> Prop.
+
+Definition match_states: Mach.state -> state -> Prop 
+  := ForwardSimulationBlock.match_states (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog) trans_state.
+
+Lemma match_states_trans_state s1: match_states s1 (trans_state s1).
+Proof.
+  apply match_states_trans_state.
+Qed.
+
+Local Hint Resolve match_states_trans_state.
 
 Lemma symbols_preserved:
   forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
@@ -187,95 +163,91 @@ Proof.
     + revert H. unfold Mach.find_label. simpl. rewrite peq_false; auto.
 Qed.
 
-Lemma find_label_stop l b c c0:
- to_bblock (Mlabel l :: c) = (b, c0) -> find_label l (b :: trans_code c0) = Some (trans_code c).
+
+Definition concat (h: list label) (c: code): code :=
+  match c with
+  | nil =>  {| header := h; body := nil; exit := None |}::nil
+  | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
+  end.
+
+Lemma to_bblock_start_label i c l b c0: 
+  (b, c0) = to_bblock (i :: c)
+  -> In l (header b)
+  -> i <> Mlabel l
+  -> exists l2, i=Mlabel l2.
 Proof.
-  intros H.
-  unfold find_label.
-  assert (X: b=(fst (to_bblock (Mlabel l :: c)))).
-  { rewrite H; simpl; auto. }
-  subst b; rewrite to_bblock_islabel.
-  remember ({| header := None; body := _ ; exit := _ |}) as b'.
-  remember (fst (to_bblock _)) as b.
-  destruct (size b') eqn:SIZE.
-  - destruct (size_null b') as (Hh & Hb & He); auto.
-    subst b'; simpl in *. clear Hh SIZE.
-    erewrite <- (to_bblock_label_then_nil b l c c0); eauto.
-  - assert (X: exists b0 lb0, trans_code c = b0::lb0 /\ c <> nil).
-    { induction c, (trans_code c) using trans_code_ind.
-      + subst. simpl in * |-. inversion SIZE.
-      + (repeat econstructor 1).  intro; subst; try tauto.
-    }
-    destruct X as (b0 & lb0 & X0 & X1).
-    unfold to_bblock in * |-.
-    remember (to_bblock_header _) as bh; destruct bh as [h c1].
-    remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
-    remember (to_bblock_exit _) as be; destruct be as [ext c3].
-    unfold size in SIZE; subst b b'; simpl in * |-.
-    injection H; clear H; intro; subst c3.
-    injection Heqbh; clear Heqbh; intros; subst.
-    cut (to_bblock_header c = (None, c)).
-    * intros X2; exploit trans_code_step; eauto.
-      simpl; rewrite X0; clear X0.
-      intros (Y1 & Y2 & Y3 & Y4). subst.
-      rewrite Y1; clear X1; destruct b0; simpl; auto.
-    * destruct (cn_eqdec (get_code_nature c) IsLabel) as [ Y | Y ].
-      + destruct c; simpl; try discriminate.
-        destruct i; simpl; try discriminate.
-        simpl in * |-.
-        inversion Heqbb; subst. simpl in * |-.
-        inversion Heqbe; subst; simpl in * |-.
-        discriminate.
-      + destruct c; simpl; discriminate || auto.
-        destruct i; simpl; auto.
-        destruct Y. simpl; auto.
+   unfold to_bblock.
+   remember (to_bblock_header _) as bh; destruct bh as [h c1].
+   remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
+   remember (to_bblock_exit _) as be; destruct be as [ext c3].
+   intros H; inversion H; subst; clear H; simpl.
+   destruct i; try (simpl in Heqbh; inversion Heqbh; subst; clear Heqbh; simpl; intuition eauto).
 Qed.
 
-Lemma find_label_next l i b c c':
- to_bblock (i :: c) = (b, c') -> i <> Mlabel l -> find_label l (b :: trans_code c') = find_label l (trans_code c').
+Lemma find_label_stop c:
+ forall l b c0 c',
+   (b, c0) = to_bblock c
+ -> Mach.find_label l c = Some c'
+ -> In l (header b)
+ -> exists h, In l h /\ Some (b :: trans_code c0) = Some (concat h (trans_code c')).
 Proof.
-  intros H H1.
-  destruct b as [hd bd ex].
-  destruct (cn_eqdec (get_code_nature (i::c)) IsLabel) as [ X | X ].
-  - destruct i; try discriminate.
-    exploit to_bblock_label; eauto.
-    intros (bdy & c1 & Y1 & Y2 & Y3 & Y4).
-    simpl in *|-. subst. clear X.
-    simpl. unfold is_label; simpl.
-    assert (l0 <> l); [ intro; subst; contradict H1; auto |].
-    rewrite peq_false; auto.
-  - exploit to_bblock_no_label; eauto.
-    intro Y. apply (f_equal fst) in H as Y1. simpl in Y1. rewrite Y in Y1. clear Y.
-    inversion Y1; subst; clear Y1.
-    simpl. auto.
+  induction c as [ |i c].
+  - simpl; intros; discriminate.
+  - intros l b c0 c' H H1 H2.
+    exploit Mach_find_label_split; eauto; clear H1.
+    intros [(X1 & X2) | (X1 & X2)].
+    * subst. exploit to_bblock_label; eauto. clear H.
+      intros (H3 & H4). constructor 1 with (x:=l::nil); simpl; intuition auto.
+      symmetry.
+      rewrite trans_code_equation.
+      destruct c as [ |i c].
+      + unfold to_bblock in H4; simpl in H4.
+        injection H4. clear H4; intros H4 H H0 H1; subst. simpl.
+        rewrite trans_code_equation; simpl.
+        rewrite <- H1 in H3; clear H1.
+        destruct b as [h b e]; simpl in * |- *; subst; auto.
+      + rewrite H4; clear H4; simpl. rewrite <- H3; clear H3.
+        destruct b; simpl; auto.
+    * exploit to_bblock_start_label; eauto.
+      intros (l' & H'). subst.
+      assert (X: l' <> l). { intro Z; subst; destruct X1; auto. }
+      clear X1.
+      exploit to_bblock_label; eauto. clear H.
+      intros (H3 & H4).
+      exploit IHc; eauto. { simpl. rewrite H3 in H2; simpl in H2. destruct H2; subst; tauto. }
+      intros (h' & H5 & H6).
+      constructor 1 with (x:=l'::h'); simpl; intuition auto.
+      destruct b as [h b e]; simpl in * |- *; subst.
+      remember (tl h) as th. subst h.
+      remember (trans_code c') as tcc'.
+      rewrite trans_code_equation in Heqtcc'.
+      destruct c'; subst; simpl in * |- *. 
+      + inversion H6; subst; auto.
+      + destruct (to_bblock (i :: c')) as [b1 c1]. simpl in * |- *.
+        inversion H6; subst; auto.
 Qed.
 
-Lemma to_bblock_header_split i c h c1:
-  to_bblock_header (i::c)=(h, c1)
-  -> (exists l, i=Mlabel l /\ h=Some l /\ c1=c) \/ (forall l, i<>Mlabel l /\ h=None /\ c1=(i::c)).
+Lemma to_bblock_header_find_label c l: forall c1 h c',
+  to_bblock_header c = (h, c1)
+  -> Mach.find_label l c = Some c'
+  -> ~ In l h
+  -> Mach.find_label l c = Mach.find_label l c1.
 Proof.
-  destruct i; simpl; intros H; inversion H; try (constructor 2; intuition auto; discriminate).
-  constructor 1; eapply ex_intro; intuition eauto.
+  induction c as [|i  c]; simpl; auto.
+  - intros; discriminate.
+  - destruct i;
+    try (simpl; intros c1 h c' H1 H2; inversion H1; subst; clear H1; intros; apply refl_equal).
+    remember (to_bblock_header c) as tbhc. destruct tbhc as [h2 c2].
+    intros h c1 c' H1; inversion H1; subst; clear H1.
+    simpl. destruct (peq _ _).
+    + subst; tauto.
+    + intros H1 H2; erewrite IHc; eauto.
 Qed.
 
-Lemma to_bblock_header_find_label i c1 l c h:
-  i <> Mlabel l
-  -> to_bblock_header (i :: c) = (h, c1) -> Mach.find_label l c = Mach.find_label l c1.
-Proof.
-  intros H1 H2; exploit to_bblock_header_split; eauto.
-  intros [ ( l0 & X1 & X2 & X3 ) | X ].
-  - subst. auto.
-  - destruct (X l) as (X1 & X2 & X3). subst. clear X X1.
-    symmetry. destruct i; try (simpl; auto).
-    assert (l0 <> l); [ intro; subst; contradict H1; auto |].
-    rewrite peq_false; auto.
-Qed.
-
-Lemma to_bblock_body_find_label c2 bdy l c1:
+Lemma to_bblock_body_find_label c1 l: forall c2 bdy,
   (bdy, c2) = to_bblock_body c1 ->
   Mach.find_label l c1 = Mach.find_label l c2.
 Proof.
-  generalize bdy c2.
   induction c1 as [|i c1].
   - intros bdy0 c0 H. simpl in H. inversion H; subst; clear H. auto.
   - intros bdy' c2' H. simpl in H. destruct i; try (
@@ -283,7 +255,7 @@ Proof.
       inversion H; subst; clear H; simpl; erewrite IHc1; eauto; fail).
 Qed.
 
-Lemma to_bblock_exit_find_label c2 ext l c1:
+Lemma to_bblock_exit_find_label c1 l c2 ext:
  (ext, c2) = to_bblock_exit c1
  -> Mach.find_label l c1 = Mach.find_label l c2.
 Proof.
@@ -293,43 +265,37 @@ Proof.
       simpl in H; inversion H; subst; clear H; auto; fail).
 Qed.
 
-Lemma Mach_find_label_to_bblock i c l b c0:
- i <> Mlabel l
- -> to_bblock (i :: c) = (b, c0)
- -> Mach.find_label l c = Mach.find_label l c0.
-Proof.
-  intro H.
-  unfold to_bblock.
-  remember (to_bblock_header _) as bh; destruct bh as [h c1].
-  remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
-  remember (to_bblock_exit _) as be; destruct be as [ext c3].
-  intros X; injection X. clear X; intros; subst.
-  erewrite (to_bblock_header_find_label i c1); eauto.
-  erewrite (to_bblock_body_find_label c2); eauto.
-  erewrite to_bblock_exit_find_label; eauto.
-Qed.
-
-Local Hint Resolve find_label_next.
-
 Lemma find_label_transcode_preserved:
   forall l c c',
   Mach.find_label l c = Some c' ->
-  find_label l (trans_code c) = Some (trans_code c').
+  exists h, In l h /\ find_label l (trans_code c) = Some (concat h (trans_code c')).
 Proof.
   intros l c; induction c, (trans_code c) using trans_code_ind.
   - intros c' H; inversion H.
   - intros c' H. subst _x. destruct c as [| i c]; try tauto.
-    exploit Mach_find_label_split; eauto. clear H.
-    intros [  [H1 H2] | [H1 H2] ].
-    + subst. erewrite find_label_stop; eauto.
-    + rewrite <- IHc0. eauto.
-      erewrite <- (Mach_find_label_to_bblock i c); eauto.
+   unfold to_bblock in * |-.
+   remember (to_bblock_header _) as bh; destruct bh as [h c1].
+   remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
+   remember (to_bblock_exit _) as be; destruct be as [ext c3].
+   simpl; injection e0; intros; subst; clear e0.
+   unfold is_label; simpl; destruct (in_dec l h) as [Y|Y].
+   + clear IHc0.
+     eapply find_label_stop; eauto.
+     unfold to_bblock.
+     rewrite <- Heqbh, <- Heqbb, <- Heqbe. 
+     auto.
+   + exploit IHc0; eauto. clear IHc0.
+     rewrite <- H.
+     erewrite (to_bblock_header_find_label (i::c) l c1); eauto.
+     erewrite (to_bblock_body_find_label c1 l c2); eauto.
+     erewrite (to_bblock_exit_find_label c2 l c0); eauto.
 Qed.
+
 
 Lemma find_label_preserved:
   forall l f c,
   Mach.find_label l (Mach.fn_code f) = Some c ->
-  find_label l (fn_code (trans_function f)) = Some (trans_code c).
+  exists h, In l h /\ find_label l (fn_code (trans_function f)) = Some (concat h (trans_code c)).
 Proof.
   intros. cutrewrite ((fn_code (trans_function f)) = trans_code (Mach.fn_code f)); eauto.
   apply find_label_transcode_preserved; auto.
@@ -357,15 +323,6 @@ Definition dist_end_block (s: Mach.state): nat :=
 Local Hint Resolve exec_nil_body exec_cons_body.
 Local Hint Resolve exec_MBgetstack exec_MBsetstack exec_MBgetparam exec_MBop exec_MBload exec_MBstore.
 
-Variable rao: function -> code -> ptrofs -> Prop.
-
-(*
-Lemma minus_diff_0 n: (n-1<>0)%nat -> (n >= 2)%nat.
-Proof.
-  omega.
-Qed.
-*)
-
 Ltac ExploitDistEndBlockCode :=
   match goal with
   | [ H : dist_end_block_code (Mlabel ?l :: ?c) <> 0%nat |- _ ] =>
@@ -384,13 +341,13 @@ Ltac totologize H :=
 
 (* FIXME - refactoriser avec get_code_nature pour que ce soit plus joli *)
 Lemma dist_end_block_code_simu_mid_block i c:
-  dist_end_block_code (i::c) <> 0%nat ->
-  (dist_end_block_code (i::c) = Datatypes.S (dist_end_block_code c))%nat.
+  dist_end_block_code (i::c) <> 0 ->
+  (dist_end_block_code (i::c) = Datatypes.S (dist_end_block_code c)).
 Proof.
-  intros.
+  intros H.
   remember (get_code_nature c) as gcnc; destruct gcnc.
   (* when c is nil *)
-  - contradict H. rewrite get_code_nature_nil_contra with (c := c); auto. destruct i; simpl; auto.
+  - contradict H; rewrite get_code_nature_nil_contra with (c := c); auto. destruct i; simpl; auto.
   (* when c is IsLabel *)
   - remember i as i0; remember (to_basic_inst i) as sbi; remember (to_cfi i) as scfi;
     remember (get_code_nature (i::c)) as gcnic;
@@ -408,16 +365,19 @@ Proof.
        | intro; subst; rewrite H; simpl; auto
        ] ); fail).
     (* when i is a label *)
-    contradict H. unfold dist_end_block_code. exploit to_bblock_double_label; eauto.
-    intro. subst. rewrite H. simpl. auto.
+    unfold dist_end_block_code in * |- *. subst i0. 
+    rewrite (to_bblock_size_single_label c (Mlabel l)) in * |- *; simpl in * |- *; auto. omega.
   (* when c is IsBasicInst or IsCFI *)
+
+(*
   - destruct i; try (contradict H; auto; fail); (* getting rid of the non basic inst *)
        ( ExploitDistEndBlockCode; [ rewrite <- Heqgcnc; discriminate |
          unfold dist_end_block_code in *; intro; rewrite H0 in *; omega ] ).
   - destruct i; try (contradict H; auto; fail); (* getting rid of the non basic inst *)
        ( ExploitDistEndBlockCode; [ rewrite <- Heqgcnc; discriminate |
          unfold dist_end_block_code in *; intro; rewrite H0 in *; omega ] ).
-Qed.
+*)
+Admitted.
 
 Local Hint Resolve dist_end_block_code_simu_mid_block.
 
@@ -468,12 +428,33 @@ Proof.
      intros X; inversion_clear X. intuition eauto.
 Qed.
 
+Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit.
+Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
+
+Lemma match_states_concat_trans_code st f sp c rs m h: 
+  match_states (Mach.State st f sp c rs m) (State (trans_stack st) f sp (concat h (trans_code c)) rs m).
+Proof.
+  constructor 1; simpl.
+  + intros (t0 & s1' & H0) t s'. 
+    rewrite! trans_code_equation.
+    destruct c as [| i c]. { inversion H0. }
+    remember (to_bblock (i :: c)) as bic. destruct bic as [b c0].
+    simpl.
+    constructor 1; intros H; inversion H; subst; simpl in * |- *;
+    eapply exec_bblock; eauto.
+    - inversion H11; subst; eauto.
+      inversion H2; subst; eauto.
+    - inversion H11; subst; simpl; eauto.
+      inversion H2; subst; simpl; eauto.
+  + intros H r; constructor 1; intro X; inversion X.
+Qed.
+
 Lemma step_simu_cfi_step:
   forall c e c' stk f sp rs m t s' b lb',
   to_bblock_exit c = (Some e, c') ->
   trans_code c' = lb' ->
   Mach.step (inv_trans_rao rao) ge (Mach.State stk f sp c rs m) t s' ->
-  cfi_step rao tge e (State (trans_stack stk) f sp (b::lb') rs m) t (trans_state s').
+  exists s2, cfi_step rao tge e (State (trans_stack stk) f sp (b::lb') rs m) t s2 /\ match_states s' s2.
 Proof.
   intros c e c' stk f sp rs m t s' b lb'.
   intros Hexit Htc Hstep.
@@ -482,38 +463,66 @@ Proof.
     inversion Hexit; subst; inversion Hstep; subst; simpl
   ).
   * unfold inv_trans_rao in H11.
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
     apply exec_MBcall with (f := (trans_function f0)); auto.
     rewrite find_function_ptr_same in H9; auto.
-    apply find_funct_ptr_same. auto.
-  * apply exec_MBtailcall with (f := (trans_function f0)); auto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    apply exec_MBtailcall with (f := (trans_function f0)); auto.
     rewrite find_function_ptr_same in H9; auto.
-    apply find_funct_ptr_same; auto.
     rewrite parent_sp_preserved in H11; subst; auto.
     rewrite parent_ra_preserved in H12; subst; auto.
-  * eapply exec_MBbuiltin; eauto.
-    eapply eval_builtin_args_preserved; eauto.
-    eapply external_call_symbols_preserved; eauto.
-  * eapply exec_MBgoto; eauto.
-    apply find_funct_ptr_same; eauto.
-    apply find_label_preserved; auto.
-  * eapply exec_MBcond_true; eauto.
-    erewrite find_funct_ptr_same; eauto.
-    apply find_label_preserved; auto.
-  * eapply exec_MBcond_false; eauto.
-  * eapply exec_MBjumptable; eauto.
-    erewrite find_funct_ptr_same; eauto.
-    apply find_label_preserved; auto.
-  * eapply exec_MBreturn; eauto.
-    apply find_funct_ptr_same; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    eapply exec_MBbuiltin; eauto.
+  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    eapply exec_MBcond_false; eauto.
+  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    eapply exec_MBreturn; eauto.
     rewrite parent_sp_preserved in H8; subst; auto.
     rewrite parent_ra_preserved in H9; subst; auto.
-    rewrite mem_free_preserved in H10; subst; auto.
 Qed.
+
+
+
+Lemma step_simu_exit_step c e c' stk f sp rs m t s' b:
+  to_bblock_exit c = (e, c') ->
+  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s' ->
+  exists s2, exit_step rao tge e (State (trans_stack stk) f sp (b::trans_code c') rs m) t s2 /\ match_states s' s2.
+Proof.
+  intros H1 H2; destruct e as [ e |]; inversion_clear H2. 
+  + (* Some *) inversion H0; clear H0; subst. autorewrite with trace_rewrite.
+    exploit step_simu_cfi_step; eauto.
+    intros (s2' & H2 & H3); eapply ex_intro; intuition eauto.
+  + (* None *) 
+     destruct c as [ |i c]; simpl in H1; inversion H1.
+     - eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
+     - remember to_cfi as o. destruct o; try discriminate.
+       inversion_clear H1.
+       eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
+Qed.
+
+Lemma step_simu_header st f sp rs m s c: forall h c' t, 
+ (h, c') = to_bblock_header c ->
+ starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> s = Mach.State st f sp c' rs m /\ t = E0.
+Proof.
+   induction c as [ | i c]; simpl; intros h c' t H.
+   - inversion_clear H. simpl; intros H; inversion H; auto.
+   - destruct i; try (injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst; auto).
+     remember (to_bblock_header c) as bhc. destruct bhc as [h0 c0].
+     injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst.
+     inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
+     exploit IHc; eauto.
+Qed. 
 
 Lemma simu_end_block:
   forall s1 t s1',
   starN (Mach.step (inv_trans_rao rao)) ge (Datatypes.S (dist_end_block s1)) s1 t s1' ->
-  step rao tge (trans_state s1) t (trans_state s1').
+  exists s2', step rao tge (trans_state s1) t s2' /\ match_states s1' s2'.
 Proof.
   destruct s1; simpl.
   + (* State *)
@@ -545,10 +554,6 @@ Proof.
     destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H0 _ _ refl_equal) as [t1 [t2 [s0 [H [H1 H2]]]]].
     subst t3; clear H0.
 
-    (* Making the hypothesis more readable *)
-    remember (Smallstep.step _) as Machstep. remember (globalenv _) as mge.
-    remember (Mach.State _ _ _ _ _ _) as si.
-
     unfold to_bblock in * |- *.
     (* naming parts of block "b" *)
     remember (to_bblock_header c0) as hd. destruct hd as [hb c1].
@@ -560,49 +565,27 @@ Proof.
     subst hb bb exb.
 
     (* header opt step *)
-    assert (X: s0 = (Mach.State stack f sp c1 rs m) /\ t1 = E0).
-    {
-      destruct (header b) eqn:EQHB.
-      - inversion_clear H. inversion H2. subst.
-        destruct i; try (contradict EQHB; inversion Heqhd; fail).
-        inversion H0. subst. inversion Heqhd. auto.
-      - simpl in H. inversion H. subst.
-        destruct i; try (inversion Heqhd; auto; fail).
-    }
-    clear H; destruct X as [X1 X2]; subst s0 t1.
+    exploit step_simu_header; eauto.
+    intros [X1 X2]; subst s0 t1.
     autorewrite with trace_rewrite.
-
     (* body steps *)
-    subst mge Machstep.
     exploit (star_step_simu_body_step); eauto.
     clear H1; intros [rs' [m' [H0 [H1 H2]]]].
     subst s1 t2. autorewrite with trace_rewrite.
-    (* preparing exit step *)
-    eapply exec_bblock; eauto.
-    clear H2.
-
     (* exit step *)
-    destruct (exit b) as [e|] eqn:EQEB.
-    - constructor.
-      simpl in H3. inversion H3. subst. clear H3.
-      inversion H1. subst. clear H1.
-      destruct c2 as [|ei c2']; try (contradict Heqexb; discriminate).
-      rewrite E0_right.
-      destruct ei; try (contradict Heqexb; discriminate).
-      all: eapply step_simu_cfi_step; eauto.
-    - simpl in H3. inversion H3; subst. simpl.
-      destruct c2 as [|ei c2']; inversion Heqexb; subst; try eapply exec_None_exit.
-      clear H3. destruct (to_cfi ei) as [cfi|] eqn:TOCFI; inversion H0.
-      subst. eapply exec_None_exit.
-
+    subst tc0.
+    exploit step_simu_exit_step; eauto. clear H3.
+    intros (s2' & H3 & H4).
+    eapply ex_intro; intuition eauto.
+    eapply exec_bblock; eauto.
   + (* Callstate *)
     intros t s1' H; inversion_clear H.
+    eapply ex_intro; constructor 1; eauto.
     inversion H1; subst; clear H1.
     inversion_clear H0; simpl.
     - (* function_internal*)
       cutrewrite (trans_code (Mach.fn_code f0) = fn_code (trans_function f0)); eauto.
       eapply exec_function_internal; eauto.
-      apply find_funct_ptr_same; auto.
       rewrite <- parent_sp_preserved; eauto.
       rewrite <- parent_ra_preserved; eauto.
     - (* function_external *)
@@ -610,9 +593,9 @@ Proof.
       eapply exec_function_external; eauto.
       apply find_funct_ptr_same_external; auto.
       rewrite <- parent_sp_preserved; eauto.
-      apply external_call_preserved; auto.
   +  (* Returnstate *)
     intros t s1' H; inversion_clear H.
+    eapply ex_intro; constructor 1; eauto.
     inversion H1; subst; clear H1.
     inversion_clear H0; simpl.
     eapply exec_return.
@@ -620,14 +603,17 @@ Qed.
 
 Theorem simulation: forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
 Proof.
-  apply forward_simulation_block with (dist_end_block := dist_end_block) (build_block := trans_state).
+  apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)
   - intros s1 t s1' H1.
     destruct H1; simpl; omega || (intuition auto).
 (* public_preserved *)
   - apply senv_preserved.
 (* match_initial_states *)
-  - intros. simpl. destruct H. split.
+  - intros. simpl.
+    eapply ex_intro; constructor 1.
+    eapply match_states_trans_state.
+    destruct H. split.
     apply init_mem_preserved; auto.
     rewrite prog_main_preserved. rewrite <- H0. apply symbols_preserved.
 (* match_final_states *)

@@ -38,7 +38,7 @@ Inductive control_flow_inst: Type :=
   .
 
 Record bblock := mk_bblock {
-  header: option label;
+  header: list label;
   body:   bblock_body;
   exit:   option control_flow_inst
 }.
@@ -60,15 +60,15 @@ Definition length_opt {A} (o: option A) : nat :=
   | None => 0
   end.
 
-Definition size (b:bblock): nat := (length_opt (header b))+(length (body b))+(length_opt (exit b)).
+Definition size (b:bblock): nat := (length (header b))+(length (body b))+(length_opt (exit b)).
 
 Lemma size_null b:
   size b = 0%nat ->
-  header b = None /\ body b = nil /\ exit b = None.
+  header b = nil /\ body b = nil /\ exit b = None.
 Proof.
   destruct b as [h b e]. simpl. unfold size. simpl.
   intros H.
-  assert (length_opt h = 0%nat) as Hh; [ omega |].
+  assert (length h = 0%nat) as Hh; [ omega |].
   assert (length b = 0%nat) as Hb; [ omega |].
   assert (length_opt e = 0%nat) as He; [ omega|].
   repeat split.
@@ -94,34 +94,34 @@ Definition genv := Genv.t fundef unit.
 
 (*** sémantique ***)
 
-Definition is_label (lbl: label) (bb: bblock) : bool :=
-  match header bb with
-  | Some lbl' => if peq lbl lbl' then true else false
-  | _ => false
-  end.
-
-Lemma is_label_correct:
-  forall lbl bb,
-  if is_label lbl bb then (header bb) = Some lbl else (header bb) <> Some lbl.
+Lemma in_dec (lbl: label) (l: list label):  { List.In lbl l } + { ~(List.In lbl l) }.
 Proof.
-  intros. unfold is_label. destruct (header bb) as [lbl'|]; simpl; try discriminate.
-  case (peq lbl lbl'); intro; congruence.
+  apply List.in_dec.
+  apply Pos.eq_dec.
 Qed.
+
+Definition is_label (lbl: label) (bb: bblock) : bool :=
+  if in_dec lbl (header bb) then true else false.
+
+Lemma is_label_correct_true lbl bb:
+  List.In lbl (header bb) <-> is_label lbl bb = true. 
+Proof.
+  unfold is_label; destruct (in_dec lbl (header bb)); simpl; intuition.
+Qed.
+
+Lemma is_label_correct_false lbl bb:
+  ~(List.In lbl (header bb)) <-> is_label lbl bb = false. 
+Proof.
+  unfold is_label; destruct (in_dec lbl (header bb)); simpl; intuition.
+Qed.
+
 
 Local Open Scope nat_scope.
 
-(* FIXME - avoir une définition un peu plus simple, au prix de la preuve Mach -> Machblock ? *)
 Fixpoint find_label (lbl: label) (c: code) {struct c} : option code :=
   match c with
   | nil => None
-  | bb1 :: bbl => if is_label lbl bb1
-      then let bb' := {| header := None ; body := body bb1 ; exit := exit bb1 |} in (
-        Some (match size bb' with
-        | O => bbl
-        | Datatypes.S _ => bb' :: bbl
-        end)
-      )
-      else find_label lbl bbl
+  | bb1 :: bbl => if is_label lbl bb1 then Some c else find_label lbl bbl
   end.
 
 Section RELSEM.
