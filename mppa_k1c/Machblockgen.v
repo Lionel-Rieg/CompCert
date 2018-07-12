@@ -94,50 +94,20 @@ Proof.
   destruct i; discriminate.
 Qed.
 
-Lemma get_code_nature_nil_contra c: get_code_nature c = IsEmpty -> c = nil.
+Lemma get_code_nature_empty c: get_code_nature c = IsEmpty -> c = nil.
 Proof.
   intros H. destruct c; auto. exploit (get_code_nature_nil (i::c)); discriminate || auto.
   intro F. contradict F.
 Qed.
 
-Lemma get_code_nature_basic_inst c a c0:
-  c = a :: c0 ->
-  get_code_nature c = IsBasicInst ->
-  to_basic_inst a <> None.
-Proof.
-  intros H1 H2. destruct a; discriminate || contradict H2; subst; simpl; discriminate.
-Qed.
-
-Lemma to_bblock_header_not_IsLabel c h c0:
+Lemma to_bblock_header_noLabel c:
   get_code_nature c <> IsLabel ->
-  to_bblock_header c = (h, c0) ->
-  c = c0 /\ h=nil.
+  to_bblock_header c = (nil, c).
 Proof.
-  intros H1 H2. destruct c.
-  - simpl in H2; inversion H2; auto.
-  - destruct i; unfold to_bblock_header in H2; inversion H2; auto.
-    simpl in H1; contradict H1; auto.
+  intros H. destruct c as [|i c]; auto.
+  destruct i; simpl; auto.
+  contradict H; simpl; auto.
 Qed.
-
-Lemma to_bblock_header_eq c h c0:
-  get_code_nature c <> IsLabel ->
-  to_bblock_header c = (h, c0) ->
-  c = c0.
-Proof.
-  intros H1 H2; exploit to_bblock_header_not_IsLabel; intuition eauto.
-Qed.
-
-(*
-Lemma to_bblock_header_IsLabel c c0 b:
-  get_code_nature c = IsLabel ->
-  to_bblock_header c = (b, c0) ->
-  exists l, c = (Mlabel l)::c0.
-Proof.
-  intros H1 H2. destruct c; try discriminate.
-  destruct i; try discriminate.
-  unfold to_bblock_header in H2; inversion H2; eauto.
-Qed.
-*)
 
 Lemma to_bblock_header_wfe c:
   forall h c0,
@@ -166,15 +136,13 @@ Proof.
   simpl; omega.
 Qed.
 
-Lemma to_bblock_body_eq c b c0:
+Lemma to_bblock_body_noBasic c:
   get_code_nature c <> IsBasicInst ->
-  to_bblock_body c = (b, c0) ->
-  c = c0.
+  to_bblock_body c = (nil, c).
 Proof.
-  intros H1 H2. destruct c.
-  - simpl in H2. inversion H2. auto.
-  - destruct i; try ( simpl in *; destruct H1; auto; fail ).
-    all: simpl in *; inversion H2; subst; clear H2; auto.
+  intros H. destruct c as [|i c]; simpl; auto.
+  destruct i; simpl; auto.
+  all: contradict H; simpl; auto.
 Qed.
 
 Lemma to_bblock_body_wfe c b c0:
@@ -190,7 +158,35 @@ Proof.
     + inversion H; subst; auto.
 Qed.
 
-(* pas vraiment utile: à éliminer *)
+(** Attempt to eliminate cons_to_bblock_body *)
+(*
+Lemma to_bblock_body_basic c:
+  get_code_nature c = IsBasicInst ->
+  exists i bi b c',
+     to_basic_inst i = Some bi
+  /\ c = i :: c'
+  /\ to_bblock_body c = (bi::b, snd (to_bblock_body c')).
+Proof.
+  intros H.
+  destruct c as [|i c]; try (contradict H; simpl; discriminate).
+  destruct i eqn:I; try (contradict H; simpl; discriminate).
+  all: simpl; destruct (to_bblock_body c)  as [p c''] eqn:TBBC; repeat (eapply ex_intro); (repeat split);
+    simpl; eauto; rewrite TBBC; simpl; eauto.
+Qed.
+
+Lemma to_bblock_body_wf c b c0:
+  get_code_nature c = IsBasicInst ->
+  to_bblock_body c = (b, c0) ->
+  (length c > length c0)%nat.
+Proof.
+  intros H1 H2; exploit to_bblock_body_basic; eauto.
+  intros X. destruct X as (i & bi & b' & c' & X1 & X2 & X3).
+  exploit to_bblock_body_wfe. eauto. subst. simpl.
+  rewrite X3 in H2. inversion H2; clear H2; subst.
+  simpl; omega.
+Qed.
+*)
+
 Inductive cons_to_bblock_body c0: Mach.code -> bblock_body -> Prop :=
   Cons_to_bbloc_body i bi c' b':
     to_basic_inst i = Some bi
@@ -216,20 +212,18 @@ Lemma to_bblock_body_wf c b c0:
   (length c > length c0)%nat.
 Proof.
   intros H1 H2; exploit to_bblock_body_IsBasicInst; eauto.
-  intros X; destruct X.
-  exploit to_bblock_body_wfe; eauto.
+  intros X. destruct X.
+  exploit to_bblock_body_wfe; eauto. subst. simpl.
   simpl; omega.
 Qed.
 
-Lemma to_bblock_exit_eq c b c0:
+Lemma to_bblock_exit_noCFI c:
   get_code_nature c <> IsCFI ->
-  to_bblock_exit c = (b, c0) ->
-  c = c0.
+  to_bblock_exit c = (None, c).
 Proof.
-  intros H1 H2. destruct c as [|i c].
-  - simpl in H2; inversion H2; auto.
-  - destruct i; unfold to_bblock_header in H2; inversion H2; auto;
-    simpl in H1; contradict H1; auto.
+  intros H. destruct c as [|i c]; simpl; auto.
+  destruct i; simpl; auto.
+  all: contradict H; simpl; auto.
 Qed.
 
 Lemma to_bblock_exit_wf c b c0:
@@ -270,7 +264,7 @@ Proof.
   intros H; inversion H; subst; clear H; simpl; auto.
 Qed.
 
-Lemma to_bblock_basic_inst_then_label i c bi:
+Lemma to_bblock_basic_then_label i c bi:
   get_code_nature (i::c) = IsBasicInst ->
   get_code_nature c = IsLabel ->
   to_basic_inst i = Some bi ->
@@ -282,19 +276,17 @@ Proof.
   destruct i; simpl in *; inversion H3; subst; auto.
 Qed.
 
-Lemma to_bblock_cf_inst_then_label i c cfi:
+Lemma to_bblock_CFI i c cfi:
   get_code_nature (i::c) = IsCFI ->
-  get_code_nature c = IsLabel ->
   to_cfi i = Some cfi ->
   fst (to_bblock (i::c)) = {| header := nil; body := nil; exit := Some cfi |}.
 Proof.
-  intros H1 H2 H3.
-  destruct c as [|i' c]; try (contradict H1; simpl; discriminate).
-  destruct i'; try (contradict H1; simpl; discriminate).
-  destruct i; simpl in *; inversion H3; subst; auto.
+  intros H1 H2.
+  destruct i; try discriminate.
+  all: subst; rewrite <- H2; simpl; auto.
 Qed.
 
-Lemma to_bblock_no_label c:
+Lemma to_bblock_noLabel c:
   get_code_nature c <> IsLabel ->
   fst (to_bblock c) = {|
     header := nil;
@@ -349,26 +341,7 @@ Proof.
   intros H; inversion H; subst; clear H; simpl; auto.
 Qed.
 
-(*
-Lemma to_bblock_label_then_nil b l c c':
-  to_bblock (Mlabel l :: c) = (b, c') ->
-  body b = nil ->
-  exit b = None ->
-  c = c'.
-Proof.
-  intros TOB BB EB.
-  unfold to_bblock in TOB.
-  remember (to_bblock_header _) as tbh; destruct tbh as [h c0].
-  remember (to_bblock_body _) as tbb; destruct tbb as [bdy c1].
-  remember (to_bblock_exit _) as tbe; destruct tbe as [ext c2].
-  inversion TOB; subst. simpl in *. clear TOB.
-  inversion Heqtbh; subst. clear Heqtbh.
-  exploit to_bblock_body_nil; eauto. intros; subst. clear Heqtbb.
-  exploit to_bblock_exit_nil; eauto.
-Qed.
-*)
-
-Lemma to_bblock_basic_inst c i bi:
+Lemma to_bblock_basic c i bi:
   get_code_nature (i::c) = IsBasicInst ->
   to_basic_inst i = Some bi ->
   get_code_nature c <> IsLabel ->
@@ -383,40 +356,41 @@ Proof.
   apply bblock_eq; simpl.
 (* header *)
   + destruct i; simpl; auto; (
-      exploit to_bblock_no_label; [rewrite H; discriminate | intro; rewrite H2; simpl; auto]).
+      exploit to_bblock_noLabel; [rewrite H; discriminate | intro; rewrite H2; simpl; auto]).
 (* body *)
 (* FIXME - the proof takes some time to prove.. N² complexity :( *)
-  + destruct i; inversion H0; try (
-      destruct i0; try (
-        subst; unfold to_bblock;
-        remember (to_bblock_header _) as tbh; destruct tbh;
-        remember (to_bblock_header (_::c)) as tbh'; destruct tbh';
-        inversion Heqtbh; inversion Heqtbh'; subst;
-
-        remember (to_bblock_body _) as tbb; destruct tbb;
-        remember (to_bblock_body (_::c)) as tbb'; destruct tbb';
-        inversion Heqtbb; inversion Heqtbb'; destruct (to_bblock_body c);
-        inversion H3; inversion H4; subst;
-
-        remember (to_bblock_exit _) as tbc; destruct tbc;
-        simpl; auto );
-      contradict H1; simpl; auto ).
-(* exit - same as body *)
-  + destruct i; inversion H0; try (
-      destruct i0; try (
-        subst; unfold to_bblock;
-        remember (to_bblock_header _) as tbh; destruct tbh;
-        remember (to_bblock_header (_::c)) as tbh'; destruct tbh';
-        inversion Heqtbh; inversion Heqtbh'; subst;
-
-        remember (to_bblock_body _) as tbb; destruct tbb;
-        remember (to_bblock_body (_::c)) as tbb'; destruct tbb';
-        inversion Heqtbb; inversion Heqtbb'; destruct (to_bblock_body c);
-        inversion H3; inversion H4; subst;
-
-        remember (to_bblock_exit _) as tbc; destruct tbc;
-        simpl; auto );
-      contradict H1; simpl; auto ).
+  + unfold to_bblock.
+    remember (to_bblock_header _) as tbh; destruct tbh.
+    remember (to_bblock_body _) as tbb; destruct tbb.
+    remember (to_bblock_exit _) as tbe; destruct tbe.
+    simpl.
+    destruct i; destruct i0.
+    all: try (simpl in H1; contradiction).
+    all: try discriminate.
+    all: try (
+    simpl in Heqtbh; inversion Heqtbh; clear Heqtbh; subst;
+    simpl in Heqtbb; remember (to_bblock_body c) as tbbc; destruct tbbc;
+    inversion Heqtbb; clear Heqtbb; subst; simpl in *; clear H H1;
+    inversion H0; clear H0; subst; destruct (to_bblock_body c);
+    inversion Heqtbbc; clear Heqtbbc; subst;
+    destruct (to_bblock_exit c1); simpl; auto; fail).
+(* exit *)
+  + unfold to_bblock.
+    remember (to_bblock_header _) as tbh; destruct tbh.
+    remember (to_bblock_body _) as tbb; destruct tbb.
+    remember (to_bblock_exit _) as tbe; destruct tbe.
+    simpl.
+    destruct i; destruct i0.
+    all: try (simpl in H1; contradiction).
+    all: try discriminate.
+    all: try (
+    simpl in Heqtbh; inversion Heqtbh; clear Heqtbh; subst;
+    simpl in Heqtbb; remember (to_bblock_body c) as tbbc; destruct tbbc; 
+    inversion Heqtbb; clear Heqtbb; subst; simpl in *; clear H H1;
+    inversion H0; clear H0; subst; destruct (to_bblock_body c) eqn:TBBC;
+    inversion Heqtbbc; clear Heqtbbc; subst;
+    destruct (to_bblock_exit c1) eqn:TBBE; simpl;
+    inversion Heqtbe; clear Heqtbe; subst; auto; fail).
 Qed.
 
 Lemma to_bblock_size_single_label c i:
@@ -439,7 +413,7 @@ Proof.
   intros; rewrite to_bblock_size_single_label; auto.
 Qed.
 
-Lemma to_bblock_size_basicinst_neqz c:
+Lemma to_bblock_size_basic_neqz c:
   get_code_nature c = IsBasicInst ->
   size (fst (to_bblock c)) <> 0%nat.
 Proof.
@@ -448,12 +422,12 @@ Proof.
   (
     destruct (get_code_nature c) eqn:gcnc;
     (* Case gcnc is not IsLabel *)
-    try (erewrite to_bblock_basic_inst; eauto; [
+    try (erewrite to_bblock_basic; eauto; [
         unfold size; simpl; auto
       | simpl; auto
       | rewrite gcnc; discriminate
     ]);
-    erewrite to_bblock_basic_inst_then_label; eauto; [
+    erewrite to_bblock_basic_then_label; eauto; [
         unfold size; simpl; auto
       | simpl; auto
     ]
@@ -468,18 +442,18 @@ Proof.
   destruct i; discriminate.
 Qed.
 
-Lemma to_bblock_size_single_basicinst c i:
+Lemma to_bblock_size_single_basic c i:
   get_code_nature (i::c) = IsBasicInst ->
   get_code_nature c <> IsLabel ->
   size (fst (to_bblock (i::c))) = Datatypes.S (size (fst (to_bblock c))).
 Proof.
   intros.
   destruct i; try (contradict H; simpl; discriminate); try (
-    (exploit to_bblock_basic_inst; eauto);
+    (exploit to_bblock_basic; eauto);
       [remember (to_basic_inst _) as tbi; destruct tbi; eauto |];
     intro; rewrite H1; unfold size; simpl;
     assert ((length (header (fst (to_bblock c)))) = 0%nat);
-      exploit to_bblock_no_label; eauto; intro; rewrite H2; simpl; auto;
+      exploit to_bblock_noLabel; eauto; intro; rewrite H2; simpl; auto;
     rewrite H2; auto
   ).
 Qed.
@@ -505,86 +479,36 @@ Proof.
     destruct p3 as [h3 c3].
     exploit to_bblock_exit_wfe; eauto.
     inversion H0. omega.
-  - exploit to_bblock_header_eq; eauto. rewrite <- Heqgcn. discriminate.
-    intro; subst.
-    remember (to_bblock_body c1) as p2; eauto.
+  - exploit to_bblock_header_noLabel; eauto. rewrite <- Heqgcn. discriminate.
+    intro. rewrite H1 in Heqp1. inversion Heqp1. clear Heqp1. subst.
+    remember (to_bblock_body c) as p2; eauto.
     destruct p2 as [h2 c2].
     exploit to_bblock_body_wf; eauto.
     remember (to_bblock_exit c2) as p3; eauto.
     destruct p3 as [h3 c3].
     exploit to_bblock_exit_wfe; eauto.
     inversion H0. omega.
-  - exploit to_bblock_header_eq; eauto. rewrite <- Heqgcn. discriminate.
-    intro; subst.
-    remember (to_bblock_body c1) as p2; eauto.
+  - exploit to_bblock_header_noLabel; eauto. rewrite <- Heqgcn. discriminate.
+    intro. rewrite H1 in Heqp1. inversion Heqp1; clear Heqp1; subst.
+    remember (to_bblock_body c) as p2; eauto.
     destruct p2 as [h2 c2].
-    exploit (to_bblock_body_eq c1 h2 c2); eauto. rewrite <- Heqgcn. discriminate.
-    intro; subst.
-    remember (to_bblock_exit c2) as p3; eauto.
+    exploit (to_bblock_body_noBasic c); eauto. rewrite <- Heqgcn. discriminate.
+    intros H2; rewrite H2 in Heqp2; inversion Heqp2; clear Heqp2; subst.
+    remember (to_bblock_exit c) as p3; eauto.
     destruct p3 as [h3 c3].
-    exploit (to_bblock_exit_wf c2 h3 c3); eauto.
+    exploit (to_bblock_exit_wf c h3 c3); eauto.
     inversion H0. omega.
 Qed.
 
-Lemma to_bblock_nonil c i c0:
-  c = i :: c0 ->
-  size (fst (to_bblock c)) <> 0%nat.
+Lemma to_bblock_nonil i c0:
+  size (fst (to_bblock (i :: c0))) <> 0%nat.
 Proof.
-  intros H. remember (get_code_nature c) as gcnc. destruct gcnc.
+  intros H. remember (i::c0) as c. remember (get_code_nature c) as gcnc. destruct gcnc.
   - contradict Heqgcnc. subst. simpl. destruct i; discriminate.
-  - eapply to_bblock_size_label_neqz; auto.
-  - eapply to_bblock_size_basicinst_neqz; auto.
-  - eapply to_bblock_size_cfi_neqz; auto.
+  - eapply to_bblock_size_label_neqz; eauto.
+  - eapply to_bblock_size_basic_neqz; eauto.
+  - eapply to_bblock_size_cfi_neqz; eauto.
 Qed.
-
-(*
-Lemma to_bblock_islabel c l:
-  is_label l (fst (to_bblock (Mlabel l :: c))) = true.
-Proof.
-  unfold to_bblock.
-  remember (to_bblock_header _) as tbh; destruct tbh as [h c0].
-  remember (to_bblock_body _) as tbc; destruct tbc as [bdy c1].
-  remember (to_bblock_exit _) as tbe; destruct tbe as [ext c2].
-  simpl. inversion Heqtbh. unfold is_label. simpl.
-  apply peq_true.
-Qed.
-
-Lemma body_fst_to_bblock_label l c:
-  body (fst (to_bblock (Mlabel l :: c))) = fst (to_bblock_body c).
-Proof.
-  destruct c as [|i c']; simpl; auto.
-  destruct i; simpl; auto.
-  all: (
-    remember (to_bblock_body c') as tbbc; destruct tbbc as [tc c'']; simpl;
-    unfold to_bblock;
-    remember (to_bblock_header _) as tbh; destruct tbh as [h c0];
-    remember (to_bblock_body c0) as tbc; destruct tbc as [bdy c1];
-    remember (to_bblock_exit c1) as tbe; destruct tbe as [ext c2];
-    simpl; simpl in Heqtbh; inversion Heqtbh; subst c0;
-    simpl in Heqtbc; remember (to_bblock_body c') as tbc'; destruct tbc' as [tc' osef];
-    inversion Heqtbc; inversion Heqtbbc; auto
-  ).
-Qed.
-
-Lemma exit_fst_to_bblock_label c c' l:
-  snd (to_bblock_body c) = c' ->
-  exit (fst (to_bblock (Mlabel l :: c))) = fst (to_bblock_exit c').
-Proof.
-  intros H. destruct c as [|i c]; [simpl in *; subst; auto |].
-  unfold to_bblock.
-  remember (to_bblock_header _) as tbh; destruct tbh as [h c0].
-  remember (to_bblock_body c0) as tbc; destruct tbc as [bdy c1].
-  remember (to_bblock_exit c1) as tbe; destruct tbe as [ext c2].
-  simpl in *. inversion Heqtbh; subst.
-  destruct (to_basic_inst i) eqn:TBI.
-  - remember (to_bblock_body c) as tbbc; destruct tbbc as [p c''].
-    simpl. simpl in Heqtbc. rewrite TBI in Heqtbc. rewrite <- Heqtbbc in Heqtbc.
-    inversion Heqtbc; subst. apply (f_equal fst) in Heqtbe; auto.
-  - simpl. simpl in Heqtbc. rewrite TBI in Heqtbc.
-    inversion Heqtbc; subst. clear Heqtbh Heqtbc. unfold to_bblock_exit in Heqtbe.
-    apply (f_equal fst) in Heqtbe; auto.
-Qed.
-*)
 
 Function trans_code (c: Mach.code) { measure length c }: code :=
   match c with

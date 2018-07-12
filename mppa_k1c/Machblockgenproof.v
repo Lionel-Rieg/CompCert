@@ -328,7 +328,7 @@ Ltac ExploitDistEndBlockCode :=
   | [ H : dist_end_block_code (Mlabel ?l :: ?c) <> 0%nat |- _ ] =>
       exploit (to_bblock_size_single_label c (Mlabel l)); eauto
   | [ H : dist_end_block_code (?i0 :: ?c) <> 0%nat |- _ ] =>
-      exploit (to_bblock_size_single_basicinst c i0); eauto
+      exploit (to_bblock_size_single_basic c i0); eauto
   | _ => idtac
   end.
 
@@ -339,45 +339,44 @@ Ltac totologize H :=
     assert (id = id) as Hassert; auto; rewrite H in Hassert at 2; simpl in Hassert; rewrite H in Hassert)
   end.
 
-(* FIXME - refactoriser avec get_code_nature pour que ce soit plus joli *)
 Lemma dist_end_block_code_simu_mid_block i c:
   dist_end_block_code (i::c) <> 0 ->
   (dist_end_block_code (i::c) = Datatypes.S (dist_end_block_code c)).
 Proof.
   intros H.
-  remember (get_code_nature c) as gcnc; destruct gcnc.
-  (* when c is nil *)
-  - contradict H; rewrite get_code_nature_nil_contra with (c := c); auto. destruct i; simpl; auto.
-  (* when c is IsLabel *)
-  - remember i as i0; remember (to_basic_inst i) as sbi; remember (to_cfi i) as scfi;
-    remember (get_code_nature (i::c)) as gcnic;
-    destruct i.
-    (* when i is a basic instruction *)
-    1-6: try (( contradict H; unfold dist_end_block_code; exploit to_bblock_basic_inst_then_label; eauto;
-       [ totologize Heqgcnic; eapply Htoto
-       | totologize Heqsbi; try eapply Htoto
-       | intro; subst; rewrite H; simpl; auto
-       ] ); fail).
-    (* when i is a control flow instruction *)
-    1-8: try (( contradict H; unfold dist_end_block_code; exploit to_bblock_cf_inst_then_label; eauto;
-       [ totologize Heqgcnic; eapply Htoto
-       | totologize Heqscfi; try eapply Htoto
-       | intro; subst; rewrite H; simpl; auto
-       ] ); fail).
-    (* when i is a label *)
-    unfold dist_end_block_code in * |- *. subst i0. 
-    rewrite (to_bblock_size_single_label c (Mlabel l)) in * |- *; simpl in * |- *; auto. omega.
-  (* when c is IsBasicInst or IsCFI *)
-
-(*
-  - destruct i; try (contradict H; auto; fail); (* getting rid of the non basic inst *)
-       ( ExploitDistEndBlockCode; [ rewrite <- Heqgcnc; discriminate |
-         unfold dist_end_block_code in *; intro; rewrite H0 in *; omega ] ).
-  - destruct i; try (contradict H; auto; fail); (* getting rid of the non basic inst *)
-       ( ExploitDistEndBlockCode; [ rewrite <- Heqgcnc; discriminate |
-         unfold dist_end_block_code in *; intro; rewrite H0 in *; omega ] ).
-*)
-Admitted.
+  unfold dist_end_block_code.
+  destruct (get_code_nature (i::c)) eqn:GCNIC.
+  - apply get_code_nature_empty in GCNIC. discriminate.
+  - rewrite to_bblock_size_single_label; auto.
+    destruct c as [|i' c].
+    + contradict H. destruct i; simpl; auto.
+    + assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil. omega. 
+  - destruct (get_code_nature c) eqn:GCNC.
+    + apply get_code_nature_empty in GCNC. subst. contradict H. destruct i; simpl; auto.
+    + contradict H. destruct c as [|i' c]; try discriminate.
+      destruct i'; try discriminate.
+      destruct i; try discriminate. all: simpl; auto.
+    + destruct (to_basic_inst i) eqn:TBI; [| destruct i; discriminate].
+      erewrite to_bblock_basic; eauto; [| rewrite GCNC; discriminate ].
+      simpl. destruct c as [|i' c]; try discriminate.
+      assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil.
+      cutrewrite (Datatypes.S (size (fst (to_bblock (i'::c))) - 1) = size (fst (to_bblock (i'::c)))).
+      unfold size. cutrewrite (length (header (fst (to_bblock (i' :: c)))) = 0). simpl. omega.
+      rewrite to_bblock_noLabel. simpl; auto.
+      rewrite GCNC. discriminate.
+      omega.
+    + destruct (to_basic_inst i) eqn:TBI; [| destruct i; discriminate].
+      erewrite to_bblock_basic; eauto; [| rewrite GCNC; discriminate ].
+      simpl. destruct c as [|i' c]; try discriminate.
+      assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil.
+      cutrewrite (Datatypes.S (size (fst (to_bblock (i'::c))) - 1) = size (fst (to_bblock (i'::c)))).
+      unfold size. cutrewrite (length (header (fst (to_bblock (i' :: c)))) = 0). simpl. omega.
+      rewrite to_bblock_noLabel. simpl; auto.
+      rewrite GCNC. discriminate.
+      omega.
+  - contradict H. destruct i; try discriminate.
+    all: unfold dist_end_block_code; erewrite to_bblock_CFI; eauto; simpl; eauto.
+Qed.
 
 Local Hint Resolve dist_end_block_code_simu_mid_block.
 
@@ -543,7 +542,7 @@ Proof.
     assert (X: Datatypes.S (dist_end_block_code c0) = (size (fst (to_bblock c0)))).
     {
       unfold dist_end_block_code. remember (size _) as siz.
-      assert (siz <> 0%nat). rewrite Heqsiz; apply to_bblock_nonil with (c0 := c) (i := i) (c := c0); auto.
+      assert (siz <> 0%nat). rewrite Heqsiz; subst; apply to_bblock_nonil with (c0 := c) (i := i); auto.
       omega.
     }
 

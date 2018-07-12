@@ -42,7 +42,7 @@ Proof.
       intuition eauto. subst. auto.
 Qed.
 
-Lemma starN_last_step n s t1 s': 
+Lemma starN_tailstep n s t1 s': 
   starN (step L) (globalenv L) n s t1 s' ->
   forall (t t2:trace) s'',
      Step L s' t2 s'' -> t = t1 ** t2 -> starN (step L) (globalenv L) (S n) s t s''.
@@ -95,31 +95,31 @@ Hypothesis simu_end_block:
 
 Local Hint Resolve starN_refl starN_step.
 
-Definition star_in_block (head current: state L1): Prop :=
+Definition follows_in_block (head current: state L1): Prop :=
   dist_end_block head >= dist_end_block current 
   /\ starN (step L1) (globalenv L1) (minus (dist_end_block head) (dist_end_block current)) head E0 current. 
 
-Lemma star_in_block_step (head previous next: state L1):
-  forall t, star_in_block head previous -> Step L1 previous t next -> (dist_end_block previous)<>0 -> star_in_block head next.
+Lemma follows_in_block_step (head previous next: state L1):
+  forall t, follows_in_block head previous -> Step L1 previous t next -> (dist_end_block previous)<>0 -> follows_in_block head next.
 Proof.
   intros t [H1 H2] H3 H4.
   destruct (simu_mid_block _ _ _ H3 H4) as [H5 H6]; subst. 
   constructor 1.
   + omega.
   + cutrewrite (dist_end_block head - dist_end_block next = S (dist_end_block head - dist_end_block previous)).
-    - eapply starN_last_step; eauto.
+    - eapply starN_tailstep; eauto.
     - omega.
 Qed.
 
-Lemma star_in_block_init (head current: state L1):
-  forall t, Step L1 head t current -> (dist_end_block head)<>0 -> star_in_block head current.
+Lemma follows_in_block_init (head current: state L1):
+  forall t, Step L1 head t current -> (dist_end_block head)<>0 -> follows_in_block head current.
 Proof.
   intros t H3 H4.
   destruct (simu_mid_block _ _ _ H3 H4) as [H5 H6]; subst. 
   constructor 1.
   + omega.
   + cutrewrite (dist_end_block head - dist_end_block current = 1).
-    - eapply starN_last_step; eauto.
+    - eapply starN_tailstep; eauto.
     - omega.
 Qed.
 
@@ -127,7 +127,7 @@ Qed.
 Record memostate := {
     real: state L1; 
     memorized: option (state L1);
-    memo_star: forall head, memorized = Some head -> star_in_block head real;
+    memo_star: forall head, memorized = Some head -> follows_in_block head real;
     memo_final: forall r, final_state L1 real r -> memorized = None
 }.
 
@@ -137,7 +137,7 @@ Definition head (s: memostate): state L1 :=
     | Some s' => s'
     end.
 
-Lemma head_star (s: memostate): star_in_block (head s) (real s).
+Lemma head_followed (s: memostate): follows_in_block (head s) (real s).
 Proof.
   destruct s as [rs ms Hs]. simpl.
   destruct ms as [ms|]; unfold head; simpl; auto.
@@ -204,10 +204,10 @@ Proof.
   * intros; discriminate.
   * intros; auto.
   * intros head X; injection X; clear X; intros; subst.
-    eapply star_in_block_step; eauto.
+    eapply follows_in_block_step; eauto.
   * intros r X; erewrite final_states_end_block in H3; intuition eauto.
   * intros head X; injection X; clear X; intros; subst.
-    eapply star_in_block_init; eauto.
+    eapply follows_in_block_init; eauto.
   * intros r X; erewrite final_states_end_block in H3; intuition eauto.
 Qed.
 
@@ -244,9 +244,9 @@ Proof.
     - (* EndBloc *)
       constructor 1.
       destruct (simu_end_block (head s1) t (real s1') s2) as (s2' & H3 & H4); auto.
-      * destruct (head_star s1) as [H4 H3].
+      * destruct (head_followed s1) as [H4 H3].
         cutrewrite (dist_end_block (head s1) - dist_end_block (real s1) = dist_end_block (head s1)) in H3; try omega.
-        eapply starN_last_step; eauto.
+        eapply starN_tailstep; eauto.
       * unfold head; rewrite H2; simpl. intuition eauto. 
 Qed.
 
