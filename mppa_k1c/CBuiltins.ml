@@ -21,13 +21,75 @@ let builtins = {
   Builtins.typedefs = [
     "__builtin_va_list", TPtr(TVoid [], [])
   ];
-  Builtins.functions = [
-    "__builtin_clzll",
-      (TInt(IInt, []), 
-      [TInt(IULongLong, [])], false);
-    "__builtin_k1_stsud",
-      (TInt(IULongLong, []), 
-      [TInt(IULongLong, []); TInt(IULongLong, [])], false);
+  (* The builtin list is inspired from the GCC file builtin_k1.h *)
+  Builtins.functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
+      (* BCU Instructions *)
+      "__builtin_k1_await", (TVoid [], [], false);
+      "__builtin_k1_barrier", (TVoid [], [], false);
+      "__builtin_k1_doze", (TVoid [], [], false);
+        (* No __builtin_k1_get - not compatible with the Asm model *)
+      "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
+      "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
+      "__builtin_k1_invaldtlb", (TVoid [], [], false);
+      "__builtin_k1_invalitlb", (TVoid [], [], false);
+      "__builtin_k1_probetlb", (TVoid [], [], false);
+      "__builtin_k1_readtlb", (TVoid [], [], false);
+      "__builtin_k1_sleep", (TVoid [], [], false);
+      "__builtin_k1_stop", (TVoid [], [], false);
+      "__builtin_k1_syncgroup", (TVoid [], [TInt(IUInt, [])], false);
+      "__builtin_k1_tlbwrite", (TVoid [], [], false);
+
+      (* LSU Instructions *)
+        (* No ACWS - __int128 *)
+      "__builtin_k1_afda", (TInt(IULongLong, []), [TPtr(TVoid [], []); TInt(ILongLong, [])], false);
+      "__builtin_k1_aldc", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_dinval", (TVoid [], [], false);
+      "__builtin_k1_dinvall", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_dtouchl", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_dzerol", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_fence", (TVoid [], [], false);
+      "__builtin_k1_iinval", (TVoid [], [], false);
+      "__builtin_k1_iinvals", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_itouchl", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_lbsu", (TInt(IChar, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_lbzu", (TInt(IUChar, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_ldu", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_lhsu", (TInt(IShort, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_lhzu", (TInt(IUShort, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_lwzu", (TInt(IUInt, []), [TPtr(TVoid [], [])], false);
+
+      (* ALU Instructions *)
+      (* "__builtin_k1_addhp", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
+      (* "__builtin_k1_adds", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
+      (* "__builtin_k1_bwlu", (TInt(IUInt, []), 
+        [TInt(IUInt, []); TInt(IUInt, []); TInt(IUInt, []); TInt(IUInt, []); TInt(IUShort, [])], false); *)
+      (* "__builtin_k1_bwluhp", (TInt(IUInt, []), [TInt(IUInt, []); TInt(IUInt, []); TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_bwluwp", (TInt(IULongLong, []), 
+        [TInt(IULongLong, []); TInt(IULongLong, []); TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_cbs", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_cbsdl", (TInt(ILongLong, []), [TInt(IULongLong, [])], false); *)
+      (* "__builtin_k1_clz", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
+      "__builtin_k1_clzw", (TInt(IInt, []), [TInt(IUInt, [])], false);
+      "__builtin_k1_clzd", (TInt(ILongLong, []), [TInt(IULongLong, [])], false);
+      (* "__builtin_k1_clzdl", (TInt(ILongLong, []), [TInt(IULongLong, [])], false); *)
+      (* "__builtin_k1_cmove", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, []); TInt(IInt, [])], false); *)
+      (* "__builtin_k1_ctz", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
+      "__builtin_k1_ctzw", (TInt(IInt, []), [TInt(IUInt, [])], false);
+      "__builtin_k1_ctzd", (TInt(ILongLong, []), [TInt(IULongLong, [])], false);
+      (* "__builtin_k1_ctzdl", (TInt(ILongLong, []), [TInt(IULongLong, [])], false); *)
+      (* "__builtin_k1_extfz", (TInt(IUInt, []), [TInt(IUInt, []); TInt(IUInt, []); TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_landhp", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, []); TInt(IInt, [])], false); *)
+      (* "__builtin_k1_sat", (TInt(IInt, []), [TInt(IInt, []); TInt(IUChar, [])], false); *)
+      "__builtin_k1_satd", (TInt(ILongLong, []), [TInt(ILongLong, []); TInt(IUChar, [])], false);
+      (* "__builtin_k1_sbfhp", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
+      "__builtin_k1_sbmm8", (TInt(IULongLong, []), [TInt(IULongLong, []); TInt(IULongLong, [])], false);
+      "__builtin_k1_sbmmt8", (TInt(IULongLong, []), [TInt(IULongLong, []); TInt(IULongLong, [])], false);
+      (* "__builtin_k1_sllhps", (TInt(IUInt, []), [TInt(IUInt, []); TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_srahps", (TInt(IUInt, []), [TInt(IUInt, []); TInt(IUInt, [])], false); *)
+      (* "__builtin_k1_stsu", (TInt(IUInt, []), [TInt(IUInt, []); TInt(IUInt, [])], false); *)
+      "__builtin_k1_stsud", (TInt(IULongLong, []), [TInt(IULongLong, []); TInt(IULongLong, [])], false);
+
+
     (* Synchronization *)
 (*  "__builtin_fence",
       (TVoid [], [], false);

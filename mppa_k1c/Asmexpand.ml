@@ -417,13 +417,77 @@ let expand_builtin_inline name args res =
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
      ()
+  (* BCU *)
+  | "__builtin_k1_await", [], BR(IR _) -> emit (PExpand (Pawait))
+  | "__builtin_k1_barrier", [], BR(IR _) -> emit (PExpand (Pbarrier))
+  | "__builtin_k1_doze", [], BR(IR _) -> emit (PExpand (Pdoze))
+  | "__builtin_k1_wfxl", [BA(IR a1); BA(IR a2)], BR(IR _) -> emit (PExpand (Pwfxl(a1, a2)))
+  | "__builtin_k1_wfxm", [BA(IR a1); BA(IR a2)], BR(IR _) -> emit (PExpand (Pwfxm(a1, a2)))
+  | "__builtin_k1_invaldtlb", [], BR(IR _) -> emit (PExpand (Pinvaldtlb))
+  | "__builtin_k1_invalitlb", [], BR(IR _) -> emit (PExpand (Pinvalitlb))
+  | "__builtin_k1_probetlb", [], BR(IR _) -> emit (PExpand (Pprobetlb))
+  | "__builtin_k1_readtlb", [], BR(IR _) -> emit (PExpand (Preadtlb))
+  | "__builtin_k1_sleep", [], BR(IR _) -> emit (PExpand (Psleep))
+  | "__builtin_k1_stop", [], BR(IR _) -> emit (PExpand (Pstop))
+  | "__builtin_k1_syncgroup", [BA(IR a1)], BR(IR _) -> emit (PExpand (Psyncgroup(a1)))
+  | "__builtin_k1_tlbwrite", [], BR(IR _) -> emit (PExpand (Ptlbwrite))
+
+  (* LSU *)
+  | "__builtin_k1_afda", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pafda(r, a1, a2)))
+  | "__builtin_k1_aldc", [BA(IR a1)], BR(IR r) -> emit (PExpand (Paldc(r, a1)))
+  | "__builtin_k1_dinval", [], BR(IR _) -> emit (PExpand (Pdinval))
+  | "__builtin_k1_dinvall", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdinvall(a1)))
+  | "__builtin_k1_dtouchl", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdtouchl(a1)))
+  | "__builtin_k1_dzerol", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdzerol(a1)))
+  | "__builtin_k1_fence", [], BR(IR _) -> emit (PExpand (Pfence))
+  | "__builtin_k1_iinval", [], BR(IR _) -> emit (PExpand (Piinval))
+  | "__builtin_k1_iinvals", [BA(IR a1)], BR(IR _) -> emit (PExpand (Piinvals(a1)))
+  | "__builtin_k1_itouchl", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pitouchl(a1)))
+  | "__builtin_k1_lbsu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plbsu(r, a1)))
+  | "__builtin_k1_lbzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plbzu(r, a1)))
+  | "__builtin_k1_ldu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pldu(r, a1)))
+  | "__builtin_k1_lhsu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plhsu(r, a1)))
+  | "__builtin_k1_lhzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plhzu(r, a1)))
+  | "__builtin_k1_lwzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plwzu(r, a1)))
+
+  (* ALU *)
+  | "__builtin_k1_addhp", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Paddhp(r, a1, a2)))
+  | "__builtin_k1_adds", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Padds(r, a1, a2)))
+  | "__builtin_k1_bwlu", [BA(IR a1); BA(IR a2); BA(IR a3); BA(IR a4); BA(IR a5)], BR(IR r) -> 
+          emit (PExpand (Pbwlu(r, a1, a2, a3, a4, a5)))
+  | "__builtin_k1_bwluhp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
+          emit (PExpand (Pbwluhp(r, a1, a2, a3)))
+  | "__builtin_k1_bwluwp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
+          emit (PExpand (Pbwluwp(r, a1, a2, a3)))
+  | "__builtin_k1_cbs", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pcbs(r, a1)))
+  | "__builtin_k1_cbsdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pcbsdl(r, a1)))
+  | "__builtin_k1_clz", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclz(r, a1)))
+  | "__builtin_k1_clzw", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzw(r, a1)))
+  | "__builtin_k1_clzd", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzd(r, a1)))
+  | "__builtin_k1_clzdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzdl(r, a1)))
+  | "__builtin_k1_cmove", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
+          emit (PExpand (Pcmove(r, a1, a2, a3)))
+  | "__builtin_k1_ctz", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctz(r, a1)))
+  | "__builtin_k1_ctzw", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzw(r, a1)))
+  | "__builtin_k1_ctzd", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzd(r, a1)))
+  | "__builtin_k1_ctzdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzdl(r, a1)))
+  | "__builtin_k1_extfz", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
+          emit (PExpand (Pextfz(r, a1, a2, a3)))
+  | "__builtin_k1_landhp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
+          emit (PExpand (Plandhp(r, a1, a2, a3)))
+  | "__builtin_k1_sat", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psat(r, a1, a2)))
+  | "__builtin_k1_satd", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psatd(r, a1, a2)))
+  | "__builtin_k1_sbfhp", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbfhp(r, a1, a2)))
+  | "__builtin_k1_sbmm8", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbmm8(r, a1, a2)))
+  | "__builtin_k1_sbmmt8", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbmmt8(r, a1, a2)))
+  | "__builtin_k1_sllhps", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psllhps(r, a1, a2)))
+  | "__builtin_k1_srahps", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psrahps(r, a1, a2)))
+  | "__builtin_k1_stsu", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pstsu(r, a1, a2)))
+  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pstsud(r, a1, a2)))
+
   (* Vararg stuff *)
   | "__builtin_va_start", [BA(IR a)], _ ->
      expand_builtin_va_start a
-  | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
-     emit (PExpand (Pclzll(res, a)))
-  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
-     emit (PExpand (Pstsud(res, a1, a2)))
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1

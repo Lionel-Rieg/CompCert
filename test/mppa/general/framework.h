@@ -3,6 +3,17 @@
 
 #include "../lib/prng.c"
 
+#define BEGIN_TEST_N(type, N)\
+    int main(void){\
+        type t[N], c, i, j, S;\
+        srand(0);\
+        S = 0;\
+        for (i = 0 ; i < 100 ; i++){\
+            c = randlong();\
+            for (j = 0 ; j < N ; j++)\
+                t[j] = randlong();\
+    /* END BEGIN_TEST_N */
+
 #define BEGIN_TEST(type)\
     int main(void){\
         type a, b, c, i, S;\
