@@ -87,11 +87,11 @@ End BregEq.
 Module Bregmap := EMap(BregEq).
 
 Inductive preg: Type :=
-  | BaR: breg -> preg                   (**r basic registers   *)
+  | BR: breg -> preg                   (**r basic registers   *)
   | RA: preg                            (**r return address    *)
   | PC: preg.                           (**r program counter   *)
 
-Coercion BaR: breg >-> preg.
+Coercion BR: breg >-> preg.
 
 Lemma preg_eq: forall (x y: preg), {x=y} + {x<>y}.
 Proof. decide equality. apply breg_eq. Defined.
@@ -103,11 +103,11 @@ End PregEq.
 
 Module Pregmap := EMap(PregEq).
 
-Definition bpreg_get {A} (rs: Pregmap.t A): (Bregmap.t A)
-  := fun r => rs (BaR r).
+Definition pregs_to_bregs {A} (rs: Pregmap.t A): (Bregmap.t A)
+  := fun r => rs (BR r).
 
-Definition bpreg_set {A} (rs1: Bregmap.t A) (rs2:Pregmap.t A): Pregmap.t A 
-  := fun r => match r with BaR r => rs1 r | _ => rs2 r end.
+Definition update_pregs {A} (rs1: Pregmap.t A) (rs2:Bregmap.t A): Pregmap.t A 
+  := fun r => match r with BR r => rs2 r | _ => rs1 r end.
 
 
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
@@ -492,7 +492,7 @@ Definition bregset := Bregmap.t val.
 Definition regset := Pregmap.t val.
 
 Definition bregset_cast (rs: regset): bregset
-  := fun r => rs (BaR r).
+  := fun r => rs (BR r).
 
 Coercion bregset_cast: regset >->  bregset.
 
@@ -559,7 +559,7 @@ Arguments outcome: clear implicits.
 
 (** ** Arithmetic Expressions (including comparisons) *)
 
-Inductive signedness: Type := Signed | Unsigned.nextinstr b (bpreg_set rs' rs0)
+Inductive signedness: Type := Signed | Unsigned.
 
 Inductive intsize: Type := Int | Long.
 
@@ -654,7 +654,7 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   | ITeq  => Val.cmpl Ceq v1 v2
   | ITlt  => Val.cmpl Clt v1 v2
   | ITge  => Val.cmpl Cge v1 v2
-  | ITle  => Val.cmpl Cle v1 v2nextinstr b (bpreg_set rs' rs0)
+  | ITle  => Val.cmpl Cle v1 v2
   | ITgt  => Val.cmpl Cgt v1 v2
   | ITneu => Val.cmplu (Mem.valid_pointer m) Cne v1 v2
   | ITequ => Val.cmplu (Mem.valid_pointer m) Ceq v1 v2
@@ -1021,7 +1021,7 @@ end.
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
   match exec_body (body b) rs0 m with
   | Next rs' m' => 
-    let rs1 := nextinstr b (bpreg_set rs' rs0) in
+    let rs1 := nextinstr b (update_pregs rs0 rs') in
     match (exit b) with
     | None => Next rs1 m'
     | Some ic => exec_control f ic rs1 m'
@@ -1114,7 +1114,7 @@ Inductive step: state -> trace -> state -> Prop :=
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (bpreg_set (set_pair (loc_external_result (ef_sig ef) ) res rs) rs)#PC <-- (rs RA) ->
+      rs' = (update_pregs rs (set_pair (loc_external_result (ef_sig ef) ) res rs))#PC <-- (rs RA) ->
       step (State rs m) t (State rs' m').
 
 End RELSEM.
