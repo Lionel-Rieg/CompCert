@@ -33,7 +33,12 @@ Require Import Conventions.
 
 (** * Abstract syntax *)
 
-(** General Purpose registers. *)
+(** General Purpose registers. 
+
+TODO: Au niveau Asmbloc, on pourrait peut-etre reutiliser les registres Mach au lieu des
+gpreg, quitte à ajouter FP, SP, et RTMP dans les registres preg ???
+
+*)
 
 Inductive gpreg: Type :=
   | GPR0:  gpreg | GPR1:  gpreg | GPR2:  gpreg | GPR3:  gpreg | GPR4:  gpreg
@@ -179,7 +184,13 @@ Definition label := positive.
   representable range.  Of course, our K1c generator (file
   [Asmgen]) is careful to respect this range. *)
 
-(** Instructions to be expanded *)
+(** Instructions to be expanded 
+
+TODO: à reclassifier ailleurs ??
+ - builtin: seul dans un bloc (car on ne connaît pas à priori ses dépendances qui sont fixés dans du code Caml non certifié).
+ - loadsymbol: pourrait etre une instruction arithmetique.
+ - Pallocframe/Pfreeframe: pourraient etre des LOAD/STORE(+ARITH) en touchant FP, SP et RTMP.
+*)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
@@ -192,15 +203,14 @@ Inductive ex_instruction : Type :=
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
 .
 
-(* A REVOIR: vu le traitement semantique des builtin, il faut peut-être mieux les mettre a part ?
+(* A REVOIR cf. ci-dessus: builtin tout seul dans un bloc (avec des labels devant).
+
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
 *)
 
 (** The pseudo-instructions are the following:
-
-- [Plabel]: define a code label at the current program point.
 
 - [Ploadsymbol]: load the address of a symbol in an integer register.
   Expands to the [la] assembler pseudo-instruction, which does the right
@@ -436,7 +446,7 @@ Coercion PCtlFlow:  cf_instruction >-> control.
 
 (** * Definition of a bblock *)
 
-Definition non_empty_bblock (body: list basic) (exit: option control)
+Definition non_empty_bblock (body: list basic) (exit: option control): Prop
  := body <> nil \/ exit <> None. (* TODO: use booleans instead of Prop to enforce proof irrelevance in bblock type ? *)
 
 Record bblock := mk_bblock {
@@ -549,7 +559,7 @@ Arguments outcome: clear implicits.
 
 (** ** Arithmetic Expressions (including comparisons) *)
 
-Inductive signedness: Type := Signed | Unsigned.
+Inductive signedness: Type := Signed | Unsigned.nextinstr b (bpreg_set rs' rs0)
 
 Inductive intsize: Type := Int | Long.
 
@@ -644,7 +654,7 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   | ITeq  => Val.cmpl Ceq v1 v2
   | ITlt  => Val.cmpl Clt v1 v2
   | ITge  => Val.cmpl Cge v1 v2
-  | ITle  => Val.cmpl Cle v1 v2
+  | ITle  => Val.cmpl Cle v1 v2nextinstr b (bpreg_set rs' rs0)
   | ITgt  => Val.cmpl Cgt v1 v2
   | ITneu => Val.cmplu (Mem.valid_pointer m) Cne v1 v2
   | ITequ => Val.cmplu (Mem.valid_pointer m) Ceq v1 v2
@@ -665,6 +675,8 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
 (** Execution of arith instructions 
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
+
+FIXME: replace parameter "m" by a function corresponding to the resul of "(Mem.valid_pointer m)"
 
 *)
 
@@ -841,7 +853,7 @@ Fixpoint find_pos (pos: Z) (c: code) {struct c} : option bblock :=
   match c with
   | nil => None
   | b :: il => 
-    if zlt pos 0 then None
+    if zlt pos 0 then None  (* NOTE: It is impossible to branch inside a block *)
     else if zeq pos 0 then Some b
     else find_pos (pos - (size b)) il
   end.
@@ -873,6 +885,7 @@ Proof.
   unfold is_label; destruct (in_dec lbl (header bb)); simpl; intuition.
 Qed.
 
+(** convert a label into a position in the code *)
 Fixpoint label_pos (lbl: label) (pos: Z) (c: code) {struct c} : option Z :=
   match c with
   | nil => None
@@ -902,8 +915,12 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
   end.
 
 
-(** Execution of a single instruction [i] in initial state [rs] and
-    [m].  Return updated state.  For instructions that correspond tobuiltin
+(** Execution of a single control-flow instruction [i] in initial state [rs] and
+    [m].  Return updated state.
+
+    As above: PC is assumed to be incremented on the next block before the control-flow instruction
+
+    For instructions that correspond tobuiltin
     actual RISC-V instructions, the cases are straightforward
     transliterations of the informal descriptions given in the RISC-V
     user-mode specification.  For pseudo-instructions, refer to the
