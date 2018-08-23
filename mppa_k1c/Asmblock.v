@@ -490,7 +490,7 @@ Definition genv := Genv.t fundef unit.
 
 Notation "a # b" := (a b) (at level 1, only parsing) : asm.
 Notation "a # b <- c" := (Bregmap.set b c a) (at level 1, b at next level) : asm.
-Notation "a # b <= c" := (Pregmap.set b c a) (at level 1, b at next level) : asm.
+Notation "a # b <-- c" := (Pregmap.set b c a) (at level 1, b at next level) : asm.
 
 Open Scope asm.
 
@@ -500,7 +500,7 @@ Open Scope asm.
 Fixpoint undef_regs (l: list preg) (rs: regset) : regset :=
   match l with
   | nil => rs
-  | r :: l' => undef_regs l' (rs#r <= Vundef)
+  | r :: l' => undef_regs l' (rs#r <-- Vundef)
   end.
 *)
 
@@ -834,7 +834,7 @@ Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
   instruction ([nextinstr]) or branching to a label ([goto_label]). *)
 
 Definition nextinstr (b:bblock) (rs: regset) :=
-  rs#PC <= (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
+  rs#PC <-- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
 
 (** Looking up instructions in a code sequence by position. *)
 Fixpoint find_pos (pos: Z) (c: code) {struct c} : option bblock :=
@@ -884,7 +884,7 @@ Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome
   | None => Stuck
   | Some pos =>
       match rs#PC with
-      | Vptr b ofs => Next (rs#PC <= (Vptr b (Ptrofs.repr pos))) m
+      | Vptr b ofs => Next (rs#PC <-- (Vptr b (Ptrofs.repr pos))) m
       | _          => Stuck
       end
   end.
@@ -919,22 +919,22 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
   match ic with
   | Pget rd ra =>
     match ra with
-    | RA => Next (rs#rd <= (rs#ra)) m
+    | RA => Next (rs#rd <-- (rs#ra)) m
     | _  => Stuck
     end
   | Pset ra rd =>
     match ra with
-    | RA => Next (rs#ra <= (rs#rd)) m
+    | RA => Next (rs#ra <-- (rs#rd)) m
     | _  => Stuck
     end
 
 (** Branch Control Unit instructions *)
   | Pret =>
-      Next (rs#PC <= (rs#RA)) m
+      Next (rs#PC <-- (rs#RA)) m
   | Pcall s =>
-      Next (rs#RA <= (Val.offset_ptr (rs#PC) Ptrofs.one)#PC <= (Genv.symbol_address ge s Ptrofs.zero)) m
+      Next (rs#RA <-- (rs#PC) #PC <-- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pgoto s =>
-      Next (rs#PC <= (Genv.symbol_address ge s Ptrofs.zero)) m
+      Next (rs#PC <-- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pj_l l =>
       goto_label f l rs m
   | Pcb bt r l =>
@@ -957,7 +957,7 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
       let sp := (Vptr stk Ptrofs.zero) in
       match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
       | None => Stuck
-      | Some m2 => Next (rs #FP <= (rs SP) #SP <= sp #GPR31 <= Vundef) m2
+      | Some m2 => Next (rs #FP <-- (rs SP) #SP <-- sp #GPR31 <-- Vundef) m2
       end
   | Pfreeframe sz pos =>
       match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
@@ -967,27 +967,27 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
           | Vptr stk ofs =>
               match Mem.free m stk 0 sz with
               | None => Stuck
-              | Some m' => Next (rs#SP <= v #GPR31 <= Vundef) m'
+              | Some m' => Next (rs#SP <-- v #GPR31 <-- Vundef) m'
               end
           | _ => Stuck
           end
       end
   | Ploadsymbol rd s ofs =>
-      Next (rs#rd <= (Genv.symbol_address ge s ofs)) m
+      Next (rs#rd <-- (Genv.symbol_address ge s ofs)) m
 (*| Ploadsymbol_high rd s ofs =>
-      Next (rs#rd <= (high_half ge s ofs)) m
+      Next (rs#rd <-- (high_half ge s ofs)) m
   | Ploadli rd i =>
-      Next (rs#GPR31 <= Vundef #rd <= (Vlong i)) m
+      Next (rs#GPR31 <-- Vundef #rd <-- (Vlong i)) m
   | Ploadfi rd f =>
-      Next (rs#GPR31 <= Vundef #rd <= (Vfloat f)) m
+      Next (rs#GPR31 <-- Vundef #rd <-- (Vfloat f)) m
   | Ploadsi rd f =>
-      Next (rs#GPR31 <= Vundef #rd <= (Vsingle f)) m
+      Next (rs#GPR31 <-- Vundef #rd <-- (Vsingle f)) m
   | Pbtbl r tbl =>
       match rs r with
       | Vint n =>
           match list_nth_z tbl (Int.unsigned n) with
           | None => Stuck
-          | Some lbl => goto_label f lbl (rs#GPR5 <= Vundef #GPR31 <= Vundef) m
+          | Some lbl => goto_label f lbl (rs#GPR5 <-- Vundef #GPR31 <-- Vundef) m
           endmap_rpair
       | _ => Stuck
       end
@@ -1097,7 +1097,7 @@ Inductive step: state -> trace -> state -> Prop :=
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (bpreg_set (set_pair (loc_external_result (ef_sig ef) ) res rs) rs)#PC <= (rs RA) ->
+      rs' = (bpreg_set (set_pair (loc_external_result (ef_sig ef) ) res rs) rs)#PC <-- (rs RA) ->
       step (State rs m) t (State rs' m').
 
 End RELSEM.
@@ -1109,9 +1109,9 @@ Inductive initial_state (p: program): state -> Prop :=
       let ge := Genv.globalenv p in
       let rs0 :=
         (Pregmap.init Vundef)
-        # PC <= (Genv.symbol_address ge p.(prog_main) Ptrofs.zero)
-        # SP <= Vnullptr
-        # RA <= Vnullptr in
+        # PC <-- (Genv.symbol_address ge p.(prog_main) Ptrofs.zero)
+        # SP <-- Vnullptr
+        # RA <-- Vnullptr in
       Genv.init_mem p = Some m0 ->
       initial_state p (State rs0 m0).
 
