@@ -87,11 +87,11 @@ End BregEq.
 Module Bregmap := EMap(BregEq).
 
 Inductive preg: Type :=
-  | BR: breg -> preg                   (**r basic registers   *)
+  | BaR: breg -> preg                   (**r basic registers   *)
   | RA: preg                            (**r return address    *)
   | PC: preg.                           (**r program counter   *)
 
-Coercion BR: breg >-> preg.
+Coercion BaR: breg >-> preg.
 
 Lemma preg_eq: forall (x y: preg), {x=y} + {x<>y}.
 Proof. decide equality. apply breg_eq. Defined.
@@ -104,10 +104,10 @@ End PregEq.
 Module Pregmap := EMap(PregEq).
 
 Definition pregs_to_bregs {A} (rs: Pregmap.t A): (Bregmap.t A)
-  := fun r => rs (BR r).
+  := fun r => rs (BaR r).
 
 Definition update_pregs {A} (rs1: Pregmap.t A) (rs2:Bregmap.t A): Pregmap.t A 
-  := fun r => match r with BR r => rs2 r | _ => rs1 r end.
+  := fun r => match r with BaR r => rs2 r | _ => rs1 r end.
 
 
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
@@ -177,6 +177,7 @@ Inductive offset : Type :=
 
 Definition label := positive.
 
+(* FIXME - rewrite the comment *)
 (** A note on immediates: there are various constraints on immediate
   operands to K1c instructions.  We do not attempt to capture these
   restrictions in the abstract syntax nor in the semantics.  The
@@ -197,40 +198,17 @@ Inductive ex_instruction : Type :=
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
   | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
 (*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
-  | Ploadli (rd: ireg) (i: int64)                   (**r load an immediate int64 *)
-  | Ploadfi (rd: freg) (f: float)                   (**r load an immediate float *)
-  | Ploadsi (rd: freg) (f: float32)                 (**r load an immediate single *)
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
-.
-
-(* A REVOIR cf. ci-dessus: builtin tout seul dans un bloc (avec des labels devant).
 
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
-*)
 
 (** The pseudo-instructions are the following:
 
 - [Ploadsymbol]: load the address of a symbol in an integer register.
   Expands to the [la] assembler pseudo-instruction, which does the right
   thing even if we are in PIC mode.
-
-- [Ploadli rd ival]: load an immediate 64-bit integer into an integer
-  register rd.  Expands to a load from an address in the constant data section,
-  using the integer register x31 as temporary:
-<<
-        lui x31, %hi(lbl)
-        ld rd, %lo(lbl)(x31)
-lbl:
-        .quad ival
->>
-
-- [Ploadfi rd fval]: similar to [Ploadli] but loads a double FP constant fval
-  into a float register rd.
-
-- [Ploadsi rd fval]: similar to [Ploadli] but loads a singe FP constant fval
-  into a float register rd.
 
 - [Pallocframe sz pos]: in the formal semantics, this
   pseudo-instruction allocates a memory block with bounds [0] and
@@ -266,21 +244,6 @@ lbl:
 table:  .long   table[0], table[1], ...
 >>
   Note that [reg] contains 4 times the index of the desired table entry.
-
-- [Pseq rd rs1 rs2]: since unsigned comparisons have particular
-  semantics for pointers, we cannot encode equality directly using
-  xor/sub etc, which have only integer semantics.
-<<
-        xor     rd, rs1, rs2
-        sltiu   rd, rd, 1
->>
-  The [xor] is omitted if one of [rs1] and [rs2] is [x0].
-
-- [Psne rd rs1 rs2]: similarly for unsigned inequality.
-<<
-        xor     rd, rs1, rs2
-        sltu    rd, x0, rd
->>
 *)
 
 (** Control Flow instructions *)
@@ -289,9 +252,11 @@ Inductive cf_instruction : Type :=
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
+
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
   | Pj_l    (l: label)                              (**r jump to label *)
+
   (* Conditional branches *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
   | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
@@ -449,11 +414,20 @@ Coercion PCtlFlow:  cf_instruction >-> control.
 Definition non_empty_bblock (body: list basic) (exit: option control): Prop
  := body <> nil \/ exit <> None. (* TODO: use booleans instead of Prop to enforce proof irrelevance in bblock type ? *)
 
+Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
+  exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
+
+Definition wf_bblock (body: list basic) (exit: option control) :=
+  non_empty_bblock body exit /\ builtin_alone body exit.
+
+(** A bblock is well-formed if he contains at least one instruction,
+    and if there is a builtin then it must be alone in this bblock. *)
+
 Record bblock := mk_bblock {
   header: list label;
   body: list basic;
   exit: option control;
-  correct: non_empty_bblock body exit
+  correct: wf_bblock body exit
 }.
 
 (* FIXME: redundant with definition in Machblock *)
@@ -469,8 +443,28 @@ Definition length_opt {A} (o: option A) : nat :=
 *)
 Definition size (b:bblock): Z := Z.of_nat ((length (body b))+(length_opt (exit b))).
 
+Lemma length_nonil {A: Type} : forall l:(list A), l <> nil -> (length l > 0)%nat.
+Proof.
+  intros. destruct l; try (contradict H; auto; fail).
+  simpl. omega.
+Qed.
+
+Lemma to_nat_pos : forall z:Z, (Z.to_nat z > 0)%nat -> z > 0.
+Proof.
+  intros. destruct z; auto.
+  - contradict H. simpl. apply gt_irrefl.
+  - apply Zgt_pos_0.
+  - contradict H. simpl. apply gt_irrefl.
+Qed.
+
 Lemma size_positive (b:bblock): size b > 0.
-Admitted. (* TODO *)
+Proof.
+  unfold size. apply to_nat_pos. rewrite Nat2Z.id.
+  destruct b as [h b e COR]. simpl. inversion COR. inversion H.
+  - assert ((length b > 0)%nat). apply length_nonil. auto.
+    omega.
+  - destruct e; simpl; try omega. contradict H; simpl; auto.
+Qed.
 
 Definition code := list bblock.
 
@@ -492,7 +486,7 @@ Definition bregset := Bregmap.t val.
 Definition regset := Pregmap.t val.
 
 Definition bregset_cast (rs: regset): bregset
-  := fun r => rs (BR r).
+  := fun r => rs (BaR r).
 
 Coercion bregset_cast: regset >->  bregset.
 
@@ -506,13 +500,13 @@ Open Scope asm.
 
 
 (** Undefining some registers *)
-(* FIXME
+
 Fixpoint undef_regs (l: list preg) (rs: regset) : regset :=
   match l with
   | nil => rs
   | r :: l' => undef_regs l' (rs#r <-- Vundef)
   end.
-*)
+
 
 (** Assigning a register pair *)
 Definition set_pair (p: rpair breg) (v: val) (rs: bregset) : bregset :=
@@ -521,27 +515,25 @@ Definition set_pair (p: rpair breg) (v: val) (rs: bregset) : bregset :=
   | Twolong rhi rlo => rs#rhi <- (Val.hiword v) #rlo <- (Val.loword v)
   end.
 
-(* TODO: Is it still useful ??
+(* TODO: Is it still useful ?? *)
+
 
 (** Assigning multiple registers *)
 
-Fixpoint set_regs (rl: list preg) (vl: list val) (rs: regset) : regset :=
+(* Fixpoint set_regs (rl: list preg) (vl: list val) (rs: regset) : regset :=
   match rl, vl with
   | r1 :: rl', v1 :: vl' => set_regs rl' vl' (rs#r1 <- v1)
   | _, _ => rs
   end.
-
+ *)
 (** Assigning the result of a builtin *)
 
 Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
   match res with
-  | BR r => rs#r <- v
+  | BR r => rs#r <-- v
   | BR_none => rs
   | BR_splitlong hi lo => set_res lo (Val.loword v) (set_res hi (Val.hiword v) rs)
   end.
-
-*)
-
 
 Section RELSEM.
 
@@ -843,19 +835,19 @@ Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
   end.
 
 (** Manipulations over the [PC] register: continuing with the next
-  instruction ([nextinstr]) or branching to a label ([goto_label]). *)
+  instruction ([nextblock]) or branching to a label ([goto_label]). *)
 
-Definition nextinstr (b:bblock) (rs: regset) :=
+Definition nextblock (b:bblock) (rs: regset) :=
   rs#PC <-- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
 
-(** Looking up instructions in a code sequence by position. *)
-Fixpoint find_pos (pos: Z) (c: code) {struct c} : option bblock :=
+(** Looking up bblocks in a code sequence by position. *)
+Fixpoint find_bblock (pos: Z) (c: code) {struct c} : option bblock :=
   match c with
   | nil => None
   | b :: il => 
     if zlt pos 0 then None  (* NOTE: It is impossible to branch inside a block *)
     else if zeq pos 0 then Some b
-    else find_pos (pos - (size b)) il
+    else find_bblock (pos - (size b)) il
   end.
 
 
@@ -991,37 +983,14 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
       end
   | Ploadsymbol rd s ofs =>
       Next (rs#rd <-- (Genv.symbol_address ge s ofs)) m
-(*| Ploadsymbol_high rd s ofs =>
-      Next (rs#rd <-- (high_half ge s ofs)) m
-  | Ploadli rd i =>
-      Next (rs#GPR31 <-- Vundef #rd <-- (Vlong i)) m
-  | Ploadfi rd f =>
-      Next (rs#GPR31 <-- Vundef #rd <-- (Vfloat f)) m
-  | Ploadsi rd f =>
-      Next (rs#GPR31 <-- Vundef #rd <-- (Vsingle f)) m
-  | Pbtbl r tbl =>
-      match rs r with
-      | Vint n =>
-          match list_nth_z tbl (Int.unsigned n) with
-          | None => Stuck
-          | Some lbl => goto_label f lbl (rs#GPR5 <-- Vundef #GPR31 <-- Vundef) m
-          endmap_rpair
-      | _ => Stuck
-      end
-*)
-
-(* FIXME.
-
-| Pbuiltin ef args res =>
+  | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
-*)
-
 end.
 
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
   match exec_body (body b) rs0 m with
   | Next rs' m' => 
-    let rs1 := nextinstr b (update_pregs rs0 rs') in
+    let rs1 := nextblock b (update_pregs rs0 rs') in
     match (exit b) with
     | None => Next rs1 m'
     | Some ic => exec_control f ic rs1 m'
@@ -1051,6 +1020,8 @@ Definition breg_of (r: mreg) : breg :=
   | R55 => GPR55 | R56 => GPR56 | R57 => GPR57 | R58 => GPR58 | R59  => GPR59
   | R60 => GPR60 | R61 => GPR61 | R62 => GPR62 | R63 => GPR63
   end.
+
+Definition preg_of (r: mreg) : preg := breg_of r.
 
 (** Extract the values of the arguments of an external call.
     We exploit the calling conventions from module [Conventions], except that
@@ -1086,28 +1057,33 @@ Definition loc_external_result (sg: signature) : rpair breg :=
 Inductive state: Type :=
   | State: regset -> mem -> state.
 
+
+(** TODO
+ * For now, we consider a builtin is alone in a basic block.
+ * Perhaps there is a way to avoid that ?
+ *)
+
 Inductive step: state -> trace -> state -> Prop :=
   | exec_step_internal:
       forall b ofs f bi rs m rs' m',
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_pos (Ptrofs.unsigned ofs) (fn_code f) = Some bi ->
+      find_bblock (Ptrofs.unsigned ofs) (fn_code f) = Some bi ->
       exec_bblock f bi rs m = Next rs' m' ->
       step (State rs m) E0 (State rs' m')
-(* TODO
   | exec_step_builtin:
-      forall b ofs f ef args res rs m vargs t vres rs' m',
+      forall b ofs f ef args res rs m vargs t vres rs' m' bi,
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_instr (Ptrofs.unsigned ofs) f.(fn_bundles) = Some (A:=instruction) (Pbuiltin ef args res) ->
+      find_bblock (Ptrofs.unsigned ofs) f.(fn_code) = Some bi ->
+      exit bi = Some (PExpand (Pbuiltin ef args res)) ->
       eval_builtin_args ge rs (rs SP) m args vargs ->
       external_call ef ge vargs m t vres m' ->
-      rs' = nextinstr
+      rs' = nextblock bi
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
-                   (rs#GPR31 <- Vundef))) ->
+                   (rs#GPR31 <-- Vundef))) ->
       step (State rs m) t (State rs' m')
-*)
   | exec_step_external:
       forall b ef args res rs m t rs' m',
       rs PC = Vptr b Ptrofs.zero ->
