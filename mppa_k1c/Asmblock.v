@@ -33,11 +33,7 @@ Require Import Conventions.
 
 (** * Abstract syntax *)
 
-(** General Purpose registers. 
-
-TODO: Au niveau Asmbloc, on pourrait peut-etre reutiliser les registres Mach au lieu des
-gpreg, quitte à ajouter FP, SP, et RTMP dans les registres preg ???
-
+(** General Purpose registers.
 *)
 
 Inductive gpreg: Type :=
@@ -185,18 +181,10 @@ Definition label := positive.
   representable range.  Of course, our K1c generator (file
   [Asmgen]) is careful to respect this range. *)
 
-(** Instructions to be expanded 
-
-TODO: à reclassifier ailleurs ??
- - builtin: seul dans un bloc (car on ne connaît pas à priori ses dépendances qui sont fixés dans du code Caml non certifié).
- - loadsymbol: pourrait etre une instruction arithmetique.
- - Pallocframe/Pfreeframe: pourraient etre des LOAD/STORE(+ARITH) en touchant FP, SP et RTMP.
+(** Instructions to be expanded in control-flow 
 *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
-  | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
-  | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
-  | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
 (*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
 
@@ -204,7 +192,10 @@ Inductive ex_instruction : Type :=
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
 
-(** The pseudo-instructions are the following:
+(** FIXME: comment not up to date !
+
+
+ The pseudo-instructions are the following:
 
 - [Ploadsymbol]: load the address of a symbol in an integer register.
   Expands to the [la] assembler pseudo-instruction, which does the right
@@ -303,6 +294,7 @@ Coercion PStoreRRO:       store_name_rro        >-> Funclass.
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
   | Pcvtw2l                                         (**r Convert Word to Long *)
+  | Ploadsymbol (id: ident) (ofs: ptrofs)           (**r load the address of a symbol *)
 .
 
 Inductive arith_name_rr : Type :=
@@ -390,9 +382,11 @@ Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
 
 Inductive basic : Type :=
+  | PArith          (i: ar_instruction)
   | PLoad           (i: ld_instruction)
   | PStore          (i: st_instruction)
-  | PArith          (i: ar_instruction)
+  | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
+  | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
 .
 
 Coercion PLoad:         ld_instruction >-> basic.
@@ -537,6 +531,8 @@ Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
 
 Section RELSEM.
 
+Variable ge: genv.
+
 (** The semantics is purely small-step and defined as a function
   from the current state (a register set + a memory state)
   to either [Next rs' m'] where [rs'] and [m'] are the updated register
@@ -677,8 +673,9 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: bregset) (m: mem) : bregse
   | PArithR n d =>
       match n with
       | Pcvtw2l => rs#d <- (Val.longofint rs#d)
+      | Ploadsymbol s ofs => rs#d <- (Genv.symbol_address ge s ofs)
       end
-  
+
   | PArithRR n d s =>
       match n with
       | Pmv => rs#d <- (rs#s)
@@ -748,8 +745,6 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: bregset) (m: mem) : bregse
       | Pxoril  => rs#d <- (Val.xorl  rs#s (Vlong i))
       end
   end.
-
-Variable ge: genv.
 
 (** * load/store *)
 
@@ -822,6 +817,29 @@ Definition exec_basic_instr (bi: basic) (rs: bregset) (m: mem) : outcome bregset
         | Pfss => exec_store Mfloat32 rs m s a ofs
         | Pfsd => exec_store Mfloat64 rs m s a ofs
       end
+
+  | Pallocframe sz pos =>
+      let (m1, stk) := Mem.alloc m 0 sz in
+      let sp := (Vptr stk Ptrofs.zero) in
+      match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
+      | None => Stuck
+      | Some m2 => Next (rs #FP <- (rs SP) #SP <- sp #GPR31 <- Vundef) m2
+      end
+
+  | Pfreeframe sz pos =>
+      match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
+      | None => Stuck
+      | Some v =>
+          match rs SP with
+          | Vptr stk ofs =>
+              match Mem.free m stk 0 sz with
+              | None => Stuck
+              | Some m' => Next (rs#SP <- v #GPR31 <- Vundef) m'
+              end
+          | _ => Stuck
+          end
+      end
+
    end.
 
 Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
@@ -961,28 +979,6 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
 
 
 (** Pseudo-instructions *)
-  | Pallocframe sz pos =>
-      let (m1, stk) := Mem.alloc m 0 sz in
-      let sp := (Vptr stk Ptrofs.zero) in
-      match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
-      | None => Stuck
-      | Some m2 => Next (rs #FP <-- (rs SP) #SP <-- sp #GPR31 <-- Vundef) m2
-      end
-  | Pfreeframe sz pos =>
-      match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
-      | None => Stuck
-      | Some v =>
-          match rs SP with
-          | Vptr stk ofs =>
-              match Mem.free m stk 0 sz with
-              | None => Stuck
-              | Some m' => Next (rs#SP <-- v #GPR31 <-- Vundef) m'
-              end
-          | _ => Stuck
-          end
-      end
-  | Ploadsymbol rd s ofs =>
-      Next (rs#rd <-- (Genv.symbol_address ge s ofs)) m
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
 end.
