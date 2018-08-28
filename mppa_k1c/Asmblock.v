@@ -411,7 +411,7 @@ Definition non_empty_bblock (body: list basic) (exit: option control): Prop
 Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
 
-Definition wf_bblock (body: list basic) (exit: option control) :=
+Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
   non_empty_bblock body exit /\ builtin_alone body exit.
 
 (** A bblock is well-formed if he contains at least one instruction,
@@ -421,7 +421,7 @@ Record bblock := mk_bblock {
   header: list label;
   body: list basic;
   exit: option control;
-  correct: wf_bblock body exit
+  correct: wf_bblock header body exit
 }.
 
 (* FIXME: redundant with definition in Machblock *)
@@ -460,13 +460,43 @@ Proof.
   - destruct e; simpl; try omega. contradict H; simpl; auto.
 Qed.
 
-Definition code := list bblock.
+Definition bblocks := list bblock.
 
-Record function : Type := mkfunction { fn_sig: signature; fn_code: code }.
+Record function : Type := mkfunction { fn_sig: signature; fn_blocks: bblocks }.
 Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.
 
+Inductive instruction : Type :=
+  | PBasic    (i: basic)
+  | PControl  (i: control)
+.
 
+Coercion PBasic:    basic >-> instruction.
+Coercion PControl:  control >-> instruction.
+
+Definition code := list instruction.
+
+
+(** * Utility for Asmblockgen *)
+
+Example bblock_single_basic_correct : forall i, wf_bblock nil (i::nil) None.
+Proof.
+  intros. split. left; discriminate. discriminate.
+Qed.
+
+Example bblock_single_control_correct : forall i, wf_bblock nil nil (Some i).
+Proof.
+  intros. split. right; discriminate.
+  unfold builtin_alone. intros. auto.
+Qed.
+
+Definition bblock_single_inst (i: instruction) :=
+  match i with
+  | PBasic b => {| header:=nil; body:=(b::nil); exit:=None;
+                    correct:=bblock_single_basic_correct b |}
+  | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl);
+                    correct:=bblock_single_control_correct ctl |}
+  end.
 
 (** * Operational semantics *)
 
@@ -859,8 +889,8 @@ Definition nextblock (b:bblock) (rs: regset) :=
   rs#PC <-- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
 
 (** Looking up bblocks in a code sequence by position. *)
-Fixpoint find_bblock (pos: Z) (c: code) {struct c} : option bblock :=
-  match c with
+Fixpoint find_bblock (pos: Z) (lb: bblocks) {struct lb} : option bblock :=
+  match lb with
   | nil => None
   | b :: il => 
     if zlt pos 0 then None  (* NOTE: It is impossible to branch inside a block *)
@@ -896,14 +926,14 @@ Proof.
 Qed.
 
 (** convert a label into a position in the code *)
-Fixpoint label_pos (lbl: label) (pos: Z) (c: code) {struct c} : option Z :=
-  match c with
+Fixpoint label_pos (lbl: label) (pos: Z) (lb: bblocks) {struct lb} : option Z :=
+  match lb with
   | nil => None
-  | b :: c' => if is_label lbl b then Some pos else label_pos lbl (pos + (size b)) c'
+  | b :: lb' => if is_label lbl b then Some pos else label_pos lbl (pos + (size b)) lb'
   end.
 
 Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome regset :=
-  match label_pos lbl 0 (fn_code f) with
+  match label_pos lbl 0 (fn_blocks f) with
   | None => Stuck
   | Some pos =>
       match rs#PC with
@@ -1064,14 +1094,14 @@ Inductive step: state -> trace -> state -> Prop :=
       forall b ofs f bi rs m rs' m',
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_bblock (Ptrofs.unsigned ofs) (fn_code f) = Some bi ->
+      find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bi ->
       exec_bblock f bi rs m = Next rs' m' ->
       step (State rs m) E0 (State rs' m')
   | exec_step_builtin:
       forall b ofs f ef args res rs m vargs t vres rs' m' bi,
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_bblock (Ptrofs.unsigned ofs) f.(fn_code) = Some bi ->
+      find_bblock (Ptrofs.unsigned ofs) f.(fn_blocks) = Some bi ->
       exit bi = Some (PExpand (Pbuiltin ef args res)) ->
       eval_builtin_args ge rs (rs SP) m args vargs ->
       external_call ef ge vargs m t vres m' ->
