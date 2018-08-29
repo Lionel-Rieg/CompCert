@@ -1174,6 +1174,8 @@ Inductive final_state: state -> int -> Prop :=
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
 
+Axiom semantics_determinate: forall p, determinate (semantics p).
+
 (** Determinacy of the [Asm] semantics. *)
 
 (* TODO.

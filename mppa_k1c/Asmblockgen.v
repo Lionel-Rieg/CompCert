@@ -58,7 +58,7 @@ Inductive immed64 : Type :=
 (* For now, let's suppose all instructions of K1c can handle 64-bits immediate *)
 Definition make_immed64 (val: int64) := Imm64_single val.
 
-Notation "a ::: b" := (cons (A:=instruction) a b) (at level 49, right associativity).
+Notation "a ::g b" := (cons (A:=instruction) a b) (at level 49, right associativity).
 Notation "a ::i b" := (cons (A:=basic) a b) (at level 49, right associativity).
 Notation "a ::b lb" := ((bblock_single_inst a) :: lb) (at level 49, right associativity).
 
@@ -127,11 +127,11 @@ Definition addptrofs (rd rs: ireg) (n: ptrofs) :=
 
 Definition transl_comp
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
-  Pcompw (itest_for_cmp c s) RTMP r1 r2 ::: Pcb BTwnez RTMP lbl ::: k.
+  Pcompw (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
 
 Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
-  Pcompl (itest_for_cmp c s) RTMP r1 r2 ::: Pcb BTwnez RTMP lbl ::: k.
+  Pcompl (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
 
 Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
@@ -147,10 +147,10 @@ Definition select_comp (n: int) (c: comparison) : option comparison :=
 Definition transl_opt_compuimm
     (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
   match select_comp n c with
-  | Some Ceq => Pcbu BTweqz r1 lbl ::: k
-  | Some Cne => Pcbu BTwnez r1 lbl ::: k
+  | Some Ceq => Pcbu BTweqz r1 lbl ::g k
+  | Some Cne => Pcbu BTwnez r1 lbl ::g k
   | Some _   => nil (* Never happens *)
-  | None     => loadimm32 RTMP n ::: (transl_comp c Unsigned r1 RTMP lbl k)
+  | None     => loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
   end
   .
 
@@ -168,10 +168,10 @@ Definition select_compl (n: int64) (c: comparison) : option comparison :=
 Definition transl_opt_compluimm
     (n: int64) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
   match select_compl n c with
-  | Some Ceq => Pcbu BTdeqz r1 lbl ::: k
-  | Some Cne => Pcbu BTdnez r1 lbl ::: k
+  | Some Ceq => Pcbu BTdeqz r1 lbl ::g k
+  | Some Cne => Pcbu BTdnez r1 lbl ::g k
   | Some _   => nil (* Never happens *)
-  | None     => loadimm64 RTMP n ::: (transl_compl c Unsigned r1 RTMP lbl k)
+  | None     => loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
   end
   .
 
@@ -190,9 +190,9 @@ Definition transl_cbranch
   | Ccompimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (if Int.eq n Int.zero then
-            Pcb (btest_for_cmpswz c) r1 lbl ::: k
+            Pcb (btest_for_cmpswz c) r1 lbl ::g k
           else
-            loadimm32 RTMP n ::: (transl_comp c Signed r1 RTMP lbl k)
+            loadimm32 RTMP n ::g (transl_comp c Signed r1 RTMP lbl k)
          )
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
@@ -206,9 +206,9 @@ Definition transl_cbranch
   | Ccomplimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (if Int64.eq n Int64.zero then
-            Pcb (btest_for_cmpsdz c) r1 lbl ::: k
+            Pcb (btest_for_cmpsdz c) r1 lbl ::g k
           else
-            loadimm64 RTMP n ::: (transl_compl c Signed r1 RTMP lbl k)
+            loadimm64 RTMP n ::g (transl_compl c Signed r1 RTMP lbl k)
          )
 (*| Ccompf c, f1 :: f2 :: nil =>
       do r1 <- freg_of f1; do r2 <- freg_of f2;
@@ -734,7 +734,7 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
 
 Definition make_epilogue (f: Machblock.function) (k: code) :=
   (loadind_ptr SP f.(fn_retaddr_ofs) GPR8) 
-  ::: Pset RA GPR8 ::: Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) ::: k.
+  ::g Pset RA GPR8 ::g Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) ::g k.
 
 (** Translation of a Mach instruction. *)
 
@@ -767,23 +767,23 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
 (*| Mcall sig (inl r) =>
       do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)
 *)  | MBcall sig (inr symb) =>
-        OK ((Pcall symb) ::: nil)
+        OK ((Pcall symb) ::g nil)
 (*| Mtailcall sig (inl r) =>
       do r1 <- ireg_of r;
       OK (make_epilogue f (Pcall :: k))
 *)  | MBtailcall sig (inr symb) =>
-        OK (make_epilogue f ((Pgoto symb) ::: nil))
+        OK (make_epilogue f ((Pgoto symb) ::g nil))
     | MBbuiltin ef args res =>
-        OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) ::: nil)
+        OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) ::g nil)
 (*   | Mlabel lbl =>
       OK (Plabel lbl ::i k) *)
     | MBgoto lbl =>
-        OK (Pj_l lbl ::: nil)
+        OK (Pj_l lbl ::g nil)
     | MBcond cond args lbl =>
         transl_cbranch cond args lbl nil
 (*| Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
 *)  | MBreturn =>
-        OK (make_epilogue f (Pret ::: nil))
+        OK (make_epilogue f (Pret ::g nil))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)
     | _ =>
         Error (msg "Asmgen.transl_instr")
