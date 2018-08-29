@@ -66,6 +66,7 @@ Proof. decide equality. Defined.
 Inductive breg: Type :=
   | IR: gpreg -> breg                   (**r integer registers *)
   | FR: gpreg -> breg                   (**r float registers   *)
+  | RA: breg
   .
 
 Coercion IR: gpreg >-> breg.
@@ -84,7 +85,6 @@ Module Bregmap := EMap(BregEq).
 
 Inductive preg: Type :=
   | BaR: breg -> preg                   (**r basic registers   *)
-  | RA: preg                            (**r return address    *)
   | PC: preg.                           (**r program counter   *)
 
 Coercion BaR: breg >-> preg.
@@ -239,8 +239,6 @@ table:  .long   table[0], table[1], ...
 
 (** Control Flow instructions *)
 Inductive cf_instruction : Type :=
-  | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
-  | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
 
@@ -387,6 +385,8 @@ Inductive basic : Type :=
   | PStore          (i: st_instruction)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
+  | Pget    (rd: ireg) (rs: breg)                   (**r get system register *)
+  | Pset    (rd: breg) (rs: ireg)                   (**r set system register *)
 .
 
 Coercion PLoad:         ld_instruction >-> basic.
@@ -475,7 +475,38 @@ Coercion PBasic:    basic >-> instruction.
 Coercion PControl:  control >-> instruction.
 
 Definition code := list instruction.
+Definition bcode := list basic.
 
+(** 
+  Asmblockgen will have to translate a Mach control into a list of instructions of the form
+   i1 :: i2 :: i3 :: ctl :: nil ; where i1..i3 are basic instructions, ctl is a control instruction
+  These functions provide way to extract the basic / control instructions
+*)
+
+Fixpoint extract_basic (c: code) :=
+  match c with
+  | nil => nil
+  | PBasic i :: c => i :: (extract_basic c)
+  | PControl i :: c => nil
+  end.
+
+Fixpoint extract_ctl (c: code) :=
+  match c with
+  | nil => None
+  | PBasic i :: c => extract_ctl c
+  | PControl i :: nil => Some i
+  | PControl i :: _ => None (* if the first found control instruction isn't the last *)
+  end.
+
+Example wf_bblock_exbasic_none : forall hd i c0 ctl, wf_bblock hd ((i :: c0) ++ extract_basic ctl) None.
+Proof.
+  intros. split. left; discriminate. discriminate.
+Qed.
+
+Example wf_bblock_exbasic_cfi : forall hd c ctl i, wf_bblock hd (c ++ extract_basic ctl) (Some (PCtlFlow i)).
+Proof.
+  intros. split. right; discriminate. discriminate.
+Qed.
 
 (** * Utility for Asmblockgen *)
 
@@ -869,8 +900,17 @@ Definition exec_basic_instr (bi: basic) (rs: bregset) (m: mem) : outcome bregset
           | _ => Stuck
           end
       end
-
-   end.
+  | Pget rd ra =>
+    match ra with
+    | RA => Next (rs#rd <- (rs#ra)) m
+    | _  => Stuck
+    end
+  | Pset ra rd =>
+    match ra with
+    | RA => Next (rs#ra <- (rs#rd)) m
+    | _  => Stuck
+    end
+end.
 
 Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
   match body with
@@ -974,16 +1014,7 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
 Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outcome regset :=
 (** Get/Set system registers *)
   match ic with
-  | Pget rd ra =>
-    match ra with
-    | RA => Next (rs#rd <-- (rs#ra)) m
-    | _  => Stuck
-    end
-  | Pset ra rd =>
-    match ra with
-    | RA => Next (rs#ra <-- (rs#rd)) m
-    | _  => Stuck
-    end
+
 
 (** Branch Control Unit instructions *)
   | Pret =>
