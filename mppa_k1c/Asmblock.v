@@ -510,6 +510,20 @@ Qed.
 
 (** * Utility for Asmblockgen *)
 
+Program Definition bblock_single_inst (i: instruction) :=
+  match i with
+  | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
+  | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
+  end.
+Obligation 1.
+  intros. split. left; discriminate. discriminate.
+Qed.
+Obligation 2.
+  intros. split. right; discriminate.
+  unfold builtin_alone. intros. auto.
+Qed.
+
+(*
 Example bblock_single_basic_correct : forall i, wf_bblock nil (i::nil) None.
 Proof.
   intros. split. left; discriminate. discriminate.
@@ -521,6 +535,7 @@ Proof.
   unfold builtin_alone. intros. auto.
 Qed.
 
+
 Definition bblock_single_inst (i: instruction) :=
   match i with
   | PBasic b => {| header:=nil; body:=(b::nil); exit:=None;
@@ -528,6 +543,7 @@ Definition bblock_single_inst (i: instruction) :=
   | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl);
                     correct:=bblock_single_control_correct ctl |}
   end.
+*)
 
 (** * Operational semantics *)
 
