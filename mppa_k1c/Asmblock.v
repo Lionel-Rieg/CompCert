@@ -387,6 +387,7 @@ Inductive basic : Type :=
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
   | Pget    (rd: ireg) (rs: breg)                   (**r get system register *)
   | Pset    (rd: breg) (rs: ireg)                   (**r set system register *)
+  | Pnop                                            (**r virtual instruction that does nothing *)
 .
 
 Coercion PLoad:         ld_instruction >-> basic.
@@ -423,6 +424,9 @@ Record bblock := mk_bblock {
   exit: option control;
   correct: wf_bblock header body exit
 }.
+
+Ltac bblock_auto_correct := (split; try discriminate; try (left; discriminate); try (right; discriminate)).
+Local Obligation Tactic := bblock_auto_correct.
 
 (* FIXME: redundant with definition in Machblock *)
 Definition length_opt {A} (o: option A) : nat :=
@@ -498,16 +502,6 @@ Fixpoint extract_ctl (c: code) :=
   | PControl i :: _ => None (* if the first found control instruction isn't the last *)
   end.
 
-Example wf_bblock_exbasic_none : forall hd i c0 ctl, wf_bblock hd ((i :: c0) ++ extract_basic ctl) None.
-Proof.
-  intros. split. left; discriminate. discriminate.
-Qed.
-
-Example wf_bblock_exbasic_cfi : forall hd c ctl i, wf_bblock hd (c ++ extract_basic ctl) (Some (PCtlFlow i)).
-Proof.
-  intros. split. right; discriminate. discriminate.
-Qed.
-
 (** * Utility for Asmblockgen *)
 
 Program Definition bblock_single_inst (i: instruction) :=
@@ -515,35 +509,9 @@ Program Definition bblock_single_inst (i: instruction) :=
   | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
   | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
   end.
-Obligation 1.
-  intros. split. left; discriminate. discriminate.
+Next Obligation.
+  bblock_auto_correct.
 Qed.
-Obligation 2.
-  intros. split. right; discriminate.
-  unfold builtin_alone. intros. auto.
-Qed.
-
-(*
-Example bblock_single_basic_correct : forall i, wf_bblock nil (i::nil) None.
-Proof.
-  intros. split. left; discriminate. discriminate.
-Qed.
-
-Example bblock_single_control_correct : forall i, wf_bblock nil nil (Some i).
-Proof.
-  intros. split. right; discriminate.
-  unfold builtin_alone. intros. auto.
-Qed.
-
-
-Definition bblock_single_inst (i: instruction) :=
-  match i with
-  | PBasic b => {| header:=nil; body:=(b::nil); exit:=None;
-                    correct:=bblock_single_basic_correct b |}
-  | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl);
-                    correct:=bblock_single_control_correct ctl |}
-  end.
-*)
 
 (** * Operational semantics *)
 
@@ -926,6 +894,7 @@ Definition exec_basic_instr (bi: basic) (rs: bregset) (m: mem) : outcome bregset
     | RA => Next (rs#ra <- (rs#rd)) m
     | _  => Stuck
     end
+  | Pnop => Next rs m
 end.
 
 Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=

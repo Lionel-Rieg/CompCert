@@ -838,26 +838,23 @@ Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_
   otherwise the offset part of the [PC] code pointer could wrap
   around, leading to incorrect executions. *)
 
-(** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
-Fixpoint gen_bblocks_rec (fuel: nat) (hd: list label) (c: list basic) (ctl: list instruction) :=
-  match fuel with
-  | O => nil
-  | (Datatypes.S) n => 
-    match (extract_ctl ctl) with
-    | None =>
-        match c with
-        | nil => nil (* empty block should not happen *)
-        | i::c =>  {| header := hd; body := (i::c) ++ (extract_basic ctl); exit := None;
-                      correct := wf_bblock_exbasic_none hd i c ctl |} :: nil
-        end
-    | Some (PExpand (Pbuiltin ef args res)) => (gen_bblocks_rec n hd c nil) ++ 
-                                              ((PExpand (Pbuiltin ef args res)) ::b nil)
-    | Some (PCtlFlow i) => {| header := hd; body := c ++ (extract_basic ctl); exit := Some (PCtlFlow i);
-                            correct := wf_bblock_exbasic_cfi hd c ctl i |} :: nil
-    end
+Obligation Tactic := bblock_auto_correct.
+
+Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
+  match c with
+  | nil => {| header := hd; body := Pnop::nil; exit := None |}
+  | i::c => {| header := hd; body := i::c; exit := None |}
   end.
 
-Definition gen_bblocks := gen_bblocks_rec 42.
+(** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
+Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instruction) :=
+  match (extract_ctl ctl) with
+  | None => gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil
+  | Some (PExpand (Pbuiltin ef args res)) => (gen_bblock_noctl hd c) :: 
+                                            ((PExpand (Pbuiltin ef args res)) ::b nil)
+  | Some (PCtlFlow i) => {| header := hd; body := c ++ (extract_basic ctl); exit := Some (PCtlFlow i) |} :: nil
+  end
+.
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) : res (list bblock) :=
   do c <- transl_basic_code' f fb.(Machblock.body) true;
