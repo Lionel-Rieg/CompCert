@@ -1161,6 +1161,16 @@ Definition semantics (p: program) :=
 
 Axiom semantics_determinate: forall p, determinate (semantics p).
 
+Definition data_preg (r: preg) : bool :=
+  match r with
+  | RA  => false
+  | IR GPR31 => false
+  | IR GPR8 => false
+  | IR _   => true
+  | FR _   => true
+  | PC     => false
+  end.
+
 (** Determinacy of the [Asm] semantics. *)
 
 (* TODO.

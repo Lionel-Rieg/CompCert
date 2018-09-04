@@ -22,12 +22,11 @@ Require Import Asmblockgen.
 Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
-(* Lemma transf_program_match:
+Lemma transf_program_match:
   forall p tp, transf_program p = OK tp -> match_prog p tp.
 Proof.
   intros. eapply match_transform_partial_program; eauto.
 Qed.
- *)
 
 Section PRESERVATION.
 

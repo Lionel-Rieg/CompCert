@@ -574,5 +574,5 @@ Definition trans_function (f: Mach.function) : function :=
 Definition trans_fundef (f: Mach.fundef) : fundef :=
   transf_fundef trans_function f.
 
-Definition trans_prog (src: Mach.program) : program :=
+Definition transf_program (src: Mach.program) : program :=
   transform_program trans_fundef src.

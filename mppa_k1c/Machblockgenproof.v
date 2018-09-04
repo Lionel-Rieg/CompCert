@@ -23,7 +23,7 @@ Definition inv_trans_rao (rao: function -> code -> ptrofs -> Prop) (f: Mach.func
 Definition match_prog (p: Mach.program) (tp: Machblock.program) :=
   match_program (fun _ f tf => tf = trans_fundef f) eq p tp.
 
-Lemma trans_program_match: forall p, match_prog p (trans_prog p).
+Lemma transf_program_match: forall p, match_prog p (transf_program p).
 Proof.
   intros. eapply match_transform_program; eauto.
 Qed.
@@ -461,8 +461,7 @@ Proof.
   destruct ei; (contradict Hexit; discriminate) || (
     inversion Hexit; subst; inversion Hstep; subst; simpl
   ).
-  * unfold inv_trans_rao in H11.
-    eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
     apply exec_MBcall with (f := (trans_function f0)); auto.
     rewrite find_function_ptr_same in H9; auto.
   * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
@@ -600,7 +599,8 @@ Proof.
     eapply exec_return.
 Qed.
 
-Theorem simulation: forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
+Theorem transf_program_correct: 
+    forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
 Proof.
   apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)

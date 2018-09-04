@@ -838,7 +838,7 @@ Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_
   otherwise the offset part of the [PC] code pointer could wrap
   around, leading to incorrect executions. *)
 
-Obligation Tactic := bblock_auto_correct.
+Local Obligation Tactic := bblock_auto_correct.
 
 Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
   match c with
