@@ -59,3 +59,5 @@ Proof.
 Qed.
 
 End PRESERVATION.
+
+Instance TransfAsm: TransfLink match_prog := pass_match_link (compose_passes block_passes).
