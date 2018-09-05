@@ -563,7 +563,7 @@ Proof.
 Qed.
 
 (* à finir pour passer des Mach.function au function, etc. *)
-Definition trans_function (f: Mach.function) : function :=
+Definition transf_function (f: Mach.function) : function :=
   {| fn_sig:=Mach.fn_sig f;
      fn_code:=trans_code (Mach.fn_code f);
      fn_stacksize := Mach.fn_stacksize f;
@@ -571,8 +571,8 @@ Definition trans_function (f: Mach.function) : function :=
      fn_retaddr_ofs := Mach.fn_retaddr_ofs f
  |}.
 
-Definition trans_fundef (f: Mach.fundef) : fundef :=
-  transf_fundef trans_function f.
+Definition transf_fundef (f: Mach.fundef) : fundef :=
+  transf_fundef transf_function f.
 
 Definition transf_program (src: Mach.program) : program :=
-  transform_program trans_fundef src.
+  transform_program transf_fundef src.

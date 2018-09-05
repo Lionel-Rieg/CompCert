@@ -24,3 +24,14 @@ Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := Machblockgen.transf_program p in
   do abp <- Asmblockgen.transf_program mbp;
   OK (Asm.transf_program abp).
+
+Definition transf_function (f: Mach.function) : res function :=
+  let mbf := Machblockgen.transf_function f in
+  do abf <- Asmblockgen.transf_function mbf;
+  OK (Asm.transf_function abf).
+
+Definition transl_code (f: Mach.function) (l: Mach.code) : res (list instruction) :=
+  let mbf := Machblockgen.transf_function f in
+  let mbc := Machblockgen.trans_code l in
+  do abc <- transl_blocks mbf mbc;
+  OK (unfold abc).

@@ -18,10 +18,10 @@ Require Import Machblockgen.
 Require Import ForwardSimulationBlock.
 
 Definition inv_trans_rao (rao: function -> code -> ptrofs -> Prop) (f: Mach.function) (c: Mach.code) :=
-  rao (trans_function f) (trans_code c).
+  rao (transf_function f) (trans_code c).
 
 Definition match_prog (p: Mach.program) (tp: Machblock.program) :=
-  match_program (fun _ f tf => tf = trans_fundef f) eq p tp.
+  match_program (fun _ f tf => tf = transf_fundef f) eq p tp.
 
 Lemma transf_program_match: forall p tp, transf_program p = tp -> match_prog p tp.
 Proof.
@@ -90,7 +90,7 @@ Proof (match_program_main TRANSF).
 Lemma functions_translated:
   forall b f,
   Genv.find_funct_ptr ge b = Some f ->
-  exists tf, Genv.find_funct_ptr tge b = Some tf /\ trans_fundef f = tf.
+  exists tf, Genv.find_funct_ptr tge b = Some tf /\ transf_fundef f = tf.
 Proof.
   intros.
   exploit (Genv.find_funct_ptr_match TRANSF); eauto. intro.
@@ -110,7 +110,7 @@ Qed.
 Lemma find_funct_ptr_same:
   forall f f0,
   Genv.find_funct_ptr ge f = Some (Internal f0) ->
-  Genv.find_funct_ptr tge f = Some (Internal (trans_function f0)).
+  Genv.find_funct_ptr tge f = Some (Internal (transf_function f0)).
 Proof.
   intros. exploit (Genv.find_funct_ptr_transf TRANSF); eauto.
 Qed.
@@ -295,15 +295,15 @@ Qed.
 Lemma find_label_preserved:
   forall l f c,
   Mach.find_label l (Mach.fn_code f) = Some c ->
-  exists h, In l h /\ find_label l (fn_code (trans_function f)) = Some (concat h (trans_code c)).
+  exists h, In l h /\ find_label l (fn_code (transf_function f)) = Some (concat h (trans_code c)).
 Proof.
-  intros. cutrewrite ((fn_code (trans_function f)) = trans_code (Mach.fn_code f)); eauto.
+  intros. cutrewrite ((fn_code (transf_function f)) = trans_code (Mach.fn_code f)); eauto.
   apply find_label_transcode_preserved; auto.
 Qed.
 
 Lemma mem_free_preserved:
   forall m stk f,
-  Mem.free m stk 0 (Mach.fn_stacksize f) = Mem.free m stk 0 (fn_stacksize (trans_function f)).
+  Mem.free m stk 0 (Mach.fn_stacksize f) = Mem.free m stk 0 (fn_stacksize (transf_function f)).
 Proof.
   intros. auto.
 Qed.
@@ -462,10 +462,10 @@ Proof.
     inversion Hexit; subst; inversion Hstep; subst; simpl
   ).
   * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    apply exec_MBcall with (f := (trans_function f0)); auto.
+    apply exec_MBcall with (f := (transf_function f0)); auto.
     rewrite find_function_ptr_same in H9; auto.
   * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    apply exec_MBtailcall with (f := (trans_function f0)); auto.
+    apply exec_MBtailcall with (f := (transf_function f0)); auto.
     rewrite find_function_ptr_same in H9; auto.
     rewrite parent_sp_preserved in H11; subst; auto.
     rewrite parent_ra_preserved in H12; subst; auto.
@@ -582,7 +582,7 @@ Proof.
     inversion H1; subst; clear H1.
     inversion_clear H0; simpl.
     - (* function_internal*)
-      cutrewrite (trans_code (Mach.fn_code f0) = fn_code (trans_function f0)); eauto.
+      cutrewrite (trans_code (Mach.fn_code f0) = fn_code (transf_function f0)); eauto.
       eapply exec_function_internal; eauto.
       rewrite <- parent_sp_preserved; eauto.
       rewrite <- parent_ra_preserved; eauto.

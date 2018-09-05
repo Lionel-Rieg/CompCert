@@ -872,7 +872,7 @@ Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) :=
   end
 .
 
-Definition transl_function (f: Machblock.function) :=
+Definition transf_function (f: Machblock.function) :=
   do lb <- transl_blocks f f.(Machblock.fn_code);
   OK (mkfunction f.(Machblock.fn_sig)
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::b
@@ -889,7 +889,7 @@ Definition transl_function (f: Machblock.function) :=
 
 
 Definition transf_fundef (f: Machblock.fundef) : res Asmblock.fundef :=
-  transf_partial_fundef transl_function f.
+  transf_partial_fundef transf_function f.
 
 Definition transf_program (p: Machblock.program) : res Asmblock.program :=
   transform_partial_program transf_fundef p.
