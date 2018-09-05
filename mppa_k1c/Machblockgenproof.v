@@ -23,9 +23,9 @@ Definition inv_trans_rao (rao: function -> code -> ptrofs -> Prop) (f: Mach.func
 Definition match_prog (p: Mach.program) (tp: Machblock.program) :=
   match_program (fun _ f tf => tf = trans_fundef f) eq p tp.
 
-Lemma transf_program_match: forall p, match_prog p (transf_program p).
+Lemma transf_program_match: forall p tp, transf_program p = tp -> match_prog p tp.
 Proof.
-  intros. eapply match_transform_program; eauto.
+  intros. rewrite <- H. eapply match_transform_program; eauto.
 Qed.
 
 Definition trans_stackframe (msf: Mach.stackframe) : stackframe :=

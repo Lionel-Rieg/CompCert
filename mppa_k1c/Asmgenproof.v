@@ -18,32 +18,26 @@ Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Mach Conventions Asm Asmgen Machblockgen Asmblockgen.
 Require Import Machblockgenproof Asmblockgenproof.
 
-(* Local Open Scope linking_scope.
+Local Open Scope linking_scope.
 
 Definition block_passes :=
       mkpass Machblockgenproof.match_prog
   ::: mkpass Asmblockgenproof.match_prog
   ::: mkpass Asm.match_prog
   ::: pass_nil _.
- *)
 
-Inductive match_prog : Mach.program -> Asm.program -> Prop :=
-  | mk_match_prog: forall p mbp abp tp,
-      Machblockgen.transf_program p = mbp -> Machblockgenproof.match_prog p mbp ->
-      Asmblockgen.transf_program mbp = OK abp -> Asmblockgenproof.match_prog mbp abp ->
-      Asm.match_prog abp tp ->
-      match_prog p tp.
+Definition match_prog := pass_match (compose_passes block_passes).
 
 Lemma transf_program_match:
   forall p tp, Asmgen.transf_program p = OK tp -> match_prog p tp.
 Proof.
   intros p tp H.
   unfold Asmgen.transf_program in H. apply bind_inversion in H. destruct H.
-  inversion_clear H. inversion_clear H1. remember (Machblockgen.transf_program p) as mbp.
-  constructor 1 with (mbp:=mbp) (abp:=x); auto.
-  subst. apply Machblockgenproof.transf_program_match.
-  apply Asmblockgenproof.transf_program_match. auto.
-  apply Asm.transf_program_match. auto.
+  inversion_clear H. inversion H1. remember (Machblockgen.transf_program p) as mbp.
+  unfold match_prog; simpl.
+  exists mbp; split. apply Machblockgenproof.transf_program_match; auto.
+  exists x; split. apply Asmblockgenproof.transf_program_match; auto.
+  exists tp; split. apply Asm.transf_program_match; auto. auto.
 Qed.
 
 Section PRESERVATION.
@@ -57,7 +51,8 @@ Let tge := Genv.globalenv tprog.
 Theorem transf_program_correct:
   forward_simulation (Mach.semantics (inv_trans_rao return_address_offset) prog) (Asm.semantics tprog).
 Proof.
-  inv TRANSF.
+  unfold match_prog in TRANSF. simpl in TRANSF.
+  inv TRANSF. inv H. inv H1. inv H. inv H2. inv H.
   eapply compose_forward_simulations. apply Machblockgenproof.transf_program_correct; eauto.
   eapply compose_forward_simulations. apply Asmblockgenproof.transf_program_correct; eauto.
   apply Asm.transf_program_correct. eauto.

@@ -359,11 +359,7 @@ Proof.
   intros f. destruct f as [sig blks]. unfold function_proj. simpl. auto.
 Qed.
 
-Definition transf_fundef (f: Asmblock.fundef) : fundef := 
-  match f with
-  | Internal f => Internal (transf_function f)
-  | External ef => External ef
-  end.
+Definition transf_fundef : Asmblock.fundef -> fundef := AST.transf_fundef transf_function.
 
 Lemma transf_fundef_proj: forall f, fundef_proj (transf_fundef f) = f.
 Proof.
@@ -371,7 +367,7 @@ Proof.
   rewrite transf_function_proj. auto.
 Qed.
 
-Definition transf_globdef (gd: globdef Asmblock.fundef unit) : globdef fundef unit :=
+(* Definition transf_globdef (gd: globdef Asmblock.fundef unit) : globdef fundef unit :=
   match gd with
   | Gfun f => Gfun (transf_fundef f)
   | Gvar gu => Gvar gu
@@ -398,16 +394,11 @@ Proof.
   rewrite transf_globdef_proj.
   congruence.
 Qed.
+ *)
 
-Definition transf_program (p: Asmblock.program) : program :=
-  {|  prog_defs := transf_prog_defs (prog_defs p);
-      prog_public := prog_public p;
-      prog_main := prog_main p
-  |}.
+Definition transf_program : Asmblock.program -> program := transform_program transf_fundef.
 
-Definition match_prog (p: Asmblock.program) (tp: program) := (p = program_proj tp).
-
-Lemma asmblock_program_equals: forall (p1 p2: Asmblock.program),
+Lemma program_equals {A B: Type} : forall (p1 p2: AST.program A B),
   prog_defs p1 = prog_defs p2 ->
   prog_public p1 = prog_public p2 ->
   prog_main p1 = prog_main p2 ->
@@ -416,14 +407,47 @@ Proof.
   intros. destruct p1. destruct p2. simpl in *. subst. auto.
 Qed.
 
+Lemma transf_program_proj: forall p, program_proj (transf_program p) = p.
+Proof.
+  intros p. destruct p as [defs pub main]. unfold program_proj. simpl.
+  apply program_equals; simpl; auto.
+  induction defs.
+  - simpl; auto.
+  - simpl. rewrite IHdefs. 
+    destruct a as [id gd]; simpl.
+    destruct gd as [f|v]; simpl; auto.
+    rewrite transf_fundef_proj. auto.
+Qed.
+
+Definition match_prog (p: Asmblock.program) (tp: program) :=
+  match_program (fun _ f tf => tf = transf_fundef f) eq p tp.
+
 Lemma transf_program_match:
   forall p tp, transf_program p = tp -> match_prog p tp.
 Proof.
-  intros p tp H. unfold match_prog.
-  unfold transf_program in H.
-  destruct tp as [tdefs tpub tmain]. inv H.
-  unfold program_proj. simpl. apply asmblock_program_equals; simpl; auto.
-  apply transf_prog_proj.
+  intros. rewrite <- H. eapply match_transform_program; eauto.
+Qed.
+
+Lemma cons_extract {A: Type} : forall (l: list A) a b, a = b -> a::l = b::l.
+Proof.
+  intros. congruence.
+Qed.
+
+(* I think it is a special case of Asmblock -> Asm. Very handy to have *)
+Lemma match_program_transf:
+  forall p tp, match_prog p tp -> transf_program p = tp.
+Proof.
+  intros p tp H. inversion_clear H. inv H1.
+  destruct p as [defs pub main]. destruct tp as [tdefs tpub tmain]. simpl in *.
+  subst. unfold transf_program. unfold transform_program. simpl.
+  apply program_equals; simpl; auto.
+  induction H0; simpl; auto.
+  rewrite IHlist_forall2. apply cons_extract.
+  destruct a1 as [ida gda]. destruct b1 as [idb gdb].
+  simpl in *.
+  inv H. inv H2.
+  - simpl in *. subst. auto.
+  - simpl in *. subst. inv H. auto.
 Qed.
 
 Section PRESERVATION.
@@ -436,16 +460,25 @@ Let tge := Genv.globalenv tprog.
 
 Definition match_states (s1 s2: state) := s1 = s2.
 
+Lemma symbols_preserved:
+  forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
+Proof (Genv.find_symbol_match TRANSF).
+
+Lemma senv_preserved:
+  Senv.equiv ge tge.
+Proof (Genv.senv_match TRANSF).
+
+
 Theorem transf_program_correct:
   forward_simulation (Asmblock.semantics prog) (semantics tprog).
 Proof.
-  inversion TRANSF. (* inv H0. *)
-  eapply forward_simulation_step with (match_states := match_states).
-  all: try (simpl; congruence).
-  - simpl. intros s1 H1. exists s1. split; auto. congruence.
-  - simpl. intros s1 t s1' H1 s2 H2. exists s1'. split.
-    + congruence.
-    + unfold match_states. auto.
+  pose proof (match_program_transf prog tprog TRANSF) as TR.
+  subst. unfold semantics. rewrite transf_program_proj.
+
+  eapply forward_simulation_step with (match_states := match_states); simpl; auto.
+  - intros. exists s1. split; auto. congruence.
+  - intros. inv H. auto.
+  - intros. exists s1'. inv H0. split; auto. congruence.
 Qed.
 
 End PRESERVATION.
