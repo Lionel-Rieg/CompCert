@@ -50,10 +50,7 @@ Inductive code_tail: Z -> code -> code -> Prop :=
       code_tail (pos + 1) (i :: c1) c2.
 
 Definition return_address_offset (f: Mach.function) (c: Mach.code) (ofs: ptrofs) : Prop :=
-  forall tf tc,
-  Asmgen.transf_function f = OK tf ->
-  Asmgen.transl_code f c = OK tc ->
-  code_tail (Ptrofs.unsigned ofs) (fn_code tf) tc.
+  Asmblockgenproof.return_address_offset (Machblockgen.transf_function f) (Machblockgen.trans_code c) ofs.
 
 Axiom return_address_exists:
   forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
@@ -72,7 +69,10 @@ Theorem transf_program_correct:
 Proof.
   unfold match_prog in TRANSF. simpl in TRANSF.
   inv TRANSF. inv H. inv H1. inv H. inv H2. inv H.
-  eapply compose_forward_simulations. apply Machblockgenproof.transf_program_correct; eauto.
+  eapply compose_forward_simulations. 
+  exploit Machblockgenproof.transf_program_correct; eauto.
+  unfold Machblockgenproof.inv_trans_rao. 
+  intros X; apply X.
   eapply compose_forward_simulations. apply Asmblockgenproof.transf_program_correct; eauto.
   apply Asm.transf_program_correct. eauto.
 Qed.
