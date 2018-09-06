@@ -419,12 +419,12 @@ let expand_builtin_inline name args res = let open Asmblock in
   | "__builtin_membar", [], _ ->
      ()
   (* Vararg stuff *)
-  | "__builtin_va_start", [BA(IR a)], _ ->
+  | "__builtin_va_start", [BA(BaR (IR a))], _ ->
      expand_builtin_va_start a
-  | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
-     emit (PExpand (Pclzll(res, a)))
-  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
-     emit (PExpand (Pstsud(res, a1, a2)))
+  | "__builtin_clzll", [BA(BaR (IR a))], BR(BaR (IR res)) ->
+     emit (Pclzll(res, a))
+  | "__builtin_k1_stsud", [BA(BaR (IR a1)); BA(BaR (IR a2))], BR(BaR (IR res)) ->
+     emit (Pstsud(res, a1, a2))
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1
@@ -511,7 +511,7 @@ let expand_instruction instr =
   | Pj_s(symb, sg) ->
       fixup_call sg; emit instr
 
-*)| PExpand Pbuiltin (ef,args,res) ->
+*)| Pbuiltin (ef,args,res) ->
      begin match ef with
      | EF_builtin (name,sg) ->
         expand_builtin_inline (camlstring_of_coqstring name) args res

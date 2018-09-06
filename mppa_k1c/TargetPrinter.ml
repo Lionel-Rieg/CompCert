@@ -229,6 +229,10 @@ module Target : TARGET =
          end
       | Pnop -> fprintf oc "	nop\n;;\n"
 
+      | Pclzll (rd, rs) -> fprintf oc "	clzd %a = %a\n;;\n" ireg rd ireg rs
+      | Pstsud (rd, rs1, rs2) -> fprintf oc "	stsud %a = %a, %a\n;;\n" ireg rd ireg rs1 ireg rs2
+
+
       (* Control flow instructions *)
       | Pget (rd, rs) ->
          fprintf oc "	get	%a = %a\n;;\n" ireg rd preg rs

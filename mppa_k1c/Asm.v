@@ -49,6 +49,10 @@ Inductive instruction : Type :=
               -> builtin_res preg -> instruction   (**r built-in function (pseudo) *)
   | Pnop                                            (**r instruction that does nothing *)
 
+  (** builtins *)
+  | Pclzll (rd rs: ireg)
+  | Pstsud (rd rs1 rs2: ireg)
+
   (** Control flow instructions *)
   | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
