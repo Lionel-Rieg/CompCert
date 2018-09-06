@@ -47,9 +47,9 @@ let align n a = (n + a - 1) land (-a)
   List.iter emit (Asmgen.loadimm32 dst n [])
 *)
 let expand_addptrofs dst src n =
-  List.iter emit (Asmgen.addptrofs dst src n [])
+  List.iter emit (Asm.addptrofs dst src n [])
 let expand_storeind_ptr src base ofs =
-  List.iter emit (Asmgen.storeind_ptr src base ofs [])
+  List.iter emit (Asm.storeind_ptr src base ofs [])
 
 (* Built-ins.  They come in two flavors:
    - annotation statements: take their arguments in registers or stack

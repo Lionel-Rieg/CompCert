@@ -30,10 +30,15 @@ Require Import Smallstep.
 Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
-Require Import Asmblock.
+Require Import Asmblock Asmblockgen.
 Require Import Linking.
 Require Import Errors.
 
+(** Definitions for OCaml code *)
+Definition label := positive.
+Definition preg := preg.
+
+(** Syntax *)
 Inductive instruction : Type :=
   (** pseudo instructions *)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
@@ -251,6 +256,11 @@ Definition basic_to_instruction (b: basic) :=
 
 Section RELSEM.
 
+(** For OCaml code *)
+Definition addptrofs (rd rs: ireg) (n: ptrofs) := basic_to_instruction (addptrofs rd rs n).
+Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) := 
+  basic_to_instruction (storeind_ptr src base ofs).
+
 Definition code := list instruction.
 
 Fixpoint unfold_label (ll: list label) :=
@@ -281,6 +291,9 @@ Fixpoint unfold (lb: bblocks) :=
 
 Record function : Type := mkfunction { fn_sig: signature; fn_blocks: bblocks; fn_code: code; 
                                        correct: unfold fn_blocks = fn_code }.
+
+(* For OCaml code *)
+Program Definition dummy_function := {| fn_code := nil; fn_sig := signature_main; fn_blocks := nil |}.
 
 Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.
