@@ -20,6 +20,7 @@
    of the RISC-V assembly code. *)
 
 open Asm
+open Asmgen
 open Asmexpandaux
 open AST
 open Camlcoq
@@ -47,9 +48,9 @@ let align n a = (n + a - 1) land (-a)
   List.iter emit (Asmgen.loadimm32 dst n [])
 *)
 let expand_addptrofs dst src n =
-  List.iter emit (Asm.addptrofs dst src n [])
+  List.iter emit (addptrofs dst src n :: [])
 let expand_storeind_ptr src base ofs =
-  List.iter emit (Asm.storeind_ptr src base ofs [])
+  List.iter emit (storeind_ptr src base ofs :: [])
 
 (* Built-ins.  They come in two flavors:
    - annotation statements: take their arguments in registers or stack
@@ -61,7 +62,7 @@ let expand_storeind_ptr src base ofs =
 (* Fix-up code around calls to variadic functions.  Floating-point arguments
    residing in FP registers need to be moved to integer registers. *)
 
-let int_param_regs   = [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
+let int_param_regs   = let open Asmblock in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
 (* let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |] *)
 let float_param_regs = [| |]
 
@@ -330,7 +331,7 @@ let rec args_size sz = function
 let arguments_size sg =
   args_size 0 sg.sig_args
 
-let save_arguments first_reg base_ofs =
+let save_arguments first_reg base_ofs = let open Asmblock in
   for i = first_reg to 7 do
     expand_storeind_ptr
       int_param_regs.(i)
@@ -412,7 +413,7 @@ let expand_bswap64 d s = assert false
 
 (* Handling of compiler-inlined builtins *)
 
-let expand_builtin_inline name args res =
+let expand_builtin_inline name args res = let open Asmblock in
   match name, args, res with
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
@@ -438,32 +439,32 @@ let expand_builtin_inline name args res =
 
 let expand_instruction instr =
   match instr with
-  | PExpand Pallocframe (sz, ofs) ->
+  | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (PArith (PArithRR (Pmv, GPR10, GPR12)));
+      emit (Pmv (Asmblock.GPR10, Asmblock.GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
-        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg full_sz));
-        expand_storeind_ptr GPR10 GPR12 ofs;
+        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
+        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
         let va_ofs =
           Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg sz));
-        expand_storeind_ptr GPR10 GPR12 ofs;
+        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
+        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
         vararg_start_ofs := None
       end
-  | PExpand Pfreeframe (sz, ofs) ->
+  | Pfreeframe (sz, ofs) ->
      let sg = get_current_function_sig() in
      let extra_sz =
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         if n >= 8 then 0 else align 16 ((8 - n) * wordsize)
       end else 0 in
-     expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
+     expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
 (*| Pseqw(rd, rs1, rs2) ->
       (* emulate based on the fact that x == 0 iff x <u 1 (unsigned cmp) *)
@@ -493,10 +494,10 @@ let expand_instruction instr =
       end else begin
         emit (Pxorl(rd, rs1, rs2)); emit (Psltul(rd, X0, X rd))
       end
-*)| PArith PArithRR (Pcvtl2w,rd, rs) ->
+*)| Pcvtl2w (rd, rs) ->
       assert Archi.ptr64;
-      emit (PArith (PArithRRI32 (Paddiw,rd, rs, Int.zero)))  (* 32-bit sign extension *)
-  | PArith PArithR r -> (* Pcvtw2l *)
+      emit (Paddiw (rd, rs, Int.zero))  (* 32-bit sign extension *)
+  | Pcvtw2l (r) -> (* Pcvtw2l *)
       assert Archi.ptr64
       (* no-operation because the 32-bit integer was kept sign extended already *)
       (* FIXME - is it really the case on the MPPA ? *)
@@ -532,7 +533,7 @@ let expand_instruction instr =
 
 (* NOTE: Dwarf register maps for RV32G are not yet specified
    officially.  This is just a placeholder.  *)
-let int_reg_to_dwarf = function
+let int_reg_to_dwarf = let open Asmblock in function
    | GPR0  -> 1   | GPR1  -> 2   | GPR2  -> 3   | GPR3  -> 4   | GPR4  -> 5
    | GPR5  -> 6   | GPR6  -> 7   | GPR7  -> 8   | GPR8  -> 9   | GPR9  -> 10
    | GPR10 -> 11  | GPR11 -> 12  | GPR12 -> 13  | GPR13 -> 14  | GPR14 -> 15
@@ -547,10 +548,13 @@ let int_reg_to_dwarf = function
    | GPR55 -> 56  | GPR56 -> 57  | GPR57 -> 58  | GPR58 -> 59  | GPR59 -> 60
    | GPR60 -> 61  | GPR61 -> 62  | GPR62 -> 63  | GPR63 -> 64
 
-let preg_to_dwarf = function
+let breg_to_dwarf = let open Asmblock in function
    | IR r -> int_reg_to_dwarf r
    | FR r -> int_reg_to_dwarf r
    | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)
+
+let preg_to_dwarf = let open Asmblock in function
+   | BaR r -> breg_to_dwarf r
    | _ -> assert false
 
 let expand_function id fn =

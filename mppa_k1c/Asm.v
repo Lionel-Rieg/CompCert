@@ -30,7 +30,7 @@ Require Import Smallstep.
 Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
-Require Import Asmblock Asmblockgen.
+Require Import Asmblock.
 Require Import Linking.
 Require Import Errors.
 
@@ -255,11 +255,6 @@ Definition basic_to_instruction (b: basic) :=
   end.
 
 Section RELSEM.
-
-(** For OCaml code *)
-Definition addptrofs (rd rs: ireg) (n: ptrofs) := basic_to_instruction (addptrofs rd rs n).
-Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) := 
-  basic_to_instruction (storeind_ptr src base ofs).
 
 Definition code := list instruction.
 
