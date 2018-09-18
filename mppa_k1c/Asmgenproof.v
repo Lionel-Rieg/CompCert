@@ -42,13 +42,6 @@ Qed.
 
 (** Return Address Offset *)
 
-Inductive code_tail: Z -> code -> code -> Prop :=
-  | code_tail_0: forall c,
-      code_tail 0 c c
-  | code_tail_S: forall pos i c1 c2,
-      code_tail pos c1 c2 ->
-      code_tail (pos + 1) (i :: c1) c2.
-
 Definition return_address_offset (f: Mach.function) (c: Mach.code) (ofs: ptrofs) : Prop :=
   Asmblockgenproof.return_address_offset (Machblockgen.transf_function f) (Machblockgen.trans_code c) ofs.
 

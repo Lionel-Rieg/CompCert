@@ -17,7 +17,7 @@ Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
 (* Require Import Asmgen Asmgenproof0 Asmgenproof1. *)
-Require Import Asmblockgen.
+Require Import Asmblockgen Asmblockgenproof0.
 
 Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
@@ -1104,7 +1104,7 @@ Qed.
  *)
 
 Definition return_address_offset : Machblock.function -> Machblock.code -> ptrofs -> Prop := 
-  (fun a b c => False).
+  Asmblockgenproof0.return_address_offset.
 
 Axiom transf_program_correct:
   forward_simulation (Machblock.semantics return_address_offset prog) (Asmblock.semantics tprog).
