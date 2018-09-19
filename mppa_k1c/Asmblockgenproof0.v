@@ -93,3 +93,7 @@ Definition return_address_offset (f: MB.function) (c: MB.code) (ofs: ptrofs) : P
   transf_function f = OK tf ->
   transl_blocks f c = OK tc ->
   code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc.
+
+Axiom return_address_exists:
+  forall b f sg ros c, b.(MB.exit) = Some (MBcall sg ros) -> is_tail (b :: c) f.(MB.fn_code) ->
+  exists ra, return_address_offset f c ra.

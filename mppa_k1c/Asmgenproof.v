@@ -16,7 +16,7 @@ Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Mach Conventions Asm Asmgen Machblockgen Asmblockgen.
-Require Import Machblockgenproof Asmblockgenproof.
+Require Import Machblockgenproof Asmblockgenproof0 Asmblockgenproof.
 
 Local Open Scope linking_scope.
 
@@ -43,11 +43,25 @@ Qed.
 (** Return Address Offset *)
 
 Definition return_address_offset (f: Mach.function) (c: Mach.code) (ofs: ptrofs) : Prop :=
-  Asmblockgenproof.return_address_offset (Machblockgen.transf_function f) (Machblockgen.trans_code c) ofs.
+  Asmblockgenproof0.return_address_offset (Machblockgen.transf_function f) (Machblockgen.trans_code c) ofs.
 
-Axiom return_address_exists:
+
+Lemma Mach_Machblock_tail:
+  forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
+  exists b, MB.exit b = Some (Machblock.MBcall sg ros)
+    /\ is_tail (b :: trans_code c) (MB.fn_code (Machblockgen.transf_function f)).
+Admitted.
+
+Lemma return_address_exists:
   forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
   exists ra, return_address_offset f c ra.
+Proof.
+  intros.
+  exploit Mach_Machblock_tail; eauto.
+  destruct 1 as [b [H1 H2]].
+  eapply Asmblockgenproof0.return_address_exists; eauto.
+Qed.
+
 
 Section PRESERVATION.
 
