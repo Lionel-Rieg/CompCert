@@ -872,20 +872,28 @@ Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) :=
   end
 .
 
-Definition transf_function (f: Machblock.function) :=
+
+
+Definition transl_function (f: Machblock.function) :=
   do lb <- transl_blocks f f.(Machblock.fn_code);
   OK (mkfunction f.(Machblock.fn_sig)
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::b
          Pget GPR8 RA ::b
          storeind_ptr GPR8 SP f.(fn_retaddr_ofs) ::b lb)).
 
-(* TODO TODO - move this check to Asm *)
-(* Definition transf_function (f: Machblock.function) : res Asmblock.function :=
+Fixpoint size_blocks (l: bblocks): Z :=
+  match l with
+  | nil => 0
+  | b :: l =>
+     (size b) + (size_blocks l)
+  end
+  .
+
+Definition transf_function (f: Machblock.function) : res Asmblock.function :=
   do tf <- transl_function f;
-  if zlt Ptrofs.max_unsigned (list_length_z tf.(fn_code))
+  if zlt Ptrofs.max_unsigned (size_blocks tf.(fn_blocks))
   then Error (msg "code size exceeded")
   else OK tf.
- *)
 
 
 Definition transf_fundef (f: Machblock.fundef) : res Asmblock.fundef :=

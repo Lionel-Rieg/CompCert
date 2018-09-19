@@ -479,14 +479,17 @@ Proof.
   generalize (transf_function_no_overflow _ _ H0). omega.
   intros. apply Pregmap.gso; auto.
 Qed.
+*)
 
 (** Existence of return addresses *)
 
 Lemma return_address_exists:
-  forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
+  forall b f sg ros c, b.(MB.exit) = Some (MBcall sg ros) -> is_tail (b :: c) f.(MB.fn_code) ->
   exists ra, return_address_offset f c ra.
 Proof.
-  intros. eapply Asmgenproof0.return_address_exists; eauto.
+  intros. eapply Asmblockgenproof0.return_address_exists; eauto.
+Admitted.
+(*
 - intros. exploit transl_instr_label; eauto.
   destruct i; try (intros [A B]; apply A). intros. subst c0. repeat constructor.
 - intros. monadInv H0.
@@ -496,7 +499,8 @@ Proof.
   constructor. apply is_tail_cons. apply (storeind_ptr_label GPR8 GPR12 (fn_retaddr_ofs f0) x).
 - exact transf_function_no_overflow.
 Qed.
- *)
+*)
+
 (** * Proof of semantic preservation *)
 
 (** Semantic preservation is proved using simulation diagrams
