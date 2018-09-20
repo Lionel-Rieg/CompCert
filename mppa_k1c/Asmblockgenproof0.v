@@ -74,49 +74,56 @@ Proof.
     omega.
 Qed.
 
-Lemma size_blocks_pos c: size_blocks c >= 0.
+Lemma size_blocks_pos c: 0 <= size_blocks c.
 Proof.
   induction c as [| a l ]; simpl; try omega.
   generalize (size_positive a); omega.
 Qed.
 
-Remark code_tail_bounds_1:
+Remark code_tail_positive:
   forall fn ofs c,
-  code_tail ofs fn c -> 0 <= ofs <= size_blocks fn.
+  code_tail ofs fn c -> 0 <= ofs.
 Proof.
   induction 1; intros; simpl.
-  generalize (size_blocks_pos c). omega.
-  generalize (size_positive bi). omega.
+  - omega.
+  - generalize (size_positive bi). omega.
 Qed.
 
-
-Remark code_tail_bounds_2:
-  forall fn ofs i c,
-  code_tail ofs fn (i :: c) -> 0 <= ofs < size_blocks fn.
-Admitted.
-(*
-  assert (forall ofs fn c, code_tail ofs fn c ->
-          forall i c', c = i :: c' -> 0 <= ofs < list_length_z fn).
-  induction 1; intros; simpl.
-  rewrite H. rewrite list_length_z_cons. generalize (list_length_z_pos c'). omega.
-  rewrite list_length_z_cons. generalize (IHcode_tail _ _ H0). omega.
-  eauto.
+Remark code_tail_size:
+  forall fn ofs c,
+  code_tail ofs fn c -> size_blocks fn = ofs + size_blocks c.
+Proof.
+  induction 1; intros; simpl; try omega.
 Qed.
-*)
 
-(* TODO: adapt this lemma -- needs  Ptrofs.one -> size bi
+Remark code_tail_bounds fn ofs c:
+  code_tail ofs fn c -> 0 <= ofs <= size_blocks fn.
+Proof.
+  intro H; 
+  exploit code_tail_size; eauto.
+  generalize (code_tail_positive _ _ _ H), (size_blocks_pos c).
+  omega.
+Qed.
+
+Local Hint Resolve code_tail_next.
+
+(* is it useful ?
 Lemma code_tail_next_int:
   forall fn ofs bi c,
   size_blocks fn <= Ptrofs.max_unsigned ->
   code_tail (Ptrofs.unsigned ofs) fn (bi :: c) ->
-  code_tail (Ptrofs.unsigned (Ptrofs.add ofs Ptrofs.one)) fn c.
+  code_tail (Ptrofs.unsigned (Ptrofs.add ofs (Ptrofs.repr (size bi)))) fn c.
 Proof.
-  intros. rewrite Ptrofs.add_unsigned, Ptrofs.unsigned_one.
-  rewrite Ptrofs.unsigned_repr. apply code_tail_next with i; auto.
-  generalize (code_tail_bounds_2 _ _ _ _ H0). omega.
+  intros. 
+  exploit code_tail_size; eauto.
+  simpl; generalize (code_tail_positive _ _ _ H0), (size_positive bi), (size_blocks_pos c).
+  intros.
+  rewrite Ptrofs.add_unsigned, Ptrofs.unsigned_repr.
+  - rewrite Ptrofs.unsigned_repr; eauto.
+    omega.
+  - rewrite Ptrofs.unsigned_repr; omega.
 Qed.
 *)
-
 
 (** Predictor for return addresses in generated Asm code.
 
@@ -149,12 +156,20 @@ Definition return_address_offset (f: MB.function) (c: MB.code) (ofs: ptrofs) : P
   transl_blocks f c = OK tc ->
   code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc.
 
-(* NB: this lemma should go into [Coqlib.v] *) 
+(* NB: these two lemma should go into [Coqlib.v] *) 
 Lemma is_tail_app A (l1: list A): forall l2, is_tail l2 (l1 ++ l2).
 Proof.
   induction l1; simpl; auto with coqlib.
 Qed.
 Hint Resolve is_tail_app: coqlib.
+
+Lemma is_tail_app_inv A (l1: list A): forall l2 l3, is_tail (l1 ++ l2) l3 -> is_tail l2 l3.
+Proof.
+  induction l1; simpl; auto with coqlib.
+  intros l2 l3 H; inversion H; eauto with coqlib.
+Qed.
+Hint Resolve is_tail_app_inv: coqlib.
+
 
 Lemma transl_blocks_tail:
   forall f c1 c2, is_tail c1 c2 ->
@@ -168,6 +183,12 @@ Proof.
   eapply is_tail_trans; eauto with coqlib. 
 Qed.
 
+Lemma is_tail_code_tail:
+  forall c1 c2, is_tail c1 c2 -> exists ofs, code_tail ofs c2 c1.
+Proof.
+  induction 1; eauto.
+  destruct IHis_tail; eauto. 
+Qed.
 
 Section RETADDR_EXISTS.
 
@@ -178,30 +199,28 @@ Hypothesis transf_function_inv:
 Hypothesis transf_function_len:
   forall f tf, transf_function f = OK tf -> size_blocks (fn_blocks tf) <= Ptrofs.max_unsigned.
 
+
+(* NB: the hypothesis on [b] is not needed in the proof !
+   It is strange, no ?
+ *)
 Lemma return_address_exists:
-  forall b f sg ros c, b.(MB.exit) = Some (MBcall sg ros) -> is_tail (b :: c) f.(MB.fn_code) ->
+  forall b f (* sg ros *) c, (* b.(MB.exit) = Some (MBcall sg ros) -> *) is_tail (b :: c) f.(MB.fn_code) ->
   exists ra, return_address_offset f c ra.
 Proof.
   intros. destruct (transf_function f) as [tf|] eqn:TF.
-+ exploit transf_function_inv; eauto. intros (tc1 & TR1 & TL1).
-  exploit transl_blocks_tail; eauto. intros (tc2 & TR2 & TL2).
-  unfold return_address_offset.
-  (* exploit code_tail_next_int; eauto.*)
-Admitted.
-
-(*
-Opaque transl_instr.
-  monadInv TR2.
-  assert (TL3: is_tail x (fn_code tf)).
-  { apply is_tail_trans with tc1; auto.
-    apply is_tail_trans with tc2; auto.
-    eapply transl_instr_tail; eauto. }
-  exploit is_tail_code_tail. eexact TL3. intros [ofs CT].
-  exists (Ptrofs.repr ofs). red; intros.
-  rewrite Ptrofs.unsigned_repr. congruence.
-  exploit code_tail_bounds_1; eauto.
-  apply transf_function_len in TF. omega.
-+ exists Ptrofs.zero; red; intros. congruence.
+  + exploit transf_function_inv; eauto. intros (tc1 & TR1 & TL1).
+    exploit transl_blocks_tail; eauto. intros (tc2 & TR2 & TL2).
+    unfold return_address_offset.
+    monadInv TR2.
+    assert (TL3: is_tail x0 (fn_blocks tf)).
+    { apply is_tail_trans with tc1; eauto with coqlib. }
+    exploit is_tail_code_tail; eauto.
+    intros [ofs CT].
+    exists (Ptrofs.repr ofs). intros.
+    rewrite Ptrofs.unsigned_repr. congruence.
+    exploit code_tail_bounds; eauto.
+    intros; apply transf_function_len in TF. omega.
+  + exists Ptrofs.zero; red; intros. congruence.
 Qed.
-*)
+
 End RETADDR_EXISTS.
