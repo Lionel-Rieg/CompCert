@@ -63,14 +63,15 @@ Qed.
  *)
 (** * Properties of control flow *)
 
-(* Lemma transf_function_no_overflow:
+Lemma transf_function_no_overflow:
   forall f tf,
-  transf_function f = OK tf -> list_length_z tf.(fn_code) <= Ptrofs.max_unsigned.
+  transf_function f = OK tf -> size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned.
 Proof.
-  intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (list_length_z x.(fn_code))); inv EQ0.
+  intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0.
   omega.
 Qed.
 
+(*
 Lemma exec_straight_exec:
   forall fb f c ep tf tc c' rs m rs' m',
   transl_code_at_pc ge (rs PC) fb f c ep tf tc ->
@@ -483,23 +484,19 @@ Qed.
 
 (** Existence of return addresses *)
 
+(* NB: the hypothesis in comment on [b] is not needed in the proof ! 
+*)
 Lemma return_address_exists:
-  forall b f sg ros c, b.(MB.exit) = Some (MBcall sg ros) -> is_tail (b :: c) f.(MB.fn_code) ->
+  forall b f (* sg ros *) c, (* b.(MB.exit) = Some (MBcall sg ros) -> *) is_tail (b :: c) f.(MB.fn_code) ->
   exists ra, return_address_offset f c ra.
 Proof.
   intros. eapply Asmblockgenproof0.return_address_exists; eauto.
-Admitted.
-(*
-- intros. exploit transl_instr_label; eauto.
-  destruct i; try (intros [A B]; apply A). intros. subst c0. repeat constructor.
-- intros. monadInv H0.
-  destruct (zlt Ptrofs.max_unsigned (list_length_z x.(fn_code))); inv EQ0. monadInv EQ.
-  rewrite transl_code'_transl_code in EQ0.
-  exists x; exists true; split; auto. unfold fn_code.
-  constructor. apply is_tail_cons. apply (storeind_ptr_label GPR8 GPR12 (fn_retaddr_ofs f0) x).
-- exact transf_function_no_overflow.
+  - intros f0 tf H0. monadInv H0.
+  destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0.
+  monadInv EQ. simpl.
+  eapply ex_intro; constructor 1; eauto with coqlib.
+  - exact transf_function_no_overflow.
 Qed.
-*)
 
 (** * Proof of semantic preservation *)
 

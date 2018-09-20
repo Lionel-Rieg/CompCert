@@ -200,9 +200,7 @@ Hypothesis transf_function_len:
   forall f tf, transf_function f = OK tf -> size_blocks (fn_blocks tf) <= Ptrofs.max_unsigned.
 
 
-(* NB: the hypothesis on [b] is not needed in the proof !
-   It is strange, no ?
- *)
+(* NB: the hypothesis in comment on [b] is not needed in the proof ! *)
 Lemma return_address_exists:
   forall b f (* sg ros *) c, (* b.(MB.exit) = Some (MBcall sg ros) -> *) is_tail (b :: c) f.(MB.fn_code) ->
   exists ra, return_address_offset f c ra.
