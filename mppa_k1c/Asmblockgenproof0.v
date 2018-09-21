@@ -17,6 +17,245 @@ Require Import Asmblockgen.
 Module MB:=Machblock.
 Module AB:=Asmblock.
 
+Lemma ireg_of_eq:
+  forall r r', ireg_of r = OK r' -> preg_of r = IR r'.
+Proof.
+  unfold ireg_of; intros. destruct (preg_of r); inv H; auto.
+  destruct b. all: try discriminate.
+  inv H1. auto.
+Qed.
+
+(* FIXME - Replaced FR by IR for MPPA *)
+Lemma freg_of_eq:
+  forall r r', freg_of r = OK r' -> preg_of r = IR r'.
+Proof.
+  unfold freg_of; intros. destruct (preg_of r); inv H; auto.
+  destruct b. all: try discriminate.
+  inv H1. auto.
+Qed.
+
+
+Lemma preg_of_injective:
+  forall r1 r2, preg_of r1 = preg_of r2 -> r1 = r2.
+Proof.
+  destruct r1; destruct r2; simpl; intros; reflexivity || discriminate.
+Qed.
+
+Lemma preg_of_data:
+  forall r, data_preg (preg_of r) = true.
+Proof.
+  intros. destruct r; reflexivity.
+Qed.
+Hint Resolve preg_of_data: asmgen.
+
+Lemma data_diff:
+  forall r r',
+  data_preg r = true -> data_preg r' = false -> r <> r'.
+Proof.
+  congruence.
+Qed.
+Hint Resolve data_diff: asmgen.
+
+Lemma preg_of_not_SP:
+  forall r, preg_of r <> SP.
+Proof.
+  intros. unfold preg_of; destruct r; simpl; congruence.
+Qed.
+
+Lemma preg_of_not_PC:
+  forall r, preg_of r <> PC.
+Proof.
+  intros. apply data_diff; auto with asmgen.
+Qed.
+
+Hint Resolve preg_of_not_SP preg_of_not_PC: asmgen.
+
+(** * Agreement between Mach registers and processor registers *)
+
+Record agree (ms: Mach.regset) (sp: val) (rs: AB.regset) : Prop := mkagree {
+  agree_sp: rs#SP = sp;
+  agree_sp_def: sp <> Vundef;
+  agree_mregs: forall r: mreg, Val.lessdef (ms r) (rs#(preg_of r))
+}.
+
+Lemma preg_val:
+  forall ms sp rs r, agree ms sp rs -> Val.lessdef (ms r) rs#(preg_of r).
+Proof.
+  intros. destruct H. auto.
+Qed.
+
+Lemma preg_vals:
+  forall ms sp rs, agree ms sp rs ->
+  forall l, Val.lessdef_list (map ms l) (map rs (map preg_of l)).
+Proof.
+  induction l; simpl. constructor. constructor. eapply preg_val; eauto. auto.
+Qed.
+
+Lemma sp_val:
+  forall ms sp rs, agree ms sp rs -> sp = rs#SP.
+Proof.
+  intros. destruct H; auto.
+Qed.
+
+Lemma ireg_val:
+  forall ms sp rs r r',
+  agree ms sp rs ->
+  ireg_of r = OK r' ->
+  Val.lessdef (ms r) rs#r'.
+Proof.
+  intros. rewrite <- (ireg_of_eq _ _ H0). eapply preg_val; eauto.
+Qed.
+
+Lemma freg_val:
+  forall ms sp rs r r',
+  agree ms sp rs ->
+  freg_of r = OK r' ->
+  Val.lessdef (ms r) (rs#r').
+Proof.
+  intros. rewrite <- (freg_of_eq _ _ H0). eapply preg_val; eauto.
+Qed.
+
+Lemma agree_exten:
+  forall ms sp rs rs',
+  agree ms sp rs ->
+  (forall r, data_preg r = true -> rs'#r = rs#r) ->
+  agree ms sp rs'.
+Proof.
+  intros. destruct H. split; auto.
+  rewrite H0; auto. auto.
+  intros. rewrite H0; auto. apply preg_of_data.
+Qed.
+
+(** Preservation of register agreement under various assignments. *)
+
+Lemma agree_set_mreg:
+  forall ms sp rs r v rs',
+  agree ms sp rs ->
+  Val.lessdef v (rs'#(preg_of r)) ->
+  (forall r', data_preg r' = true -> r' <> preg_of r -> rs'#r' = rs#r') ->
+  agree (Mach.Regmap.set r v ms) sp rs'.
+Proof.
+  intros. destruct H. split; auto.
+  rewrite H1; auto. apply not_eq_sym. apply preg_of_not_SP.
+  intros. unfold Mach.Regmap.set. destruct (Mach.RegEq.eq r0 r). congruence.
+  rewrite H1. auto. apply preg_of_data.
+  red; intros; elim n. eapply preg_of_injective; eauto.
+Qed.
+
+Corollary agree_set_mreg_parallel:
+  forall ms sp rs r v v',
+  agree ms sp rs ->
+  Val.lessdef v v' ->
+  agree (Mach.Regmap.set r v ms) sp (Pregmap.set (preg_of r) v' rs).
+Proof.
+  intros. eapply agree_set_mreg; eauto. rewrite Pregmap.gss; auto. intros; apply Pregmap.gso; auto.
+Qed.
+
+Lemma agree_set_other:
+  forall ms sp rs r v,
+  agree ms sp rs ->
+  data_preg r = false ->
+  agree ms sp (rs#r <-- v).
+Proof.
+  intros. apply agree_exten with rs. auto.
+  intros. apply Pregmap.gso. congruence.
+Qed.
+
+(* Lemma agree_nextinstr:
+  forall ms sp rs,
+  agree ms sp rs -> agree ms sp (nextinstr rs).
+Proof.
+  intros. unfold nextinstr. apply agree_set_other. auto. auto.
+Qed.
+ *)
+
+(* Lemma agree_set_pair:
+  forall sp p v v' ms rs,
+  agree ms sp rs ->
+  Val.lessdef v v' ->
+  agree (Mach.set_pair p v ms) sp (set_pair (map_rpair preg_of p) v' rs).
+Proof.
+  intros. destruct p; simpl.
+- apply agree_set_mreg_parallel; auto.
+- apply agree_set_mreg_parallel. apply agree_set_mreg_parallel; auto.
+  apply Val.hiword_lessdef; auto. apply Val.loword_lessdef; auto.
+Qed.
+ *)
+
+Lemma agree_undef_nondata_regs:
+  forall ms sp rl rs,
+  agree ms sp rs ->
+  (forall r, In r rl -> data_preg r = false) ->
+  agree ms sp (undef_regs rl rs).
+Proof.
+  induction rl; simpl; intros. auto.
+  apply IHrl. apply agree_exten with rs; auto.
+  intros. apply Pregmap.gso. red; intros; subst.
+  assert (data_preg a = false) by auto. congruence.
+  intros. apply H0; auto.
+Qed.
+
+(* Lemma agree_undef_regs:
+  forall ms sp rl rs rs',
+  agree ms sp rs ->
+  (forall r', data_preg r' = true -> preg_notin r' rl -> rs'#r' = rs#r') ->
+  agree (Mach.undef_regs rl ms) sp rs'.
+Proof.
+  intros. destruct H. split; auto.
+  rewrite <- agree_sp0. apply H0; auto.
+  rewrite preg_notin_charact. intros. apply not_eq_sym. apply preg_of_not_SP.
+  intros. destruct (In_dec mreg_eq r rl).
+  rewrite Mach.undef_regs_same; auto.
+  rewrite Mach.undef_regs_other; auto. rewrite H0; auto.
+  apply preg_of_data.
+  rewrite preg_notin_charact. intros; red; intros. elim n.
+  exploit preg_of_injective; eauto. congruence.
+Qed.
+ *)
+
+(* Lemma agree_undef_regs2:
+  forall ms sp rl rs rs',
+  agree (Mach.undef_regs rl ms) sp rs ->
+  (forall r', data_preg r' = true -> preg_notin r' rl -> rs'#r' = rs#r') ->
+  agree (Mach.undef_regs rl ms) sp rs'.
+Proof.
+  intros. destruct H. split; auto.
+  rewrite <- agree_sp0. apply H0; auto.
+  rewrite preg_notin_charact. intros. apply not_eq_sym. apply preg_of_not_SP.
+  intros. destruct (In_dec mreg_eq r rl).
+  rewrite Mach.undef_regs_same; auto.
+  rewrite H0; auto.
+  apply preg_of_data.
+  rewrite preg_notin_charact. intros; red; intros. elim n.
+  exploit preg_of_injective; eauto. congruence.
+Qed.
+ *)
+
+(* Lemma agree_set_undef_mreg:
+  forall ms sp rs r v rl rs',
+  agree ms sp rs ->
+  Val.lessdef v (rs'#(preg_of r)) ->
+  (forall r', data_preg r' = true -> r' <> preg_of r -> preg_notin r' rl -> rs'#r' = rs#r') ->
+  agree (Mach.Regmap.set r v (Mach.undef_regs rl ms)) sp rs'.
+Proof.
+  intros. apply agree_set_mreg with (rs'#(preg_of r) <- (rs#(preg_of r))); auto.
+  apply agree_undef_regs with rs; auto.
+  intros. unfold Pregmap.set. destruct (PregEq.eq r' (preg_of r)).
+  congruence. auto.
+  intros. rewrite Pregmap.gso; auto.
+Qed.
+ *)
+
+Lemma agree_change_sp:
+  forall ms sp rs sp',
+  agree ms sp rs -> sp' <> Vundef ->
+  agree ms sp' (rs#SP <-- sp').
+Proof.
+  intros. inv H. split; auto.
+  intros. rewrite Pregmap.gso; auto with asmgen.
+Qed.
+
+
 (* inspired from Mach *)
 
 Lemma find_label_tail:
@@ -222,3 +461,64 @@ Proof.
 Qed.
 
 End RETADDR_EXISTS.
+
+(** [transl_code_at_pc pc fb f c ep tf tc] holds if the code pointer [pc] points
+  within the Asm code generated by translating Mach function [f],
+  and [tc] is the tail of the generated code at the position corresponding
+  to the code pointer [pc]. *)
+
+Inductive transl_code_at_pc (ge: MB.genv):
+    val -> block -> MB.function -> MB.code -> bool -> AB.function -> AB.bblocks -> Prop :=
+  transl_code_at_pc_intro:
+    forall b ofs f c ep tf tc,
+    Genv.find_funct_ptr ge b = Some(Internal f) ->
+    transf_function f = Errors.OK tf ->
+    transl_blocks f c = OK tc ->
+    code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc ->
+    transl_code_at_pc ge (Vptr b ofs) b f c ep tf tc.
+
+(** * Properties of the Machblock call stack *)
+
+Section MATCH_STACK.
+
+Variable ge: MB.genv.
+
+Inductive match_stack: list MB.stackframe -> Prop :=
+  | match_stack_nil:
+      match_stack nil
+  | match_stack_cons: forall fb sp ra c s f tf tc,
+      Genv.find_funct_ptr ge fb = Some (Internal f) ->
+      transl_code_at_pc ge ra fb f c false tf tc ->
+      sp <> Vundef ->
+      match_stack s ->
+      match_stack (Stackframe fb sp ra c :: s).
+
+Lemma parent_sp_def: forall s, match_stack s -> parent_sp s <> Vundef.
+Proof.
+  induction 1; simpl.
+  unfold Vnullptr; destruct Archi.ptr64; congruence.
+  auto.
+Qed.
+
+Lemma parent_ra_def: forall s, match_stack s -> parent_ra s <> Vundef.
+Proof.
+  induction 1; simpl.
+  unfold Vnullptr; destruct Archi.ptr64; congruence.
+  inv H0. congruence.
+Qed.
+
+Lemma lessdef_parent_sp:
+  forall s v,
+  match_stack s -> Val.lessdef (parent_sp s) v -> v = parent_sp s.
+Proof.
+  intros. inv H0. auto. exploit parent_sp_def; eauto. tauto.
+Qed.
+
+Lemma lessdef_parent_ra:
+  forall s v,
+  match_stack s -> Val.lessdef (parent_ra s) v -> v = parent_ra s.
+Proof.
+  intros. inv H0. auto. exploit parent_ra_def; eauto. tauto.
+Qed.
+
+End MATCH_STACK.

@@ -19,6 +19,9 @@ Require Import Op Locations Machblock Conventions Asmblock.
 (* Require Import Asmgen Asmgenproof0 Asmgenproof1. *)
 Require Import Asmblockgen Asmblockgenproof0.
 
+Module MB := Machblock.
+Module AB := Asmblock.
+
 Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
@@ -36,7 +39,7 @@ Hypothesis TRANSF: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
-(* Lemma symbols_preserved:
+Lemma symbols_preserved:
   forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
 Proof (Genv.find_symbol_match TRANSF).
 
@@ -44,6 +47,7 @@ Lemma senv_preserved:
   Senv.equiv ge tge.
 Proof (Genv.senv_match TRANSF).
 
+(*
 Lemma functions_translated:
   forall b f,
   Genv.find_funct_ptr ge b = Some f ->
@@ -515,14 +519,6 @@ Qed.
   the current Mach code sequence.
 - Mach register values and Asm register values agree.
 *)
-
-Definition match_stack : Machblock.genv -> list stackframe -> Prop := (fun x y => False).
-
-Definition transl_code_at_pc : 
-  Machblock.genv -> val -> block -> Machblock.function -> Machblock.code -> bool -> function -> code -> Prop
-  := (fun a b c d e f g h => False).
-
-Definition agree : Mach.regset -> val -> regset -> Prop := (fun a b c => False).
 
 Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
   | match_states_intro:
@@ -1072,10 +1068,11 @@ Local Transparent destroyed_at_function_entry.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.
 Qed.
+*)
 
 Lemma transf_initial_states:
-  forall st1, Mach.initial_state prog st1 ->
-  exists st2, Asm.initial_state tprog st2 /\ match_states st1 st2.
+  forall st1, MB.initial_state prog st1 ->
+  exists st2, AB.initial_state tprog st2 /\ match_states st1 st2.
 Proof.
   intros. inversion H. unfold ge0 in *.
   econstructor; split.
@@ -1087,7 +1084,7 @@ Proof.
   constructor.
   apply Mem.extends_refl.
   split. auto. simpl. unfold Vnullptr; destruct Archi.ptr64; congruence.
-  intros. rewrite Regmap.gi. auto.
+  intros. rewrite Mach.Regmap.gi. auto.
   unfold Genv.symbol_address.
   rewrite (match_program_main TRANSF).
   rewrite symbols_preserved.
@@ -1096,19 +1093,27 @@ Qed.
 
 Lemma transf_final_states:
   forall st1 st2 r,
-  match_states st1 st2 -> Mach.final_state st1 r -> Asm.final_state st2 r.
+  match_states st1 st2 -> MB.final_state st1 r -> AB.final_state st2 r.
 Proof.
   intros. inv H0. inv H. constructor. assumption.
   compute in H1. inv H1.
   generalize (preg_val _ _ _ R0 AG). rewrite H2. intros LD; inv LD. auto.
 Qed.
- *)
 
 Definition return_address_offset : Machblock.function -> Machblock.code -> ptrofs -> Prop := 
   Asmblockgenproof0.return_address_offset.
 
-Axiom transf_program_correct:
-  forward_simulation (Machblock.semantics return_address_offset prog) (Asmblock.semantics tprog).
+Axiom TODO: False.
+
+Theorem transf_program_correct:
+  forward_simulation (MB.semantics return_address_offset prog) (AB.semantics tprog).
+Proof.
+  eapply forward_simulation_step.
+  - apply senv_preserved.
+  - eexact transf_initial_states.
+  - eexact transf_final_states.
+  - destruct TODO.
+Qed.
 
 (* 
 Theorem transf_program_correct:
