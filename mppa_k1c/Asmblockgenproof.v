@@ -663,12 +663,6 @@ Qed. *)
   So, the following integer measure will suffice to rule out
   the unwanted behaviour. *)
 
-Definition measure (s: Mach.state) : nat :=
-  match s with
-  | Mach.State _ _ _ _ _ _ => 0%nat
-  | Mach.Callstate _ _ _ _ => 0%nat
-  | Mach.Returnstate _ _ _ => 1%nat
-  end.
 (* 
 Remark preg_of_not_FP: forall r, negb (mreg_eq r R10) = true -> IR FP <> preg_of r.
 Proof.
@@ -1070,6 +1064,31 @@ Local Transparent destroyed_at_function_entry.
 Qed.
 *)
 
+Definition measure (s: MB.state) : nat :=
+  match s with
+  | MB.State _ _ _ _ _ _ => 0%nat
+  | MB.Callstate _ _ _ _ => 0%nat
+  | MB.Returnstate _ _ _ => 1%nat
+  end.
+
+Axiom TODO: False.
+
+Theorem step_simulation:
+  forall S1 t S2, MB.step return_address_offset ge S1 t S2 ->
+  forall S1' (MS: match_states S1 S1'),
+  (exists S2', plus step tge S1' t S2' /\ match_states S2 S2')
+  \/ (measure S2 < measure S1 /\ t = E0 /\ match_states S2 S1')%nat.
+Proof.
+  induction 1; intros.
+  - destruct TODO.
+  - destruct TODO.
+  - destruct TODO.
+  - inv MS. inv STACKS. simpl in *.
+  right. split. omega. split. auto.
+  rewrite <- ATPC in H5.
+  econstructor; eauto. congruence.
+Admitted.
+
 Lemma transf_initial_states:
   forall st1, MB.initial_state prog st1 ->
   exists st2, AB.initial_state tprog st2 /\ match_states st1 st2.
@@ -1103,16 +1122,14 @@ Qed.
 Definition return_address_offset : Machblock.function -> Machblock.code -> ptrofs -> Prop := 
   Asmblockgenproof0.return_address_offset.
 
-Axiom TODO: False.
-
 Theorem transf_program_correct:
   forward_simulation (MB.semantics return_address_offset prog) (AB.semantics tprog).
 Proof.
-  eapply forward_simulation_step.
+  eapply forward_simulation_star with (measure := measure).
   - apply senv_preserved.
   - eexact transf_initial_states.
   - eexact transf_final_states.
-  - destruct TODO.
+  - exact step_simulation.
 Qed.
 
 (* 
