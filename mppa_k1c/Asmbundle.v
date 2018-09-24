@@ -12,10 +12,108 @@ Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
 Require Export Asmblock.
+Require Import ListSet.
 
 Section RELSEM.
 
 Variable ge: genv.
+
+(** List of all registers, to use for Pbuiltin dependencies *)
+Definition all_gpregs := 
+  GPR0 :: GPR1 :: GPR2 :: GPR3 :: GPR4 :: GPR5 :: GPR6 :: GPR7 :: GPR8 :: GPR9 ::
+  GPR10 :: GPR11 :: GPR12 :: GPR13 :: GPR14 :: GPR15 :: GPR16 :: GPR17 :: GPR18 :: GPR19 ::
+  GPR20 :: GPR21 :: GPR22 :: GPR23 :: GPR24 :: GPR25 :: GPR26 :: GPR27 :: GPR28 :: GPR29 ::
+  GPR30 :: GPR31 :: GPR32 :: GPR33 :: GPR34 :: GPR35 :: GPR36 :: GPR37 :: GPR38 :: GPR39 ::
+  GPR40 :: GPR41 :: GPR42 :: GPR43 :: GPR44 :: GPR45 :: GPR46 :: GPR47 :: GPR48 :: GPR49 ::
+  GPR50 :: GPR51 :: GPR52 :: GPR53 :: GPR54 :: GPR55 :: GPR56 :: GPR57 :: GPR58 :: GPR59 ::
+  GPR60 :: GPR61 :: GPR62 :: GPR63 :: nil.
+
+Fact all_gpregs_complete : forall gpr, List.In gpr all_gpregs.
+Proof.
+  intros. destruct gpr; simpl.
+  all: repeat ((try (left; reflexivity)); right).
+Qed.
+
+Definition all_bregs := (map IR all_gpregs) ++ (map FR all_gpregs) ++ (RA::nil).
+
+Fact all_bregs_complete : forall br, List.In br all_bregs.
+Proof.
+  intros. destruct br.
+  - unfold all_bregs. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
+  - unfold all_bregs. apply in_app_iff. right. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
+  - unfold all_bregs. repeat (apply in_app_iff; right). simpl. left; auto.
+Qed.
+
+Definition readregs (i: instruction) : list breg :=
+  match i with
+  (* Control instructions *)
+  | Pset rd rs => IR rs::nil
+  | Pget rd rs => rs::nil
+  | Pcb bt r l => IR r::nil
+  | Pcbu bt r l => IR r::nil
+  | Pret => RA::nil
+  (* Load and store *)
+  | PLoadRRO i rd ra o => IR ra :: nil
+  | PStoreRRO i rs ra o => IR rs :: IR ra :: nil
+  (* Arith *)
+  | PArithRR i rd rs => IR rs :: nil
+  | PArithRRR i rd rs1 rs2 => IR rs1 :: IR rs2 :: nil
+  | PArithRRI32 i rd rs imm => IR rs :: nil
+  | PArithRRI64 i rd rs imm => IR rs :: nil
+  (* Alloc and freeframe and builtins : implemented in OCaml, we know nothing about them *)
+  | Pallocframe _ _ | Pfreeframe _ _ | Pbuiltin _ _ _ => all_bregs
+  (* Instructions that do not read *)
+  | Pnop | Pcall _ | Pgoto _ | Pj_l _ | PArithR _ _ | PArithRI32 _ _ _ | PArithRI64 _ _ _ => nil
+  end.
+
+Definition writeregs (i: instruction): list breg :=
+  match i with
+  (* Control instructions *)
+  | Pset rd rs => rd::nil
+  | Pget rd rs => IR rd::nil
+  | Pcall s => RA::nil
+  (* Load *)
+  | PLoadRRO i rd ra o => IR rd::nil
+  (* Arith *)
+  | PArithR i rd => IR rd::nil
+  | PArithRR i rd rs => IR rd::nil
+  | PArithRI32 i rd imm => IR rd::nil
+  | PArithRI64 i rd imm => IR rd::nil
+  | PArithRRR i rd rs1 rs2 => IR rd::nil
+  | PArithRRI32 i rd rs imm => IR rd::nil
+  | PArithRRI64 i rd rs imm => IR rd::nil
+  (* Alloc and freeframe *)
+  | Pallocframe _ _ | Pfreeframe _ _ | Pbuiltin _ _ _ => all_bregs
+  (* Instructions that do not write *)
+  | Pnop | Pret | Pgoto _ | Pj_l _ | Pcb _ _ _ | Pcbu _ _ _ | PStoreRRO _ _ _ _ => nil
+  end.
+
+(* Definition disjoint {A: Type} (l l':list A) : Prop := forall r, In r l -> In r l' -> False. *)
+
+(* Inductive definition of disjoint, easier to reason with *)
+Inductive disjoint {A: Type} : list A -> list A -> Prop :=
+  | disjoint_nilr : forall l, disjoint l nil
+  | disjoint_nill : forall l, disjoint nil l
+  | disjoint_consl : forall l l' e, disjoint l l' -> (~ In e l') -> disjoint (e::l) l'
+  | disjoint_consr : forall l l' e, disjoint l l' -> (~ In e l) -> disjoint l (e::l')
+  .
+
+Example disjoint_ex1: disjoint (4::2::1::nil) (3::5::7::nil).
+Proof.
+  repeat constructor.
+  all: try (intro H; simpl in H;
+  repeat (match goal with h:_ \/ _ |- _ => inversion_clear h; [discriminate|] | _ => fail end); contradiction).
+Qed.
+
+Inductive depfree : list breg -> list breg -> list instruction -> Prop :=
+  | depfree_nil : forall lw lr, depfree lw lr nil
+  | depfree_cons : forall i lri lwi lw lr l,
+                    lri = readregs i -> lwi = writeregs i ->
+                    disjoint lwi lw -> (* Checking for WAW *)
+                    disjoint lwi lr -> (* Checking for RAW *)
+                    depfree (lr++lri) (lw++lwi) l ->
+                    depfree lr lw (i::l)
+  .
 
 (* FIXME: STUB *)
 Definition is_bundle (b:bblock):=True. 
