@@ -1105,15 +1105,15 @@ Inductive state: Type :=
  * Perhaps there is a way to avoid that ?
  *)
 
-Inductive step: state -> trace -> state -> Prop :=
-  | exec_step_internal:
+Inductive stepin: option bblock -> state -> trace -> state -> Prop :=
+  | exec_stepin_internal:
       forall b ofs f bi rs m rs' m',
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
       find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bi ->
       exec_bblock f bi rs m = Next rs' m' ->
-      step (State rs m) E0 (State rs' m')
-  | exec_step_builtin:
+      stepin (Some bi) (State rs m) E0 (State rs' m')
+  | exec_stepin_builtin:
       forall b ofs f ef args res rs m vargs t vres rs' m' bi,
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
@@ -1125,15 +1125,64 @@ Inductive step: state -> trace -> state -> Prop :=
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
                    (rs#GPR31 <-- Vundef))) ->
-      step (State rs m) t (State rs' m')
-  | exec_step_external:
+      stepin (Some bi) (State rs m) t (State rs' m')
+  | exec_stepin_external:
       forall b ef args res rs m t rs' m',
       rs PC = Vptr b Ptrofs.zero ->
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
       rs' = (update_pregs rs (set_pair (loc_external_result (ef_sig ef) ) res rs))#PC <-- (rs RA) ->
+      stepin None (State rs m) t (State rs' m')
+  .
+
+Definition step (s:state) (t:trace) (s':state): Prop := exists obi, stepin obi s t s'.
+
+(* original constructors *)
+Lemma exec_step_internal b ofs f bi rs m rs' m':
+      rs PC = Vptr b ofs ->
+      Genv.find_funct_ptr ge b = Some (Internal f) ->
+      find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bi ->
+      exec_bblock f bi rs m = Next rs' m' ->
+      step (State rs m) E0 (State rs' m').
+Proof.
+  intros; eexists. eapply exec_stepin_internal; eauto.
+Qed.
+
+Lemma exec_step_builtin b ofs f ef args res rs m vargs t vres rs' m' bi:
+      rs PC = Vptr b ofs ->
+      Genv.find_funct_ptr ge b = Some (Internal f) ->
+      find_bblock (Ptrofs.unsigned ofs) f.(fn_blocks) = Some bi ->
+      exit bi = Some (PExpand (Pbuiltin ef args res)) ->
+      eval_builtin_args ge rs (rs SP) m args vargs ->
+      external_call ef ge vargs m t vres m' ->
+      rs' = nextblock bi
+              (set_res res vres
+                (undef_regs (map preg_of (destroyed_by_builtin ef))
+                   (rs#GPR31 <-- Vundef))) ->
       step (State rs m) t (State rs' m').
+Proof.
+  intros; eexists. eapply exec_stepin_builtin; eauto.
+Qed.
+
+Lemma exec_step_external b ef args res rs m t rs' m':
+      rs PC = Vptr b Ptrofs.zero ->
+      Genv.find_funct_ptr ge b = Some (External ef) ->
+      external_call ef ge args m t res m' ->
+      extcall_arguments rs m (ef_sig ef) args ->
+      rs' = (update_pregs rs (set_pair (loc_external_result (ef_sig ef) ) res rs))#PC <-- (rs RA) ->
+      step (State rs m) t (State rs' m')
+  .
+Proof.
+  intros; eexists. eapply exec_stepin_external; eauto.
+Qed.
+
+
+(* juste pour essayer *)
+Parameter is_bundle: bblock -> Prop.
+
+Definition bundle_step (s:state) (t:trace) (s':state): Prop := 
+  exists obi, stepin obi s t s' /\ forall bi, obi = Some bi -> is_bundle bi.
 
 End RELSEM.
 
