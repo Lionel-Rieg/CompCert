@@ -1087,7 +1087,7 @@ Proof.
   right. split. omega. split. auto.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.
-Admitted.
+Qed.
 
 Lemma transf_initial_states:
   forall st1, MB.initial_state prog st1 ->
@@ -1131,16 +1131,5 @@ Proof.
   - eexact transf_final_states.
   - exact step_simulation.
 Qed.
-
-(* 
-Theorem transf_program_correct:
-  forward_simulation (Mach.semantics return_address_offset prog) (Asm.semantics tprog).
-Proof.
-  eapply forward_simulation_star with (measure := measure).
-  apply senv_preserved.
-  eexact transf_initial_states.
-  eexact transf_final_states.
-  exact step_simulation.
-Qed. *)
 
 End PRESERVATION.
