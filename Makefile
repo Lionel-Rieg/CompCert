@@ -97,6 +97,7 @@ BACKEND=\
   Bounds.v Stacklayout.v Stacking.v Stackingproof.v \
   Machblock.v Machblockgen.v Machblockgenproof.v \
   Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof.v \
+  Asmbundle.v Asmbundling.v Asmbundlingproof.v \
   Asm.v Asmgen.v Asmgenproof.v
 
 # C front-end modules (in cfrontend/)
