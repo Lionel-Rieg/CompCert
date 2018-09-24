@@ -14,6 +14,19 @@ Require Import Conventions.
 Require Export Asmblock.
 Require Import ListSet.
 
+
+Fixpoint notIn {A} (x: A) (l:list A): Prop :=
+  match l with
+  | nil => True
+  | a::l' => x <> a /\ notIn x l'
+  end.
+
+Lemma notIn_rewrite A (r:A) l: (~List.In r l) <-> notIn r l.
+Proof.
+  induction l; simpl; intuition.
+Qed.
+
+
 Section RELSEM.
 
 Variable ge: genv.
@@ -44,28 +57,6 @@ Proof.
   - unfold all_bregs. repeat (apply in_app_iff; right). simpl. left; auto.
 Qed.
 
-Definition readregs (i: instruction) : list breg :=
-  match i with
-  (* Control instructions *)
-  | Pset rd rs => IR rs::nil
-  | Pget rd rs => rs::nil
-  | Pcb bt r l => IR r::nil
-  | Pcbu bt r l => IR r::nil
-  | Pret => RA::nil
-  (* Load and store *)
-  | PLoadRRO i rd ra o => IR ra :: nil
-  | PStoreRRO i rs ra o => IR rs :: IR ra :: nil
-  (* Arith *)
-  | PArithRR i rd rs => IR rs :: nil
-  | PArithRRR i rd rs1 rs2 => IR rs1 :: IR rs2 :: nil
-  | PArithRRI32 i rd rs imm => IR rs :: nil
-  | PArithRRI64 i rd rs imm => IR rs :: nil
-  (* Alloc and freeframe and builtins : implemented in OCaml, we know nothing about them *)
-  | Pallocframe _ _ | Pfreeframe _ _ | Pbuiltin _ _ _ => all_bregs
-  (* Instructions that do not read *)
-  | Pnop | Pcall _ | Pgoto _ | Pj_l _ | PArithR _ _ | PArithRI32 _ _ _ | PArithRI64 _ _ _ => nil
-  end.
-
 Definition writeregs (i: instruction): list breg :=
   match i with
   (* Control instructions *)
@@ -83,14 +74,131 @@ Definition writeregs (i: instruction): list breg :=
   | PArithRRI32 i rd rs imm => IR rd::nil
   | PArithRRI64 i rd rs imm => IR rd::nil
   (* Alloc and freeframe *)
-  | Pallocframe _ _ | Pfreeframe _ _ | Pbuiltin _ _ _ => all_bregs
+  | Pallocframe _ _ => IR FP::IR GPR31::IR SP :: nil
+  | Pfreeframe _ _ => IR GPR31::IR SP :: nil
+  (* builtins : only implemented in OCaml, we know nothing about them *)
+  | Pbuiltin _ _ _ => all_bregs
   (* Instructions that do not write *)
   | Pnop | Pret | Pgoto _ | Pj_l _ | Pcb _ _ _ | Pcbu _ _ _ | PStoreRRO _ _ _ _ => nil
   end.
 
-(* Definition disjoint {A: Type} (l l':list A) : Prop := forall r, In r l -> In r l' -> False. *)
+Lemma update_PC_breg (rs: regset) v (r: breg):
+  (rs#PC <-- v) r = rs r.
+Proof.
+ rewrite Pregmap.gso; congruence.
+Qed.
 
-(* Inductive definition of disjoint, easier to reason with *)
+Lemma update_pregs_diff (rs:regset) rd x r: r <> rd -> update_pregs rs (rs # rd <- x) r = rs r.
+Proof.
+  unfold update_pregs. intro H. rewrite Bregmap.gso; congruence.
+Qed.
+ 
+Hint Rewrite update_PC_breg update_pregs_diff: regset_rw.
+
+Fact writeregs_correct f i rs m rs' m' r: 
+    ~(List.In r (writeregs i)) -> 
+    (exec_bblock ge f (bblock_single_inst i) rs m) = Next rs' m' ->
+    rs' r = rs r.
+Proof.
+  rewrite notIn_rewrite.
+  unfold exec_bblock, nextblock, size; destruct i; simpl.
+  destruct i; simpl.
+  destruct i; simpl; try ( 
+    destruct i; simpl; intro H; decompose [and] H; clear H;
+    intros H; inversion_clear H;
+    autorewrite with regset_rw; auto; fail).
+  - (* LOAD *) destruct i; simpl. 
+  destruct i; simpl; unfold exec_load; 
+  destruct (Mem.loadv _ _ _); try discriminate;
+  intro H; decompose [and] H; clear H;
+  intros H; inversion_clear H;
+  autorewrite with regset_rw; auto.
+  - (* STORE *) destruct i; simpl. 
+  destruct i; simpl; unfold exec_store;
+  destruct (Mem.storev _ _ _ _); try discriminate;
+  intro H; clear H;
+  intros H; inversion_clear H;
+  autorewrite with regset_rw; auto.
+  - (* ALLOCFRAME *)
+Admitted.
+
+Definition readregs (i: instruction) : list breg :=
+  match i with
+  (* Control instructions *)
+  | Pset rd rs => IR rs::nil
+  | Pget rd rs => rs::nil
+  | Pcb bt r l => IR r::nil
+  | Pcbu bt r l => IR r::nil
+  | Pret => RA::nil
+  (* Load and store *)
+  | PLoadRRO i rd ra o => IR ra :: nil
+  | PStoreRRO i rs ra o => IR rs :: IR ra :: nil
+  (* Arith *)
+  | PArithRR i rd rs => IR rs :: nil
+  | PArithRRR i rd rs1 rs2 => IR rs1 :: IR rs2 :: nil
+  | PArithRRI32 i rd rs imm => IR rs :: nil
+  | PArithRRI64 i rd rs imm => IR rs :: nil
+  (* Alloc and freeframe (from the semantics) *) 
+  | Pallocframe _ _ | Pfreeframe _ _ => IR SP :: nil
+  (* builtins : only implemented in OCaml, we know nothing about them *)
+  | Pbuiltin _ _ _ => all_bregs
+  (* Instructions that do not read *)
+  | Pnop | Pcall _ | Pgoto _ | Pj_l _ | PArithR _ _ | PArithRI32 _ _ _ | PArithRI64 _ _ _ => nil
+  end.
+
+Axiom TODO: False.
+
+Definition outcome_equiv (r: breg) v (o1 o2: outcome (rgset:=regset))  :=
+  match o1 with
+  | Next rs1 m1 => exists rs2, exists m2, o2=Next rs2 m2 /\ (forall r, (rs1#r <-- v) r = rs2 r) /\ (forall chunk p, Mem.loadv chunk m1 p = Mem.loadv chunk m2 p)
+  | Stuck => o2 = Stuck
+  end.
+
+Fact useregs_correct f i rs m r v: 
+  ~(List.In r ((readregs i)++(writeregs i))) -> 
+    outcome_equiv r v
+                  (exec_bblock ge f (bblock_single_inst i) rs m) 
+                  (exec_bblock ge f (bblock_single_inst i) (rs#r <-- v) m).
+Proof.
+  rewrite notIn_rewrite.
+  unfold exec_bblock, nextblock, size; destruct i; simpl.
+  + destruct i; simpl.
+   - destruct i; simpl.
+     * intro H; decompose [and] H; clear H. (* H useless *)
+       elim TODO.
+     * intro H; decompose [and] H; clear H.
+       destruct i; simpl.
+       simpl; eexists; eexists; constructor 1; eauto. 
+       intuition. 
+       destruct r0.
+       rewrite! update_PC_breg.
+    (* TODO: lemma on  rs # _ <-- _ *)
+Abort.
+
+(* alternative definition of disjoint *)
+Definition disjoint_x {A: Type} (l l':list A) : Prop := forall r, In r l -> ~In r l'. (* TODO: use notIn instead ? *)
+
+Example disjoint_x_ex1: disjoint_x (4::2::1::nil) (3::5::7::nil).
+Proof.
+  unfold disjoint_x; simpl. intuition.
+Qed.
+
+Lemma disjoint_x_nilr : forall A (l:list A), disjoint_x l nil.
+Proof.
+  unfold disjoint_x; simpl. intuition.
+Qed.
+
+Lemma disjoint_x_consl : forall A l l' (e:A), disjoint_x l l' -> (~ In e l') -> disjoint_x (e::l) l'.
+Proof.
+  unfold disjoint_x; simpl. intuition (subst; eauto).
+Qed.
+
+(* Inductive definition of disjoint, easier to reason with 
+
+Sylvain: I am not sure. Actually, from the above definition, we can still prove the following "constructors" as lemma if needed
+ (cf. example above).
+*)
+
 Inductive disjoint {A: Type} : list A -> list A -> Prop :=
   | disjoint_nilr : forall l, disjoint l nil
   | disjoint_nill : forall l, disjoint nil l
@@ -106,14 +214,25 @@ Proof.
 Qed.
 
 Inductive depfree : list breg -> list breg -> list instruction -> Prop :=
-  | depfree_nil : forall lw lr, depfree lw lr nil
+  | depfree_nil : forall lr lw, depfree lr lw nil
   | depfree_cons : forall i lri lwi lw lr l,
                     lri = readregs i -> lwi = writeregs i ->
                     disjoint lwi lw -> (* Checking for WAW *)
-                    disjoint lwi lr -> (* Checking for RAW *)
+                    disjoint lri lw -> (* Checking for RAW *)
                     depfree (lr++lri) (lw++lwi) l ->
                     depfree lr lw (i::l)
   .
+
+(* une version alternative *)
+Inductive depfreex : list breg -> list instruction -> Prop :=
+  | depfreex_nil : forall lw, depfreex lw nil
+  | depfreex_cons : forall i lri lwi lw l,
+                    lri = readregs i -> lwi = writeregs i ->
+                    disjoint (lri++lwi) lw -> (* Checking for WAW + RAW *)
+                    depfreex (lw++lwi) l ->
+                    depfreex lw (i::l)
+  .
+
 
 (* FIXME: STUB *)
 Definition is_bundle (b:bblock):=True. 

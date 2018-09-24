@@ -576,7 +576,6 @@ Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
 
 Section RELSEM.
 
-Variable ge: genv.
 
 (** The semantics is purely small-step and defined as a function
   from the current state (a register set + a memory state)
@@ -712,6 +711,9 @@ TODO: subsplitting by instruction type ? Could be useful for expressing auxiliar
 FIXME: replace parameter "m" by a function corresponding to the resul of "(Mem.valid_pointer m)"
 
 *)
+
+Variable ge: genv.
+
 
 Definition exec_arith_instr (ai: ar_instruction) (rs: bregset) (m: mem) : bregset :=
   match ai with
