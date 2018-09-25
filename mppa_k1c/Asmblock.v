@@ -548,10 +548,10 @@ Fixpoint undef_regs (l: list preg) (rs: regset) : regset :=
 
 
 (** Assigning a register pair *)
-Definition set_pair (p: rpair breg) (v: val) (rs: bregset) : bregset :=
+Definition set_pair (p: rpair preg) (v: val) (rs: regset) : regset :=
   match p with
-  | One r => rs#r <- v
-  | Twolong rhi rlo => rs#rhi <- (Val.hiword v) #rlo <- (Val.loword v)
+  | One r => rs#r <-- v
+  | Twolong rhi rlo => rs#rhi <-- (Val.hiword v) #rlo <-- (Val.loword v)
   end.
 
 (* TODO: Is it still useful ?? *)
@@ -1093,8 +1093,8 @@ Definition extcall_arguments
     (rs: regset) (m: mem) (sg: signature) (args: list val) : Prop :=
   list_forall2 (extcall_arg_pair rs m) (loc_arguments sg) args.
 
-Definition loc_external_result (sg: signature) : rpair breg :=
-  map_rpair breg_of (loc_result sg).
+Definition loc_external_result (sg: signature) : rpair preg :=
+  map_rpair preg_of (loc_result sg).
 
 (** Execution of the instruction at [rs PC]. *)
 
@@ -1134,7 +1134,7 @@ Inductive stepin: option bblock -> state -> trace -> state -> Prop :=
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (update_pregs rs (set_pair (loc_external_result (ef_sig ef) ) res rs))#PC <-- (rs RA) ->
+      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <-- (rs RA) ->
       stepin None (State rs m) t (State rs' m')
   .
 
@@ -1172,7 +1172,7 @@ Lemma exec_step_external b ef args res rs m t rs' m':
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (update_pregs rs (set_pair (loc_external_result (ef_sig ef) ) res rs))#PC <-- (rs RA) ->
+      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <-- (rs RA) ->
       step (State rs m) t (State rs' m')
   .
 Proof.

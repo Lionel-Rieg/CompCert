@@ -47,7 +47,7 @@ Lemma senv_preserved:
   Senv.equiv ge tge.
 Proof (Genv.senv_match TRANSF).
 
-(*
+
 Lemma functions_translated:
   forall b f,
   Genv.find_funct_ptr ge b = Some f ->
@@ -55,6 +55,7 @@ Lemma functions_translated:
   Genv.find_funct_ptr tge b = Some tf /\ transf_fundef f = OK tf.
 Proof (Genv.find_funct_ptr_transf_partial TRANSF).
 
+(*
 Lemma functions_transl:
   forall fb f tf,
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
@@ -1079,11 +1080,27 @@ Theorem step_simulation:
   (exists S2', plus step tge S1' t S2' /\ match_states S2 S2')
   \/ (measure S2 < measure S1 /\ t = E0 /\ match_states S2 S1')%nat.
 Proof.
-  induction 1; intros.
+  induction 1; intros; inv MS.
   - destruct TODO.
   - destruct TODO.
-  - destruct TODO.
-  - inv MS. inv STACKS. simpl in *.
+
+- (* external function *)
+  exploit functions_translated; eauto.
+  intros [tf [A B]]. simpl in B. inv B.
+  exploit extcall_arguments_match; eauto.
+  intros [args' [C D]].
+  exploit external_call_mem_extends; eauto.
+  intros [res' [m2' [P [Q [R S]]]]].
+  left; econstructor; split.
+  apply plus_one. eapply exec_step_external; eauto.
+  eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+  econstructor; eauto.
+  unfold loc_external_result.
+  apply agree_set_other; auto.
+  apply agree_set_pair; auto.
+
+  - (* return *) 
+  inv STACKS. simpl in *.
   right. split. omega. split. auto.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.

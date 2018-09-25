@@ -169,7 +169,7 @@ Proof.
 Qed.
  *)
 
-(* Lemma agree_set_pair:
+Lemma agree_set_pair:
   forall sp p v v' ms rs,
   agree ms sp rs ->
   Val.lessdef v v' ->
@@ -180,7 +180,6 @@ Proof.
 - apply agree_set_mreg_parallel. apply agree_set_mreg_parallel; auto.
   apply Val.hiword_lessdef; auto. apply Val.loword_lessdef; auto.
 Qed.
- *)
 
 Lemma agree_undef_nondata_regs:
   forall ms sp rl rs,
@@ -255,6 +254,62 @@ Proof.
   intros. rewrite Pregmap.gso; auto with asmgen.
 Qed.
 
+(** Connection between Mach and Asm calling conventions for external
+    functions. *)
+
+Lemma extcall_arg_match:
+  forall ms sp rs m m' l v,
+  agree ms sp rs ->
+  Mem.extends m m' ->
+  Mach.extcall_arg ms m sp l v ->
+  exists v', AB.extcall_arg rs m' l v' /\ Val.lessdef v v'.
+Proof.
+  intros. inv H1.
+  exists (rs#(preg_of r)); split. constructor. eapply preg_val; eauto.
+  unfold Mach.load_stack in H2.
+  exploit Mem.loadv_extends; eauto. intros [v' [A B]].
+  rewrite (sp_val _ _ _ H) in A.
+  exists v'; split; auto.
+  econstructor. eauto. assumption.
+Qed.
+
+Lemma extcall_arg_pair_match:
+  forall ms sp rs m m' p v,
+  agree ms sp rs ->
+  Mem.extends m m' ->
+  Mach.extcall_arg_pair ms m sp p v ->
+  exists v', AB.extcall_arg_pair rs m' p v' /\ Val.lessdef v v'.
+Proof.
+  intros. inv H1.
+- exploit extcall_arg_match; eauto. intros (v' & A & B). exists v'; split; auto. constructor; auto.
+- exploit extcall_arg_match. eauto. eauto. eexact H2. intros (v1 & A1 & B1).
+  exploit extcall_arg_match. eauto. eauto. eexact H3. intros (v2 & A2 & B2).
+  exists (Val.longofwords v1 v2); split. constructor; auto. apply Val.longofwords_lessdef; auto.
+Qed.
+
+
+Lemma extcall_args_match:
+  forall ms sp rs m m', agree ms sp rs -> Mem.extends m m' ->
+  forall ll vl,
+  list_forall2 (Mach.extcall_arg_pair ms m sp) ll vl ->
+  exists vl', list_forall2 (AB.extcall_arg_pair rs m') ll vl' /\ Val.lessdef_list vl vl'.
+Proof.
+  induction 3; intros.
+  exists (@nil val); split. constructor. constructor.
+  exploit extcall_arg_pair_match; eauto. intros [v1' [A B]].
+  destruct IHlist_forall2 as [vl' [C D]].
+  exists (v1' :: vl'); split; constructor; auto.
+Qed.
+
+Lemma extcall_arguments_match:
+  forall ms m m' sp rs sg args,
+  agree ms sp rs -> Mem.extends m m' ->
+  Mach.extcall_arguments ms m sp sg args ->
+  exists args', AB.extcall_arguments rs m' sg args' /\ Val.lessdef_list args args'.
+Proof.
+  unfold Mach.extcall_arguments, AB.extcall_arguments; intros.
+  eapply extcall_args_match; eauto.
+Qed.
 
 (* inspired from Mach *)
 
