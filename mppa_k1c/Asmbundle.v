@@ -228,11 +228,29 @@ Inductive depfreex : list breg -> list instruction -> Prop :=
   | depfreex_nil : forall lw, depfreex lw nil
   | depfreex_cons : forall i lri lwi lw l,
                     lri = readregs i -> lwi = writeregs i ->
-                    disjoint (lri++lwi) lw -> (* Checking for WAW + RAW *)
+                    disjoint_x lri lw -> (* Checking for RAW *)
+                    disjoint_x lwi lw -> (* Checking for WAW *)
                     depfreex (lw++lwi) l ->
                     depfreex lw (i::l)
   .
 
+Import ListNotations.
+
+Open Scope list_scope.
+
+Local Hint Resolve depfreex_nil depfreex_cons.
+
+Example depfreex_2 i1 i2 lw1 lr2 lw2:
+  lw1 = writeregs i1 ->
+  lr2 = readregs i2 ->
+  lw2 = writeregs i2 ->
+  disjoint_x lr2 lw1 ->  (* RAW *)
+  disjoint_x lw2 lw1 ->  (* WAW *)
+  depfreex [] [i1;i2].
+Proof.
+  intros; eapply depfreex_cons; eauto;
+  unfold disjoint_x; simpl; intuition.
+Qed.
 
 (* FIXME: STUB *)
 Definition is_bundle (b:bblock):=True. 
