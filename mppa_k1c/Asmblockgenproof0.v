@@ -70,6 +70,24 @@ Qed.
 
 Hint Resolve preg_of_not_SP preg_of_not_PC: asmgen.
 
+Lemma nextblock_pc:
+  forall b rs, (nextblock b rs)#PC = Val.offset_ptr rs#PC (Ptrofs.repr (size b)).
+Proof.
+  intros. apply Pregmap.gss.
+Qed.
+
+Lemma nextblock_inv:
+  forall b r rs, r <> PC -> (nextblock b rs)#r = rs#r.
+Proof.
+  intros. unfold nextblock. apply Pregmap.gso. red; intro; subst. auto.
+Qed.
+
+Lemma nextblock_inv1:
+  forall b r rs, data_preg r = true -> (nextblock b rs)#r = rs#r.
+Proof.
+  intros. apply nextblock_inv. red; intro; subst; discriminate.
+Qed.
+
 (** * Agreement between Mach registers and processor registers *)
 
 Record agree (ms: Mach.regset) (sp: val) (rs: AB.regset) : Prop := mkagree {
@@ -401,7 +419,6 @@ Qed.
 
 Local Hint Resolve code_tail_next.
 
-(* is it useful ?
 Lemma code_tail_next_int:
   forall fn ofs bi c,
   size_blocks fn <= Ptrofs.max_unsigned ->
@@ -417,7 +434,6 @@ Proof.
     omega.
   - rewrite Ptrofs.unsigned_repr; omega.
 Qed.
-*)
 
 (** Predictor for return addresses in generated Asm code.
 
@@ -531,6 +547,120 @@ Inductive transl_code_at_pc (ge: MB.genv):
     transl_blocks f c = OK tc ->
     code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc ->
     transl_code_at_pc ge (Vptr b ofs) b f c ep tf tc.
+
+Section STRAIGHTLINE.
+
+Variable ge: genv.
+Variable fn: function.
+
+(** Straight-line code is composed of processor instructions that execute
+  in sequence (no branches, no function calls and returns).
+  The following inductive predicate relates the machine states
+  before and after executing a straight-line sequence of instructions.
+  Instructions are taken from the first list instead of being fetched
+  from memory. *)
+
+Inductive exec_straight: bblocks -> regset -> mem ->
+                         bblocks -> regset -> mem -> Prop :=
+  | exec_straight_one:
+      forall b1 c rs1 m1 rs2 m2,
+      exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
+      rs2#PC = Val.offset_ptr (rs1 PC) (Ptrofs.repr (size b1)) ->
+      exec_straight (b1 :: c) rs1 m1 c rs2 m2
+  | exec_straight_step:
+      forall b c rs1 m1 rs2 m2 c' rs3 m3,
+      exec_bblock ge fn b rs1 m1 = Next rs2 m2 ->
+      rs2#PC = Val.offset_ptr (rs1 PC) (Ptrofs.repr (size b)) ->
+      exec_straight c rs2 m2 c' rs3 m3 ->
+      exec_straight (b :: c) rs1 m1 c' rs3 m3.
+
+Lemma exec_straight_trans:
+  forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
+  exec_straight c1 rs1 m1 c2 rs2 m2 ->
+  exec_straight c2 rs2 m2 c3 rs3 m3 ->
+  exec_straight c1 rs1 m1 c3 rs3 m3.
+Proof.
+  induction 1; intros.
+  apply exec_straight_step with rs2 m2; auto.
+  apply exec_straight_step with rs2 m2; auto.
+Qed.
+
+Lemma exec_straight_two:
+  forall b1 b2 c rs1 m1 rs2 m2 rs3 m3,
+  exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
+  exec_bblock ge fn b2 rs2 m2 = Next rs3 m3 ->
+  rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b1)) ->
+  rs3#PC = Val.offset_ptr rs2#PC (Ptrofs.repr (size b2)) ->
+  exec_straight (b1 :: b2 :: c) rs1 m1 c rs3 m3.
+Proof.
+  intros. apply exec_straight_step with rs2 m2; auto.
+  apply exec_straight_one; auto.
+Qed.
+
+Lemma exec_straight_three:
+  forall b1 b2 b3 c rs1 m1 rs2 m2 rs3 m3 rs4 m4,
+  exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
+  exec_bblock ge fn b2 rs2 m2 = Next rs3 m3 ->
+  exec_bblock ge fn b3 rs3 m3 = Next rs4 m4 ->
+  rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b1)) ->
+  rs3#PC = Val.offset_ptr rs2#PC (Ptrofs.repr (size b2)) ->
+  rs4#PC = Val.offset_ptr rs3#PC (Ptrofs.repr (size b3)) ->
+  exec_straight (b1 :: b2 :: b3 :: c) rs1 m1 c rs4 m4.
+Proof.
+  intros. apply exec_straight_step with rs2 m2; auto.
+  eapply exec_straight_two; eauto.
+Qed.
+
+(** The following lemmas show that straight-line executions
+  (predicate [exec_straight]) correspond to correct Asm executions. *)
+
+Lemma exec_straight_steps_1:
+  forall c rs m c' rs' m',
+  exec_straight c rs m c' rs' m' ->
+  size_blocks (fn_blocks fn) <= Ptrofs.max_unsigned ->
+  forall b ofs,
+  rs#PC = Vptr b ofs ->
+  Genv.find_funct_ptr ge b = Some (Internal fn) ->
+  code_tail (Ptrofs.unsigned ofs) (fn_blocks fn) c ->
+  plus step ge (State rs m) E0 (State rs' m').
+Proof.
+  induction 1; intros.
+  apply plus_one.
+  repeat (econstructor; eauto).
+  eapply find_bblock_tail. eauto.
+  eapply plus_left'.
+  repeat (econstructor; eauto).
+  eapply find_bblock_tail. eauto.
+  apply IHexec_straight with b0 (Ptrofs.add ofs (Ptrofs.repr (size b))).
+  auto. rewrite H0. rewrite H3. reflexivity.
+  auto.
+  apply code_tail_next_int; auto.
+  traceEq.
+Qed.
+
+Lemma exec_straight_steps_2:
+  forall c rs m c' rs' m',
+  exec_straight c rs m c' rs' m' ->
+  size_blocks (fn_blocks fn) <= Ptrofs.max_unsigned ->
+  forall b ofs,
+  rs#PC = Vptr b ofs ->
+  Genv.find_funct_ptr ge b = Some (Internal fn) ->
+  code_tail (Ptrofs.unsigned ofs) (fn_blocks fn) c ->
+  exists ofs',
+     rs'#PC = Vptr b ofs'
+  /\ code_tail (Ptrofs.unsigned ofs') (fn_blocks fn) c'.
+Proof.
+  induction 1; intros.
+  exists (Ptrofs.add ofs (Ptrofs.repr (size b1))). split.
+  rewrite H0. rewrite H2. auto.
+  apply code_tail_next_int; auto.
+  apply IHexec_straight with (Ptrofs.add ofs (Ptrofs.repr (size b))).
+  auto. rewrite H0. rewrite H3. reflexivity. auto.
+  apply code_tail_next_int; auto.
+Qed.
+
+End STRAIGHTLINE.
+
 
 (** * Properties of the Machblock call stack *)
 

@@ -99,13 +99,6 @@ End PregEq.
 
 Module Pregmap := EMap(PregEq).
 
-Definition pregs_to_bregs {A} (rs: Pregmap.t A): (Bregmap.t A)
-  := fun r => rs (BaR r).
-
-Definition update_pregs {A} (rs1: Pregmap.t A) (rs2:Bregmap.t A): Pregmap.t A 
-  := fun r => match r with BaR r => rs2 r | _ => rs1 r end.
-
-
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
@@ -537,6 +530,11 @@ Notation "a # b <-- c" := (Pregmap.set b c a) (at level 1, b at next level) : as
 
 Open Scope asm.
 
+Definition pregs_to_bregs {A} (rs: Pregmap.t A): (Bregmap.t A)
+  := fun r => rs (BaR r).
+
+Definition update_pregs {A} (rs1: Pregmap.t A) (rs2:Bregmap.t A): Pregmap.t A 
+  := fun r => match r with BaR r => rs2 r | _ => rs1 r end.
 
 (** Undefining some registers *)
 
@@ -1033,7 +1031,7 @@ end.
 
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
   match exec_body (body b) rs0 m with
-  | Next rs' m' => 
+  | Next rs' m' =>
     let rs1 := nextblock b (update_pregs rs0 rs') in
     match (exit b) with
     | None => Next rs1 m'
