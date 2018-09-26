@@ -386,11 +386,11 @@ Coercion PCtlFlow:  cf_instruction >-> control.
 Definition non_empty_bblock (body: list basic) (exit: option control): Prop
  := body <> nil \/ exit <> None. (* TODO: use booleans instead of Prop to enforce proof irrelevance in bblock type ? *)
 
-Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
+(* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
-
+ *)
 Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
-  non_empty_bblock body exit /\ builtin_alone body exit.
+  non_empty_bblock body exit (* /\ builtin_alone body exit *).
 
 (** A bblock is well-formed if he contains at least one instruction,
     and if there is a builtin then it must be alone in this bblock. *)
@@ -402,7 +402,7 @@ Record bblock := mk_bblock {
   correct: wf_bblock header body exit
 }.
 
-Ltac bblock_auto_correct := (split; try discriminate; try (left; discriminate); try (right; discriminate)).
+Ltac bblock_auto_correct := ((* split;  *)try discriminate; try (left; discriminate); try (right; discriminate)).
 Local Obligation Tactic := bblock_auto_correct.
 
 (* FIXME: redundant with definition in Machblock *)
@@ -435,7 +435,7 @@ Qed.
 Lemma size_positive (b:bblock): size b > 0.
 Proof.
   unfold size. apply to_nat_pos. rewrite Nat2Z.id.
-  destruct b as [h b e COR]. simpl. inversion COR. inversion H.
+  destruct b as [h b e COR]. simpl. inversion COR. (* inversion H. *)
   - assert ((length b > 0)%nat). apply length_nonil. auto.
     omega.
   - destruct e; simpl; try omega. contradict H; simpl; auto.
@@ -486,8 +486,21 @@ Program Definition bblock_single_inst (i: instruction) :=
   | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
   | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
   end.
-Next Obligation.
+(* Next Obligation.
   bblock_auto_correct.
+Qed.
+ *)
+Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
+  match i with
+  | Some i => {| header:=nil; body:=c; exit:=Some i |}
+  | None =>
+    match c with
+    | _::_ => {| header:=nil; body:=c; exit:=None |}
+    | nil => {| header:=nil; body:=Pnop::nil; exit:=None |}
+    end
+  end.
+Next Obligation.
+  constructor. subst; discriminate.
 Qed.
 
 (** * Operational semantics *)
@@ -967,7 +980,9 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
     we generate cannot use those registers to hold values that must
     survive the execution of the pseudo-instruction. *)
 
-Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outcome regset :=
+Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome regset :=
+  match oc with
+  | Some ic =>
 (** Get/Set system registers *)
   match ic with
 
@@ -998,16 +1013,14 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
 (** Pseudo-instructions *)
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
+  end
+  | None => Next rs m
 end.
 
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
   match exec_body (body b) rs0 m with
   | Next rs' m' =>
-    let rs1 := nextblock b rs' in
-    match (exit b) with
-    | None => Next rs1 m'
-    | Some ic => exec_control f ic rs1 m'
-    end
+    let rs1 := nextblock b rs' in exec_control f (exit b) rs1 m'
   | Stuck => Stuck
   end.
 

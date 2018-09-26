@@ -17,7 +17,7 @@ Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
 (* Require Import Asmgen Asmgenproof0 Asmgenproof1. *)
-Require Import Asmblockgen Asmblockgenproof0.
+Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
 
 Module MB := Machblock.
 Module AB := Asmblock.
@@ -1105,7 +1105,7 @@ Proof.
   set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
                           (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
   destruct TODO.
-(*   exploit (Pget_correct tge tf GPR8 RA (storeind_ptr GPR8 SP (fn_retaddr_ofs f) x0) rs2 m2'); auto.
+(*   exploit (Pget_correct tge tf GPR8 RA (storeind_ptr GPR8 SP (fn_retaddr_ofs f) ::b x0) rs2 m2'); auto.
   intros (rs' & U' & V').
   exploit (storeind_ptr_correct tge tf SP (fn_retaddr_ofs f) GPR8 x0 rs' m2').
     rewrite chunk_of_Tptr in P.

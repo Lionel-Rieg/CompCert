@@ -562,19 +562,17 @@ Variable fn: function.
   Instructions are taken from the first list instead of being fetched
   from memory. *)
 
-Inductive exec_straight: bblocks -> regset -> mem ->
-                         bblocks -> regset -> mem -> Prop :=
+Inductive exec_straight: list basic -> regset -> mem ->
+                         list basic -> regset -> mem -> Prop :=
   | exec_straight_one:
-      forall b1 c rs1 m1 rs2 m2,
-      exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
-      rs2#PC = Val.offset_ptr (rs1 PC) (Ptrofs.repr (size b1)) ->
-      exec_straight (b1 :: c) rs1 m1 c rs2 m2
+      forall i1 c rs1 m1 rs2 m2,
+      exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
+      exec_straight (i1 :: c) rs1 m1 c rs2 m2
   | exec_straight_step:
-      forall b c rs1 m1 rs2 m2 c' rs3 m3,
-      exec_bblock ge fn b rs1 m1 = Next rs2 m2 ->
-      rs2#PC = Val.offset_ptr (rs1 PC) (Ptrofs.repr (size b)) ->
+      forall i c rs1 m1 rs2 m2 c' rs3 m3,
+      exec_basic_instr ge i rs1 m1 = Next rs2 m2 ->
       exec_straight c rs2 m2 c' rs3 m3 ->
-      exec_straight (b :: c) rs1 m1 c' rs3 m3.
+      exec_straight (i :: c) rs1 m1 c' rs3 m3.
 
 Lemma exec_straight_trans:
   forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
@@ -588,37 +586,84 @@ Proof.
 Qed.
 
 Lemma exec_straight_two:
-  forall b1 b2 c rs1 m1 rs2 m2 rs3 m3,
-  exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
-  exec_bblock ge fn b2 rs2 m2 = Next rs3 m3 ->
-  rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b1)) ->
-  rs3#PC = Val.offset_ptr rs2#PC (Ptrofs.repr (size b2)) ->
-  exec_straight (b1 :: b2 :: c) rs1 m1 c rs3 m3.
+  forall i1 i2 c rs1 m1 rs2 m2 rs3 m3,
+  exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
+  exec_basic_instr ge i2 rs2 m2 = Next rs3 m3 ->
+  rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
+  rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
+  exec_straight (i1 :: i2 :: c) rs1 m1 c rs3 m3.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.
   apply exec_straight_one; auto.
 Qed.
 
 Lemma exec_straight_three:
-  forall b1 b2 b3 c rs1 m1 rs2 m2 rs3 m3 rs4 m4,
-  exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
-  exec_bblock ge fn b2 rs2 m2 = Next rs3 m3 ->
-  exec_bblock ge fn b3 rs3 m3 = Next rs4 m4 ->
-  rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b1)) ->
-  rs3#PC = Val.offset_ptr rs2#PC (Ptrofs.repr (size b2)) ->
-  rs4#PC = Val.offset_ptr rs3#PC (Ptrofs.repr (size b3)) ->
-  exec_straight (b1 :: b2 :: b3 :: c) rs1 m1 c rs4 m4.
+  forall i1 i2 i3 c rs1 m1 rs2 m2 rs3 m3 rs4 m4,
+  exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
+  exec_basic_instr ge i2 rs2 m2 = Next rs3 m3 ->
+  exec_basic_instr ge i3 rs3 m3 = Next rs4 m4 ->
+  rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
+  rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
+  rs4#PC = Val.offset_ptr rs3#PC Ptrofs.one ->
+  exec_straight (i1 :: i2 :: i3 :: c) rs1 m1 c rs4 m4.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.
   eapply exec_straight_two; eauto.
 Qed.
 
+(** Like exec_straight predicate, but on blocks *)
+
+Inductive exec_straight_blocks: bblocks -> regset -> mem ->
+                                bblocks -> regset -> mem -> Prop :=
+  | exec_straight_blocks_one:
+      forall b1 c rs1 m1 rs2 m2,
+      exec_bblock ge fn b1 rs1 m1 = Next rs2 m2 ->
+      rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b1)) ->
+      exec_straight_blocks (b1 :: c) rs1 m1 c rs2 m2
+  | exec_straight_blocks_step:
+      forall b c rs1 m1 rs2 m2 c' rs3 m3,
+      exec_bblock ge fn b rs1 m1 = Next rs2 m2 ->
+      rs2#PC = Val.offset_ptr rs1#PC (Ptrofs.repr (size b)) ->
+      exec_straight_blocks c rs2 m2 c' rs3 m3 ->
+      exec_straight_blocks (b :: c) rs1 m1 c' rs3 m3.
+
+(** Linking exec_straight with exec_straight_blocks *)
+
+Axiom TODO: False.
+
+Lemma exec_straight_body:
+  forall c rs1 m1 rs2 m2,
+  exec_straight c rs1 m1 nil rs2 m2 ->
+  exec_body ge c rs1 m1 = Next rs2 m2.
+Proof.
+  induction c.
+  - intros. inv H.
+  - intros. inv H.
+    + inv H7. simpl. remember (exec_basic_instr _ _ _ _) as ebi. destruct ebi; simpl; auto.
+    + destruct TODO.
+Qed.
+
+Lemma exec_straight_through:
+  forall c i b lb rs1 m1 rs2 m2 rs2' m2' rs3 m3,
+  bblock_basic_ctl c i = b ->
+  exec_straight c rs1 m1 nil rs2 m2 ->
+  nextblock b rs2 = rs2' -> m2 = m2' ->
+  exec_control ge fn i rs2' m2' = Next rs3 m3 ->
+  exec_straight_blocks (b::lb) rs1 m1 lb rs3 m3.
+Proof.
+  intros. subst. constructor 1.
+  - unfold exec_bblock. destruct i.
+    + simpl body. erewrite exec_straight_body; eauto.
+    + destruct TODO.
+  - destruct TODO.
+Qed.
+
 (** The following lemmas show that straight-line executions
-  (predicate [exec_straight]) correspond to correct Asm executions. *)
+  (predicate [exec_straight_blocks]) correspond to correct Asm executions. *)
 
 Lemma exec_straight_steps_1:
   forall c rs m c' rs' m',
-  exec_straight c rs m c' rs' m' ->
+  exec_straight_blocks c rs m c' rs' m' ->
   size_blocks (fn_blocks fn) <= Ptrofs.max_unsigned ->
   forall b ofs,
   rs#PC = Vptr b ofs ->
@@ -628,12 +673,12 @@ Lemma exec_straight_steps_1:
 Proof.
   induction 1; intros.
   apply plus_one.
-  repeat (econstructor; eauto).
+  econstructor; econstructor; eauto.
   eapply find_bblock_tail. eauto.
   eapply plus_left'.
-  repeat (econstructor; eauto).
+  econstructor; econstructor; eauto.
   eapply find_bblock_tail. eauto.
-  apply IHexec_straight with b0 (Ptrofs.add ofs (Ptrofs.repr (size b))).
+  apply IHexec_straight_blocks with b0 (Ptrofs.add ofs (Ptrofs.repr (size b))).
   auto. rewrite H0. rewrite H3. reflexivity.
   auto.
   apply code_tail_next_int; auto.
@@ -642,7 +687,7 @@ Qed.
 
 Lemma exec_straight_steps_2:
   forall c rs m c' rs' m',
-  exec_straight c rs m c' rs' m' ->
+  exec_straight_blocks c rs m c' rs' m' ->
   size_blocks (fn_blocks fn) <= Ptrofs.max_unsigned ->
   forall b ofs,
   rs#PC = Vptr b ofs ->
@@ -656,7 +701,7 @@ Proof.
   exists (Ptrofs.add ofs (Ptrofs.repr (size b1))). split.
   rewrite H0. rewrite H2. auto.
   apply code_tail_next_int; auto.
-  apply IHexec_straight with (Ptrofs.add ofs (Ptrofs.repr (size b))).
+  apply IHexec_straight_blocks with (Ptrofs.add ofs (Ptrofs.repr (size b))).
   auto. rewrite H0. rewrite H3. reflexivity. auto.
   apply code_tail_next_int; auto.
 Qed.

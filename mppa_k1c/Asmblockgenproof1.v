@@ -1285,16 +1285,18 @@ Proof.
   unfold exec_load. rewrite B, LOAD. eauto. Simpl. 
   split; intros; Simpl.
 Qed.
+*)
 
+(*
 Lemma indexed_store_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> instruction) r1 m,
+  forall chunk (mk_instr: ireg -> offset -> basic) r1 m,
   (forall base ofs rs,
-     exec_instr ge fn (mk_instr base ofs) rs m = exec_store ge chunk rs m r1 base ofs) ->
+     exec_bblock ge fn (bblock_single_inst (mk_instr base ofs)) rs m = exec_store ge chunk rs m r1 base ofs) ->
   forall (base: ireg) ofs k (rs: regset) m',
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
-  base <> GPR31 -> r1 <> GPR31 -> r1 <> PC ->
+  base <> GPR31 -> r1 <> GPR31 -> IR r1 <> PC ->
   exists rs',
-     exec_straight ge fn (indexed_memory_access mk_instr base ofs k) rs m k rs' m'
+     exec_straight ge fn (indexed_memory_access mk_instr base ofs ::b k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
@@ -1305,7 +1307,9 @@ Proof.
   unfold exec_store. rewrite B, C, STORE by auto. eauto. auto. 
   intros; Simpl.
 Qed.
+*)
 
+(*
 Lemma loadind_correct:
   forall (base: ireg) ofs ty dst k c (rs: regset) m v,
   loadind base ofs ty dst k = OK c ->
@@ -1350,23 +1354,20 @@ Qed.
 
 *)
 
-Definition noscroll := 0.
-
 Ltac bsimpl := unfold exec_bblock; simpl.
 
 Lemma Pget_correct:
   forall (dst: gpreg) (src: preg) k (rs: regset) m,
   src = RA ->
   exists rs',
-     exec_straight ge fn (Pget dst src ::b k) rs m k rs' m
+     exec_straight ge (Pget dst src :: k) rs m k rs' m
   /\ rs'#dst = rs#src
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. econstructor; econstructor; econstructor.
 - rewrite H. bsimpl. auto.
 - Simpl.
-- Simpl.
-- intros. rewrite H. Simpl.
+- intros. Simpl.
 Qed.
 
 (*
@@ -1398,19 +1399,25 @@ Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H1. auto.
 Qed.
+*)
+
+(*
+Definition noscroll := 0.
 
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
   base <> GPR31 -> src <> GPR31 ->
   exists rs',
-     exec_straight ge fn (storeind_ptr src base ofs k) rs m k rs' m'
+     exec_straight ge fn (storeind_ptr src base ofs ::b k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true); auto.
 Qed.
+*)
 
+(*
 Lemma transl_memory_access_correct:
   forall mk_instr addr args k c (rs: regset) m v,
   transl_memory_access mk_instr addr args k = OK c ->
