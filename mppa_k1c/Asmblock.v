@@ -63,34 +63,18 @@ Proof. decide equality. Defined.
 (** We model the following registers of the RISC-V architecture. *)
 
 (** basic register *)
-Inductive breg: Type :=
-  | IR: gpreg -> breg                   (**r integer registers *)
-  | FR: gpreg -> breg                   (**r float registers   *)
-  | RA: breg
+Inductive preg: Type :=
+  | IR: gpreg -> preg                   (**r integer registers *)
+  | FR: gpreg -> preg                   (**r float registers   *)
+  | RA: preg
+  | PC: preg
   .
 
-Coercion IR: gpreg >-> breg.
-Coercion FR: gpreg >-> breg.
-
-Lemma breg_eq: forall (x y: breg), {x=y} + {x<>y}.
-Proof. decide equality. apply ireg_eq. apply freg_eq. Defined.
-
-
-Module BregEq.
-  Definition t  := breg.
-  Definition eq := breg_eq.
-End BregEq.
-
-Module Bregmap := EMap(BregEq).
-
-Inductive preg: Type :=
-  | BaR: breg -> preg                   (**r basic registers   *)
-  | PC: preg.                           (**r program counter   *)
-
-Coercion BaR: breg >-> preg.
+Coercion IR: gpreg >-> preg.
+Coercion FR: gpreg >-> preg.
 
 Lemma preg_eq: forall (x y: preg), {x=y} + {x<>y}.
-Proof. decide equality. apply breg_eq. Defined.
+Proof. decide equality. apply ireg_eq. apply freg_eq. Defined.
 
 Module PregEq.
   Definition t  := preg.
@@ -378,8 +362,8 @@ Inductive basic : Type :=
   | PStore          (i: st_instruction)
   | Pallocframe (sz: Z) (pos: ptrofs)               (**r allocate new stack frame *)
   | Pfreeframe  (sz: Z) (pos: ptrofs)               (**r deallocate stack frame and restore previous frame *)
-  | Pget    (rd: ireg) (rs: breg)                   (**r get system register *)
-  | Pset    (rd: breg) (rs: ireg)                   (**r set system register *)
+  | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
+  | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
   | Pnop                                            (**r virtual instruction that does nothing *)
 .
 
@@ -514,42 +498,29 @@ Qed.
   type [Tint] or [Tlong] (in 64 bit mode),
   and float registers to values of type [Tsingle] or [Tfloat]. *)
 
-Definition bregset := Bregmap.t val.
 Definition regset := Pregmap.t val.
-
-Definition bregset_cast (rs: regset): bregset
-  := fun r => rs (BaR r).
-
-Coercion bregset_cast: regset >->  bregset.
 
 Definition genv := Genv.t fundef unit.
 
 Notation "a # b" := (a b) (at level 1, only parsing) : asm.
-Notation "a # b <- c" := (Bregmap.set b c a) (at level 1, b at next level) : asm.
-Notation "a # b <-- c" := (Pregmap.set b c a) (at level 1, b at next level) : asm.
+Notation "a # b <- c" := (Pregmap.set b c a) (at level 1, b at next level) : asm.
 
 Open Scope asm.
-
-Definition pregs_to_bregs {A} (rs: Pregmap.t A): (Bregmap.t A)
-  := fun r => rs (BaR r).
-
-Definition update_pregs {A} (rs1: Pregmap.t A) (rs2:Bregmap.t A): Pregmap.t A 
-  := fun r => match r with BaR r => rs2 r | _ => rs1 r end.
 
 (** Undefining some registers *)
 
 Fixpoint undef_regs (l: list preg) (rs: regset) : regset :=
   match l with
   | nil => rs
-  | r :: l' => undef_regs l' (rs#r <-- Vundef)
+  | r :: l' => undef_regs l' (rs#r <- Vundef)
   end.
 
 
 (** Assigning a register pair *)
 Definition set_pair (p: rpair preg) (v: val) (rs: regset) : regset :=
   match p with
-  | One r => rs#r <-- v
-  | Twolong rhi rlo => rs#rhi <-- (Val.hiword v) #rlo <-- (Val.loword v)
+  | One r => rs#r <- v
+  | Twolong rhi rlo => rs#rhi <- (Val.hiword v) #rlo <- (Val.loword v)
   end.
 
 (* TODO: Is it still useful ?? *)
@@ -567,7 +538,7 @@ Definition set_pair (p: rpair preg) (v: val) (rs: regset) : regset :=
 
 Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
   match res with
-  | BR r => rs#r <-- v
+  | BR r => rs#r <- v
   | BR_none => rs
   | BR_splitlong hi lo => set_res lo (Val.loword v) (set_res hi (Val.hiword v) rs)
   end.
@@ -713,7 +684,7 @@ FIXME: replace parameter "m" by a function corresponding to the resul of "(Mem.v
 Variable ge: genv.
 
 
-Definition exec_arith_instr (ai: ar_instruction) (rs: bregset) (m: mem) : bregset :=
+Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset :=
   match ai with
   | PArithR n d =>
       match n with
@@ -817,15 +788,15 @@ Definition eval_offset (ofs: offset) : ptrofs :=
   | Ofslow id delta => low_half ge id delta
   end.
 
-Definition exec_load (chunk: memory_chunk) (rs: bregset) (m: mem)
-                     (d: breg) (a: ireg) (ofs: offset) :=
+Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
+                     (d: ireg) (a: ireg) (ofs: offset) :=
   match Mem.loadv chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) with
   | None => Stuck
   | Some v => Next (rs#d <- v) m
   end.
 
-Definition exec_store (chunk: memory_chunk) (rs: bregset) (m: mem)
-                      (s: breg) (a: ireg) (ofs: offset) :=
+Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
+                      (s: ireg) (a: ireg) (ofs: offset) :=
   match Mem.storev chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) (rs s) with
   | None => Stuck
   | Some m' => Next rs m'
@@ -833,7 +804,7 @@ Definition exec_store (chunk: memory_chunk) (rs: bregset) (m: mem)
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: bregset) (m: mem) : outcome bregset :=
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :=
  match bi with
  | PArith ai => Next (exec_arith_instr ai rs m) m
 
@@ -897,7 +868,7 @@ Definition exec_basic_instr (bi: basic) (rs: bregset) (m: mem) : outcome bregset
   | Pnop => Next rs m
 end.
 
-Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
+Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome regset :=
   match body with
   | nil => Next rs m
   | bi::body' => 
@@ -911,7 +882,7 @@ Fixpoint exec_body (body: list basic) (rs: bregset) (m: mem): outcome bregset :=
   instruction ([nextblock]) or branching to a label ([goto_label]). *)
 
 Definition nextblock (b:bblock) (rs: regset) :=
-  rs#PC <-- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
+  rs#PC <- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
 
 (** Looking up bblocks in a code sequence by position. *)
 Fixpoint find_bblock (pos: Z) (lb: bblocks) {struct lb} : option bblock :=
@@ -962,7 +933,7 @@ Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome
   | None => Stuck
   | Some pos =>
       match rs#PC with
-      | Vptr b ofs => Next (rs#PC <-- (Vptr b (Ptrofs.repr pos))) m
+      | Vptr b ofs => Next (rs#PC <- (Vptr b (Ptrofs.repr pos))) m
       | _          => Stuck
       end
   end.
@@ -1003,11 +974,11 @@ Definition exec_control (f: function) (ic: control) (rs: regset) (m: mem) : outc
 
 (** Branch Control Unit instructions *)
   | Pret =>
-      Next (rs#PC <-- (rs#RA)) m
+      Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
-      Next (rs#RA <-- (rs#PC) #PC <-- (Genv.symbol_address ge s Ptrofs.zero)) m
+      Next (rs#RA <- (rs#PC) #PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pgoto s =>
-      Next (rs#PC <-- (Genv.symbol_address ge s Ptrofs.zero)) m
+      Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pj_l l =>
       goto_label f l rs m
   | Pcb bt r l =>
@@ -1032,7 +1003,7 @@ end.
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
   match exec_body (body b) rs0 m with
   | Next rs' m' =>
-    let rs1 := nextblock b (update_pregs rs0 rs') in
+    let rs1 := nextblock b rs' in
     match (exit b) with
     | None => Next rs1 m'
     | Some ic => exec_control f ic rs1 m'
@@ -1046,7 +1017,7 @@ Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcom
   code.  *)
 
   (* FIXME - R31 is not there *)
-Definition breg_of (r: mreg) : breg :=
+Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
   | R5  => GPR5  | R6  => GPR6  | R7  => GPR7                 | R9  => GPR9
@@ -1063,15 +1034,13 @@ Definition breg_of (r: mreg) : breg :=
   | R60 => GPR60 | R61 => GPR61 | R62 => GPR62 | R63 => GPR63
   end.
 
-Definition preg_of (r: mreg) : preg := breg_of r.
-
 (** Extract the values of the arguments of an external call.
     We exploit the calling conventions from module [Conventions], except that
     we use RISC-V registers instead of locations. *)
 
 Inductive extcall_arg (rs: regset) (m: mem): loc -> val -> Prop :=
   | extcall_arg_reg: forall r,
-      extcall_arg rs m (R r) (rs (breg_of r))
+      extcall_arg rs m (R r) (rs (preg_of r))
   | extcall_arg_stack: forall ofs ty bofs v,
       bofs = Stacklayout.fe_ofs_arg + 4 * ofs ->
       Mem.loadv (chunk_of_type ty) m
@@ -1124,7 +1093,7 @@ Inductive stepin: option bblock -> state -> trace -> state -> Prop :=
       rs' = nextblock bi
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
-                   (rs#GPR31 <-- Vundef))) ->
+                   (rs#GPR31 <- Vundef))) ->
       stepin (Some bi) (State rs m) t (State rs' m')
   | exec_stepin_external:
       forall b ef args res rs m t rs' m',
@@ -1132,7 +1101,7 @@ Inductive stepin: option bblock -> state -> trace -> state -> Prop :=
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <-- (rs RA) ->
+      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <- (rs RA) ->
       stepin None (State rs m) t (State rs' m')
   .
 
@@ -1159,7 +1128,7 @@ Lemma exec_step_builtin b ofs f ef args res rs m vargs t vres rs' m' bi:
       rs' = nextblock bi
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
-                   (rs#GPR31 <-- Vundef))) ->
+                   (rs#GPR31 <- Vundef))) ->
       step (State rs m) t (State rs' m').
 Proof.
   intros; eexists. eapply exec_stepin_builtin; eauto.
@@ -1170,7 +1139,7 @@ Lemma exec_step_external b ef args res rs m t rs' m':
       Genv.find_funct_ptr ge b = Some (External ef) ->
       external_call ef ge args m t res m' ->
       extcall_arguments rs m (ef_sig ef) args ->
-      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <-- (rs RA) ->
+      rs' = (set_pair (loc_external_result (ef_sig ef) ) res rs)#PC <- (rs RA) ->
       step (State rs m) t (State rs' m')
   .
 Proof.
@@ -1187,9 +1156,9 @@ Inductive initial_state (p: program): state -> Prop :=
       let ge := Genv.globalenv p in
       let rs0 :=
         (Pregmap.init Vundef)
-        # PC <-- (Genv.symbol_address ge p.(prog_main) Ptrofs.zero)
-        # SP <-- Vnullptr
-        # RA <-- Vnullptr in
+        # PC <- (Genv.symbol_address ge p.(prog_main) Ptrofs.zero)
+        # SP <- Vnullptr
+        # RA <- Vnullptr in
       Genv.init_mem p = Some m0 ->
       initial_state p (State rs0 m0).
 

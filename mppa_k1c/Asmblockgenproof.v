@@ -1103,7 +1103,7 @@ Proof.
                  storeind_ptr GPR8 SP (fn_retaddr_ofs f) ::b x0) in *.
   set (tf := {| fn_sig := MB.fn_sig f; fn_blocks := tfbody |}) in *.
   set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
-                          (rs0#FP <-- (parent_sp s) #SP <-- sp #GPR31 <-- Vundef)).
+                          (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
   destruct TODO.
 (*   exploit (Pget_correct tge tf GPR8 RA (storeind_ptr GPR8 SP (fn_retaddr_ofs f) x0) rs2 m2'); auto.
   intros (rs' & U' & V').

@@ -17,22 +17,24 @@ Require Import Asmblockgen.
 Module MB:=Machblock.
 Module AB:=Asmblock.
 
+Hint Extern 2 (_ <> _) => congruence: asmgen.
+
 Lemma ireg_of_eq:
   forall r r', ireg_of r = OK r' -> preg_of r = IR r'.
 Proof.
   unfold ireg_of; intros. destruct (preg_of r); inv H; auto.
-  destruct b. all: try discriminate.
+(*   destruct b. all: try discriminate.
   inv H1. auto.
-Qed.
+ *)Qed.
 
 (* FIXME - Replaced FR by IR for MPPA *)
 Lemma freg_of_eq:
   forall r r', freg_of r = OK r' -> preg_of r = IR r'.
 Proof.
   unfold freg_of; intros. destruct (preg_of r); inv H; auto.
-  destruct b. all: try discriminate.
+(*   destruct b. all: try discriminate.
   inv H1. auto.
-Qed.
+ *)Qed.
 
 
 Lemma preg_of_injective:
@@ -173,7 +175,7 @@ Lemma agree_set_other:
   forall ms sp rs r v,
   agree ms sp rs ->
   data_preg r = false ->
-  agree ms sp (rs#r <-- v).
+  agree ms sp (rs#r <- v).
 Proof.
   intros. apply agree_exten with rs. auto.
   intros. apply Pregmap.gso. congruence.
@@ -266,7 +268,7 @@ Qed.
 Lemma agree_change_sp:
   forall ms sp rs sp',
   agree ms sp rs -> sp' <> Vundef ->
-  agree ms sp' (rs#SP <-- sp').
+  agree ms sp' (rs#SP <- sp').
 Proof.
   intros. inv H. split; auto.
   intros. rewrite Pregmap.gso; auto with asmgen.

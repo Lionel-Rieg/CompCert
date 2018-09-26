@@ -47,17 +47,18 @@ Proof.
   all: repeat ((try (left; reflexivity)); right).
 Qed.
 
-Definition all_bregs := (map IR all_gpregs) ++ (map FR all_gpregs) ++ (RA::nil).
+Definition all_pregs := (map IR all_gpregs) ++ (map FR all_gpregs) ++ (RA::PC::nil).
 
-Fact all_bregs_complete : forall br, List.In br all_bregs.
+Fact all_pregs_complete : forall br, List.In br all_pregs.
 Proof.
   intros. destruct br.
-  - unfold all_bregs. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
-  - unfold all_bregs. apply in_app_iff. right. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
-  - unfold all_bregs. repeat (apply in_app_iff; right). simpl. left; auto.
+  - unfold all_pregs. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
+  - unfold all_pregs. apply in_app_iff. right. apply in_app_iff. left. apply in_map. apply all_gpregs_complete.
+  - unfold all_pregs. repeat (apply in_app_iff; right). simpl. left; auto.
+  - unfold all_pregs. repeat (apply in_app_iff; right). simpl. right; auto.
 Qed.
 
-Definition writeregs (i: instruction): list breg :=
+Definition writeregs (i: instruction): list preg :=
   match i with
   (* Control instructions *)
   | Pset rd rs => rd::nil
@@ -77,25 +78,27 @@ Definition writeregs (i: instruction): list breg :=
   | Pallocframe _ _ => IR FP::IR GPR31::IR SP :: nil
   | Pfreeframe _ _ => IR GPR31::IR SP :: nil
   (* builtins : only implemented in OCaml, we know nothing about them *)
-  | Pbuiltin _ _ _ => all_bregs
+  | Pbuiltin _ _ _ => all_pregs
   (* Instructions that do not write *)
   | Pnop | Pret | Pgoto _ | Pj_l _ | Pcb _ _ _ | Pcbu _ _ _ | PStoreRRO _ _ _ _ => nil
   end.
 
-Lemma update_PC_breg (rs: regset) v (r: breg):
-  (rs#PC <-- v) r = rs r.
+(* Lemma update_PC_breg (rs: regset) v (r: preg):
+  (rs#PC <- v) r = rs r.
 Proof.
- rewrite Pregmap.gso; congruence.
+  rewrite Pregmap.gso; auto. congruence.
 Qed.
+ *)
 
-Lemma update_pregs_diff (rs:regset) rd x r: r <> rd -> update_pregs rs (rs # rd <- x) r = rs r.
+(* Lemma update_pregs_diff (rs:regset) rd x r: r <> rd -> update_pregs rs (rs # rd <- x) r = rs r.
 Proof.
   unfold update_pregs. intro H. rewrite Bregmap.gso; congruence.
 Qed.
- 
-Hint Rewrite update_PC_breg update_pregs_diff: regset_rw.
+ *) 
 
-Fact writeregs_correct f i rs m rs' m' r: 
+(* Hint Rewrite update_PC_breg update_pregs_diff: regset_rw. *)
+
+(* Fact writeregs_correct f i rs m rs' m' r: 
     ~(List.In r (writeregs i)) -> 
     (exec_bblock ge f (bblock_single_inst i) rs m) = Next rs' m' ->
     rs' r = rs r.
@@ -121,8 +124,9 @@ Proof.
   autorewrite with regset_rw; auto.
   - (* ALLOCFRAME *)
 Admitted.
+ *)
 
-Definition readregs (i: instruction) : list breg :=
+Definition readregs (i: instruction) : list preg :=
   match i with
   (* Control instructions *)
   | Pset rd rs => IR rs::nil
@@ -141,14 +145,14 @@ Definition readregs (i: instruction) : list breg :=
   (* Alloc and freeframe (from the semantics) *) 
   | Pallocframe _ _ | Pfreeframe _ _ => IR SP :: nil
   (* builtins : only implemented in OCaml, we know nothing about them *)
-  | Pbuiltin _ _ _ => all_bregs
+  | Pbuiltin _ _ _ => all_pregs
   (* Instructions that do not read *)
   | Pnop | Pcall _ | Pgoto _ | Pj_l _ | PArithR _ _ | PArithRI32 _ _ _ | PArithRI64 _ _ _ => nil
   end.
 
 Axiom TODO: False.
 
-Definition outcome_equiv (r: breg) v (o1 o2: outcome (rgset:=regset))  :=
+(* Definition outcome_equiv (r: preg) v (o1 o2: outcome (rgset:=regset))  :=
   match o1 with
   | Next rs1 m1 => exists rs2, exists m2, o2=Next rs2 m2 /\ (forall r, (rs1#r <-- v) r = rs2 r) /\ (forall chunk p, Mem.loadv chunk m1 p = Mem.loadv chunk m2 p)
   | Stuck => o2 = Stuck
@@ -174,6 +178,7 @@ Proof.
        rewrite! update_PC_breg.
     (* TODO: lemma on  rs # _ <-- _ *)
 Abort.
+ *)
 
 (* alternative definition of disjoint *)
 Definition disjoint_x {A: Type} (l l':list A) : Prop := forall r, In r l -> ~In r l'. (* TODO: use notIn instead ? *)
@@ -213,7 +218,7 @@ Proof.
   repeat (match goal with h:_ \/ _ |- _ => inversion_clear h; [discriminate|] | _ => fail end); contradiction).
 Qed.
 
-Inductive depfree : list breg -> list breg -> list instruction -> Prop :=
+Inductive depfree : list preg -> list preg -> list instruction -> Prop :=
   | depfree_nil : forall lr lw, depfree lr lw nil
   | depfree_cons : forall i lri lwi lw lr l,
                     lri = readregs i -> lwi = writeregs i ->
@@ -224,7 +229,7 @@ Inductive depfree : list breg -> list breg -> list instruction -> Prop :=
   .
 
 (* une version alternative *)
-Inductive depfreex : list breg -> list instruction -> Prop :=
+Inductive depfreex : list preg -> list instruction -> Prop :=
   | depfreex_nil : forall lw, depfreex lw nil
   | depfreex_cons : forall i lri lwi lw l,
                     lri = readregs i -> lwi = writeregs i ->

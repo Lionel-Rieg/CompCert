@@ -1355,7 +1355,7 @@ Definition noscroll := 0.
 Ltac bsimpl := unfold exec_bblock; simpl.
 
 Lemma Pget_correct:
-  forall (dst: gpreg) (src: breg) k (rs: regset) m,
+  forall (dst: gpreg) (src: preg) k (rs: regset) m,
   src = RA ->
   exists rs',
      exec_straight ge fn (Pget dst src ::b k) rs m k rs' m
@@ -1365,9 +1365,9 @@ Proof.
   intros. econstructor; econstructor; econstructor.
 - rewrite H. bsimpl. auto.
 - Simpl.
-(* - Simpl.
+- Simpl.
 - intros. rewrite H. Simpl.
- *)Admitted.
+Qed.
 
 (*
 
