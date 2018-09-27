@@ -57,6 +57,8 @@ Proof.
 *)
 Qed.
 
+*)
+
 Lemma make_immed64_sound:
   forall n,
   match make_immed64 n with
@@ -74,6 +76,8 @@ Proof.
   auto.
   auto.
 Qed.
+
+(*
 
 (** Properties of registers *)
 
@@ -312,22 +316,27 @@ Ltac ArgsInv :=
   | [ H: freg_of _ = OK _ |- _ ] => simpl in *; rewrite (freg_of_eq _ _ H) in *
   end).
 
-Inductive exec_straight_opt: code -> regset -> mem -> code -> regset -> mem -> Prop :=
+*)
+
+Definition bla := 0.
+
+Inductive exec_straight_opt: list basic -> regset -> mem -> list basic -> regset -> mem -> Prop :=
   | exec_straight_opt_refl: forall c rs m,
       exec_straight_opt c rs m c rs m
   | exec_straight_opt_intro: forall c1 rs1 m1 c2 rs2 m2,
-      exec_straight ge fn c1 rs1 m1 c2 rs2 m2 ->
+      exec_straight ge c1 rs1 m1 c2 rs2 m2 ->
       exec_straight_opt c1 rs1 m1 c2 rs2 m2.
 
 Remark exec_straight_opt_right:
   forall c3 rs3 m3 c1 rs1 m1 c2 rs2 m2,
   exec_straight_opt c1 rs1 m1 c2 rs2 m2 ->
-  exec_straight ge fn c2 rs2 m2 c3 rs3 m3 ->
-  exec_straight ge fn c1 rs1 m1 c3 rs3 m3.
+  exec_straight ge c2 rs2 m2 c3 rs3 m3 ->
+  exec_straight ge c1 rs1 m1 c3 rs3 m3.
 Proof.
   destruct 1; intros. auto. eapply exec_straight_trans; eauto. 
 Qed.
 
+(*
 Lemma transl_comp_correct:
   forall cmp r1 r2 lbl k rs m b,
   exists rs',
@@ -1218,12 +1227,15 @@ Qed.
 
 
 (** Memory accesses *)
+*)
+
+Definition no := 0.
 
 Lemma indexed_memory_access_correct:
   forall mk_instr base ofs k rs m,
   base <> GPR31 ->
   exists base' ofs' rs',
-     exec_straight_opt (indexed_memory_access mk_instr base ofs k) rs m
+     exec_straight_opt (indexed_memory_access mk_instr base ofs :: k) rs m
                        (mk_instr base' ofs' :: k) rs' m
   /\ Val.offset_ptr rs'#base' (eval_offset ge ofs') = Val.offset_ptr rs#base ofs
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
@@ -1265,6 +1277,7 @@ Proof.
 *)*)
 Qed.
 
+(*
 Lemma indexed_load_access_correct:
   forall chunk (mk_instr: ireg -> offset -> instruction) rd m,
   (forall base ofs rs,
@@ -1287,27 +1300,28 @@ Proof.
 Qed.
 *)
 
-(*
+Definition noscroll := 0.
+
 Lemma indexed_store_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) r1 m,
   (forall base ofs rs,
-     exec_bblock ge fn (bblock_single_inst (mk_instr base ofs)) rs m = exec_store ge chunk rs m r1 base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk rs m r1 base ofs) ->
   forall (base: ireg) ofs k (rs: regset) m',
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
   base <> GPR31 -> r1 <> GPR31 -> IR r1 <> PC ->
   exists rs',
-     exec_straight ge fn (indexed_memory_access mk_instr base ofs ::b k) rs m k rs' m'
+     exec_straight ge (indexed_memory_access mk_instr base ofs :: k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
-  intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
+(*   intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
   exploit indexed_memory_access_correct; eauto.
   intros (base' & ofs' & rs' & A & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. rewrite EXEC.
   unfold exec_store. rewrite B, C, STORE by auto. eauto. auto. 
   intros; Simpl.
-Qed.
-*)
+ *)Admitted.
+
 
 (*
 Lemma loadind_correct:
@@ -1401,21 +1415,21 @@ Proof.
 Qed.
 *)
 
-(*
-Definition noscroll := 0.
+
+Definition nosroll := 0.
 
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
   base <> GPR31 -> src <> GPR31 ->
   exists rs',
-     exec_straight ge fn (storeind_ptr src base ofs ::b k) rs m k rs' m'
+     exec_straight ge (storeind_ptr src base ofs :: k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true); auto.
 Qed.
-*)
+
 
 (*
 Lemma transl_memory_access_correct:

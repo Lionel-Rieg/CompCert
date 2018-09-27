@@ -1104,10 +1104,9 @@ Proof.
   set (tf := {| fn_sig := MB.fn_sig f; fn_blocks := tfbody |}) in *.
   set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
                           (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
-  destruct TODO.
-(*   exploit (Pget_correct tge tf GPR8 RA (storeind_ptr GPR8 SP (fn_retaddr_ofs f) ::b x0) rs2 m2'); auto.
-  intros (rs' & U' & V').
-  exploit (storeind_ptr_correct tge tf SP (fn_retaddr_ofs f) GPR8 x0 rs' m2').
+  exploit (Pget_correct tge GPR8 RA nil rs2 m2'); auto.
+  intros (rs' & U' & V'). destruct TODO.
+(*   exploit (storeind_ptr_correct tge tf SP (fn_retaddr_ofs f) GPR8 x0 rs' m2').
     rewrite chunk_of_Tptr in P.
     assert (rs' GPR8 = rs0 RA). { apply V'. }
     assert (rs' GPR12 = rs2 GPR12). { apply V'; discriminate. }

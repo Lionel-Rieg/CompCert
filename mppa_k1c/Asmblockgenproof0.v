@@ -639,8 +639,6 @@ Ltac Simplif :=
 
 Ltac Simpl := repeat Simplif.
 
-Axiom TODO: False.
-
 Lemma exec_straight_body:
   forall c rs1 m1 rs2 m2,
   exec_straight c rs1 m1 nil rs2 m2 ->
@@ -650,7 +648,7 @@ Proof.
   - intros. inv H.
   - intros. inv H.
     + inv H7. simpl. remember (exec_basic_instr _ _ _ _) as ebi. destruct ebi; simpl; auto.
-    + destruct TODO.
+    + simpl. rewrite H2. apply IHc. auto.
 Qed.
 
 Lemma exec_basic_instr_pc:
