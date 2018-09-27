@@ -629,6 +629,16 @@ Inductive exec_straight_blocks: bblocks -> regset -> mem ->
 
 (** Linking exec_straight with exec_straight_blocks *)
 
+Ltac Simplif :=
+  ((rewrite nextblock_inv by eauto with asmgen)
+  || (rewrite nextblock_inv1 by eauto with asmgen)
+  || (rewrite Pregmap.gss)
+  || (rewrite nextblock_pc)
+  || (rewrite Pregmap.gso by eauto with asmgen)
+  ); auto with asmgen.
+
+Ltac Simpl := repeat Simplif.
+
 Axiom TODO: False.
 
 Lemma exec_straight_body:
@@ -643,19 +653,51 @@ Proof.
     + destruct TODO.
 Qed.
 
+Lemma exec_basic_instr_pc:
+  forall b rs1 m1 rs2 m2,
+  exec_basic_instr ge b rs1 m1 = Next rs2 m2 ->
+  rs2 PC = rs1 PC.
+Proof.
+  intros. destruct b; try destruct i; try destruct i.
+  all: try (inv H; Simpl).
+  all: try (unfold exec_load in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
+  all: try (unfold exec_store in H1; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
+  destruct (Mem.alloc _ _ _). destruct (Mem.store _ _ _ _ _). inv H1. Simpl. discriminate.
+  destruct (rs1 _); try discriminate.
+  destruct (Mem.free _ _ _ _). inv H0. Simpl. discriminate.
+  destruct rs; try discriminate. inv H1. Simpl.
+  destruct rd; try discriminate. inv H1; Simpl.
+  auto.
+Qed.
+
+Lemma exec_straight_pc:
+  forall c rs1 m1 rs2 m2,
+  exec_straight c rs1 m1 nil rs2 m2 ->
+  rs2 PC = rs1 PC.
+Proof.
+  induction c; intros; try (inv H; fail).
+  inv H.
+  - erewrite exec_basic_instr_pc; eauto.
+  - rewrite (IHc rs3 m3 rs2 m2); auto.
+    erewrite exec_basic_instr_pc; eauto.
+Qed.
+
 Lemma exec_straight_through:
-  forall c i b lb rs1 m1 rs2 m2 rs2' m2' rs3 m3,
+  forall c i b lb rs1 m1 rs2 m2 rs2' m2',
   bblock_basic_ctl c i = b ->
   exec_straight c rs1 m1 nil rs2 m2 ->
   nextblock b rs2 = rs2' -> m2 = m2' ->
-  exec_control ge fn i rs2' m2' = Next rs3 m3 ->
-  exec_straight_blocks (b::lb) rs1 m1 lb rs3 m3.
+  exec_control ge fn i rs2' m2' = Next rs2' m2' -> (* if the control does not jump *)
+  exec_straight_blocks (b::lb) rs1 m1 lb rs2' m2'.
 Proof.
-  intros. subst. constructor 1.
-  - unfold exec_bblock. destruct i.
-    + simpl body. erewrite exec_straight_body; eauto.
-    + destruct TODO.
-  - destruct TODO.
+  intros. subst. destruct i.
+  - constructor 1. 
+      + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
+      + rewrite <- (exec_straight_pc c rs1 m1 rs2 m2'); auto.
+  - destruct c as [|i c]; try (inv H0; fail).
+    constructor 1.
+    + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
+    + rewrite <- (exec_straight_pc (i ::i c) rs1 m1 rs2 m2'); auto.
 Qed.
 
 (** The following lemmas show that straight-line executions
