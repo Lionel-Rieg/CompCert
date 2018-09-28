@@ -419,11 +419,11 @@ let expand_builtin_inline name args res = let open Asmblock in
   | "__builtin_membar", [], _ ->
      ()
   (* Vararg stuff *)
-  | "__builtin_va_start", [BA(BaR (IR a))], _ ->
+  | "__builtin_va_start", [BA(IR a)], _ ->
      expand_builtin_va_start a
-  | "__builtin_clzll", [BA(BaR (IR a))], BR(BaR (IR res)) ->
+  | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
      emit (Pclzll(res, a))
-  | "__builtin_k1_stsud", [BA(BaR (IR a1)); BA(BaR (IR a2))], BR(BaR (IR res)) ->
+  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
      emit (Pstsud(res, a1, a2))
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
@@ -548,13 +548,10 @@ let int_reg_to_dwarf = let open Asmblock in function
    | GPR55 -> 56  | GPR56 -> 57  | GPR57 -> 58  | GPR58 -> 59  | GPR59 -> 60
    | GPR60 -> 61  | GPR61 -> 62  | GPR62 -> 63  | GPR63 -> 64
 
-let breg_to_dwarf = let open Asmblock in function
+let preg_to_dwarf = let open Asmblock in function
    | IR r -> int_reg_to_dwarf r
    | FR r -> int_reg_to_dwarf r
    | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)
-
-let preg_to_dwarf = let open Asmblock in function
-   | BaR r -> breg_to_dwarf r
    | _ -> assert false
 
 let expand_function id fn =

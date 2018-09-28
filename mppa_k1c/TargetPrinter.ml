@@ -62,22 +62,16 @@ module Target : TARGET =
 
     let ireg = ireg
 
-    let breg oc = let open Asmblock in function
+    let preg oc = let open Asmblock in function
       | IR r -> ireg oc r
       | FR r -> ireg oc r
       | RA   -> output_string oc "$ra"
-
-    let breg_annot = let open Asmblock in function
-      | IR r -> int_reg_name r
-      | FR r -> int_reg_name r
-      | RA   -> "$ra"
-
-    let preg oc = let open Asmblock in function
-      | BaR r -> breg oc r
       | _ -> assert false
 
     let preg_annot = let open Asmblock in function
-      | BaR r -> breg_annot r
+      | IR r -> int_reg_name r
+      | FR r -> int_reg_name r
+      | RA   -> "$ra"
       | _ -> assert false
 
 (* Names of sections *)
