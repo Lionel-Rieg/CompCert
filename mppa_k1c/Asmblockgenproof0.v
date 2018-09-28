@@ -754,10 +754,10 @@ Lemma exec_straight_steps_1:
 Proof.
   induction 1; intros.
   apply plus_one.
-  econstructor; econstructor; eauto.
+  econstructor; eauto.
   eapply find_bblock_tail. eauto.
   eapply plus_left'.
-  econstructor; econstructor; eauto.
+  econstructor; eauto.
   eapply find_bblock_tail. eauto.
   apply IHexec_straight_blocks with b0 (Ptrofs.add ofs (Ptrofs.repr (size b))).
   auto. rewrite H0. rewrite H3. reflexivity.
