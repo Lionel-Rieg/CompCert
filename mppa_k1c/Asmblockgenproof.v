@@ -55,7 +55,6 @@ Lemma functions_translated:
   Genv.find_funct_ptr tge b = Some tf /\ transf_fundef f = OK tf.
 Proof (Genv.find_funct_ptr_transf_partial TRANSF).
 
-(*
 Lemma functions_transl:
   forall fb f tf,
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
@@ -65,7 +64,7 @@ Proof.
   intros. exploit functions_translated; eauto. intros [tf' [A B]].
   monadInv B. rewrite H0 in EQ; inv EQ; auto.
 Qed.
- *)
+
 (** * Properties of control flow *)
 
 Lemma transf_function_no_overflow:
@@ -1105,38 +1104,48 @@ Proof.
   set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
                           (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
   exploit (Pget_correct tge GPR8 RA nil rs2 m2'); auto.
-  intros (rs' & U' & V'). destruct TODO.
-(*   exploit (storeind_ptr_correct tge tf SP (fn_retaddr_ofs f) GPR8 x0 rs' m2').
+  intros (rs' & U' & V').
+  exploit (exec_straight_through_singleinst); eauto.
+  intro W'. remember (nextblock _ rs') as rs''.
+  exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPR8 nil rs'' m2').
     rewrite chunk_of_Tptr in P.
     assert (rs' GPR8 = rs0 RA). { apply V'. }
+    assert (rs'' GPR8 = rs' GPR8). { subst. Simpl. }
     assert (rs' GPR12 = rs2 GPR12). { apply V'; discriminate. }
-    rewrite H3. rewrite H4.
+    assert (rs'' GPR12 = rs' GPR12). { subst. Simpl. }
+    rewrite H4. rewrite H3. rewrite H6. rewrite H5.
     (* change (rs' GPR8) with (rs0 RA). *)
     rewrite ATLR.
     change (rs2 GPR12) with sp. eexact P.
     congruence. congruence.
   intros (rs3 & U & V).
+  exploit (exec_straight_through_singleinst); eauto.
+  intro W.
+  remember (nextblock _ rs3) as rs3'.
   assert (EXEC_PROLOGUE:
-            exec_straight tge tf
-              tf.(fn_code) rs0 m'
-              x0 rs3 m3').
-  { change (fn_code tf) with tfbody; unfold tfbody.
-    apply exec_straight_step with rs2 m2'.
-    unfold exec_instr. rewrite C. fold sp.
-    rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. rewrite F. reflexivity.
+            exec_straight_blocks tge tf
+              tf.(fn_blocks) rs0 m'
+              x0 rs3' m3').
+  { change (fn_blocks tf) with tfbody; unfold tfbody.
+    apply exec_straight_blocks_step with rs2 m2'.
+    unfold exec_bblock. simpl exec_body. rewrite C. fold sp. simpl exec_control.
+    rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. simpl in F. rewrite F. reflexivity.
     reflexivity.
-    eapply exec_straight_trans.
-    - eexact U'.
-    - eexact U. }
-  exploit exec_straight_steps_2; eauto using functions_transl. omega. constructor.
+    eapply exec_straight_blocks_trans.
+    - eexact W'.
+    - eexact W. }
+  exploit exec_straight_steps_2; eauto using functions_transl.
+  simpl fn_blocks. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega. constructor.
   intros (ofs' & X & Y).                    
-  left; exists (State rs3 m3'); split.
-  eapply exec_straight_steps_1; eauto. omega. constructor.
+  left; exists (State rs3' m3'); split.
+  eapply exec_straight_steps_1; eauto.
+  simpl fn_blocks. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega.
+  constructor.
   econstructor; eauto.
   rewrite X; econstructor; eauto. 
   apply agree_exten with rs2; eauto with asmgen.
   unfold rs2. 
-  apply agree_nextinstr. apply agree_set_other; auto with asmgen.
+  apply agree_nextblock. apply agree_set_other; auto with asmgen.
   apply agree_change_sp with (parent_sp s). 
   apply agree_undef_regs with rs0. auto.
 Local Transparent destroyed_at_function_entry.
@@ -1145,17 +1154,18 @@ Local Transparent destroyed_at_function_entry.
 
   intros.
   assert (r <> GPR31). { contradict H3; rewrite H3; unfold data_preg; auto. }
-  rewrite V.
+  rewrite Heqrs3'. Simpl. rewrite V. rewrite Heqrs''. Simpl. inversion V'. rewrite H6. auto.
   assert (r <> GPR8). { contradict H3; rewrite H3; unfold data_preg; auto. }
   assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }
-  rewrite H6; auto.
+  (* rewrite H8; auto. *)
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
-  intros. rewrite V by auto with asmgen.
+  auto. intros. rewrite Heqrs3'. Simpl. rewrite V by auto with asmgen.
   assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }
+  rewrite Heqrs''. Simpl.
   rewrite H4 by auto with asmgen. reflexivity.
- *) - (* external function *)
+ - (* external function *)
   exploit functions_translated; eauto.
   intros [tf [A B]]. simpl in B. inv B.
   exploit extcall_arguments_match; eauto.
@@ -1175,6 +1185,8 @@ Local Transparent destroyed_at_function_entry.
   right. split. omega. split. auto.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.
+Unshelve.
+  destruct TODO.
 Qed.
 
 Lemma transf_initial_states:

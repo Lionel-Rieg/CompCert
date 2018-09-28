@@ -90,6 +90,26 @@ Proof.
   intros. apply nextblock_inv. red; intro; subst; discriminate.
 Qed.
 
+Fixpoint preg_notin (r: preg) (rl: list mreg) : Prop :=
+  match rl with
+  | nil => True
+  | r1 :: nil => r <> preg_of r1
+  | r1 :: rl => r <> preg_of r1 /\ preg_notin r rl
+  end.
+
+Remark preg_notin_charact:
+  forall r rl,
+  preg_notin r rl <-> (forall mr, In mr rl -> r <> preg_of mr).
+Proof.
+  induction rl; simpl; intros.
+  tauto.
+  destruct rl.
+  simpl. split. intros. intuition congruence. auto.
+  rewrite IHrl. split.
+  intros [A B]. intros. destruct H. congruence. auto.
+  auto.
+Qed.
+
 (** * Agreement between Mach registers and processor registers *)
 
 Record agree (ms: Mach.regset) (sp: val) (rs: AB.regset) : Prop := mkagree {
@@ -181,13 +201,12 @@ Proof.
   intros. apply Pregmap.gso. congruence.
 Qed.
 
-(* Lemma agree_nextinstr:
-  forall ms sp rs,
-  agree ms sp rs -> agree ms sp (nextinstr rs).
+Lemma agree_nextblock:
+  forall ms sp rs b,
+  agree ms sp rs -> agree ms sp (nextblock b rs).
 Proof.
-  intros. unfold nextinstr. apply agree_set_other. auto. auto.
+  intros. unfold nextblock. apply agree_set_other. auto. auto.
 Qed.
- *)
 
 Lemma agree_set_pair:
   forall sp p v v' ms rs,
@@ -214,7 +233,7 @@ Proof.
   intros. apply H0; auto.
 Qed.
 
-(* Lemma agree_undef_regs:
+Lemma agree_undef_regs:
   forall ms sp rl rs rs',
   agree ms sp rs ->
   (forall r', data_preg r' = true -> preg_notin r' rl -> rs'#r' = rs#r') ->
@@ -230,7 +249,6 @@ Proof.
   rewrite preg_notin_charact. intros; red; intros. elim n.
   exploit preg_of_injective; eauto. congruence.
 Qed.
- *)
 
 (* Lemma agree_undef_regs2:
   forall ms sp rl rs rs',
@@ -627,6 +645,17 @@ Inductive exec_straight_blocks: bblocks -> regset -> mem ->
       exec_straight_blocks c rs2 m2 c' rs3 m3 ->
       exec_straight_blocks (b :: c) rs1 m1 c' rs3 m3.
 
+Lemma exec_straight_blocks_trans:
+  forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
+  exec_straight_blocks c1 rs1 m1 c2 rs2 m2 ->
+  exec_straight_blocks c2 rs2 m2 c3 rs3 m3 ->
+  exec_straight_blocks c1 rs1 m1 c3 rs3 m3.
+Proof.
+  induction 1; intros.
+  apply exec_straight_blocks_step with rs2 m2; auto.
+  apply exec_straight_blocks_step with rs2 m2; auto.
+Qed.
+
 (** Linking exec_straight with exec_straight_blocks *)
 
 Ltac Simplif :=
@@ -696,6 +725,18 @@ Proof.
     constructor 1.
     + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
     + rewrite <- (exec_straight_pc (i ::i c) rs1 m1 rs2 m2'); auto.
+Qed.
+
+Lemma exec_straight_through_singleinst:
+  forall a b rs1 m1 rs2 m2 rs2' m2' lb,
+  bblock_single_inst (PBasic a) = b ->
+  exec_straight (a::nil) rs1 m1 nil rs2 m2 ->
+  nextblock b rs2 = rs2' -> m2 = m2' ->
+  exec_straight_blocks (b::lb) rs1 m1 lb rs2' m2'.
+Proof.
+  intros. subst. constructor 1. unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
+  simpl. auto.
+  simpl; auto. unfold nextblock; simpl. Simpl. erewrite exec_straight_pc; eauto.
 Qed.
 
 (** The following lemmas show that straight-line executions

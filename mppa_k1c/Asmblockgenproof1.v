@@ -1313,14 +1313,15 @@ Lemma indexed_store_access_correct:
      exec_straight ge (indexed_memory_access mk_instr base ofs :: k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
-(*   intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
-  exploit indexed_memory_access_correct; eauto.
+  intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
+  exploit indexed_memory_access_correct. instantiate (1 := base). eauto.
   intros (base' & ofs' & rs' & A & B & C).
   econstructor; split.
-  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_store. rewrite B, C, STORE by auto. eauto. auto. 
-  intros; Simpl.
- *)Admitted.
+  eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
+  unfold exec_store. rewrite B, C, STORE. eauto. eauto. 
+  destruct r1; try discriminate. contradiction NOT31'. auto. auto.
+(*   intros; Simpl. *)
+Qed.
 
 
 (*
