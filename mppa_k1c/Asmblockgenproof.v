@@ -548,7 +548,8 @@ Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
         (ATPC: rs PC = parent_ra s),
       match_states (Machblock.Returnstate s ms m)
                    (Asmblock.State rs m').
-(* 
+
+(*
 Lemma exec_straight_steps:
   forall s fb f rs1 i c ep tf tc m1' m2 m2' sp ms2,
   match_stack ge s ->
@@ -570,7 +571,9 @@ Proof.
   eapply exec_straight_exec; eauto.
   econstructor; eauto. eapply exec_straight_at; eauto.
 Qed.
+*)
 
+(*
 Lemma exec_straight_steps_goto:
   forall s fb f rs1 i c ep tf tc m1' m2 m2' sp ms2 lbl c',
   match_stack ge s ->
@@ -1073,17 +1076,69 @@ Definition measure (s: MB.state) : nat :=
 
 Axiom TODO: False.
 
+Lemma step_simulation_control:
+  forall (bb: Machblock.bblock) sf f sp bb c rs' m' t s' (S1' S2': state),
+  exit_step return_address_offset ge (Machblock.exit bb) (Machblock.State sf f sp (bb::c) rs' m') t s' ->
+  match_states (Machblock.State sf f sp (bb :: c) rs' m') S1' ->
+  exists S2' : state, plus step tge S1' t S2' /\ match_states s' S2'.
+Proof.
+Admitted.
+
+Definition remove_body (bb: MB.bblock) := {| MB.header := MB.header bb; MB.body := nil; MB.exit := MB.exit bb |}.
+
+Lemma step_simulation_body:
+  forall sf f sp bb bb' rs m rs' m' (S1' S2': state) s' t c,
+  body_step ge sf f sp (Machblock.body bb) rs m rs' m' ->
+  bb' = remove_body bb ->
+  s' = (Machblock.State sf f sp (bb' :: c) rs' m') ->
+  match_states (Machblock.State sf f sp (bb::c) rs m) S1' ->
+  exists S2': state, step tge S1' t S2' /\ match_states s' S2' /\ t=E0.
+Proof.
+Admitted.
+
+(* Alternative form of step_simulation_bblock, easier to prove *)
+Lemma step_simulation_bblock':
+  forall sf f sp bb bb' rs m rs' m' t S1' s' c,
+  body_step ge sf f sp (Machblock.body bb) rs m rs' m' ->
+  bb' = remove_body bb ->
+  exit_step return_address_offset ge (Machblock.exit bb') (Machblock.State sf f sp (bb' :: c) rs' m') t s' ->
+  match_states (Machblock.State sf f sp (bb :: c) rs m) S1' ->
+  exists S2' : state, plus step tge S1' t S2' /\ match_states s' S2'.
+Proof.
+  intros.
+  exploit step_simulation_body; eauto. intros. destruct H3 as (S2' & H31 & H32 & H33).
+  exploit step_simulation_control; eauto. intros. destruct H3 as (S3' & H41 & H42).
+  econstructor. econstructor. econstructor.
+  eapply H31. apply plus_star. eapply H41.
+  erewrite H33. traceEq. auto.
+Qed.
+
+Lemma step_simulation_bblock:
+  forall sf f sp bb rs m rs' m' t S1' s' c,
+  body_step ge sf f sp (Machblock.body bb) rs m rs' m' ->
+  exit_step return_address_offset ge (Machblock.exit bb) (Machblock.State sf f sp (bb :: c) rs' m') t s' ->
+  match_states (Machblock.State sf f sp (bb :: c) rs m) S1' ->
+  exists S2' : state, plus step tge S1' t S2' /\ match_states s' S2'.
+Proof.
+  intros. eapply step_simulation_bblock'; eauto. destruct bb as [hd bdy ex]; simpl in *. unfold remove_body; simpl.
+  inv H0.
+  - simpl in *. subst. econstructor. inv H2; try (econstructor; eauto; fail).
+  - simpl in *. subst. econstructor.
+Qed.
+
 Theorem step_simulation:
   forall S1 t S2, MB.step return_address_offset ge S1 t S2 ->
   forall S1' (MS: match_states S1 S1'),
   (exists S2', plus step tge S1' t S2' /\ match_states S2 S2')
   \/ (measure S2 < measure S1 /\ t = E0 /\ match_states S2 S1')%nat.
 Proof.
-  induction 1; intros; inv MS.
+  induction 1; intros.
 
-- destruct TODO.
+- (* bblock *)
+  left. eapply step_simulation_bblock; eauto.
 
 - (* internal function *)
+  inv MS.
   exploit functions_translated; eauto. intros [tf [A B]]. monadInv B.
   generalize EQ; intros EQ'. monadInv EQ'.
   destruct (zlt Ptrofs.max_unsigned (size_blocks x0.(fn_blocks))); inversion EQ1. clear EQ1. subst x0.
@@ -1165,7 +1220,8 @@ Local Transparent destroyed_at_function_entry.
   assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }
   rewrite Heqrs''. Simpl.
   rewrite H4 by auto with asmgen. reflexivity.
- - (* external function *)
+- (* external function *)
+  inv MS.
   exploit functions_translated; eauto.
   intros [tf [A B]]. simpl in B. inv B.
   exploit extcall_arguments_match; eauto.
@@ -1181,12 +1237,13 @@ Local Transparent destroyed_at_function_entry.
   apply agree_set_pair; auto.
 
 - (* return *) 
+  inv MS.
   inv STACKS. simpl in *.
   right. split. omega. split. auto.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.
 Unshelve.
-  destruct TODO.
+  exact true.
 Qed.
 
 Lemma transf_initial_states:
