@@ -1080,27 +1080,45 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (AG: agree ms sp rs)
         (DXP: ep = true -> rs#FP = parent_sp s),
       match_codestate fb (Machblock.State s fb sp c ms m)
-                   (Codestate (Asmblock.State rs m') tc).
+                   (Codestate (Asmblock.State rs m') tc)
+  | match_codestate_call:
+      forall s ms m m' rs tc
+        (STACKS: match_stack ge s)
+        (MEXT: Mem.extends m m')
+        (AG: agree ms (parent_sp s) rs)
+        (ATPC: rs PC = Vptr fb Ptrofs.zero)
+        (ATLR: rs RA = parent_ra s),
+      match_codestate fb (Machblock.Callstate s fb ms m)
+                            (Codestate (Asmblock.State rs m') tc)
+  | match_codestate_return:
+      forall s ms m m' rs tc
+        (STACKS: match_stack ge s)
+        (MEXT: Mem.extends m m')
+        (AG: agree ms (parent_sp s) rs)
+        (ATPC: rs PC = parent_ra s),
+      match_codestate fb (Machblock.Returnstate s ms m)
+                       (Codestate (Asmblock.State rs m') tc).
 
 Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
   | match_asmblock_intro:
       forall rs f tf tc m ep c
         (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
         (AT: transl_code_at_pc ge (rs PC) fb f c ep tf tc),
-      match_asmblock fb (Codestate (Asmblock.State rs m) tc) (Asmblock.State rs m).
+      match_asmblock fb (Codestate (Asmblock.State rs m) tc) (Asmblock.State rs m)
+.
 
 Theorem match_codestate_state:
-  forall mbs abs cs s fb sp c ms m rs m' tc,
-  mbs = (Machblock.State s fb sp c ms m) ->
-  cs = (Codestate (Asmblock.State rs m') tc) ->
-  abs = (Asmblock.State rs m') ->
+  forall mbs abs fb cs,
   match_codestate fb mbs cs ->
   match_asmblock fb cs abs ->
   match_states mbs abs.
 Proof.
-  intros until tc. intros H0 H1 H2 MCS MAB. subst.
-  inv MCS. inv MAB. rewrite FIND0 in FIND. inv FIND.
-  econstructor; eauto. inv AT. econstructor; eauto.
+  intros until cs. intros MCS MAB.
+  inv MCS.
+  - inv MAB. rewrite FIND0 in FIND. inv FIND.
+    econstructor; eauto. inv AT. econstructor; eauto.
+  - inv MAB. econstructor; eauto.
+  - inv MAB. econstructor; eauto.
 Qed.
 
 Theorem match_state_codestate:
@@ -1137,7 +1155,12 @@ Proof.
   intros. destruct bb as [hd bdy ex]. simpl in *. subst. auto.
 Qed.
 
-Lemma step_simulation_body:
+(* To be expanded later based on what we need for step_simu_control *)
+Inductive control_preserved : state -> state -> Prop :=
+  | control_pres_intro: 
+      forall rs rs' m m', rs PC = rs' PC -> control_preserved (State rs m) (State rs' m').
+
+Lemma step_simu_body:
   forall sf f sp bb bb' ms m ms' m' rs0 m0 s' c tc tbb,
   body_step ge sf f sp (MB.body bb) ms m ms' m' ->
   bb' = remove_body bb ->
@@ -1148,10 +1171,55 @@ Lemma step_simulation_body:
   /\ exec_body tge (body tbb) rs0 m0 = Next rs1 m1
   /\ match_codestate f s' S1''
   /\ exists tbb' tc', tc = tbb' :: tc'
+  /\ control_preserved (State rs0 m0) (State rs1 m1)
 .
 Proof.
 Admitted.
 
+Lemma transl_blocks_distrib:
+  forall f bb c tbb tc ef args res,
+  transl_blocks f (bb::c) = OK (tbb::tc)
+  -> MB.exit bb <> Some (MBbuiltin ef args res)
+  -> transl_block f bb = OK (tbb :: nil)
+  /\ transl_blocks f c = OK tc.
+Proof.
+Admitted.
+
+(** TODO - Voir comment gérer le PC *)
+Lemma step_simu_control:
+  forall S0 bb bb' f tf f0 sf sp c ms' m' rs1 m1 tbb' tbb tc tc' rs0 m'0 t s'' ep ms
+  (AT: transl_code_at_pc ge (rs0 PC) f f0 (bb::c) ep tf (tbb :: tc'))
+  (DXP: ep = true -> rs0 GPR10 = parent_sp sf)
+  (AG : agree ms sp rs0),
+  bb' = remove_body bb ->
+  S0 = (State rs0 m'0) ->
+  match_codestate f (Machblock.State sf f sp (bb' :: c) ms' m') 
+    (Codestate (State rs1 m1) (tbb' :: tc)) ->
+  match_asmblock f (Codestate S0 (tbb::tc)) (State rs0 m'0) ->
+  control_preserved S0 (State rs1 m1) ->
+  exit_step return_address_offset ge (MB.exit bb') 
+    (Machblock.State sf f sp (bb'::c) ms' m') t s'' ->
+  exists rs2 m2,
+     exec_bblock tge tf tbb rs1 m1 = Next rs2 m2
+  /\ match_codestate f s'' (Codestate (State rs2 m2) tc)
+  /\ match_asmblock f (Codestate (State rs2 m2) tc) (State rs2 m2)
+  /\ plus step tge S0 t (State rs2 m2).
+Proof.
+Admitted.
+(*   intros until ms. intros AT DXP AG. intros H20 H21. intros MCS MAB CP ESTEP.
+  inv ESTEP.
+  - destruct TODO.
+  - inv MCS. exploit transl_blocks_distrib; eauto. rewrite <- H0; discriminate. intros (TRANSB & TRANSC).
+    clear TRANS.
+    monadInv TRANSB. simpl in EQ. inv EQ. simpl MB.exit in *. rewrite <- H0 in EQ1. inv EQ1.
+    inv H1. simpl in *.
+    inv CP. rewrite H1 in AT. inv AT. rewrite H2 in FIND. inv FIND.
+    repeat esplit; eauto.
+    + econstructor; eauto. inv AG0. unfold nextblock; unfold size; simpl. constructor; auto. intro; Simpl.
+    + unfold nextblock; simpl. unfold size; simpl. Simpl. rewrite <- H. simpl. econstructor; eauto.
+      
+Admitted.
+ *)
 (* Alternative form of step_simulation_bblock, easier to prove *)
 Lemma step_simulation_bblock':
   forall sf f sp bb bb' rs m rs' m' t s'' c S1,
@@ -1166,11 +1234,16 @@ Proof.
   remember (State rs0 m'0) as abs.
   exploit match_state_codestate; eauto. inv AT. auto.
   intros (S1' & MCS & MAS & cseq). subst.
-  exploit step_simulation_body; eauto.
-  intros (S1'' & EBD & S1''eq & MCS' & tbb' & tc' & tceq).
-  subst. 
-  (* TODO - appliquer step_simulation_control *)
-Admitted.
+  exploit step_simu_body; eauto.
+  intros (S1'' & rs1 & m1 & S1''eq & EBD & MCS' & tbb' & tc' & tceq & PRES).
+  subst. exploit step_simu_control; eauto.
+  intros (rs2 & m2 & EBB & MCS'' & MAB' & PSTEP). subst.
+  exists (State rs2 m2). split; auto.
+  eapply match_codestate_state; eauto.
+Unshelve.
+  destruct TODO.
+Qed.
+
 
 (* TODO - step_simulation_control *)
 

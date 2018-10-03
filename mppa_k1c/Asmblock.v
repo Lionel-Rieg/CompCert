@@ -389,8 +389,8 @@ Definition non_empty_bblock (body: list basic) (exit: option control): Prop
 (* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
  *)
-Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
-  non_empty_bblock body exit (* /\ builtin_alone body exit *).
+(* Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
+  non_empty_bblock body exit (* /\ builtin_alone body exit *). *)
 
 (** A bblock is well-formed if he contains at least one instruction,
     and if there is a builtin then it must be alone in this bblock. *)
@@ -399,7 +399,7 @@ Record bblock := mk_bblock {
   header: list label;
   body: list basic;
   exit: option control;
-  correct: wf_bblock header body exit
+(*   correct: wf_bblock header body exit *)
 }.
 
 Ltac bblock_auto_correct := ((* split;  *)try discriminate; try (left; discriminate); try (right; discriminate)).
@@ -416,7 +416,11 @@ Definition length_opt {A} (o: option A) : nat :=
    We ignore labels here...
    The result is in Z to be compatible with operations on PC
 *)
-Definition size (b:bblock): Z := Z.of_nat ((length (body b))+(length_opt (exit b))).
+Definition size (b:bblock): Z := 
+  match Z.of_nat ((length (body b))+(length_opt (exit b))) with
+  | 0 => 1
+  | z => z
+  end.
 
 Lemma length_nonil {A: Type} : forall l:(list A), l <> nil -> (length l > 0)%nat.
 Proof.
@@ -434,12 +438,21 @@ Qed.
 
 Lemma size_positive (b:bblock): size b > 0.
 Proof.
-  unfold size. apply to_nat_pos. rewrite Nat2Z.id.
-  destruct b as [h b e COR]. simpl. inversion COR. (* inversion H. *)
+  unfold size. apply to_nat_pos. destruct (Z.of_nat _) eqn:eq.
+  - simpl. unfold Pos.to_nat. simpl. omega.
+  - rewrite <- eq. rewrite Nat2Z.id. destruct b as [h b e]. simpl in *.
+    destruct b. destruct e. simpl. omega.
+                simpl in eq. discriminate.
+                simpl. omega.
+  - rewrite <- eq. rewrite Nat2Z.id. destruct b as [h b e]. simpl in *.
+    destruct b. destruct e. simpl. omega.
+                simpl in eq. discriminate.
+                simpl. omega.
+(*     rewrite eq. (* inversion COR. *) (* inversion H. *)
   - assert ((length b > 0)%nat). apply length_nonil. auto.
     omega.
   - destruct e; simpl; try omega. contradict H; simpl; auto.
-Qed.
+ *)Qed.
 
 Definition bblocks := list bblock.
 
@@ -499,9 +512,10 @@ Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
     | nil => {| header:=nil; body:=Pnop::nil; exit:=None |}
     end
   end.
-Next Obligation.
+(* Next Obligation.
   constructor. subst; discriminate.
 Qed.
+ *)
 
 (** * Operational semantics *)
 

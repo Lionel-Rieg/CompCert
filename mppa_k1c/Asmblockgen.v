@@ -840,17 +840,19 @@ Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_
 
 Local Obligation Tactic := bblock_auto_correct.
 
-Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
+(* Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
   match c with
   | nil => {| header := hd; body := Pnop::nil; exit := None |}
   | i::c => {| header := hd; body := i::c; exit := None |}
   end.
+ *)
 
 (** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
 Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instruction) :=
   match (extract_ctl ctl) with
-  | None => gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil
-  | Some (PExpand (Pbuiltin ef args res)) => (gen_bblock_noctl hd c) :: 
+  | None => {| header := hd; body := c; exit := None |} :: nil
+(* gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil *)
+  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := c; exit := None |}) :: 
                                             ((PExpand (Pbuiltin ef args res)) ::b nil)
   | Some (PCtlFlow i) => {| header := hd; body := c ++ (extract_basic ctl); exit := Some (PCtlFlow i) |} :: nil
   end
