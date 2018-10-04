@@ -416,11 +416,12 @@ Definition length_opt {A} (o: option A) : nat :=
    We ignore labels here...
    The result is in Z to be compatible with operations on PC
 *)
-Definition size (b:bblock): Z := 
-  match Z.of_nat ((length (body b))+(length_opt (exit b))) with
-  | 0 => 1
-  | z => z
+Definition size (b:bblock): Z :=
+  match (body b, exit b) with
+  | (nil, None) => 1
+  | _ => Z.of_nat (length (body b) + length_opt (exit b))
   end.
+
 
 Lemma length_nonil {A: Type} : forall l:(list A), l <> nil -> (length l > 0)%nat.
 Proof.
@@ -438,16 +439,10 @@ Qed.
 
 Lemma size_positive (b:bblock): size b > 0.
 Proof.
-  unfold size. apply to_nat_pos. destruct (Z.of_nat _) eqn:eq.
-  - simpl. unfold Pos.to_nat. simpl. omega.
-  - rewrite <- eq. rewrite Nat2Z.id. destruct b as [h b e]. simpl in *.
-    destruct b. destruct e. simpl. omega.
-                simpl in eq. discriminate.
-                simpl. omega.
-  - rewrite <- eq. rewrite Nat2Z.id. destruct b as [h b e]. simpl in *.
-    destruct b. destruct e. simpl. omega.
-                simpl in eq. discriminate.
-                simpl. omega.
+  unfold size. destruct (body b). destruct (exit b).
+  - apply to_nat_pos. rewrite Nat2Z.id. simpl. omega.
+  - apply to_nat_pos. simpl. unfold Pos.to_nat. simpl. omega.
+  - apply to_nat_pos. rewrite Nat2Z.id. simpl. omega.
 (*     rewrite eq. (* inversion COR. *) (* inversion H. *)
   - assert ((length b > 0)%nat). apply length_nonil. auto.
     omega.

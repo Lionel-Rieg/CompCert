@@ -1185,7 +1185,13 @@ Lemma transl_blocks_distrib:
 Proof.
 Admitted.
 
-(** TODO - Voir comment gérer le PC *)
+Lemma transl_basic_code_length :
+  forall f bdy tbdy,
+  transl_basic_code' f bdy true = OK tbdy -> length bdy = length tbdy.
+Proof.
+Admitted.
+
+(** TODO - factoriser la preuve du exit=None en introduisant des lemmes *)
 Lemma step_simu_control:
   forall S0 bb bb' f tf f0 sf sp c ms' m' rs1 m1 tbb' tbb tc tc' rs0 m'0 t s'' ep ms
   (AT: transl_code_at_pc ge (rs0 PC) f f0 (bb::c) ep tf (tbb :: tc'))
@@ -1193,33 +1199,57 @@ Lemma step_simu_control:
   (AG : agree ms sp rs0),
   bb' = remove_body bb ->
   S0 = (State rs0 m'0) ->
+  exec_body tge (body tbb) rs0 m'0 = Next rs1 m1 ->
   match_codestate f (Machblock.State sf f sp (bb' :: c) ms' m') 
     (Codestate (State rs1 m1) (tbb' :: tc)) ->
-  match_asmblock f (Codestate S0 (tbb::tc)) (State rs0 m'0) ->
+(*   match_asmblock f (Codestate S0 (tbb::tc)) (State rs0 m'0) -> *)
   control_preserved S0 (State rs1 m1) ->
   exit_step return_address_offset ge (MB.exit bb') 
     (Machblock.State sf f sp (bb'::c) ms' m') t s'' ->
   exists rs2 m2,
-     exec_bblock tge tf tbb rs1 m1 = Next rs2 m2
+     exec_control tge tf (exit tbb') (nextblock tbb rs1) m1 = Next rs2 m2
   /\ match_codestate f s'' (Codestate (State rs2 m2) tc)
   /\ match_asmblock f (Codestate (State rs2 m2) tc) (State rs2 m2)
   /\ plus step tge S0 t (State rs2 m2).
 Proof.
-Admitted.
-(*   intros until ms. intros AT DXP AG. intros H20 H21. intros MCS MAB CP ESTEP.
-  inv ESTEP.
+  intros until ms. intros AT DXP AG. intros H20 H21. intros EBDY MCS (* MAB *) CP ESTEP.
+  (* destruct tbb as [thd tbdy tex]. destruct bb as [hd bdy ex]. destruct bb' as [hd' bdy' ex']. *) simpl in *.
+  inv CP. inv H0.
+  inv ESTEP. 
   - destruct TODO.
-  - inv MCS. exploit transl_blocks_distrib; eauto. rewrite <- H0; discriminate. intros (TRANSB & TRANSC).
-    clear TRANS.
-    monadInv TRANSB. simpl in EQ. inv EQ. simpl MB.exit in *. rewrite <- H0 in EQ1. inv EQ1.
-    inv H1. simpl in *.
-    inv CP. rewrite H1 in AT. inv AT. rewrite H2 in FIND. inv FIND.
-    repeat esplit; eauto.
-    + econstructor; eauto. inv AG0. unfold nextblock; unfold size; simpl. constructor; auto. intro; Simpl.
-    + unfold nextblock; simpl. unfold size; simpl. Simpl. rewrite <- H. simpl. econstructor; eauto.
-      
-Admitted.
- *)
+  - inv MCS. destruct bb as [hd bdy ex]; simpl in *. subst. eapply transl_blocks_distrib in TRANS; [| simpl; discriminate].
+    destruct TRANS as (TRANS1 & TRANS2). monadInv TRANS1.
+    inv EQ1. inv EQ. unfold gen_bblocks in H0; simpl in H0. inv H0.
+  esplit; esplit. esplit. 2: esplit. 3: esplit.
+    + simpl; auto.
+    + econstructor; eauto. inv AG0. econstructor; eauto. intro. Simpl.
+    + inv AT. econstructor; eauto. unfold nextblock; unfold size; simpl.
+      destruct tbb as [thd tbdy tex]; simpl.
+      eapply transl_blocks_distrib in H3. destruct H3 as (H31 & H32). monadInv H31. simpl in EQ. simpl in EQ1.
+      inv EQ1. inv H5. 2: simpl; discriminate.
+      simpl. rewrite FIND in H0. inv H0. rewrite H32 in TRANS2. inv TRANS2.
+      destruct bdy as [|i bdy].
+      * inv EQ. Simpl. rewrite <- H1. rewrite <- H. econstructor; eauto.
+        assert (H42: size {| header := thd; body := nil; exit := None |} = 1) by (simpl; auto).
+        rewrite <- H42. eapply code_tail_next_int. 
+        eapply transf_function_no_overflow; eauto.
+        eauto.
+      * apply transl_basic_code_length in EQ. destruct tbdy as [|i' tbdy]. simpl in EQ. discriminate.
+        Simpl. rewrite <- H1. rewrite <- H. econstructor; eauto.
+        assert (H42: size {| header := thd; body := i' ::i tbdy; exit := None |} = Z.of_nat (length (i' ::i tbdy))).
+          unfold size; simpl; auto. rewrite Nat.add_0_r. auto.
+        rewrite Nat.add_0_r. rewrite <- H42. eapply code_tail_next_int.
+        eapply transf_function_no_overflow; eauto.
+        eauto.
+    + apply plus_one. inv AT. econstructor; eauto. eapply functions_transl; eauto.
+      eapply find_bblock_tail; eauto.
+      unfold exec_bblock. rewrite EBDY.
+      eapply transl_blocks_distrib in H3; [|simpl; discriminate]. destruct H3 as [H31 H32].
+      destruct tbb as [thd tbdy tex]; simpl in H31. monadInv H31. simpl. inv EQ1. inv EQ. inv H5. simpl. auto.
+Unshelve.
+  all: destruct TODO.
+Qed.
+
 (* Alternative form of step_simulation_bblock, easier to prove *)
 Lemma step_simulation_bblock':
   forall sf f sp bb bb' rs m rs' m' t s'' c S1,
@@ -1237,15 +1267,15 @@ Proof.
   exploit step_simu_body; eauto.
   intros (S1'' & rs1 & m1 & S1''eq & EBD & MCS' & tbb' & tc' & tceq & PRES).
   subst. exploit step_simu_control; eauto.
+Admitted. (* TODO - fix the proof with the new step_simulation_control *)
+(*   eauto. 
   intros (rs2 & m2 & EBB & MCS'' & MAB' & PSTEP). subst.
   exists (State rs2 m2). split; auto.
   eapply match_codestate_state; eauto.
 Unshelve.
   destruct TODO.
 Qed.
-
-
-(* TODO - step_simulation_control *)
+ *)
 
 (* Previous attempt at simulation_control and simulation_body
 
