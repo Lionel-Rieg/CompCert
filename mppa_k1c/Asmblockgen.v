@@ -850,9 +850,9 @@ Local Obligation Tactic := bblock_auto_correct.
 (** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
 Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instruction) :=
   match (extract_ctl ctl) with
-  | None => {| header := hd; body := c; exit := None |} :: nil
+  | None => {| header := hd; body := Pnop::c; exit := None |} :: nil
 (* gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil *)
-  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := c; exit := None |}) :: 
+  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := Pnop::c; exit := None |}) :: 
                                             ((PExpand (Pbuiltin ef args res)) ::b nil)
   | Some (PCtlFlow i) => {| header := hd; body := c ++ (extract_basic ctl); exit := Some (PCtlFlow i) |} :: nil
   end

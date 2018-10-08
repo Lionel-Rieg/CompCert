@@ -568,6 +568,35 @@ Inductive transl_code_at_pc (ge: MB.genv):
     code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc ->
     transl_code_at_pc ge (Vptr b ofs) b f c ep tf tc.
 
+Remark code_tail_no_bigger:
+  forall pos c1 c2, code_tail pos c1 c2 -> (length c2 <= length c1)%nat.
+Proof.
+  induction 1; simpl; omega.
+Qed.
+
+Remark code_tail_unique:
+  forall fn c pos pos',
+  code_tail pos fn c -> code_tail pos' fn c -> pos = pos'.
+Proof.
+  induction fn; intros until pos'; intros ITA CT; inv ITA; inv CT; auto.
+  generalize (code_tail_no_bigger _ _ _ H3); simpl; intro; omega.
+  generalize (code_tail_no_bigger _ _ _ H3); simpl; intro; omega.
+  f_equal. eauto.
+Qed.
+
+Lemma return_address_offset_correct:
+  forall ge b ofs fb f c tf tc ofs',
+  transl_code_at_pc ge (Vptr b ofs) fb f c false tf tc ->
+  return_address_offset f c ofs' ->
+  ofs' = ofs.
+Proof.
+  intros. inv H. red in H0.
+  exploit code_tail_unique. eexact H12. eapply H0; eauto. intro.
+  rewrite <- (Ptrofs.repr_unsigned ofs).
+  rewrite <- (Ptrofs.repr_unsigned ofs').
+  congruence.
+Qed.
+
 Section STRAIGHTLINE.
 
 Variable ge: genv.
@@ -591,6 +620,46 @@ Inductive exec_straight: list basic -> regset -> mem ->
       exec_basic_instr ge i rs1 m1 = Next rs2 m2 ->
       exec_straight c rs2 m2 c' rs3 m3 ->
       exec_straight (i :: c) rs1 m1 c' rs3 m3.
+
+Inductive exec_control_rel: option control -> bblock -> regset -> mem ->
+                             regset -> mem -> Prop :=
+  | exec_control_rel_intro:
+      forall rs1 m1 b rs1' ctl rs2 m2,
+      rs1' = nextblock b rs1 ->
+      exec_control ge fn ctl rs1' m1 = Next rs2 m2 ->
+      exec_control_rel ctl b rs1 m1 rs2 m2.
+
+Inductive exec_bblock_rel: bblock -> regset -> mem -> regset -> mem -> Prop :=
+  | exec_bblock_rel_intro:
+      forall rs1 m1 b rs2 m2,
+      exec_bblock ge fn b rs1 m1 = Next rs2 m2 ->
+      exec_bblock_rel b rs1 m1 rs2 m2.
+
+Lemma exec_straight_body:
+  forall c rs1 m1 rs2 m2,
+  exec_straight c rs1 m1 nil rs2 m2 ->
+  exec_body ge c rs1 m1 = Next rs2 m2.
+Proof.
+  induction c as [|i c].
+  - intros. inv H.
+  - intros. inv H.
+    + simpl. rewrite H7. auto.
+    + apply IHc in H8. rewrite <- H8. simpl. rewrite H2. auto.
+Qed.
+
+(*     + contradict H4. generalize i1. induction c; simpl; try discriminate.
+        intros i0 X; inversion X. subst. eapply IHc. eauto. *)
+
+Theorem exec_straight_bblock:
+  forall rs1 m1 rs2 m2 rs3 m3 b,
+  exec_straight (body b) rs1 m1 nil rs2 m2 ->
+  exec_control_rel (exit b) b rs2 m2 rs3 m3 ->
+  exec_bblock_rel b rs1 m1 rs3 m3.
+Proof.
+  intros.
+  econstructor; eauto. unfold exec_bblock. erewrite exec_straight_body; eauto.
+  inv H0. auto.
+Qed.
 
 Lemma exec_straight_trans:
   forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
@@ -667,18 +736,6 @@ Ltac Simplif :=
   ); auto with asmgen.
 
 Ltac Simpl := repeat Simplif.
-
-Lemma exec_straight_body:
-  forall c rs1 m1 rs2 m2,
-  exec_straight c rs1 m1 nil rs2 m2 ->
-  exec_body ge c rs1 m1 = Next rs2 m2.
-Proof.
-  induction c.
-  - intros. inv H.
-  - intros. inv H.
-    + inv H7. simpl. remember (exec_basic_instr _ _ _ _) as ebi. destruct ebi; simpl; auto.
-    + simpl. rewrite H2. apply IHc. auto.
-Qed.
 
 Lemma exec_basic_instr_pc:
   forall b rs1 m1 rs2 m2,
