@@ -22,6 +22,8 @@ Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
 Module MB := Machblock.
 Module AB := Asmblock.
 
+Definition rao := return_address_offset.
+
 Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
@@ -1100,9 +1102,8 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
                        (Codestate (Asmblock.State rs m') tc None).
 
 Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
-  | match_asmblock_intro:
+  | match_asmblock_some:
       forall rs f tf tc m ep c bb tbb
-        (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
         (AT: transl_code_at_pc ge (rs PC) fb f (bb::c) ep tf (tbb::tc)),
       match_asmblock fb (Codestate (Asmblock.State rs m) (tbb::tc) (Some tbb)) (Asmblock.State rs m)
 .
@@ -1114,9 +1115,10 @@ Theorem match_codestate_state:
   match_states mbs abs.
 Proof.
   intros until cs. intros MCS MAB.
-  inv MCS; inv MAB.
-  rewrite FIND0 in FIND. inv FIND.
-    econstructor; eauto. inv AT. econstructor; eauto.
+  inv MCS; inv MAB. 
+  - inv AT. rewrite H0 in FIND. inv FIND.
+(*   rewrite FIND0 in FIND. inv FIND. *)
+    econstructor; eauto. rewrite <- H. (* inv AT. *) econstructor; eauto.
 Qed.
 
 Theorem match_state_codestate:
@@ -1150,26 +1152,126 @@ Proof.
   intros. eapply exec_straight_trans. eapply H. econstructor; eauto.
 Qed.
 
-
 Axiom TODO: False.
 
+Lemma transl_blocks_distrib:
+  forall c f bb tbb tc,
+  transl_blocks f (bb::c) = OK (tbb::tc)
+  -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res))
+  -> transl_block f bb = OK (tbb :: nil)
+  /\ transl_blocks f c = OK tc.
+Proof.
+  intros. destruct bb as [hd bdy ex]. simpl in *.
+  monadInv H. monadInv EQ. simpl in *.
+  destruct ex.
+  - destruct c0.
+    + simpl in EQ. destruct s0; try discriminate. monadInv EQ. simpl in *. inv H1.
+      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
+    + simpl in EQ. destruct s0; try discriminate. monadInv EQ. simpl in *. inv H1.
+      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
+    + destruct TODO. (* TODO - requires Sylvain black magic *)
+    + simpl in EQ. monadInv EQ. simpl in *. inv H1.
+      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
+    + simpl in EQ. unfold transl_cbranch in EQ. destruct c0; destruct c.
+      all: try (
+        repeat (destruct l; try discriminate);
+        monadInv EQ; simpl in *; inv H1;
+        unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl; rewrite EQ; simpl;
+        unfold gen_bblocks; simpl; auto).
+      * repeat (destruct l; try discriminate); monadInv EQ; destruct (Int.eq n Int.zero) eqn:EQ; (
+        simpl in H1; inv H1; unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl;
+        rewrite EQ; simpl; unfold gen_bblocks; simpl; auto).
+      * repeat (destruct l; try discriminate); monadInv EQ; destruct (Int.eq n Int.zero) eqn:EQ; (
+        simpl in H1; inv H1; unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl;
+        rewrite EQ; simpl; unfold gen_bblocks; simpl; auto).
+      * repeat (destruct l; try discriminate). monadInv EQ. unfold transl_block. simpl; rewrite EQ0; simpl.
+        rewrite EQ2; simpl. unfold gen_bblocks; simpl. unfold transl_opt_compuimm in *.
+        destruct (select_comp n c0). destruct c; try (simpl; inv H1; auto).
+        unfold transl_comp in *. simpl. inv H1. auto.
+      * repeat (destruct l; try discriminate). monadInv EQ. unfold transl_block. simpl. rewrite EQ0; simpl.
+        rewrite EQ2; simpl. unfold gen_bblocks in *. simpl in *. unfold transl_opt_compuimm in *.
+        destruct (select_comp n c0). destruct c1; try (simpl; inv H1; auto). simpl in *. inv H1. auto.
+      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
+        destruct (Int64.eq n Int64.zero); simpl in *.
+          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *; inv H1; auto.
+      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
+        destruct (Int64.eq n Int64.zero); simpl in *.
+          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *; inv H1; auto.
+      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
+        destruct (Int64.eq n Int64.zero); simpl in *.
+          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *;
+          unfold transl_opt_compluimm in *;
+          destruct (select_compl n c0) eqn:SEL; try (destruct c; simpl in *; inv H1; auto); try (simpl in *; inv H1; auto).
+      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
+        monadInv EQ. rewrite EQ2; simpl. unfold gen_bblocks in *; simpl in *.
+        unfold transl_opt_compluimm in *. destruct (select_compl n c0); try (destruct c1; simpl in *; inv H1; auto); try (simpl in *; inv H1; auto).
+    + simpl in EQ. discriminate.
+    + simpl in EQ. inv EQ. unfold transl_block. simpl; rewrite EQ0; simpl. unfold gen_bblocks in *.
+      simpl in *. inv H1; auto.
+  - monadInv EQ. simpl in H1. inv H1. unfold transl_block. simpl. rewrite EQ0. simpl.
+    unfold gen_bblocks. simpl. auto.
+Qed.
 
-Theorem match_asmblock_step:
+Lemma transl_block_nobuiltin:
+  forall f bb tbb,
+  transl_block f bb = OK (tbb :: nil) ->
+  exists c c',
+     transl_basic_code' f (MB.body bb) true = OK c
+  /\ transl_instr_control f (MB.exit bb) true = OK c'
+  /\ body tbb = c ++ (extract_basic c')
+  /\ exit tbb = extract_ctl c'.
+Proof.
+  intros. monadInv H.
+  repeat eexists. eauto. eauto.
+(* TODO - besoin de lemmes supplémentaires sur gen_bblocks
+      Toute la quincaillerie du lemme au dessus doit aller dans un lemme intermédiaire *)
+  unfold gen_bblocks in H0.
+Admitted.
+
+Theorem step_simu_control:
+  forall bb fb fn s sp c ms' m' rs2 m2 tbb tc t S'',
+  MB.body bb = nil ->
+  Genv.find_funct_ptr tge fb = Some (Internal fn) ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms' m') 
+    (Codestate (Asmblock.State rs2 m2) (tbb::tc) (Some tbb)) ->
+  exit_step rao ge (MB.exit bb) (MB.State s fb sp (bb::c) ms' m') t S'' ->
+  (exists rs3 m3 rs4 m4,
+      exec_straight tge (body tbb) rs2 m2 nil rs3 m3
+  /\  exec_control tge fn (exit tbb) rs3 m3 = Next rs4 m4).
+Proof.
+  intros until S''. intros H FIND MCS ESTEP. inv ESTEP.
+  - destruct TODO.
+  - inv MCS. clear H12.
+    exploit transl_blocks_distrib; eauto. rewrite <- H1. discriminate.
+    intros (TLB & TLBS). destruct bb as [hd bdy ex]; simpl in *. subst.
+    monadInv TRANS. monadInv EQ. simpl in *. inv EQ. inv EQ0. inv H0. simpl in *.
+    repeat eexists. econstructor; eauto. econstructor; eauto.
+Qed.
+
+
+(* Theorem match_asmblock_step:
   forall fb f fb' rs1 m1 rs2 m2 rs3 m3 rs4 m4 tbb tc S1,
   Genv.find_funct_ptr tge fb = Some (Internal f) ->
   match_asmblock fb (Codestate (Asmblock.State rs1 m1) (tbb::tc) (Some tbb)) S1 ->
-  (exists tbb', exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
-            /\  exec_straight tge (body tbb') rs2 m2 (body (remove_body tbb)) rs3 m3
-            /\  exec_control_rel tge f (exit tbb) tbb rs3 m3 rs4 m4) ->
+  (exists tbb' tc'',
+      exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
+  /\  exec_straight tge (body tbb') rs2 m2 (body (remove_body tbb)) rs3 m3
+  /\  exec_control_rel tge f (exit tbb) tbb rs3 m3 rs4 m4) ->
   exists S4 tc' t,
-     match_asmblock fb' (Codestate (Asmblock.State rs4 m4) tc' None) S4
-  /\ step tge S1 t S4.
+     step tge S1 t S4
+  /\ match_asmblock fb' (Codestate (Asmblock.State rs4 m4) tc' None) S4
+.
 Proof.
   intros. destruct H1 as (tbb' & H1 & H2 & H3).
   exploit exec_straight_trans. eapply H1. eapply H2. intro H4; clear H1; clear H2.
   exploit exec_straight_bblock. eapply exec_straight_pnil. eapply H4. eapply H3. intro H5; clear H3; clear H4.
-  inv H5. destruct TODO.
-Qed.
+  inv H5. inv H0. clear H7. inv AT.
+  repeat eexists. econstructor; eauto.
+  exploit functions_translated. eapply H2. intro. destruct H6 as (tf2 & FIND6 & TRANS6).
+    rewrite FIND6 in H. inv H. inv TRANS6. monadInv H6. rewrite EQ in H3. inv H3.
+  eapply find_bblock_tail. eapply H5.
+  econstructor.
+Qed. *)
 
 Definition measure (s: MB.state) : nat :=
   match s with
@@ -1203,15 +1305,6 @@ Lemma step_simu_body:
   /\ exists tbb' tc', tc = tbb' :: tc'
   /\ control_preserved (State rs0 m0) (State rs1 m1)
 .
-Proof.
-Admitted.
-
-Lemma transl_blocks_distrib:
-  forall f bb c tbb tc ef args res,
-  transl_blocks f (bb::c) = OK (tbb::tc)
-  -> MB.exit bb <> Some (MBbuiltin ef args res)
-  -> transl_block f bb = OK (tbb :: nil)
-  /\ transl_blocks f c = OK tc.
 Proof.
 Admitted.
 
