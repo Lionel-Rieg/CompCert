@@ -754,7 +754,7 @@ Proof.
   auto.
 Qed.
 
-Lemma exec_straight_pc:
+(* Lemma exec_straight_pc':
   forall c rs1 m1 rs2 m2,
   exec_straight c rs1 m1 nil rs2 m2 ->
   rs2 PC = rs1 PC.
@@ -763,6 +763,18 @@ Proof.
   inv H.
   - erewrite exec_basic_instr_pc; eauto.
   - rewrite (IHc rs3 m3 rs2 m2); auto.
+    erewrite exec_basic_instr_pc; eauto.
+Qed. *)
+
+Lemma exec_straight_pc:
+  forall c c' rs1 m1 rs2 m2,
+  exec_straight c rs1 m1 c' rs2 m2 ->
+  rs2 PC = rs1 PC.
+Proof.
+  induction c; intros; try (inv H; fail).
+  inv H.
+  - eapply exec_basic_instr_pc; eauto.
+  - rewrite (IHc c' rs3 m3 rs2 m2); auto.
     erewrite exec_basic_instr_pc; eauto.
 Qed.
 
@@ -777,11 +789,11 @@ Proof.
   intros. subst. destruct i.
   - constructor 1. 
       + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
-      + rewrite <- (exec_straight_pc c rs1 m1 rs2 m2'); auto.
+      + rewrite <- (exec_straight_pc c nil rs1 m1 rs2 m2'); auto.
   - destruct c as [|i c]; try (inv H0; fail).
     constructor 1.
     + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
-    + rewrite <- (exec_straight_pc (i ::i c) rs1 m1 rs2 m2'); auto.
+    + rewrite <- (exec_straight_pc (i ::i c) nil rs1 m1 rs2 m2'); auto.
 Qed.
 
 Lemma exec_straight_through_singleinst:
