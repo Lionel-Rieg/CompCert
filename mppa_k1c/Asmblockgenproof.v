@@ -22,8 +22,6 @@ Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
 Module MB := Machblock.
 Module AB := Asmblock.
 
-Definition rao := return_address_offset.
-
 Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
@@ -1074,7 +1072,7 @@ Inductive codestate: Type :=
 
 Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
   | match_codestate_intro:
-      forall s sp ms m m' rs f tc ep c bb tbb
+      forall s sp ms m m' rs f tc ep c bb tbb tbb'
         (STACKS: match_stack ge s)
         (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
         (MEXT: Mem.extends m m')
@@ -1082,7 +1080,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (AG: agree ms sp rs)
         (DXP: ep = true -> rs#FP = parent_sp s),
       match_codestate fb (Machblock.State s fb sp (bb::c) ms m)
-                   (Codestate (Asmblock.State rs m') (tbb::tc) (Some tbb))
+                   (Codestate (Asmblock.State rs m') (tbb::tc) (Some tbb'))
   | match_codestate_call:
       forall s ms m m' rs tc
         (STACKS: match_stack ge s)
@@ -1103,22 +1101,28 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
 
 Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
   | match_asmblock_some:
-      forall rs f tf tc m ep c bb tbb
-        (AT: transl_code_at_pc ge (rs PC) fb f (bb::c) ep tf (tbb::tc)),
-      match_asmblock fb (Codestate (Asmblock.State rs m) (tbb::tc) (Some tbb)) (Asmblock.State rs m)
+      forall rs f tf tc m tbb tbb' ofs
+        (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
+        (TRANSF: transf_function f = OK tf)
+        (PCeq: rs PC = Vptr fb ofs)
+        (TAIL: code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) (tbb::tc)),
+      match_asmblock fb (Codestate (Asmblock.State rs m) (tbb'::tc) (Some tbb)) (Asmblock.State rs m)
 .
 
 Theorem match_codestate_state:
-  forall mbs abs fb cs,
+  forall mbs abs fb cs rs m tbb tc,
+  cs = Codestate (Asmblock.State rs m) (tbb::tc) (Some tbb) ->
   match_codestate fb mbs cs ->
   match_asmblock fb cs abs ->
   match_states mbs abs.
 Proof.
-  intros until cs. intros MCS MAB.
-  inv MCS; inv MAB. 
-  - inv AT. rewrite H0 in FIND. inv FIND.
+  intros until tc. intros ? MCS MAB.
+  inv MCS; inv MAB. inv H1. 
+  - rewrite FIND0 in FIND. inv FIND.
 (*   rewrite FIND0 in FIND. inv FIND. *)
-    econstructor; eauto. rewrite <- H. (* inv AT. *) econstructor; eauto.
+    econstructor; eauto. rewrite PCeq. (* inv AT. *) econstructor; eauto.
+  - discriminate.
+  - discriminate.
 Qed.
 
 Theorem match_state_codestate:
@@ -1135,8 +1139,10 @@ Proof.
   intros. inv H4; try discriminate.
   inv H6. inv H5. rewrite FIND in H1. inv H1.
   esplit. repeat split.
+  econstructor. 4: eapply H2. all: eauto. (*  inv H3. eapply H1. *)
+  inv AT.
   econstructor; eauto.
-  econstructor; eauto.
+  congruence.
 Qed.
 
 Program Definition remove_body (bb: AB.bblock) := {| AB.header := AB.header bb; AB.body := Pnop::nil; AB.exit := AB.exit bb |}.
@@ -1212,40 +1218,116 @@ Proof.
     unfold gen_bblocks. simpl. auto.
 Qed.
 
+Lemma gen_bblocks_nobuiltin:
+  forall thd tbdy tex tbb,
+  gen_bblocks thd tbdy tex = tbb :: nil ->
+     header tbb = thd
+  /\ body tbb = Pnop :: (tbdy ++ (extract_basic tex))
+  /\ exit tbb = extract_ctl tex.
+Proof.
+  intros. unfold gen_bblocks in H.
+  destruct (extract_ctl tex).
+  - destruct c.
+    + destruct i. inv H.
+    + inv H. auto.
+  - inv H. auto.
+Qed.
+
 Lemma transl_block_nobuiltin:
   forall f bb tbb,
   transl_block f bb = OK (tbb :: nil) ->
   exists c c',
      transl_basic_code' f (MB.body bb) true = OK c
   /\ transl_instr_control f (MB.exit bb) true = OK c'
-  /\ body tbb = c ++ (extract_basic c')
+  /\ body tbb = Pnop :: (c ++ (extract_basic c'))
   /\ exit tbb = extract_ctl c'.
 Proof.
   intros. monadInv H.
-  repeat eexists. eauto. eauto.
-(* TODO - besoin de lemmes supplémentaires sur gen_bblocks
-      Toute la quincaillerie du lemme au dessus doit aller dans un lemme intermédiaire *)
-  unfold gen_bblocks in H0.
-Admitted.
+  eexists. eexists. split; eauto. split; eauto.
+  eapply gen_bblocks_nobuiltin. eauto.
+Qed.
+
+Lemma nextblock_preserves: 
+  forall rs rs' bb r,
+  rs' = nextblock bb rs ->
+  data_preg r = true ->
+  rs r = rs' r.
+Proof.
+  intros. destruct r; try discriminate.
+  - subst. Simpl.
+  - subst. Simpl.
+Qed.
 
 Theorem step_simu_control:
-  forall bb fb fn s sp c ms' m' rs2 m2 tbb tc t S'',
+  forall bb fb fn s sp c ms' m' rs2 m2 tbb tc t S'' rs1 m1 cs2,
   MB.body bb = nil ->
   Genv.find_funct_ptr tge fb = Some (Internal fn) ->
-  match_codestate fb (MB.State s fb sp (bb::c) ms' m') 
-    (Codestate (Asmblock.State rs2 m2) (tbb::tc) (Some tbb)) ->
-  exit_step rao ge (MB.exit bb) (MB.State s fb sp (bb::c) ms' m') t S'' ->
+  cs2 = Codestate (Asmblock.State rs2 m2) (tbb::tc) (Some tbb) ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms' m') cs2 ->
+  match_asmblock fb cs2 (Asmblock.State rs1 m1) ->
+  exit_step return_address_offset ge (MB.exit bb) (MB.State s fb sp (bb::c) ms' m') t S'' ->
   (exists rs3 m3 rs4 m4,
       exec_straight tge (body tbb) rs2 m2 nil rs3 m3
-  /\  exec_control tge fn (exit tbb) rs3 m3 = Next rs4 m4).
+  /\  exec_control_rel tge fn (exit tbb) tbb rs3 m3 rs4 m4
+  /\  match_states S'' (State rs4 m4)).
 Proof.
-  intros until S''. intros H FIND MCS ESTEP. inv ESTEP.
-  - destruct TODO.
-  - inv MCS. clear H12.
-    exploit transl_blocks_distrib; eauto. rewrite <- H1. discriminate.
-    intros (TLB & TLBS). destruct bb as [hd bdy ex]; simpl in *. subst.
-    monadInv TRANS. monadInv EQ. simpl in *. inv EQ. inv EQ0. inv H0. simpl in *.
-    repeat eexists. econstructor; eauto. econstructor; eauto.
+  intros until cs2. intros ? FIND ? MCS MAS ESTEP. inv ESTEP.
+  - inv MCS. inv MAS.
+    destruct ctl.
+    + (* MBcall *)
+      exploit transl_blocks_distrib; eauto. rewrite <- H1. discriminate.
+      intros (TLB & TLBS). clear TRANS. exploit transl_block_nobuiltin; eauto.
+      intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
+      destruct tbb as [hd bdy ex]; simpl in *. subst.
+      destruct bb as [mhd mbdy mex]; simpl in *. subst.
+      inv TBC. inv TIC. inv H2.
+
+      assert (f0 = f) by congruence. subst f0.
+      assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
+        eapply transf_function_no_overflow; eauto.
+      destruct s1 as [rf|fid]; simpl in H12.
+      * (* Indirect call *) inv H0.
+      * (* Direct call *)
+        monadInv H0.
+        generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1.
+        remember (Ptrofs.add _ _) as ofs'.
+        assert (TCA: transl_code_at_pc ge (Vptr fb ofs') fb f c false tf tc).
+          econstructor; eauto.
+        assert (f1 = f) by congruence. subst f1.
+        exploit return_address_offset_correct; eauto. intros; subst ra.
+        repeat eexists. econstructor; eauto. econstructor; eauto.
+        remember (nextblock _ _) as rs'1.
+        econstructor; eauto.
+        econstructor; eauto. eapply agree_sp_def; eauto.
+        simpl. eapply agree_exten; eauto. intros. Simpl.
+          exploit nextblock_preserves. eapply Heqrs'1. eauto. auto.
+        Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H12. eauto.
+        Simpl. simpl. subst. Simpl. simpl. unfold Val.offset_ptr. rewrite PCeq. auto.
+    + (* MBtailcall *)
+      destruct TODO.
+    + (* MBbuiltin *)
+      destruct TODO.
+    + (* MBgoto *)
+      destruct TODO.
+    + (* MBcond *)
+      destruct TODO.
+    + (* MBjumptable *)
+      destruct TODO.
+    + (* MBreturn *)
+      destruct TODO.
+  - inv MCS. inv MAS.
+    exploit transl_blocks_distrib; eauto. rewrite <- H2. discriminate.
+    intros (TLB & TLBS). exploit transl_block_nobuiltin; eauto.
+    intros (c0 & c' & TBB & TCT & BEQ & EXEQ).
+    destruct bb as [hd bdy ex]; simpl in *. subst. inv TBB. inv TCT. simpl in *.
+    repeat eexists. rewrite BEQ. econstructor; eauto. econstructor; eauto.
+    rewrite EXEQ. econstructor; eauto. econstructor; eauto.
+    unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
+    assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
+      eapply transf_function_no_overflow; eauto.
+    assert (f = f0) by congruence. subst f0. econstructor; eauto.
+    generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
+    eapply agree_exten; eauto. intros. Simpl.
 Qed.
 
 
