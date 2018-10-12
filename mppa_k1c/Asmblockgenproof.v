@@ -1225,7 +1225,7 @@ Lemma gen_bblocks_nobuiltin:
   forall thd tbdy tex tbb,
   gen_bblocks thd tbdy tex = tbb :: nil ->
      header tbb = thd
-  /\ body tbb = Pnop :: (tbdy ++ (extract_basic tex))
+  /\ body tbb = tbdy ++ (Pnop :: extract_basic tex)
   /\ exit tbb = extract_ctl tex.
 Proof.
   intros. unfold gen_bblocks in H.
@@ -1242,7 +1242,7 @@ Lemma transl_block_nobuiltin:
   exists c c',
      transl_basic_code' f (MB.body bb) true = OK c
   /\ transl_instr_control f (MB.exit bb) true = OK c'
-  /\ body tbb = Pnop :: (c ++ (extract_basic c'))
+  /\ body tbb = c ++ (Pnop :: extract_basic c')
   /\ exit tbb = extract_ctl c'.
 Proof.
   intros. monadInv H.
@@ -1335,17 +1335,51 @@ Proof.
     eapply agree_exten; eauto. intros. Simpl.
 Qed.
 
+(* Lemma transl_blocks_body:
+  forall f bb c tbb tc
+  transl_blocks f (bb::c) = OK (tbb::tc) ->
+  
+  exists tbdy tbdy',
+       transl_basic_code' f (MB.body bb) true = OK (tbdy)
+    /\ transl_basic_code' f (MB.body (mb_remove_body bb)) true = OK (tbdy')
+    /\ body tbb = Pnop :: tbdy ++ tbdy'.
+Proof.
+  intros. monadInv TBLS. monadInv EQ. exists x1.
+  unfold gen_bblocks in H0. destruct (extract_ctl x2). destruct c0. destruct i.
+  - inv H0. simpl. exists nil. rewrite app_nil_r. auto.
+  - inv H0. simpl. eexists. eauto.
+  - inv H0. simpl. eexists. eauto.
+Qed.
+ *)
+
+Definition mb_remove_first (bb: MB.bblock) := 
+  {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
+
+Theorem step_simu_body':
+  forall s fb sp bb c ms m rs1 m1 tbb tc ms' m' bi bdy,
+  MB.body bb = bi :: bdy ->
+  basic_step ge s fb sp ms m bi ms' m' ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
+  exists rs2 m2 tbb',
+       exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
+    /\ match_codestate fb (MB.State s fb sp (mb_remove_first bb :: c) ms' m')
+        (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
+    /\ exit tbb' = exit tbb.
+Proof.
+Admitted.
+
 Theorem step_simu_body:
   forall s fb sp bb c ms m rs1 m1 tbb tc ms' m',
-  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
   exists rs2 m2 tbb',
        exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
     /\ match_codestate fb (MB.State s fb sp (mb_remove_body bb::c) ms' m')
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
     /\ exit tbb' = exit tbb.
 Proof.
-  
+  intros until m'. intros BSTEP MCS. inv BSTEP.
+
 Admitted.
 
 Lemma transl_blocks_nonil:

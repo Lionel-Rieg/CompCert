@@ -850,13 +850,18 @@ Local Obligation Tactic := bblock_auto_correct.
 (** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
 Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instruction) :=
   match (extract_ctl ctl) with
-  | None => {| header := hd; body := Pnop::(c ++ (extract_basic ctl)); exit := None |} :: nil
+  | None => {| header := hd; body := (c ++ (Pnop :: extract_basic ctl)); exit := None |} :: nil
 (* gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil *)
-  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := Pnop::c; exit := None |}) :: 
+  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := c++(Pnop::nil); exit := None |}) :: 
                                             ((PExpand (Pbuiltin ef args res)) ::b nil)
-  | Some (PCtlFlow i) => {| header := hd; body := Pnop :: (c ++ (extract_basic ctl)); exit := Some (PCtlFlow i) |} :: nil
+  | Some (PCtlFlow i) => {| header := hd; body := (c ++ (Pnop :: extract_basic ctl)); exit := Some (PCtlFlow i) |} :: nil
   end
 .
+Next Obligation.
+  intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
+Qed. Next Obligation.
+  intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
+Qed.
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) : res (list bblock) :=
   do c <- transl_basic_code' f fb.(Machblock.body) true;
