@@ -1372,11 +1372,12 @@ Theorem step_simu_body:
   forall s fb sp bb c ms m rs1 m1 tbb tc ms' m',
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
-  exists rs2 m2 tbb',
-       exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
+  (mb_remove_body bb = bb \/
+  (exists rs2 m2 tbb',
+       (exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
     /\ match_codestate fb (MB.State s fb sp (mb_remove_body bb::c) ms' m')
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
-    /\ exit tbb' = exit tbb.
+    /\ exit tbb' = exit tbb ))).
 Proof.
   intros until m'. intros BSTEP MCS. inv BSTEP.
 
@@ -1409,8 +1410,9 @@ Proof.
   exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst. rename tc' into tc.
   exploit match_state_codestate; eauto.
   intros (S1' & MCS & MAS & cseq). subst.
-  exploit step_simu_body; eauto.
-  intros (rs2 & m2 & tbb' & EXES & MCS' & Hexit).
+  exploit step_simu_body; eauto. intro STSIMUBODY. inv STSIMUBODY.
+  - (* mb_remove_body bb = bb *) destruct TODO.
+  - destruct H4 as (rs2 & m2 & tbb' & EXES & MCS' & Hexit).
 
   remember (mb_remove_body bb) as bb'.
   assert (MB.body bb' = nil).
