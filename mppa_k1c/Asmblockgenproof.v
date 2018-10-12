@@ -1264,6 +1264,7 @@ Qed.
 Theorem step_simu_control:
   forall bb' fb fn s sp c ms' m' rs2 m2 tbb' tbb tc E0 S'' rs1 m1 cs2,
   MB.body bb' = nil ->
+  (forall ef args res, MB.exit bb' <> Some (MBbuiltin ef args res)) ->
   Genv.find_funct_ptr tge fb = Some (Internal fn) ->
   cs2 = Codestate (Asmblock.State rs2 m2) (tbb'::tc) (Some tbb) ->
   match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2 ->
@@ -1274,24 +1275,24 @@ Theorem step_simu_control:
   /\  exec_control_rel tge fn (exit tbb') tbb rs3 m3 rs4 m4
   /\  match_states S'' (State rs4 m4)).
 Proof.
-  intros until cs2. intros ? FIND ? MCS MAS ESTEP. inv ESTEP.
+  intros until cs2. intros Hbody Hbuiltin FIND Hcodestate MCS MAS ESTEP. inv ESTEP.
   - inv MCS. inv MAS.
     destruct ctl.
     + (* MBcall *)
-      exploit transl_blocks_distrib; eauto. rewrite <- H1. discriminate.
+      exploit transl_blocks_distrib; eauto. (* rewrite <- H1. discriminate. *)
       intros (TLB & TLBS). clear TRANS. exploit transl_block_nobuiltin; eauto.
       intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
       destruct tbb' as [hd' bdy' ex']; simpl in *. subst.
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
-      inv TBC. inv TIC. inv H2.
+      inv TBC. inv TIC. inv H0.
 
       assert (f0 = f) by congruence. subst f0.
       assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
         eapply transf_function_no_overflow; eauto.
       destruct s1 as [rf|fid]; simpl in H12.
-      * (* Indirect call *) inv H0.
+      * (* Indirect call *) inv H1.
       * (* Direct call *)
-        monadInv H0.
+        monadInv H1.
         generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1.
         remember (Ptrofs.add _ _) as ofs'.
         assert (TCA: transl_code_at_pc ge (Vptr fb ofs') fb f c false tf tc).
@@ -1309,7 +1310,8 @@ Proof.
     + (* MBtailcall *)
       destruct TODO.
     + (* MBbuiltin *)
-      destruct TODO.
+      assert (MB.exit bb' <> Some (MBbuiltin e l b)) by (apply Hbuiltin).
+      rewrite <- H in H1. contradict H1; auto.
     + (* MBgoto *)
       destruct TODO.
     + (* MBcond *)
@@ -1319,7 +1321,7 @@ Proof.
     + (* MBreturn *)
       destruct TODO.
   - inv MCS. inv MAS.
-    exploit transl_blocks_distrib; eauto. rewrite <- H2. discriminate.
+    exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
     intros (TLB & TLBS). exploit transl_block_nobuiltin; eauto.
     intros (c0 & c' & TBB & TCT & BEQ & EXEQ).
     destruct bb' as [hd' bdy' ex']; simpl in *. subst. inv TBB. inv TCT. simpl in *.
@@ -1362,14 +1364,15 @@ Lemma step_simulation_bblock':
   forall sf f sp bb bb' rs m rs' m' s'' c S1,
   body_step ge sf f sp (Machblock.body bb) rs m rs' m' ->
   bb' = mb_remove_body bb ->
+  (forall ef args res, MB.exit bb' <> Some (MBbuiltin ef args res)) ->
   exit_step return_address_offset ge (Machblock.exit bb') (Machblock.State sf f sp (bb' :: c) rs' m') E0 s'' ->
   match_states (Machblock.State sf f sp (bb :: c) rs m) S1 ->
   exists S2 : state, plus step tge S1 E0 S2 /\ match_states s'' S2.
 Proof.
-  intros. inversion H2. subst.
+  intros until S1. intros BSTEP Hbb' Hbuiltin ESTEP MS. inversion MS. subst.
   remember (Machblock.State sf f sp (bb::c) rs m) as mbs. 
   remember (State rs0 m'0) as abs. inversion AT.
-  exploit transl_blocks_nonil; eauto. intros (tbb & tc' & ?). subst. rename tc' into tc.
+  exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst. rename tc' into tc.
   exploit match_state_codestate; eauto.
   intros (S1' & MCS & MAS & cseq). subst.
   exploit step_simu_body; eauto.
@@ -1378,7 +1381,7 @@ Proof.
   remember (mb_remove_body bb) as bb'.
   assert (MB.body bb' = nil).
     subst. destruct bb as [hd bdy ex]; simpl; auto.
-  exploit functions_translated; eauto. intros (tf0 & ? & ?). monadInv H9.
+  exploit functions_translated; eauto. intros (tf0 & FIND' & TRANSF'). monadInv TRANSF'.
   exploit step_simu_control; eauto.
   econstructor; eauto. erewrite exec_straight_pc; eauto.
   assert (x = tf) by congruence. subst x. eauto.
@@ -1396,14 +1399,16 @@ Qed.
 Lemma step_simulation_bblock:
   forall sf f sp bb ms m ms' m' S2 c,
   body_step ge sf f sp (Machblock.body bb) ms m ms' m' ->
+  (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   exit_step return_address_offset ge (Machblock.exit bb) (Machblock.State sf f sp (bb :: c) ms' m') E0 S2 ->
   forall S1', match_states (Machblock.State sf f sp (bb :: c) ms m) S1' ->
   exists S2' : state, plus step tge S1' E0 S2' /\ match_states S2 S2'.
 Proof.
-  intros. eapply step_simulation_bblock'; eauto. destruct bb as [hd bdy ex]; simpl in *.
-  inv H0.
-  - simpl in *. subst. econstructor. inv H2; try (econstructor; eauto; fail).
-  - simpl in *. subst. econstructor.
+  intros until c. intros BSTEP Hbuiltin ESTEP S1' MS.
+  eapply step_simulation_bblock'; eauto. destruct bb as [hd bdy ex]; simpl in *.
+  inv ESTEP.
+  - econstructor. inv H; try (econstructor; eauto; fail).
+  - econstructor.
 Qed.
 
 Definition measure (s: MB.state) : nat :=
@@ -1422,8 +1427,11 @@ Proof.
   induction 1; intros.
 
 - (* bblock *)
-  left. destruct TODO.
-  (* TODO - change the trace thing *)
+  left. destruct (Machblock.exit bb) eqn:MBE; try destruct c0.
+  all: try(inversion H0; subst; inv H2; eapply step_simulation_bblock; 
+            try (rewrite MBE; try discriminate); eauto).
+  + destruct TODO. (* MBbuiltin *)
+  + inversion H0. subst. eapply step_simulation_bblock; try (rewrite MBE; try discriminate); eauto.
 
 - (* internal function *)
   inv MS.
