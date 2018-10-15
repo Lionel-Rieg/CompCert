@@ -1081,7 +1081,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (DXP: ep = true -> rs#FP = parent_sp s),
       match_codestate fb (Machblock.State s fb sp (bb::c) ms m)
                    (Codestate (Asmblock.State rs m') (tbb::tc) (Some tbb'))
-  | match_codestate_call:
+(*   | match_codestate_call:
       forall s ms m m' rs tc
         (STACKS: match_stack ge s)
         (MEXT: Mem.extends m m')
@@ -1097,7 +1097,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (AG: agree ms (parent_sp s) rs)
         (ATPC: rs PC = parent_ra s),
       match_codestate fb (Machblock.Returnstate s ms m)
-                       (Codestate (Asmblock.State rs m') tc None).
+                       (Codestate (Asmblock.State rs m') tc None) *).
 
 Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
   | match_asmblock_some:
@@ -1109,7 +1109,7 @@ Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
       match_asmblock fb (Codestate (Asmblock.State rs m) (tbb'::tc) (Some tbb)) (Asmblock.State rs m)
 .
 
-Theorem match_codestate_state:
+(* Theorem match_codestate_state:
   forall mbs abs fb cs rs m tbb tc,
   cs = Codestate (Asmblock.State rs m) (tbb::tc) (Some tbb) ->
   match_codestate fb mbs cs ->
@@ -1123,7 +1123,7 @@ Proof.
     econstructor; eauto. rewrite PCeq. (* inv AT. *) econstructor; eauto.
   - discriminate.
   - discriminate.
-Qed.
+Qed. *)
 
 Theorem match_state_codestate:
   forall mbs abs s fb sp bb c ms m rs m' tbb tc tf ep f,
@@ -1145,10 +1145,11 @@ Proof.
   congruence.
 Qed.
 
-Program Definition remove_body (bb: AB.bblock) := {| AB.header := AB.header bb; AB.body := Pnop::nil; AB.exit := AB.exit bb |}.
+(* Program Definition remove_body (bb: AB.bblock) := {| AB.header := AB.header bb; AB.body := nil; AB.exit := AB.exit bb |}.
 Next Obligation.
   unfold wf_bblock. unfold non_empty_bblock. left; discriminate.
 Qed.
+ *)
 
 Definition mb_remove_body (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := nil; MB.exit := MB.exit bb |}.
@@ -1161,7 +1162,35 @@ Proof.
   intros. eapply exec_straight_trans. eapply H. econstructor; eauto.
 Qed.
 
-Axiom TODO: False.
+Lemma no_builtin_preserved:
+  forall f ex x2,
+  (forall ef args res, ex <> Some (MBbuiltin ef args res)) ->
+  transl_instr_control f ex true = OK x2 ->
+  (exists i, extract_ctl x2 = Some (PCtlFlow i))
+    \/ extract_ctl x2 = None.
+Proof.
+  intros until x2. intros Hbuiltin TIC.
+  destruct ex.
+  - destruct c.
+    + simpl in TIC. destruct s0; try inversion TIC. simpl. eauto.
+    + simpl in TIC. destruct s0; try inversion TIC. simpl. eauto.
+    + assert (H: Some (MBbuiltin e l b) <>  Some (MBbuiltin e l b)).
+        apply Hbuiltin. contradict H; auto.
+    + simpl in TIC. monadInv TIC. simpl. eauto.
+    + simpl in TIC. unfold transl_cbranch in TIC. destruct c.
+      all: try ( destruct l; try (inv TIC; fail); destruct l; try (inv TIC; fail); destruct l; monadInv TIC;
+        simpl; eauto; try inv TIC).
+      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. destruct (Int.eq n Int.zero); simpl; eauto.
+      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. unfold transl_opt_compuimm. destruct (select_comp n c).
+        destruct c0; simpl; eauto.
+        simpl; eauto.
+      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. destruct (Int64.eq n Int64.zero); simpl; eauto.
+      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. unfold transl_opt_compluimm. destruct (select_compl n c).
+        destruct c0; simpl; eauto. simpl; eauto.
+    + simpl in TIC. inv TIC.
+    + simpl in TIC. monadInv TIC. simpl. eauto.
+  - monadInv TIC. simpl; auto.
+Qed.
 
 Lemma transl_blocks_distrib:
   forall c f bb tbb tc,
@@ -1170,85 +1199,59 @@ Lemma transl_blocks_distrib:
   -> transl_block f bb = OK (tbb :: nil)
   /\ transl_blocks f c = OK tc.
 Proof.
-  intros. destruct bb as [hd bdy ex]. simpl in *.
-  monadInv H. monadInv EQ. simpl in *.
-  destruct ex.
-  - destruct c0.
-    + simpl in EQ. destruct s0; try discriminate. monadInv EQ. simpl in *. inv H1.
-      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
-    + simpl in EQ. destruct s0; try discriminate. monadInv EQ. simpl in *. inv H1.
-      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
-    + destruct TODO. (* TODO - requires Sylvain black magic *)
-    + simpl in EQ. monadInv EQ. simpl in *. inv H1.
-      unfold transl_block. simpl. rewrite EQ0. simpl. unfold gen_bblocks. simpl. auto.
-    + simpl in EQ. unfold transl_cbranch in EQ. destruct c0; destruct c.
-      all: try (
-        repeat (destruct l; try discriminate);
-        monadInv EQ; simpl in *; inv H1;
-        unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl; rewrite EQ; simpl;
-        unfold gen_bblocks; simpl; auto).
-      * repeat (destruct l; try discriminate); monadInv EQ; destruct (Int.eq n Int.zero) eqn:EQ; (
-        simpl in H1; inv H1; unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl;
-        rewrite EQ; simpl; unfold gen_bblocks; simpl; auto).
-      * repeat (destruct l; try discriminate); monadInv EQ; destruct (Int.eq n Int.zero) eqn:EQ; (
-        simpl in H1; inv H1; unfold transl_block; simpl; rewrite EQ0; simpl; rewrite EQ2; simpl;
-        rewrite EQ; simpl; unfold gen_bblocks; simpl; auto).
-      * repeat (destruct l; try discriminate). monadInv EQ. unfold transl_block. simpl; rewrite EQ0; simpl.
-        rewrite EQ2; simpl. unfold gen_bblocks; simpl. unfold transl_opt_compuimm in *.
-        destruct (select_comp n c0). destruct c; try (simpl; inv H1; auto).
-        unfold transl_comp in *. simpl. inv H1. auto.
-      * repeat (destruct l; try discriminate). monadInv EQ. unfold transl_block. simpl. rewrite EQ0; simpl.
-        rewrite EQ2; simpl. unfold gen_bblocks in *. simpl in *. unfold transl_opt_compuimm in *.
-        destruct (select_comp n c0). destruct c1; try (simpl; inv H1; auto). simpl in *. inv H1. auto.
-      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
-        destruct (Int64.eq n Int64.zero); simpl in *.
-          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *; inv H1; auto.
-      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
-        destruct (Int64.eq n Int64.zero); simpl in *.
-          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *; inv H1; auto.
-      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
-        destruct (Int64.eq n Int64.zero); simpl in *.
-          all: monadInv EQ; rewrite EQ2; simpl; unfold gen_bblocks in *; simpl in *;
-          unfold transl_opt_compluimm in *;
-          destruct (select_compl n c0) eqn:SEL; try (destruct c; simpl in *; inv H1; auto); try (simpl in *; inv H1; auto).
-      * repeat (destruct l; try discriminate). unfold transl_block. simpl; rewrite EQ0; simpl.
-        monadInv EQ. rewrite EQ2; simpl. unfold gen_bblocks in *; simpl in *.
-        unfold transl_opt_compluimm in *. destruct (select_compl n c0); try (destruct c1; simpl in *; inv H1; auto); try (simpl in *; inv H1; auto).
-    + simpl in EQ. discriminate.
-    + simpl in EQ. inv EQ. unfold transl_block. simpl; rewrite EQ0; simpl. unfold gen_bblocks in *.
-      simpl in *. inv H1; auto.
-  - monadInv EQ. simpl in H1. inv H1. unfold transl_block. simpl. rewrite EQ0. simpl.
-    unfold gen_bblocks. simpl. auto.
+  intros until tc. intros TLBS Hbuiltin.
+  destruct bb as [hd bdy ex].
+  monadInv TLBS. monadInv EQ.
+  exploit no_builtin_preserved; eauto. intros Hectl. destruct Hectl.
+  - destruct H as [i Hectl].
+  unfold gen_bblocks in H0. rewrite Hectl in H0. inv H0.
+  simpl in *. unfold transl_block; simpl. rewrite EQ0. rewrite EQ. simpl.
+  unfold gen_bblocks. rewrite Hectl. auto.
+  - unfold gen_bblocks in H0. rewrite H in H0.
+    destruct x1 as [|bi x1].
+    + simpl in H0. inv H0. simpl in *. unfold transl_block; simpl. rewrite EQ0. rewrite EQ. simpl.
+      unfold gen_bblocks. rewrite H. auto.
+    + simpl in H0. inv H0. simpl in *. unfold transl_block; simpl. rewrite EQ0. rewrite EQ. simpl.
+      unfold gen_bblocks. rewrite H. auto.
 Qed.
 
 Lemma gen_bblocks_nobuiltin:
   forall thd tbdy tex tbb,
+  (tbdy <> nil \/ extract_ctl tex <> None) ->
   gen_bblocks thd tbdy tex = tbb :: nil ->
      header tbb = thd
-  /\ body tbb = tbdy ++ (Pnop :: extract_basic tex)
+  /\ body tbb = tbdy ++ extract_basic tex
   /\ exit tbb = extract_ctl tex.
 Proof.
-  intros. unfold gen_bblocks in H.
-  destruct (extract_ctl tex).
+  intros until tbb. intros Hnonil GENB. unfold gen_bblocks in GENB.
+  destruct (extract_ctl tex) eqn:ECTL.
   - destruct c.
-    + destruct i. inv H.
-    + inv H. auto.
-  - inv H. auto.
+    + destruct i. inv GENB.
+    + inv GENB. simpl. auto.
+  - inversion Hnonil.
+    + destruct tbdy as [|bi tbdy]; try (contradict H; simpl; auto; fail). inv GENB. auto.
+    + contradict H; simpl; auto.
 Qed.
+
+Axiom TODO: False.
 
 Lemma transl_block_nobuiltin:
   forall f bb tbb,
+  (MB.body bb <> nil \/ MB.exit bb <> None) ->
   transl_block f bb = OK (tbb :: nil) ->
   exists c c',
      transl_basic_code' f (MB.body bb) true = OK c
   /\ transl_instr_control f (MB.exit bb) true = OK c'
-  /\ body tbb = c ++ (Pnop :: extract_basic c')
+  /\ body tbb = c ++ extract_basic c'
   /\ exit tbb = extract_ctl c'.
 Proof.
-  intros. monadInv H.
+  intros until tbb. intros Hnonil TLB. monadInv TLB. destruct Hnonil.
+  - eexists. eexists. split; eauto. split; eauto. eapply gen_bblocks_nobuiltin; eauto.
+    
+(*   monadInv H.
   eexists. eexists. split; eauto. split; eauto.
-  eapply gen_bblocks_nobuiltin. eauto.
-Qed.
+  eapply gen_bblocks_nobuiltin. eauto. *)
+Admitted.
 
 Lemma nextblock_preserves: 
   forall rs rs' bb r,
@@ -1281,7 +1284,7 @@ Proof.
     + (* MBcall *)
       exploit transl_blocks_distrib; eauto. (* rewrite <- H1. discriminate. *)
       intros (TLB & TLBS). clear TRANS. exploit transl_block_nobuiltin; eauto.
-      intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
+(*       intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
       destruct tbb' as [hd' bdy' ex']; simpl in *. subst.
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
@@ -1333,7 +1336,7 @@ Proof.
     assert (f = f0) by congruence. subst f0. econstructor; eauto.
     generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
     eapply agree_exten; eauto. intros. Simpl.
-Qed.
+ *)Admitted.
 
 (* Lemma transl_blocks_body:
   forall f bb c tbb tc
@@ -1392,7 +1395,7 @@ Proof.
   destruct (extract_ctl x2).
   - destruct c0; destruct i; simpl; eauto.
   - simpl; eauto.
-Qed.
+Admitted.
 
 (* Alternative form of step_simulation_bblock, easier to prove *)
 Lemma step_simulation_bblock':
