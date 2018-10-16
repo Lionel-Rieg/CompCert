@@ -1315,7 +1315,7 @@ Proof.
   - subst. Simpl.
 Qed.
 
-Axiom TODO: False.
+Axiom TODO: False. 
 
 Theorem step_simu_control:
   forall bb' fb fn s sp c ms' m' rs2 m2 tbb' tbb tc E0 S'' rs1 m1 cs2,
@@ -1327,17 +1327,18 @@ Theorem step_simu_control:
   match_asmblock fb cs2 (Asmblock.State rs1 m1) ->
   exit_step return_address_offset ge (MB.exit bb') (MB.State s fb sp (bb'::c) ms' m') E0 S'' ->
   (exists rs3 m3 rs4 m4,
-      exec_straight tge (body tbb') rs2 m2 nil rs3 m3
+      exec_body tge (body tbb') rs2 m2 = Next rs3 m3
   /\  exec_control_rel tge fn (exit tbb') tbb rs3 m3 rs4 m4
   /\  match_states S'' (State rs4 m4)).
 Proof.
-  intros until cs2. intros Hbody Hbuiltin FIND Hcodestate MCS MAS ESTEP. inv ESTEP.
+(*   intros until cs2. intros Hbody Hbuiltin FIND Hcodestate MCS MAS ESTEP. inv ESTEP.
   - inv MCS. inv MAS.
     destruct ctl.
     + (* MBcall *)
       exploit transl_blocks_distrib; eauto. (* rewrite <- H1. discriminate. *)
       intros (TLB & TLBS). clear TRANS. exploit transl_block_nobuiltin; eauto.
-(*       intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
+        right. rewrite <- H. discriminate.
+      intros (tbdy & tex & TBC & TIC & BEQ & EXEQ). clear TLB.
       destruct tbb' as [hd' bdy' ex']; simpl in *. subst.
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
@@ -1355,7 +1356,7 @@ Proof.
           econstructor; eauto.
         assert (f1 = f) by congruence. subst f1.
         exploit return_address_offset_correct; eauto. intros; subst ra.
-        repeat eexists. econstructor; eauto. econstructor; eauto.
+        repeat eexists. simpl. econstructor; eauto. econstructor; eauto.
         remember (nextblock _ _) as rs'1.
         econstructor; eauto.
         econstructor; eauto. eapply agree_sp_def; eauto.
@@ -1388,8 +1389,8 @@ Proof.
       eapply transf_function_no_overflow; eauto.
     assert (f = f0) by congruence. subst f0. econstructor; eauto.
     generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
-    eapply agree_exten; eauto. intros. Simpl.
- *)Admitted.
+    eapply agree_exten; eauto. intros. Simpl. *)
+Admitted.
 
 (* Lemma transl_blocks_body:
   forall f bb c tbb tc
@@ -1411,7 +1412,7 @@ Qed.
 Definition mb_remove_first (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
 
-Theorem step_simu_body':
+(* Theorem step_simu_body':
   forall s fb sp bb c ms m rs1 m1 tbb tc ms' m' bi bdy,
   MB.body bb = bi :: bdy ->
   basic_step ge s fb sp ms m bi ms' m' ->
@@ -1422,18 +1423,18 @@ Theorem step_simu_body':
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
     /\ exit tbb' = exit tbb.
 Proof.
-Admitted.
+Admitted. *)
 
 Theorem step_simu_body:
   forall s fb sp bb c ms m rs1 m1 tbb tc ms' m',
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
-  (mb_remove_body bb = bb \/
-  (exists rs2 m2 tbb',
-       (exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
+  (exists rs2 m2 tbb' l,
+       body tbb = l ++ body tbb'
+    /\ exec_body tge l rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp (mb_remove_body bb::c) ms' m')
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
-    /\ exit tbb' = exit tbb ))).
+    /\ exit tbb' = exit tbb ).
 Proof.
   intros until m'. intros BSTEP MCS. inv BSTEP.
 
@@ -1449,6 +1450,60 @@ Proof.
   - destruct c0; destruct i; simpl; eauto.
   - simpl; eauto.
 Admitted.
+
+Lemma exec_body_straight:
+  forall l rs0 m0 rs1 m1,
+  l <> nil ->
+  exec_body tge l rs0 m0 = Next rs1 m1 ->
+  exec_straight tge l rs0 m0 nil rs1 m1.
+Proof.
+  induction l as [|i1 l].
+    intros. contradict H; auto.
+  destruct l as [|i2 l].
+  - intros until m1. intros _ EXEB. simpl in EXEB.
+    destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
+    inv EXEB. econstructor; eauto.
+  - intros until m1. intros _ EXEB. simpl in EXEB. simpl in IHl.
+    destruct (exec_basic_instr tge i1 rs0 m0) eqn:EBI; try discriminate.
+    econstructor; eauto. eapply IHl; eauto. discriminate.
+Qed.
+
+Lemma exec_body_pc:
+  forall l rs1 m1 rs2 m2,
+  exec_body tge l rs1 m1 = Next rs2 m2 ->
+  rs2 PC = rs1 PC.
+Proof.
+  induction l.
+  - intros. inv H. auto.
+  - intros until m2. intro EXEB.
+    inv EXEB. destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
+    eapply IHl in H0. rewrite H0.
+    erewrite exec_basic_instr_pc; eauto.
+Qed.
+
+Lemma exec_body_trans:
+  forall l l' rs0 m0 rs1 m1 rs2 m2,
+  exec_body tge l rs0 m0 = Next rs1 m1 ->
+  exec_body tge l' rs1 m1 = Next rs2 m2 ->
+  exec_body tge (l++l') rs0 m0 = Next rs2 m2.
+Proof.
+  induction l.
+  - simpl. congruence.
+  - intros until m2. intros EXEB1 EXEB2.
+    inv EXEB1. destruct (exec_basic_instr _) eqn:EBI; try discriminate.
+    simpl. rewrite EBI. eapply IHl; eauto.
+Qed.
+
+Lemma exec_body_control:
+  forall b rs1 m1 rs2 m2 rs3 m3 fn,
+  exec_body tge (body b) rs1 m1 = Next rs2 m2 ->
+  exec_control_rel tge fn (exit b) b rs2 m2 rs3 m3 ->
+  exec_bblock_rel tge fn b rs1 m1 rs3 m3.
+Proof.
+  intros until fn. intros EXEB EXECTL.
+  econstructor; eauto. inv EXECTL.
+  unfold exec_bblock. rewrite EXEB. auto.
+Qed.
 
 (* Alternative form of step_simulation_bblock, easier to prove *)
 Lemma step_simulation_bblock':
@@ -1466,22 +1521,22 @@ Proof.
   exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst. rename tc' into tc.
   exploit match_state_codestate; eauto.
   intros (S1' & MCS & MAS & cseq). subst.
-  exploit step_simu_body; eauto. intro STSIMUBODY. inv STSIMUBODY.
-  - (* mb_remove_body bb = bb *) destruct TODO.
-  - destruct H4 as (rs2 & m2 & tbb' & EXES & MCS' & Hexit).
+  exploit step_simu_body; eauto. intros (rs2 & m2 & tbb' & l & Hbody & EXES & MCS' & Hexit).
 
   remember (mb_remove_body bb) as bb'.
   assert (MB.body bb' = nil).
     subst. destruct bb as [hd bdy ex]; simpl; auto.
   exploit functions_translated; eauto. intros (tf0 & FIND' & TRANSF'). monadInv TRANSF'.
   exploit step_simu_control; eauto.
-  econstructor; eauto. erewrite exec_straight_pc; eauto.
+  econstructor; eauto.
+  
+  erewrite exec_body_pc; eauto.
   assert (x = tf) by congruence. subst x. eauto.
   
   intros (rs3 & m3 & rs4 & m4 & EXES' & EXECR & MS').
-  exploit exec_straight_trans. eapply EXES. eauto. clear EXES EXES'. intro EXES.
+  exploit exec_body_trans. eapply EXES. eauto. clear EXES EXES'. intro EXES.
   rewrite Hexit in EXECR.
-  exploit (exec_straight_bblock); eauto. intro EXECB. inv EXECB.
+  exploit (exec_body_control); eauto. rewrite Hbody. eauto. intro EXECB. inv EXECB.
   exists (State rs4 m4).
   split; auto.
   eapply plus_one. eapply exec_step_internal; eauto.
