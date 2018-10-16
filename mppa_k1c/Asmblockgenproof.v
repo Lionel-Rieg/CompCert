@@ -1331,7 +1331,7 @@ Theorem step_simu_control:
   /\  exec_control_rel tge fn (exit tbb') tbb rs3 m3 rs4 m4
   /\  match_states S'' (State rs4 m4)).
 Proof.
-(*   intros until cs2. intros Hbody Hbuiltin FIND Hcodestate MCS MAS ESTEP. inv ESTEP.
+  intros until cs2. intros Hbody Hbuiltin FIND Hcodestate MCS MAS ESTEP. inv ESTEP.
   - inv MCS. inv MAS.
     destruct ctl.
     + (* MBcall *)
@@ -1356,12 +1356,8 @@ Proof.
           econstructor; eauto.
         assert (f1 = f) by congruence. subst f1.
         exploit return_address_offset_correct; eauto. intros; subst ra.
-        repeat eexists. simpl. econstructor; eauto. econstructor; eauto.
-        remember (nextblock _ _) as rs'1.
-        econstructor; eauto.
-        econstructor; eauto. eapply agree_sp_def; eauto.
-        simpl. eapply agree_exten; eauto. intros. Simpl.
-          exploit nextblock_preserves. eapply Heqrs'1. eauto. auto.
+        repeat eexists. econstructor; eauto. econstructor; eauto.
+        eapply agree_sp_def; eauto. simpl. eapply agree_exten; eauto. intros. Simpl.
         Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H12. eauto.
         Simpl. simpl. subst. Simpl. simpl. unfold Val.offset_ptr. rewrite PCeq. auto.
     + (* MBtailcall *)
@@ -1379,51 +1375,20 @@ Proof.
       destruct TODO.
   - inv MCS. inv MAS.
     exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
-    intros (TLB & TLBS). exploit transl_block_nobuiltin; eauto.
-    intros (c0 & c' & TBB & TCT & BEQ & EXEQ).
-    destruct bb' as [hd' bdy' ex']; simpl in *. subst. inv TBB. inv TCT. simpl in *.
-    repeat eexists. rewrite BEQ. econstructor; eauto. econstructor; eauto.
-    rewrite EXEQ. econstructor; eauto. econstructor; eauto.
-    unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
+    intros (TLB & TLBS).
+    destruct bb' as [hd' bdy' ex']; simpl in *. subst.
+    unfold transl_block in TLB. simpl in TLB. unfold gen_bblocks in TLB; simpl in TLB. inv TLB.
+    simpl. repeat eexists.
+    econstructor; eauto. unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
     assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto.
     assert (f = f0) by congruence. subst f0. econstructor; eauto.
     generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
-    eapply agree_exten; eauto. intros. Simpl. *)
-Admitted.
-
-(* Lemma transl_blocks_body:
-  forall f bb c tbb tc
-  transl_blocks f (bb::c) = OK (tbb::tc) ->
-  
-  exists tbdy tbdy',
-       transl_basic_code' f (MB.body bb) true = OK (tbdy)
-    /\ transl_basic_code' f (MB.body (mb_remove_body bb)) true = OK (tbdy')
-    /\ body tbb = Pnop :: tbdy ++ tbdy'.
-Proof.
-  intros. monadInv TBLS. monadInv EQ. exists x1.
-  unfold gen_bblocks in H0. destruct (extract_ctl x2). destruct c0. destruct i.
-  - inv H0. simpl. exists nil. rewrite app_nil_r. auto.
-  - inv H0. simpl. eexists. eauto.
-  - inv H0. simpl. eexists. eauto.
+    eapply agree_exten; eauto. intros. Simpl.
 Qed.
- *)
 
 Definition mb_remove_first (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
-
-(* Theorem step_simu_body':
-  forall s fb sp bb c ms m rs1 m1 tbb tc ms' m' bi bdy,
-  MB.body bb = bi :: bdy ->
-  basic_step ge s fb sp ms m bi ms' m' ->
-  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
-  exists rs2 m2 tbb',
-       exec_straight tge (body tbb) rs1 m1 (body tbb') rs2 m2
-    /\ match_codestate fb (MB.State s fb sp (mb_remove_first bb :: c) ms' m')
-        (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
-    /\ exit tbb' = exit tbb.
-Proof.
-Admitted. *)
 
 Theorem step_simu_body:
   forall s fb sp bb c ms m rs1 m1 tbb tc ms' m',
