@@ -1390,8 +1390,65 @@ Qed.
 Definition mb_remove_first (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
 
+Lemma step_simu_basic:
+  forall bb bb' s fb sp tbb c ms m rs1 m1 tc ms' m' bi bdy,
+  MB.body bb = bi::(bdy) ->
+  bb' = {| MB.header := MB.header bb; MB.body := bdy; MB.exit := MB.exit bb |} ->
+  basic_step ge s fb sp ms m bi ms' m' ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
+  (exists rs2 m2 tbb' l,
+       body tbb = l ++ body tbb'
+    /\ exec_body tge l rs1 m1 = Next rs2 m2
+    /\ match_codestate fb (MB.State s fb sp (bb'::c) ms' m')
+        (Codestate (State rs2 m2) (tbb'::tc) (Some tbb'))
+    /\ exit tbb' = exit tbb).
+Proof.
+Admitted.
+
+Lemma exec_body_trans:
+  forall l l' rs0 m0 rs1 m1 rs2 m2,
+  exec_body tge l rs0 m0 = Next rs1 m1 ->
+  exec_body tge l' rs1 m1 = Next rs2 m2 ->
+  exec_body tge (l++l') rs0 m0 = Next rs2 m2.
+Proof.
+  induction l.
+  - simpl. congruence.
+  - intros until m2. intros EXEB1 EXEB2.
+    inv EXEB1. destruct (exec_basic_instr _) eqn:EBI; try discriminate.
+    simpl. rewrite EBI. eapply IHl; eauto.
+Qed.
+
+Lemma step_simu_body':
+  forall bb s fb sp tbb c ms m rs1 m1 tc ms' m',
+  body_step ge s fb sp (MB.body bb) ms m ms' m' ->
+  match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
+  (exists rs2 m2 tbb' l,
+       body tbb = l ++ body tbb'
+    /\ exec_body tge l rs1 m1 = Next rs2 m2
+    /\ match_codestate fb (MB.State s fb sp (mb_remove_body bb::c) ms' m')
+        (Codestate (State rs2 m2) (tbb'::tc) (Some tbb'))
+    /\ exit tbb' = exit tbb ).
+Proof.
+  intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
+  - intros until m'. intros BSTEP MCS. inv BSTEP.
+    exists rs1, m1, tbb, nil.
+    repeat (split; simpl; auto).
+  - intros until m'. intros BSTEP MCS. inv BSTEP.
+    rename ms' into ms''. rename m' into m''. rename rs' into ms'. rename m'0 into m'.
+    exploit (step_simu_basic); eauto. simpl. eauto.
+    intros (rs2 & m2 & tbb' & l & Hbody & EBODY & MCS' & Hexit).
+    simpl in *.
+    exploit IHbdy. eapply H6. eauto.
+    intros (rs3 & m3 & tbb'' & l' & Hbody' & EBODY' & MCS'' & Hexit').
+    exists rs3, m3, tbb'', (l++l').
+    repeat (split; simpl; auto).
+    rewrite Hbody. rewrite Hbody'. rewrite app_assoc. auto.
+    eapply exec_body_trans; eauto.
+    congruence.
+Qed.
+
 Theorem step_simu_body:
-  forall s fb sp bb c ms m rs1 m1 tbb tc ms' m',
+  forall bb s fb sp tbb c ms m rs1 m1 tc ms' m',
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
   (exists rs2 m2 tbb' l,
@@ -1401,20 +1458,22 @@ Theorem step_simu_body:
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb))
     /\ exit tbb' = exit tbb ).
 Proof.
-  intros until m'. intros BSTEP MCS. inv BSTEP.
-
-Admitted.
+  intros. exploit step_simu_body'; eauto.
+  intros (rs2 & m2 & tbb' & l & Hbody & EXEB & MCS & Hexit).
+  exists rs2, m2, tbb', l. repeat (split; simpl; auto).
+  inv MCS. econstructor; eauto.
+Qed.
 
 Lemma transl_blocks_nonil:
   forall f bb c tc,
   transl_blocks f (bb::c) = OK tc ->
   exists tbb tc', tc = tbb :: tc'.
 Proof.
-  intros. monadInv H. monadInv EQ. unfold gen_bblocks.
+  intros until tc. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
   destruct (extract_ctl x2).
   - destruct c0; destruct i; simpl; eauto.
-  - simpl; eauto.
-Admitted.
+  - destruct x1; simpl; eauto.
+Qed.
 
 Lemma exec_body_straight:
   forall l rs0 m0 rs1 m1,
@@ -1444,19 +1503,6 @@ Proof.
     inv EXEB. destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
     eapply IHl in H0. rewrite H0.
     erewrite exec_basic_instr_pc; eauto.
-Qed.
-
-Lemma exec_body_trans:
-  forall l l' rs0 m0 rs1 m1 rs2 m2,
-  exec_body tge l rs0 m0 = Next rs1 m1 ->
-  exec_body tge l' rs1 m1 = Next rs2 m2 ->
-  exec_body tge (l++l') rs0 m0 = Next rs2 m2.
-Proof.
-  induction l.
-  - simpl. congruence.
-  - intros until m2. intros EXEB1 EXEB2.
-    inv EXEB1. destruct (exec_basic_instr _) eqn:EBI; try discriminate.
-    simpl. rewrite EBI. eapply IHl; eauto.
 Qed.
 
 Lemma exec_body_control:
