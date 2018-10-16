@@ -1162,6 +1162,16 @@ Proof.
   intros. eapply exec_straight_trans. eapply H. econstructor; eauto.
 Qed.
 
+Ltac exploreInst :=
+  repeat match goal with
+  | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
+  | [ H : OK _ = OK _ |- _ ] => monadInv H
+  | [ |- context[if ?b then _ else _] ] => destruct b
+  | [ |- context[match ?m with | _ => _ end] ] => destruct m
+  | [ H : bind _ _ = OK _ |- _ ] => monadInv H
+  | [ H : Error _ = OK _ |- _ ] => inversion H
+  end.
+
 Lemma no_builtin_preserved:
   forall f ex x2,
   (forall ef args res, ex <> Some (MBbuiltin ef args res)) ->
@@ -1172,21 +1182,14 @@ Proof.
   intros until x2. intros Hbuiltin TIC.
   destruct ex.
   - destruct c.
-    + simpl in TIC. destruct s0; try inversion TIC. simpl. eauto.
-    + simpl in TIC. destruct s0; try inversion TIC. simpl. eauto.
+    + simpl in TIC. exploreInst; simpl; eauto.
+    + simpl in TIC. exploreInst; simpl; eauto.
     + assert (H: Some (MBbuiltin e l b) <>  Some (MBbuiltin e l b)).
         apply Hbuiltin. contradict H; auto.
-    + simpl in TIC. monadInv TIC. simpl. eauto.
-    + simpl in TIC. unfold transl_cbranch in TIC. destruct c.
-      all: try ( destruct l; try (inv TIC; fail); destruct l; try (inv TIC; fail); destruct l; monadInv TIC;
-        simpl; eauto; try inv TIC).
-      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. destruct (Int.eq n Int.zero); simpl; eauto.
-      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. unfold transl_opt_compuimm. destruct (select_comp n c).
-        destruct c0; simpl; eauto.
-        simpl; eauto.
-      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. destruct (Int64.eq n Int64.zero); simpl; eauto.
-      * repeat (destruct l; try (inv TIC; fail)). monadInv TIC. unfold transl_opt_compluimm. destruct (select_compl n c).
-        destruct c0; simpl; eauto. simpl; eauto.
+    + simpl in TIC. exploreInst; simpl; eauto.
+    + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; simpl; eauto.
+      * unfold transl_opt_compuimm. exploreInst; simpl; eauto.
+      * unfold transl_opt_compluimm. exploreInst; simpl; eauto.
     + simpl in TIC. inv TIC.
     + simpl in TIC. monadInv TIC. simpl. eauto.
   - monadInv TIC. simpl; auto.
@@ -1233,25 +1236,73 @@ Proof.
     + contradict H; simpl; auto.
 Qed.
 
-Axiom TODO: False.
+Lemma transl_instr_basic_nonil:
+  forall k f bi b x,
+  transl_instr_basic f bi b k = OK x ->
+  x <> nil.
+Proof.
+  intros until x. intros TIB.
+  destruct bi.
+  - simpl in TIB. unfold loadind in TIB. exploreInst; try discriminate.
+  - simpl in TIB. unfold storeind in TIB. exploreInst; try discriminate.
+  - simpl in TIB. monadInv TIB. unfold loadind in EQ. exploreInst; try discriminate.
+  - simpl in TIB. unfold transl_op in TIB. exploreInst; try discriminate.
+    unfold transl_cond_op in EQ0. exploreInst; try discriminate.
+  - simpl in TIB. unfold transl_load in TIB. exploreInst; try discriminate.
+    all: unfold transl_memory_access in EQ0; exploreInst; try discriminate.
+  - simpl in TIB. unfold transl_store in TIB. exploreInst; try discriminate.
+    all: unfold transl_memory_access in EQ0; exploreInst; try discriminate.
+Qed.
+
+Lemma transl_basic_code_nonil:
+  forall bdy f x b,
+  bdy <> nil ->
+  transl_basic_code f bdy b = OK x ->
+  x <> nil.
+Proof.
+  induction bdy as [|bi bdy].
+    intros. contradict H0; auto.
+  destruct bdy as [|bi2 bdy].
+  - clear IHbdy. intros f x b _ TBC. simpl in TBC. eapply transl_instr_basic_nonil; eauto.
+  - intros f x b Hnonil TBC. remember (bi2 :: bdy) as bdy'.
+    monadInv TBC. 
+    assert (x0 <> nil).
+      eapply IHbdy; eauto. subst bdy'. discriminate.
+    eapply transl_instr_basic_nonil; eauto.
+Qed.
+
+Lemma transl_instr_control_nonil:
+  forall ex f x,
+  ex <> None ->
+  transl_instr_control f ex true = OK x ->
+  extract_ctl x <> None.
+Proof.
+  intros ex f x Hnonil TIC.
+  destruct ex as [ex|].
+  - clear Hnonil. destruct ex.
+    all: try (simpl in TIC; exploreInst; discriminate).
+    + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; try discriminate.
+      * unfold transl_opt_compuimm. exploreInst; try discriminate.
+      * unfold transl_opt_compluimm. exploreInst; try discriminate.
+  - contradict Hnonil; auto.
+Qed.
 
 Lemma transl_block_nobuiltin:
   forall f bb tbb,
   (MB.body bb <> nil \/ MB.exit bb <> None) ->
   transl_block f bb = OK (tbb :: nil) ->
   exists c c',
-     transl_basic_code' f (MB.body bb) true = OK c
+     transl_basic_code f (MB.body bb) true = OK c
   /\ transl_instr_control f (MB.exit bb) true = OK c'
   /\ body tbb = c ++ extract_basic c'
   /\ exit tbb = extract_ctl c'.
 Proof.
   intros until tbb. intros Hnonil TLB. monadInv TLB. destruct Hnonil.
   - eexists. eexists. split; eauto. split; eauto. eapply gen_bblocks_nobuiltin; eauto.
-    
-(*   monadInv H.
-  eexists. eexists. split; eauto. split; eauto.
-  eapply gen_bblocks_nobuiltin. eauto. *)
-Admitted.
+    left. eapply transl_basic_code_nonil; eauto.
+  - eexists. eexists. split; eauto. split; eauto. eapply gen_bblocks_nobuiltin; eauto.
+    right. eapply transl_instr_control_nonil; eauto.
+Qed.
 
 Lemma nextblock_preserves: 
   forall rs rs' bb r,
@@ -1263,6 +1314,8 @@ Proof.
   - subst. Simpl.
   - subst. Simpl.
 Qed.
+
+Axiom TODO: False.
 
 Theorem step_simu_control:
   forall bb' fb fn s sp c ms' m' rs2 m2 tbb' tbb tc E0 S'' rs1 m1 cs2,

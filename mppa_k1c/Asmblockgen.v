@@ -133,7 +133,7 @@ Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompl (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
 
-Definition select_comp (n: int) (c: comparison) : option comparison :=
+(* Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
     match c with
     | Ceq => Some Ceq
@@ -142,17 +142,28 @@ Definition select_comp (n: int) (c: comparison) : option comparison :=
     end
   else
     None
-  .
+  . *)
 
 Definition transl_opt_compuimm
     (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
-  match select_comp n c with
+  if Int.eq n Int.zero then
+    match c with
+    | Ceq => Pcbu BTweqz r1 lbl ::g k
+    | Cne => Pcbu BTwnez r1 lbl ::g k
+    | _ => loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
+    end
+  else
+    loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
+  .
+
+(*   match select_comp n c with
   | Some Ceq => Pcbu BTweqz r1 lbl ::g k
   | Some Cne => Pcbu BTwnez r1 lbl ::g k
   | Some _   => nil (* Never happens *)
   | None     => loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
   end
   .
+ *)
 
 Definition select_compl (n: int64) (c: comparison) : option comparison :=
   if Int64.eq n Int64.zero then
@@ -167,13 +178,24 @@ Definition select_compl (n: int64) (c: comparison) : option comparison :=
 
 Definition transl_opt_compluimm
     (n: int64) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
-  match select_compl n c with
+  if Int64.eq n Int64.zero then
+    match c with
+    | Ceq => Pcbu BTdeqz r1 lbl ::g k
+    | Cne => Pcbu BTdnez r1 lbl ::g k
+    | _ => loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
+    end
+  else
+    loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
+  .
+
+(*   match select_compl n c with
   | Some Ceq => Pcbu BTdeqz r1 lbl ::g k
   | Some Cne => Pcbu BTdnez r1 lbl ::g k
   | Some _   => nil (* Never happens *)
   | None     => loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
   end
   .
+ *)
 
 Definition transl_cbranch
     (cond: condition) (args: list mreg) (lbl: label) (k: code) : res (list instruction ) :=
@@ -810,15 +832,15 @@ Definition it1_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
 (** This is the naive definition that we no longer use because it
   is not tail-recursive.  It is kept as specification. *)
 
-Fixpoint transl_basic (f: Machblock.function) (il: list Machblock.basic_inst) (it1p: bool) :=
+Fixpoint transl_basic_code (f: Machblock.function) (il: list Machblock.basic_inst) (it1p: bool) :=
   match il with
   | nil => OK nil
   | i1 :: il' =>
-      do k <- transl_basic f il' (it1_is_parent it1p i1);
+      do k <- transl_basic_code f il' (it1_is_parent it1p i1);
       transl_instr_basic f i1 it1p k
   end.
 
-(** This is an equivalent definition in continuation-passing style
+(* (** This is an equivalent definition in continuation-passing style
   that runs in constant stack space. *)
 
 Fixpoint transl_basic_rec (f: Machblock.function) (il: list Machblock.basic_inst)
@@ -831,7 +853,7 @@ Fixpoint transl_basic_rec (f: Machblock.function) (il: list Machblock.basic_inst
   end.
 
 Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_inst) (it1p: bool) :=
-  transl_basic_rec f il it1p (fun c => OK c).
+  transl_basic_rec f il it1p (fun c => OK c). *)
 
 (** Translation of a whole function.  Note that we must check
   that the generated code contains less than [2^32] instructions,
@@ -868,7 +890,7 @@ Qed. (*  Next Obligation.
 Qed. *)
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) : res (list bblock) :=
-  do c <- transl_basic_code' f fb.(Machblock.body) true;
+  do c <- transl_basic_code f fb.(Machblock.body) true;
   do ctl <- transl_instr_control f fb.(Machblock.exit) true;
   OK (gen_bblocks fb.(Machblock.header) c ctl)
 .
