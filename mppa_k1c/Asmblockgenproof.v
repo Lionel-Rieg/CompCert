@@ -1390,9 +1390,23 @@ Qed.
 Definition mb_remove_first (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
 
+Lemma exec_straight_body:
+  forall c c' rs1 m1 rs2 m2,
+  exec_straight tge c rs1 m1 c' rs2 m2 ->
+  exists l,
+     c = l ++ c'
+  /\ exec_body tge l rs1 m1 = Next rs2 m2.
+Proof.
+  induction c; try (intros; inv H; fail).
+  intros. inv H.
+  - exists (a ::i nil). split; auto. simpl. rewrite H7. auto.
+  - apply IHc in H8. destruct H8 as (l & Hc & EXECB). subst.
+    exists (a ::i l). split; auto. simpl. rewrite H2. auto.
+Qed.
+
 Lemma step_simu_basic:
   forall bb bb' s fb sp tbb c ms m rs1 m1 tc ms' m' bi bdy,
-  MB.body bb = bi::(bdy) ->
+  MB.body bb = bi::(bdy) -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   bb' = {| MB.header := MB.header bb; MB.body := bdy; MB.exit := MB.exit bb |} ->
   basic_step ge s fb sp ms m bi ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
@@ -1403,7 +1417,41 @@ Lemma step_simu_basic:
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb'))
     /\ exit tbb' = exit tbb).
 Proof.
-Admitted.
+(*   intros until bdy. intros Hbody Hnobuiltin Hbb' BSE MCS. inv MCS.
+  exploit transl_blocks_distrib; eauto. intros (TLB & TLBS).
+  exploit transl_block_nobuiltin; eauto. left; rewrite Hbody; discriminate.
+  intros (lbi & le & TBC & TIC & Htbody & Htexit).
+  rewrite Hbody in TBC. monadInv TBC.
+  inv BSE.
+  - (* MBgetstack *)
+    simpl in EQ0.
+
+    unfold Mach.load_stack in H.
+    exploit Mem.loadv_extends; eauto. intros [v' [A B]].
+    rewrite (sp_val _ _ _ AG) in A.
+    exploit loadind_correct; eauto with asmgen. { destruct TODO. }
+    intros (rs2 & EXECS & Hrs'1 & Hrs'2).
+    eapply exec_straight_body in EXECS. destruct EXECS as (l & Hlbi & EXECB).
+    exists rs2 m1 (* something *) l.
+(* TODO *)
+
+
+    left; eapply exec_straight_steps; eauto. intros. simpl in TR.
+    exploit loadind_correct; eauto with asmgen. intros [rs' [P [Q R]]].
+    exists rs'; split. eauto.
+    split. eapply agree_set_mreg; eauto with asmgen. congruence.
+    simpl; congruence.
+  - (* MBsetstack *)
+    destruct TODO.
+  - (* MBgetparam *)
+    destruct TODO.
+  - (* MBop *)
+    destruct TODO.
+  - (* MBload *)
+    destruct TODO.
+  - (* MBstore *)
+    destruct TODO.
+ *)Admitted.
 
 Lemma exec_body_trans:
   forall l l' rs0 m0 rs1 m1 rs2 m2,
@@ -1420,6 +1468,7 @@ Qed.
 
 Lemma step_simu_body':
   forall bb s fb sp tbb c ms m rs1 m1 tc ms' m',
+  (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
   (exists rs2 m2 tbb' l,
@@ -1430,15 +1479,15 @@ Lemma step_simu_body':
     /\ exit tbb' = exit tbb ).
 Proof.
   intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
-  - intros until m'. intros BSTEP MCS. inv BSTEP.
+  - intros until m'. intros Hnobuiltin BSTEP MCS. inv BSTEP.
     exists rs1, m1, tbb, nil.
     repeat (split; simpl; auto).
-  - intros until m'. intros BSTEP MCS. inv BSTEP.
+  - intros until m'. intros Hnobuiltin BSTEP MCS. inv BSTEP.
     rename ms' into ms''. rename m' into m''. rename rs' into ms'. rename m'0 into m'.
-    exploit (step_simu_basic); eauto. simpl. eauto.
+    exploit (step_simu_basic); eauto. simpl. eauto. simpl; auto.
     intros (rs2 & m2 & tbb' & l & Hbody & EBODY & MCS' & Hexit).
     simpl in *.
-    exploit IHbdy. eapply H6. eauto.
+    exploit IHbdy; simpl; auto. eapply H6. eauto.
     intros (rs3 & m3 & tbb'' & l' & Hbody' & EBODY' & MCS'' & Hexit').
     exists rs3, m3, tbb'', (l++l').
     repeat (split; simpl; auto).
@@ -1449,6 +1498,7 @@ Qed.
 
 Theorem step_simu_body:
   forall bb s fb sp tbb c ms m rs1 m1 tc ms' m',
+  (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   body_step ge s fb sp (MB.body bb) ms m ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
   (exists rs2 m2 tbb' l,
@@ -1532,6 +1582,8 @@ Proof.
   exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst. rename tc' into tc.
   exploit match_state_codestate; eauto.
   intros (S1' & MCS & MAS & cseq). subst.
+  assert (Hnobuiltin': forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)).
+    intros. destruct bb as [hd bdy ex]. simpl in *. apply Hbuiltin.
   exploit step_simu_body; eauto. intros (rs2 & m2 & tbb' & l & Hbody & EXES & MCS' & Hexit).
 
   remember (mb_remove_body bb) as bb'.

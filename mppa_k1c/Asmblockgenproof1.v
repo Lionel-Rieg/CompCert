@@ -1324,18 +1324,18 @@ Proof.
 Qed.
 
 
-(*
+
 Lemma loadind_correct:
   forall (base: ireg) ofs ty dst k c (rs: regset) m v,
   loadind base ofs ty dst k = OK c ->
   Mem.loadv (chunk_of_type ty) m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> GPR31 ->
   exists rs',
-     exec_straight ge fn c rs m k rs' m
+     exec_straight ge c rs m k rs' m
   /\ rs'#(preg_of dst) = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> preg_of dst -> rs'#r = rs#r.
-Proof.
-  intros until v; intros TR LOAD NOT31. 
+Proof. Admitted.
+(*   intros until v; intros TR LOAD NOT31. 
   assert (A: exists mk_instr,
                 c = indexed_memory_access mk_instr base ofs k
              /\ forall base' ofs' rs',
@@ -1345,8 +1345,9 @@ Proof.
     destruct ty, (preg_of dst); inv TR; econstructor; split; eauto. }
   destruct A as (mk_instr & B & C). subst c. 
   eapply indexed_load_access_correct; eauto with asmgen. 
-Qed.
+Qed. *)
 
+(*
 Lemma storeind_correct:
   forall (base: ireg) ofs ty src k c (rs: regset) m m',
   storeind src base ofs ty k = OK c ->
