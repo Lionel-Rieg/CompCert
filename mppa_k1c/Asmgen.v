@@ -39,5 +39,5 @@ Definition transf_function (f: Mach.function) : res Asm.function :=
 Definition transl_code (f: Mach.function) (l: Mach.code) : res (list Asm.instruction) :=
   let mbf := Machblockgen.transf_function f in
   let mbc := Machblockgen.trans_code l in
-  do abc <- transl_blocks mbf mbc;
+  do abc <- transl_blocks mbf mbc true;
   OK (unfold abc).

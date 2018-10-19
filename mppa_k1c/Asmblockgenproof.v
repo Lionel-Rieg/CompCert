@@ -495,10 +495,12 @@ Lemma return_address_exists:
   exists ra, return_address_offset f c ra.
 Proof.
   intros. eapply Asmblockgenproof0.return_address_exists; eauto.
-  - intros f0 tf H0. monadInv H0.
-  destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0.
-  monadInv EQ. simpl.
-  eapply ex_intro; constructor 1; eauto with coqlib.
+
+- intros. monadInv H0.
+  destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0. monadInv EQ. simpl.
+(*   rewrite transl_code'_transl_code in EQ0. *)
+  exists x; exists true; split; auto. (*  unfold fn_code. *)
+  repeat constructor.
   - exact transf_function_no_overflow.
 Qed.
 
@@ -1076,7 +1078,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (STACKS: match_stack ge s)
         (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
         (MEXT: Mem.extends m m')
-        (TRANS: transl_blocks f (bb::c) = OK (tbb::tc))
+        (TRANS: transl_blocks f (bb::c) ep = OK (tbb::tc))
         (AG: agree ms sp rs)
         (DXP: ep = true -> rs#FP = parent_sp s),
       match_codestate fb (Machblock.State s fb sp (bb::c) ms m)
@@ -1125,24 +1127,37 @@ Proof.
   - discriminate.
 Qed. *)
 
+Lemma transl_blocks_nonil:
+  forall f bb c tc ep,
+  transl_blocks f (bb::c) ep = OK tc ->
+  exists tbb tc', tc = tbb :: tc'.
+Proof.
+  intros until ep. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
+  destruct (extract_ctl x2).
+  - destruct c0; destruct i; simpl; eauto.
+  - destruct x1; simpl; eauto.
+Qed.
+
 Theorem match_state_codestate:
-  forall mbs abs s fb sp bb c ms m rs m' tbb tc tf ep f,
+  forall mbs abs s fb sp bb c ms m rs m' (* tbb tc *) (* tf *) (* ep *) f,
   mbs = (Machblock.State s fb sp (bb::c) ms m) ->
   abs = (Asmblock.State rs m') ->
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
-  transl_blocks f (bb::c) = OK (tbb::tc) ->
-  transl_code_at_pc ge (rs PC) fb f (bb::c) ep tf (tbb::tc) ->
+(*   transl_blocks f (bb::c) ep = OK (tbb::tc) -> *)
+(*   transl_code_at_pc ge (rs PC) fb f (bb::c) ep tf (tbb::tc) -> *)
   match_states mbs abs ->
-  exists cs, (match_codestate fb mbs cs /\ match_asmblock fb cs abs 
-              /\ cs = (Codestate (Asmblock.State rs m') (tbb::tc) (Some tbb))).
+  exists cs tbb tc, 
+    (  match_codestate fb mbs cs /\ match_asmblock fb cs abs 
+    /\ cs = (Codestate (Asmblock.State rs m') (tbb::tc) (Some tbb))).
 Proof.
-  intros. inv H4; try discriminate.
-  inv H6. inv H5. rewrite FIND in H1. inv H1.
-  esplit. repeat split.
-  econstructor. 4: eapply H2. all: eauto. (*  inv H3. eapply H1. *)
-  inv AT.
+  intros until f. intros Hmbs Habs Hfind MS.
+  subst. inv MS. assert (f = f0) by congruence; subst f0. clear FIND. inv AT.
+  exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc).
+  rename tc into tc''. rename tc' into tc. rename tc'' into tc'. subst tc'.
+  esplit. 
+  exists tbb, tc.
+  repeat split. econstructor. 4: eapply H2. all: eauto.
   econstructor; eauto.
-  congruence.
 Qed.
 
 (* Program Definition remove_body (bb: AB.bblock) := {| AB.header := AB.header bb; AB.body := nil; AB.exit := AB.exit bb |}.
@@ -1175,7 +1190,7 @@ Ltac exploreInst :=
 Lemma no_builtin_preserved:
   forall f ex x2,
   (forall ef args res, ex <> Some (MBbuiltin ef args res)) ->
-  transl_instr_control f ex true = OK x2 ->
+  transl_instr_control f ex = OK x2 ->
   (exists i, extract_ctl x2 = Some (PCtlFlow i))
     \/ extract_ctl x2 = None.
 Proof.
@@ -1196,13 +1211,13 @@ Proof.
 Qed.
 
 Lemma transl_blocks_distrib:
-  forall c f bb tbb tc,
-  transl_blocks f (bb::c) = OK (tbb::tc)
+  forall c f bb tbb tc ep,
+  transl_blocks f (bb::c) ep = OK (tbb::tc)
   -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res))
-  -> transl_block f bb = OK (tbb :: nil)
-  /\ transl_blocks f c = OK tc.
+  -> transl_block f bb ep = OK (tbb :: nil)
+  /\ transl_blocks f c false = OK tc.
 Proof.
-  intros until tc. intros TLBS Hbuiltin.
+  intros until ep. intros TLBS Hbuiltin.
   destruct bb as [hd bdy ex].
   monadInv TLBS. monadInv EQ.
   exploit no_builtin_preserved; eauto. intros Hectl. destruct Hectl.
@@ -1237,8 +1252,8 @@ Proof.
 Qed.
 
 Lemma transl_instr_basic_nonil:
-  forall k f bi b x,
-  transl_instr_basic f bi b k = OK x ->
+  forall k f bi ep x,
+  transl_instr_basic f bi ep k = OK x ->
   x <> nil.
 Proof.
   intros until x. intros TIB.
@@ -1255,9 +1270,9 @@ Proof.
 Qed.
 
 Lemma transl_basic_code_nonil:
-  forall bdy f x b,
+  forall bdy f x ep,
   bdy <> nil ->
-  transl_basic_code f bdy b = OK x ->
+  transl_basic_code f bdy ep = OK x ->
   x <> nil.
 Proof.
   induction bdy as [|bi bdy].
@@ -1274,7 +1289,7 @@ Qed.
 Lemma transl_instr_control_nonil:
   forall ex f x,
   ex <> None ->
-  transl_instr_control f ex true = OK x ->
+  transl_instr_control f ex = OK x ->
   extract_ctl x <> None.
 Proof.
   intros ex f x Hnonil TIC.
@@ -1288,12 +1303,12 @@ Proof.
 Qed.
 
 Lemma transl_block_nobuiltin:
-  forall f bb tbb,
+  forall f bb ep tbb,
   (MB.body bb <> nil \/ MB.exit bb <> None) ->
-  transl_block f bb = OK (tbb :: nil) ->
+  transl_block f bb ep = OK (tbb :: nil) ->
   exists c c',
-     transl_basic_code f (MB.body bb) true = OK c
-  /\ transl_instr_control f (MB.exit bb) true = OK c'
+     transl_basic_code f (MB.body bb) ep = OK c
+  /\ transl_instr_control f (MB.exit bb) = OK c'
   /\ body tbb = c ++ extract_basic c'
   /\ exit tbb = extract_ctl c'.
 Proof.
@@ -1379,12 +1394,13 @@ Proof.
     destruct bb' as [hd' bdy' ex']; simpl in *. subst.
     unfold transl_block in TLB. simpl in TLB. unfold gen_bblocks in TLB; simpl in TLB. inv TLB.
     simpl. repeat eexists.
-    econstructor; eauto. unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
+    econstructor. 4: instantiate (3 := false). all:eauto. unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
     assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto.
     assert (f = f0) by congruence. subst f0. econstructor; eauto.
     generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
     eapply agree_exten; eauto. intros. Simpl.
+    discriminate.
 Qed.
 
 Definition mb_remove_first (bb: MB.bblock) := 
@@ -1404,9 +1420,23 @@ Proof.
     exists (a ::i l). split; auto. simpl. rewrite H2. auto.
 Qed.
 
+Lemma transl_blocks_basic_step:
+  forall bb tbb c tc bi bdy x le f tbb' ep,
+  transl_blocks f (bb::c) ep = OK (tbb::tc) ->
+  MB.body bb = bi::(bdy) -> (bdy <> nil \/ MB.exit bb <> None) ->
+  transl_basic_code f bdy (it1_is_parent true bi) = OK x ->
+  transl_instr_control f (MB.exit bb) = OK le ->
+  header tbb' = header tbb -> body tbb' = x ++ extract_basic le -> exit tbb' = exit tbb ->
+  transl_blocks f ({| MB.header := MB.header bb; MB.body := bdy; MB.exit := MB.exit bb |}::c)
+    (it1_is_parent ep bi)  =
+    OK (tbb'::tc).
+Proof.
+Admitted.
+
 Lemma step_simu_basic:
   forall bb bb' s fb sp tbb c ms m rs1 m1 tc ms' m' bi bdy,
   MB.body bb = bi::(bdy) -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
+  (bdy <> nil \/ MB.exit bb <> None) ->
   bb' = {| MB.header := MB.header bb; MB.body := bdy; MB.exit := MB.exit bb |} ->
   basic_step ge s fb sp ms m bi ms' m' ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) (Codestate (State rs1 m1) (tbb::tc) (Some tbb)) ->
@@ -1417,12 +1447,22 @@ Lemma step_simu_basic:
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb'))
     /\ exit tbb' = exit tbb).
 Proof.
-(*   intros until bdy. intros Hbody Hnobuiltin Hbb' BSE MCS. inv MCS.
+Admitted.
+(*   intros until bdy. intros Hbody Hnobuiltin Hnotempty Hbb' BSE MCS. inv MCS.
   exploit transl_blocks_distrib; eauto. intros (TLB & TLBS).
   exploit transl_block_nobuiltin; eauto. left; rewrite Hbody; discriminate.
   intros (lbi & le & TBC & TIC & Htbody & Htexit).
   rewrite Hbody in TBC. monadInv TBC.
-  inv BSE.
+  assert (Hcorrect: wf_bblock (header tbb) (x ++ extract_basic le) (exit tbb)). {
+    unfold wf_bblock. unfold non_empty_bblock.
+    inv Hnotempty.
+    - assert (x <> nil). eapply transl_basic_code_nonil; eauto. left. destruct x; try discriminate.
+        contradict H0; simpl; auto.
+    - right. rewrite Htexit. eapply transl_instr_control_nonil; eauto.
+  }
+(*   remember {| header := header tbb; body := x ++ extract_basic le; exit := exit tbb; correct := Hcorrect |}
+    as tbb'.
+ *)  inv BSE.
   - (* MBgetstack *)
     simpl in EQ0.
 
@@ -1432,7 +1472,13 @@ Proof.
     exploit loadind_correct; eauto with asmgen. { destruct TODO. }
     intros (rs2 & EXECS & Hrs'1 & Hrs'2).
     eapply exec_straight_body in EXECS. destruct EXECS as (l & Hlbi & EXECB).
-    exists rs2 m1 (* something *) l.
+    remember {| header := header tbb; body := x ++ extract_basic le; exit := exit tbb; correct := Hcorrect |}
+      as tbb'.
+    exists rs2, m1, tbb', l. subst.
+    repeat (split; simpl; auto). rewrite Htbody. apply app_assoc_reverse.
+    econstructor; eauto. eapply transl_blocks_basic_step; eauto.
+    eapply agree_set_mreg; eauto with asmgen.
+    instantiate (1 := ep). intro Hep. rewrite <- DXP; auto. apply Hrs'2; try discriminate.
 (* TODO *)
 
 
@@ -1451,7 +1497,7 @@ Proof.
     destruct TODO.
   - (* MBstore *)
     destruct TODO.
- *)Admitted.
+Admitted. *)
 
 Lemma exec_body_trans:
   forall l l' rs0 m0 rs1 m1 rs2 m2,
@@ -1478,7 +1524,8 @@ Lemma step_simu_body':
         (Codestate (State rs2 m2) (tbb'::tc) (Some tbb'))
     /\ exit tbb' = exit tbb ).
 Proof.
-  intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
+Admitted.
+(*   intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
   - intros until m'. intros Hnobuiltin BSTEP MCS. inv BSTEP.
     exists rs1, m1, tbb, nil.
     repeat (split; simpl; auto).
@@ -1494,7 +1541,7 @@ Proof.
     rewrite Hbody. rewrite Hbody'. rewrite app_assoc. auto.
     eapply exec_body_trans; eauto.
     congruence.
-Qed.
+Qed. *)
 
 Theorem step_simu_body:
   forall bb s fb sp tbb c ms m rs1 m1 tc ms' m',
@@ -1512,17 +1559,6 @@ Proof.
   intros (rs2 & m2 & tbb' & l & Hbody & EXEB & MCS & Hexit).
   exists rs2, m2, tbb', l. repeat (split; simpl; auto).
   inv MCS. econstructor; eauto.
-Qed.
-
-Lemma transl_blocks_nonil:
-  forall f bb c tc,
-  transl_blocks f (bb::c) = OK tc ->
-  exists tbb tc', tc = tbb :: tc'.
-Proof.
-  intros until tc. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
-  destruct (extract_ctl x2).
-  - destruct c0; destruct i; simpl; eauto.
-  - destruct x1; simpl; eauto.
 Qed.
 
 Lemma exec_body_straight:
@@ -1576,7 +1612,8 @@ Lemma step_simulation_bblock':
   match_states (Machblock.State sf f sp (bb :: c) rs m) S1 ->
   exists S2 : state, plus step tge S1 E0 S2 /\ match_states s'' S2.
 Proof.
-  intros until S1. intros BSTEP Hbb' Hbuiltin ESTEP MS. inversion MS. subst.
+Admitted.
+(*   intros until S1. intros BSTEP Hbb' Hbuiltin ESTEP MS. inversion MS. subst.
   remember (Machblock.State sf f sp (bb::c) rs m) as mbs. 
   remember (State rs0 m'0) as abs. inversion AT.
   exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst. rename tc' into tc.
@@ -1604,7 +1641,7 @@ Proof.
   split; auto.
   eapply plus_one. eapply exec_step_internal; eauto.
   assert (x = tf) by congruence. subst x. eapply find_bblock_tail; eauto.
-Qed.
+Qed. *)
 
 Lemma step_simulation_bblock:
   forall sf f sp bb ms m ms' m' S2 c,
@@ -1748,8 +1785,6 @@ Local Transparent destroyed_at_function_entry.
   right. split. omega. split. auto.
   rewrite <- ATPC in H5.
   econstructor; eauto. congruence.
-Unshelve.
-  exact true.
 Qed.
 
 Lemma transf_initial_states:

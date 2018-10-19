@@ -781,7 +781,7 @@ Definition transl_instr_basic (f: Machblock.function) (i: Machblock.basic_inst)
   end.
 
 Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.control_flow_inst)
-                                (ep: bool) : res code :=
+                                : res code :=
   match oi with
   | None => OK nil
   | Some i =>
@@ -889,18 +889,18 @@ Qed. (*  Next Obligation.
   intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
 Qed. *)
 
-Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) : res (list bblock) :=
-  do c <- transl_basic_code f fb.(Machblock.body) true;
-  do ctl <- transl_instr_control f fb.(Machblock.exit) true;
+Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) (ep: bool) : res (list bblock) :=
+  do c <- transl_basic_code f fb.(Machblock.body) ep;
+  do ctl <- transl_instr_control f fb.(Machblock.exit);
   OK (gen_bblocks fb.(Machblock.header) c ctl)
 .
 
-Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) :=
+Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) (ep: bool) :=
   match lmb with
   | nil => OK nil
   | mb :: lmb => 
-      do lb <- transl_block f mb;
-      do lb' <- transl_blocks f lmb;
+      do lb <- transl_block f mb ep;
+      do lb' <- transl_blocks f lmb false;
       OK (lb ++ lb')
   end
 .
@@ -908,7 +908,7 @@ Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) :=
 
 
 Definition transl_function (f: Machblock.function) :=
-  do lb <- transl_blocks f f.(Machblock.fn_code);
+  do lb <- transl_blocks f f.(Machblock.fn_code) true;
   OK (mkfunction f.(Machblock.fn_sig)
         (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::b
          Pget GPR8 RA ::b

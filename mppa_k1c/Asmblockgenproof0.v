@@ -483,7 +483,7 @@ Qed.
 Definition return_address_offset (f: MB.function) (c: MB.code) (ofs: ptrofs) : Prop :=
   forall tf  tc,
   transf_function f = OK tf ->
-  transl_blocks f c = OK tc ->
+  transl_blocks f c false = OK tc ->
   code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc.
 
 (* NB: these two lemma should go into [Coqlib.v] *) 
@@ -503,14 +503,14 @@ Hint Resolve is_tail_app_inv: coqlib.
 
 Lemma transl_blocks_tail:
   forall f c1 c2, is_tail c1 c2 ->
-  forall tc2, transl_blocks f c2 = OK tc2 ->
-  exists tc1, transl_blocks f c1 = OK tc1 /\ is_tail tc1 tc2.
+  forall tc2 ep2, transl_blocks f c2 ep2 = OK tc2 ->
+  exists tc1, exists ep1, transl_blocks f c1 ep1 = OK tc1 /\ is_tail tc1 tc2.
 Proof.
   induction 1; simpl; intros.
-  exists tc2; split; auto with coqlib.
-  monadInv H0. exploit IHis_tail; eauto. intros (tc1 & A & B).
-  exists tc1; split. auto.
-  eapply is_tail_trans; eauto with coqlib. 
+  exists tc2; exists ep2; split; auto with coqlib.
+  monadInv H0. exploit IHis_tail; eauto. intros (tc1 & ep1 & A & B).
+  exists tc1; exists ep1; split. auto.
+  eapply is_tail_trans with x0; eauto with coqlib.
 Qed.
 
 Lemma is_tail_code_tail:
@@ -524,7 +524,7 @@ Section RETADDR_EXISTS.
 
 Hypothesis transf_function_inv:
   forall f tf, transf_function f = OK tf ->
-  exists tc, transl_blocks f (Machblock.fn_code f) = OK tc /\ is_tail tc (fn_blocks tf).
+  exists tc ep, transl_blocks f (Machblock.fn_code f) ep = OK tc /\ is_tail tc (fn_blocks tf).
 
 Hypothesis transf_function_len:
   forall f tf, transf_function f = OK tf -> size_blocks (fn_blocks tf) <= Ptrofs.max_unsigned.
@@ -536,15 +536,16 @@ Lemma return_address_exists:
   exists ra, return_address_offset f c ra.
 Proof.
   intros. destruct (transf_function f) as [tf|] eqn:TF.
-  + exploit transf_function_inv; eauto. intros (tc1 & TR1 & TL1).
-    exploit transl_blocks_tail; eauto. intros (tc2 & TR2 & TL2).
-    unfold return_address_offset.
+  + exploit transf_function_inv; eauto. intros (tc1 & ep1 & TR1 & TL1).
+    exploit transl_blocks_tail; eauto. intros (tc2 & ep2 & TR2 & TL2).
+(*     unfold return_address_offset. *)
     monadInv TR2.
     assert (TL3: is_tail x0 (fn_blocks tf)).
-    { apply is_tail_trans with tc1; eauto with coqlib. }
-    exploit is_tail_code_tail; eauto.
-    intros [ofs CT].
-    exists (Ptrofs.repr ofs). intros.
+    { apply is_tail_trans with tc1; auto. 
+      apply is_tail_trans with (x++x0); auto. eapply is_tail_app.
+    }
+    exploit is_tail_code_tail. eexact TL3. intros [ofs CT].
+    exists (Ptrofs.repr ofs). red; intros.
     rewrite Ptrofs.unsigned_repr. congruence.
     exploit code_tail_bounds; eauto.
     intros; apply transf_function_len in TF. omega.
@@ -564,7 +565,7 @@ Inductive transl_code_at_pc (ge: MB.genv):
     forall b ofs f c ep tf tc,
     Genv.find_funct_ptr ge b = Some(Internal f) ->
     transf_function f = Errors.OK tf ->
-    transl_blocks f c = OK tc ->
+    transl_blocks f c ep = OK tc ->
     code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc ->
     transl_code_at_pc ge (Vptr b ofs) b f c ep tf tc.
 
