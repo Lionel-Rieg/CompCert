@@ -1292,6 +1292,7 @@ Proof.
   repeat split. all: econstructor; eauto.
 Qed.
 
+(* TODO: à simplifier ? Remplacer le tbb' par tbb  *)
 Lemma gen_bblocks_eq:
   forall c c' thd tbdy tbb,
   extract_basic c = extract_basic c' ->
@@ -1318,9 +1319,9 @@ Theorem match_transl_blocks:
   match_codestate fb mbs cs ->
   match_asmblock fb cs abs ->
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
-  exists tbb',
+  (* exists tbb',
      body tbb' = body tbb /\ header tbb' = header tbb /\ exit tbb' = exit tbb
-  /\ transl_blocks f (bb::c) ep = OK (tbb'::tc).
+  /\ *) transl_blocks f (bb::c) ep = OK (tbb::tc). (* OK (tbb'::tc). *)
 Proof.
   intros until cs. intros Hmbs Hcur Hrem Hfpok MCS MAS FIND.
   unfold transl_blocks. fold transl_blocks.
@@ -1328,8 +1329,13 @@ Proof.
   inv MAS. simpl.
   unfold transl_block.
   rewrite TBC. simpl. rewrite TIC; simpl. rewrite TBLS. simpl.
-  exploit gen_bblocks_eq; eauto. intros (tbb' & GEN' & Hbody & Hheader & Hexit). exists tbb'.
-  repeat (split; auto). rewrite GEN'. simpl. auto.
+  exploit gen_bblocks_eq; eauto. intros (tbb' & GEN' & Hbody & Hheader & Hexit).
+  (* exists tbb'.
+     repeat (split; auto). rewrite GEN'. simpl. auto. *)
+  apply f_equal.
+  rewrite GEN'. simpl.
+  exploit bblock_equality; eauto.
+  intro X; rewrite X; auto.
 Qed.
 
   (*         (TRANS: transl_blocks f (bb::c) ep = OK (tbb::tc)) *)
