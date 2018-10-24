@@ -409,7 +409,7 @@ Record bblock := mk_bblock {
 Ltac bblock_auto_correct := ((* split;  *)try discriminate; try (left; discriminate); try (right; discriminate)).
 Local Obligation Tactic := bblock_auto_correct.
 
-Axiom bblock_equality: forall bb1 bb2, header bb1=header bb2 -> body bb1 = body bb2 -> exit bb1 = exit bb2 -> bb1 = bb2.
+(* Axiom bblock_equality: forall bb1 bb2, header bb1=header bb2 -> body bb1 = body bb2 -> exit bb1 = exit bb2 -> bb1 = bb2. *)
 
 (* FIXME: redundant with definition in Machblock *)
 Definition length_opt {A} (o: option A) : nat :=
