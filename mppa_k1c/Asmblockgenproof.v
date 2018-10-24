@@ -1463,31 +1463,22 @@ Proof.
   rewrite Hbody in TBC. monadInv TBC.
   inv BSTEP.
   - (* MBgetstack *)
-    destruct TODO.
-(*     simpl in EQ0.
-
+    simpl in EQ0.
     unfold Mach.load_stack in H.
     exploit Mem.loadv_extends; eauto. intros [v' [A B]].
     rewrite (sp_val _ _ _ AG) in A.
     exploit loadind_correct; eauto with asmgen. { destruct TODO. }
     intros (rs2 & EXECS & Hrs'1 & Hrs'2).
     eapply exec_straight_body in EXECS. destruct EXECS as (l & Hlbi & EXECB).
-    remember {| header := header tbb; body := x ++ extract_basic le; exit := exit tbb; correct := Hcorrect |}
-      as tbb'.
-    exists rs2, m1, tbb', l. subst.
-    repeat (split; simpl; auto). rewrite Htbody. apply app_assoc_reverse.
-    econstructor; eauto. eapply transl_blocks_basic_step; eauto.
+    exists rs2, m1, l.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    rewrite <- Hheadereq. subst.
+    eapply match_codestate_intro; eauto.
     eapply agree_set_mreg; eauto with asmgen.
-    instantiate (1 := ep). intro Hep. rewrite <- DXP; auto. apply Hrs'2; try discriminate.
-(* TODO *)
-
-
-    left; eapply exec_straight_steps; eauto. intros. simpl in TR.
-    exploit loadind_correct; eauto with asmgen. intros [rs' [P [Q R]]].
-    exists rs'; split. eauto.
-    split. eapply agree_set_mreg; eauto with asmgen. congruence.
-    simpl; congruence.
- *)  - (* MBsetstack *)
+    intro Hep. simpl in Hep. inv Hep.
+  - (* MBsetstack *)
     destruct TODO.
   - (* MBgetparam *)
     destruct TODO.
