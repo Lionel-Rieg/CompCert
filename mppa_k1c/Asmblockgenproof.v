@@ -1445,11 +1445,9 @@ Admitted.
 Lemma step_simu_basic:
   forall bb bb' s fb sp c ms m rs1 m1 ms' m' bi cs1 tbdy bdy,
   MB.body bb = bi::(bdy) -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
-(*   (bdy <> nil \/ MB.exit bb <> None) -> *)
   bb' = {| MB.header := MB.header bb; MB.body := bdy; MB.exit := MB.exit bb |} ->
   basic_step ge s fb sp ms m bi ms' m' ->
   pstate cs1 = (State rs1 m1) -> pbody1 cs1 = tbdy ->
-(*   pstate cs2 = (State rs2 m2) -> pbody1 cs2 = tbdy' -> *)
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 l cs2 tbdy',
        cs2 = {| pstate := (State rs2 m2); pheader := pheader cs1; pbody1 := tbdy'; pbody2 := pbody2 cs1;
@@ -1467,7 +1465,7 @@ Proof.
     unfold Mach.load_stack in H.
     exploit Mem.loadv_extends; eauto. intros [v' [A B]].
     rewrite (sp_val _ _ _ AG) in A.
-    exploit loadind_correct; eauto with asmgen. { destruct TODO. }
+    exploit loadind_correct; eauto with asmgen.
     intros (rs2 & EXECS & Hrs'1 & Hrs'2).
     eapply exec_straight_body in EXECS. destruct EXECS as (l & Hlbi & EXECB).
     exists rs2, m1, l.
@@ -1479,7 +1477,23 @@ Proof.
     eapply agree_set_mreg; eauto with asmgen.
     intro Hep. simpl in Hep. inv Hep.
   - (* MBsetstack *)
-    destruct TODO.
+    simpl in EQ0.
+    unfold Mach.store_stack in H.
+    assert (Val.lessdef (ms src) (rs1 (preg_of src))). { eapply preg_val; eauto. }
+    exploit Mem.storev_extends; eauto. intros [m2' [A B]].
+    exploit storeind_correct; eauto with asmgen.
+    rewrite (sp_val _ _ _ AG) in A. eauto. intros [rs' [P Q]].
+
+    eapply exec_straight_body in P. destruct P as (l & Hlbi & EXECB).
+    exists rs', m2', l.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    rewrite <- Hheadereq. subst.
+    eapply match_codestate_intro; eauto.
+
+    eapply agree_undef_regs; eauto with asmgen.
+    simpl; intros. rewrite Q; auto with asmgen.
   - (* MBgetparam *)
     destruct TODO.
   - (* MBop *)
@@ -1733,7 +1747,7 @@ Proof.
   left. destruct (Machblock.exit bb) eqn:MBE; try destruct c0.
   all: try(inversion H0; subst; inv H2; eapply step_simulation_bblock; 
             try (rewrite MBE; try discriminate); eauto).
-  + destruct TODO. (* MBbuiltin *)
+  + (* MBbuiltin *) destruct TODO.
   + inversion H0. subst. eapply step_simulation_bblock; try (rewrite MBE; try discriminate); eauto.
 
 - (* internal function *)
