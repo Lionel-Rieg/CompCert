@@ -639,12 +639,12 @@ Qed. *)
   So, the following integer measure will suffice to rule out
   the unwanted behaviour. *)
 
-(* 
+
 Remark preg_of_not_FP: forall r, negb (mreg_eq r R10) = true -> IR FP <> preg_of r.
 Proof.
   intros. change (IR FP) with (preg_of R10). red; intros.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
-Qed. *)
+Qed.
 
 (** This is the simulation diagram.  We prove it by case analysis on the Mach transition. *)
 (* 
@@ -1495,7 +1495,62 @@ Proof.
     eapply agree_undef_regs; eauto with asmgen.
     simpl; intros. rewrite Q; auto with asmgen.
   - (* MBgetparam *)
-    destruct TODO.
+    simpl in EQ0.
+
+    assert (f0 = f) by congruence; subst f0.
+    unfold Mach.load_stack in *.
+    exploit Mem.loadv_extends. eauto. eexact H0. auto.
+    intros [parent' [A B]]. rewrite (sp_val _ _ _ AG) in A.
+    exploit lessdef_parent_sp; eauto. clear B; intros B; subst parent'.
+    exploit Mem.loadv_extends. eauto. eexact H1. auto.
+    intros [v' [C D]].
+
+  (* Opaque loadind. *)
+(*     left; eapply exec_straight_steps; eauto; intros. monadInv TR. *)
+    monadInv EQ0.
+    destruct ep.
+  (* GPR31 contains parent *)
+    + exploit loadind_correct. eexact EQ1.
+      instantiate (2 := rs1). rewrite DXP; eauto. congruence.
+      intros [rs2 [P [Q R]]].
+
+      eapply exec_straight_body in P. destruct P as (l & Hlbi & EXECB).
+      exists rs2, m1, l.
+      eexists. eexists. split. instantiate (1 := x). eauto.
+      repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+      assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+      rewrite <- Hheadereq. subst.
+      eapply match_codestate_intro; eauto.
+
+      eapply agree_set_mreg. eapply agree_set_mreg; eauto. congruence. auto with asmgen.
+      simpl; intros. rewrite R; auto with asmgen.
+      apply preg_of_not_FP; auto.
+  (* GPR11 does not contain parent *)
+    + rewrite chunk_of_Tptr in A. 
+      exploit loadind_ptr_correct. eexact A. congruence. intros [rs2 [P [Q R]]].
+      exploit loadind_correct. eexact EQ1. instantiate (2 := rs2). rewrite Q. eauto. congruence.
+      intros [rs3 [S [T U]]].
+
+      exploit exec_straight_trans.
+        eapply P.
+        eapply S.
+      intros EXES.
+
+      eapply exec_straight_body in EXES. destruct EXES as (l & Hlbi & EXECB).
+      exists rs3, m1, l.
+      eexists. eexists. split. instantiate (1 := x). eauto.
+      repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+      assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+      rewrite <- Hheadereq. subst.
+      eapply match_codestate_intro; eauto.
+
+      eapply agree_set_mreg. eapply agree_set_mreg. eauto. eauto.
+      instantiate (1 := rs2#FP <- (rs3#FP)). intros.
+      rewrite Pregmap.gso; auto with asmgen.
+      congruence.
+      intros. unfold Pregmap.set. destruct (PregEq.eq r' FP). congruence. auto with asmgen.
+      simpl; intros. rewrite U; auto with asmgen.
+      apply preg_of_not_FP; auto.
   - (* MBop *)
     destruct TODO.
   - (* MBload *)

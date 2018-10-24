@@ -1394,22 +1394,20 @@ Proof.
   intros. rewrite H. Simpl.
 Qed.
 
+*)
+
 Lemma loadind_ptr_correct:
   forall (base: ireg) ofs (dst: ireg) k (rs: regset) m v,
   Mem.loadv Mptr m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> GPR31 ->
   exists rs',
-     exec_straight ge fn (loadind_ptr base ofs dst k) rs m k rs' m
+     exec_straight ge (loadind_ptr base ofs dst :: k) rs m k rs' m
   /\ rs'#dst = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H1. auto.
 Qed.
-*)
-
-
-Definition nosroll := 0.
 
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
