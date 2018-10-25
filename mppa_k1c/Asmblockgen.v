@@ -860,7 +860,7 @@ Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_
   otherwise the offset part of the [PC] code pointer could wrap
   around, leading to incorrect executions. *)
 
-Local Obligation Tactic := bblock_auto_correct.
+(* Local Obligation Tactic := bblock_auto_correct. *)
 
 (* Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
   match c with
@@ -884,10 +884,11 @@ Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instr
   end
 .
 Next Obligation.
-  intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
-Qed. (*  Next Obligation.
-  intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
-Qed. *)
+  bblock_auto_correct. intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
+Qed.
+Next Obligation.
+  bblock_auto_correct.
+Qed.
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) (ep: bool) : res (list bblock) :=
   do c <- transl_basic_code f fb.(Machblock.body) ep;

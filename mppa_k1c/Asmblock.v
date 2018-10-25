@@ -384,17 +384,38 @@ Coercion PCtlFlow:  cf_instruction >-> control.
 (** * Definition of a bblock *)
 
 Definition non_empty_bblock (body: list basic) (exit: option control): Prop
- := body <> nil \/ exit <> None. 
+ := body <> nil \/ exit <> None.
 
-(* TODO: use booleans instead of Prop to enforce proof irrelevance in bblock type 
-   in order to prove bblock_equality below
-*)
+Definition non_empty_body (body: list basic): bool :=
+  match body with
+  | nil => false
+  | _ => true
+  end.
+
+Definition non_empty_exit (exit: option control): bool :=
+  match exit with
+  | None => false
+  | _ => true
+  end.
+
+Definition non_empty_bblockb (body: list basic) (exit: option control): bool := non_empty_body body || non_empty_exit exit.
+
+Lemma non_empty_bblock_refl:
+  forall body exit,
+  non_empty_bblock body exit ->
+  Is_true (non_empty_bblockb body exit).
+Proof.
+(*   intros. destruct body; destruct exit.
+  all: unfold non_empty_bblock; try (left; discriminate); try (right; discriminate).
+  simpl in H. inv H. *)
+Admitted.
 
 (* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
  *)
-Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
-  non_empty_bblock body exit (* /\ builtin_alone body exit *).
+
+(* Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
+  non_empty_bblock body exit (* /\ builtin_alone body exit *). *)
 
 (** A bblock is well-formed if he contains at least one instruction,
     and if there is a builtin then it must be alone in this bblock. *)
@@ -403,13 +424,27 @@ Record bblock := mk_bblock {
   header: list label;
   body: list basic;
   exit: option control;
-  correct: wf_bblock header body exit
+  correct: Is_true (non_empty_bblockb body exit)
 }.
 
-Ltac bblock_auto_correct := ((* split;  *)try discriminate; try (left; discriminate); try (right; discriminate)).
-Local Obligation Tactic := bblock_auto_correct.
+Ltac bblock_auto_correct := (apply non_empty_bblock_refl; try discriminate; try (left; discriminate); try (right; discriminate)).
+(* Local Obligation Tactic := bblock_auto_correct. *)
 
-(* Axiom bblock_equality: forall bb1 bb2, header bb1=header bb2 -> body bb1 = body bb2 -> exit bb1 = exit bb2 -> bb1 = bb2. *)
+Lemma Istrue_proof_irrelevant (b: bool): forall (p1 p2:Is_true b), p1=p2.
+Proof.
+  destruct b; simpl; auto.
+  - destruct p1, p2; auto.
+  - destruct p1.
+Qed.
+
+Lemma bblock_equality bb1 bb2: header bb1=header bb2 -> body bb1 = body bb2 -> exit bb1 = exit bb2 -> bb1 = bb2.
+Proof.
+  destruct bb1 as [h1 b1 e1 c1], bb2 as [h2 b2 e2 c2]; simpl.
+  intros; subst.
+  rewrite (Istrue_proof_irrelevant _ c1 c2).
+  auto.
+Qed.
+
 
 (* FIXME: redundant with definition in Machblock *)
 Definition length_opt {A} (o: option A) : nat :=
@@ -499,10 +534,7 @@ Program Definition bblock_single_inst (i: instruction) :=
   | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
   | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
   end.
-(* Next Obligation.
-  bblock_auto_correct.
-Qed.
- *)
+
 Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
   match i with
   | Some i => {| header:=nil; body:=c; exit:=Some i |}
@@ -513,7 +545,9 @@ Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
     end
   end.
 Next Obligation.
-  constructor. subst; discriminate.
+  bblock_auto_correct.
+Qed. Next Obligation.
+  bblock_auto_correct.
 Qed.
 
 
