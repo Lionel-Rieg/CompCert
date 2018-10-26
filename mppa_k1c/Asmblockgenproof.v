@@ -925,7 +925,7 @@ Definition mb_remove_body (bb: MB.bblock) :=
 
 Lemma exec_straight_pnil:
   forall c rs1 m1 rs2 m2,
-  exec_straight tge c rs1 m1 (Pnop::nil) rs2 m2 ->
+  exec_straight tge c rs1 m1 (Pnop::gnil) rs2 m2 ->
   exec_straight tge c rs1 m1 nil rs2 m2.
 Proof.
   intros. eapply exec_straight_trans. eapply H. econstructor; eauto.
@@ -1006,9 +1006,20 @@ Proof.
           econstructor; eauto. eapply agree_sp_def; eauto. simpl. eapply agree_exten; eauto. intros. Simpl.
         Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. simpl in H14. rewrite H14. auto.
         Simpl. simpl. subst. Simpl. simpl. unfold Val.offset_ptr. rewrite PCeq. auto.
-    + (* MBtailcall *)
-      destruct TODO.
-    + (* MBbuiltin *)
+    + (* MBtailcall *) destruct TODO.
+(*       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC. inv H0.
+
+      assert (f0 = f) by congruence.  subst f0.
+      assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
+        eapply transf_function_no_overflow; eauto.
+      exploit Mem.loadv_extends. eauto. eexact H15. auto. simpl. intros [parent' [A B]].
+      destruct s1 as [rf|fid]; simpl in H13. 
+      * inv H1.
+      * monadInv H1. inv Hpstate. inv Hcur. assert (f = f1) by congruence. subst f1. clear FIND1. clear H14.
+        exploit make_epilogue_correct; eauto.
+ *)
+    + (* MBbuiltin (contradiction) *)
       assert (MB.exit bb' <> Some (MBbuiltin e l b)) by (apply Hbuiltin).
       rewrite <- H in H1. contradict H1; auto.
     + (* MBgoto *)
@@ -1040,17 +1051,44 @@ Definition mb_remove_first (bb: MB.bblock) :=
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
 
 Lemma exec_straight_body:
-  forall c c' rs1 m1 rs2 m2,
+  forall c c' lc rs1 m1 rs2 m2,
   exec_straight tge c rs1 m1 c' rs2 m2 ->
-  exists l,
+  code_to_basics c = Some lc ->
+  exists l ll,
      c = l ++ c'
-  /\ exec_body tge l rs1 m1 = Next rs2 m2.
+  /\ code_to_basics l = Some ll
+  /\ exec_body tge ll rs1 m1 = Next rs2 m2.
 Proof.
   induction c; try (intros; inv H; fail).
-  intros. inv H.
-  - exists (a ::i nil). split; auto. simpl. rewrite H7. auto.
-  - apply IHc in H8. destruct H8 as (l & Hc & EXECB). subst.
-    exists (a ::i l). split; auto. simpl. rewrite H2. auto.
+  intros until m2. intros EXES CTB. inv EXES.
+  - exists (i1 ::g nil),(i1::nil). repeat (split; simpl; auto). rewrite H6. auto.
+  - inv CTB. destruct (code_to_basics c); try discriminate. inv H0.
+    eapply IHc in H7; eauto. destruct H7 as (l' & ll & Hc & CTB & EXECB). subst.
+    exists (i ::g l'),(i::ll). repeat (split; simpl; auto).
+      rewrite CTB. auto.
+      rewrite H1. auto.
+Qed.
+
+Lemma basics_to_code_app:
+  forall c l x ll,
+  basics_to_code c = l ++ basics_to_code x ->
+  code_to_basics l = Some ll ->
+  c = ll ++ x.
+Proof.
+  intros. apply (f_equal code_to_basics) in H.
+  erewrite code_to_basics_dist in H; eauto. 2: eapply code_to_basics_id.
+  rewrite code_to_basics_id in H. inv H. auto.
+Qed.
+
+Lemma basics_to_code_app2:
+  forall i c l x ll,
+  (PBasic i) :: basics_to_code c = l ++ basics_to_code x ->
+  code_to_basics l = Some ll ->
+  i :: c = ll ++ x.
+Proof.
+  intros until ll. intros.
+  exploit basics_to_code_app. instantiate (3 := (i::c)). simpl.
+  all: eauto.
 Qed.
 
 Lemma step_simu_basic:
@@ -1078,12 +1116,17 @@ Proof.
     rewrite (sp_val _ _ _ AG) in A.
     exploit loadind_correct; eauto with asmgen.
     intros (rs2 & EXECS & Hrs'1 & Hrs'2).
-    eapply exec_straight_body in EXECS. destruct EXECS as (l & Hlbi & EXECB).
-    exists rs2, m1, l.
+    eapply exec_straight_body in EXECS.
+      2: eapply code_to_basics_id; eauto.
+    destruct EXECS as (l & Hlbi & BTC & CTB & EXECB).
+    exists rs2, m1, Hlbi.
     eexists. eexists. split. instantiate (1 := x). eauto.
-    repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     rewrite <- Hheadereq. subst.
+
     eapply match_codestate_intro; eauto.
     eapply agree_set_mreg; eauto with asmgen.
     intro Hep. simpl in Hep. inv Hep.
@@ -1095,10 +1138,14 @@ Proof.
     exploit storeind_correct; eauto with asmgen.
     rewrite (sp_val _ _ _ AG) in A. eauto. intros [rs' [P Q]].
 
-    eapply exec_straight_body in P. destruct P as (l & Hlbi & EXECB).
-    exists rs', m2', l.
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs', m2', ll.
     eexists. eexists. split. instantiate (1 := x). eauto.
-    repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     rewrite <- Hheadereq. subst.
     eapply match_codestate_intro; eauto.
@@ -1125,10 +1172,14 @@ Proof.
       instantiate (2 := rs1). rewrite DXP; eauto. congruence.
       intros [rs2 [P [Q R]]].
 
-      eapply exec_straight_body in P. destruct P as (l & Hlbi & EXECB).
-      exists rs2, m1, l.
+      eapply exec_straight_body in P.
+        2: eapply code_to_basics_id; eauto.
+      destruct P as (l & ll & BTC & CTB & EXECB).
+      exists rs2, m1, ll.
       eexists. eexists. split. instantiate (1 := x). eauto.
-      repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+      repeat (split; auto).
+        eapply basics_to_code_app; eauto.
+      remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
       assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
       rewrite <- Hheadereq. subst.
       eapply match_codestate_intro; eauto.
@@ -1147,10 +1198,14 @@ Proof.
         eapply S.
       intros EXES.
 
-      eapply exec_straight_body in EXES. destruct EXES as (l & Hlbi & EXECB).
-      exists rs3, m1, l.
+      eapply exec_straight_body in EXES.
+        2: simpl. 2: erewrite code_to_basics_id; eauto.
+      destruct EXES as (l & ll & BTC & CTB & EXECB).
+      exists rs3, m1, ll.
       eexists. eexists. split. instantiate (1 := x). eauto.
-      repeat (split; auto). remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+      repeat (split; auto).
+        eapply basics_to_code_app2; eauto.
+      remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
       assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
       rewrite <- Hheadereq. subst.
       eapply match_codestate_intro; eauto.
@@ -1213,7 +1268,7 @@ Proof.
     rewrite Happ. eapply exec_body_trans; eauto. rewrite Hcs2 in EXEB'; simpl in EXEB'. auto.
 Qed.
 
-Lemma exec_body_straight:
+(* Lemma exec_body_straight:
   forall l rs0 m0 rs1 m1,
   l <> nil ->
   exec_body tge l rs0 m0 = Next rs1 m1 ->
@@ -1228,7 +1283,7 @@ Proof.
   - intros until m1. intros _ EXEB. simpl in EXEB. simpl in IHl.
     destruct (exec_basic_instr tge i1 rs0 m0) eqn:EBI; try discriminate.
     econstructor; eauto. eapply IHl; eauto. discriminate.
-Qed.
+Qed. *)
 
 Lemma exec_body_pc:
   forall l rs1 m1 rs2 m2,

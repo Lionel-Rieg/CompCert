@@ -678,17 +678,17 @@ Variable fn: function.
   Instructions are taken from the first list instead of being fetched
   from memory. *)
 
-Inductive exec_straight: list basic -> regset -> mem ->
-                         list basic -> regset -> mem -> Prop :=
+Inductive exec_straight: list instruction -> regset -> mem ->
+                         list instruction -> regset -> mem -> Prop :=
   | exec_straight_one:
       forall i1 c rs1 m1 rs2 m2,
       exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
-      exec_straight (i1 :: c) rs1 m1 c rs2 m2
+      exec_straight ((PBasic i1) ::g c) rs1 m1 c rs2 m2
   | exec_straight_step:
       forall i c rs1 m1 rs2 m2 c' rs3 m3,
       exec_basic_instr ge i rs1 m1 = Next rs2 m2 ->
       exec_straight c rs2 m2 c' rs3 m3 ->
-      exec_straight (i :: c) rs1 m1 c' rs3 m3.
+      exec_straight ((PBasic i) :: c) rs1 m1 c' rs3 m3.
 
 Inductive exec_control_rel: option control -> bblock -> regset -> mem ->
                              regset -> mem -> Prop :=
@@ -705,21 +705,23 @@ Inductive exec_bblock_rel: bblock -> regset -> mem -> regset -> mem -> Prop :=
       exec_bblock_rel b rs1 m1 rs2 m2.
 
 Lemma exec_straight_body:
-  forall c rs1 m1 rs2 m2,
+  forall c l rs1 m1 rs2 m2,
   exec_straight c rs1 m1 nil rs2 m2 ->
-  exec_body ge c rs1 m1 = Next rs2 m2.
+  code_to_basics c = Some l ->
+  exec_body ge l rs1 m1 = Next rs2 m2.
 Proof.
   induction c as [|i c].
-  - intros. inv H.
-  - intros. inv H.
-    + simpl. rewrite H7. auto.
-    + apply IHc in H8. rewrite <- H8. simpl. rewrite H2. auto.
+  - intros until m2. intros EXES CTB. inv EXES.
+  - intros until m2. intros EXES CTB. inv EXES.
+    + inv CTB. simpl. rewrite H6. auto.
+    + inv CTB. destruct (code_to_basics c); try discriminate. inv H0. eapply IHc in H7; eauto.
+      rewrite <- H7. simpl. rewrite H1. auto.
 Qed.
 
 (*     + contradict H4. generalize i1. induction c; simpl; try discriminate.
         intros i0 X; inversion X. subst. eapply IHc. eauto. *)
 
-Theorem exec_straight_bblock:
+(* Theorem exec_straight_bblock:
   forall rs1 m1 rs2 m2 rs3 m3 b,
   exec_straight (body b) rs1 m1 nil rs2 m2 ->
   exec_control_rel (exit b) b rs2 m2 rs3 m3 ->
@@ -728,7 +730,7 @@ Proof.
   intros.
   econstructor; eauto. unfold exec_bblock. erewrite exec_straight_body; eauto.
   inv H0. auto.
-Qed.
+Qed. *)
 
 Lemma exec_straight_trans:
   forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
@@ -747,7 +749,7 @@ Lemma exec_straight_two:
   exec_basic_instr ge i2 rs2 m2 = Next rs3 m3 ->
   rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
   rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
-  exec_straight (i1 :: i2 :: c) rs1 m1 c rs3 m3.
+  exec_straight (i1 ::g i2 ::g c) rs1 m1 c rs3 m3.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.
   apply exec_straight_one; auto.
@@ -761,7 +763,7 @@ Lemma exec_straight_three:
   rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
   rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
   rs4#PC = Val.offset_ptr rs3#PC Ptrofs.one ->
-  exec_straight (i1 :: i2 :: i3 :: c) rs1 m1 c rs4 m4.
+  exec_straight (i1 ::g i2 ::g i3 ::g c) rs1 m1 c rs4 m4.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.
   eapply exec_straight_two; eauto.
@@ -847,7 +849,7 @@ Proof.
     erewrite exec_basic_instr_pc; eauto.
 Qed.
 
-Lemma exec_straight_through:
+(* Lemma exec_straight_through:
   forall c i b lb rs1 m1 rs2 m2 rs2' m2',
   bblock_basic_ctl c i = b ->
   exec_straight c rs1 m1 nil rs2 m2 ->
@@ -864,11 +866,11 @@ Proof.
     + unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
     + rewrite <- (exec_straight_pc (i ::i c) nil rs1 m1 rs2 m2'); auto.
 Qed.
-
+ *)
 Lemma exec_straight_through_singleinst:
   forall a b rs1 m1 rs2 m2 rs2' m2' lb,
   bblock_single_inst (PBasic a) = b ->
-  exec_straight (a::nil) rs1 m1 nil rs2 m2 ->
+  exec_straight (a ::g nil) rs1 m1 nil rs2 m2 ->
   nextblock b rs2 = rs2' -> m2 = m2' ->
   exec_straight_blocks (b::lb) rs1 m1 lb rs2' m2'.
 Proof.

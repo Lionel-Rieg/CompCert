@@ -506,6 +506,41 @@ Coercion PControl:  control >-> instruction.
 Definition code := list instruction.
 Definition bcode := list basic.
 
+Fixpoint basics_to_code (l: list basic) :=
+  match l with
+  | nil => nil
+  | bi::l => (PBasic bi)::(basics_to_code l)
+  end.
+
+Fixpoint code_to_basics (c: code) :=
+  match c with
+  | (PBasic i)::c =>
+    match code_to_basics c with
+    | None => None
+    | Some l => Some (i::l)
+    end
+  | _::c => None
+  | nil => Some nil
+  end.
+
+Lemma code_to_basics_id: forall c, code_to_basics (basics_to_code c) = Some c.
+Proof.
+  intros. induction c as [|i c]; simpl; auto.
+  rewrite IHc. auto.
+Qed.
+
+Lemma code_to_basics_dist:
+  forall c c' l l',
+  code_to_basics c = Some l ->
+  code_to_basics c' = Some l' ->
+  code_to_basics (c ++ c') = Some (l ++ l').
+Proof.
+  induction c as [|i c]; simpl; auto.
+  - intros. inv H. simpl. auto.
+  - intros. destruct i; try discriminate. destruct (code_to_basics c) eqn:CTB; try discriminate.
+    inv H. erewrite IHc; eauto. auto.
+Qed.
+
 (** 
   Asmblockgen will have to translate a Mach control into a list of instructions of the form
    i1 :: i2 :: i3 :: ctl :: nil ; where i1..i3 are basic instructions, ctl is a control instruction

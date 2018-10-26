@@ -320,7 +320,7 @@ Ltac ArgsInv :=
 
 Definition bla := 0.
 
-Inductive exec_straight_opt: list basic -> regset -> mem -> list basic -> regset -> mem -> Prop :=
+Inductive exec_straight_opt: list instruction -> regset -> mem -> list instruction -> regset -> mem -> Prop :=
   | exec_straight_opt_refl: forall c rs m,
       exec_straight_opt c rs m c rs m
   | exec_straight_opt_intro: forall c1 rs1 m1 c2 rs2 m2,
@@ -1235,8 +1235,8 @@ Lemma indexed_memory_access_correct:
   forall mk_instr base ofs k rs m,
   base <> GPR31 ->
   exists base' ofs' rs',
-     exec_straight_opt (indexed_memory_access mk_instr base ofs :: k) rs m
-                       (mk_instr base' ofs' :: k) rs' m
+     exec_straight_opt (indexed_memory_access mk_instr base ofs ::g k) rs m
+                       (mk_instr base' ofs' ::g k) rs' m
   /\ Val.offset_ptr rs'#base' (eval_offset ge ofs') = Val.offset_ptr rs#base ofs
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
@@ -1286,7 +1286,7 @@ Lemma indexed_load_access_correct:
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> GPR31 -> rd <> PC ->
   exists rs',
-     exec_straight ge (indexed_memory_access mk_instr base ofs :: k) rs m k rs' m
+     exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m
   /\ rs'#rd = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> rd -> rs'#r = rs#r.
 Proof.
@@ -1307,7 +1307,7 @@ Lemma indexed_store_access_correct:
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
   base <> GPR31 -> r1 <> GPR31 -> r1 <> PC ->
   exists rs',
-     exec_straight ge (indexed_memory_access mk_instr base ofs :: k) rs m k rs' m'
+     exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
@@ -1325,7 +1325,7 @@ Lemma loadind_correct:
   Mem.loadv (chunk_of_type ty) m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> GPR31 ->
   exists rs',
-     exec_straight ge c rs m k rs' m
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
   /\ rs'#(preg_of dst) = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
@@ -1347,7 +1347,7 @@ Lemma storeind_correct:
   Mem.storev (chunk_of_type ty) m (Val.offset_ptr rs#base ofs) rs#(preg_of src) = Some m' ->
   base <> GPR31 ->
   exists rs',
-     exec_straight ge c rs m k rs' m'
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TR STORE NOT31.
@@ -1367,7 +1367,7 @@ Lemma Pget_correct:
   forall (dst: gpreg) (src: preg) k (rs: regset) m,
   src = RA ->
   exists rs',
-     exec_straight ge (Pget dst src :: k) rs m k rs' m
+     exec_straight ge (Pget dst src ::g k) rs m k rs' m
   /\ rs'#dst = rs#src
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
@@ -1401,7 +1401,7 @@ Lemma loadind_ptr_correct:
   Mem.loadv Mptr m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> GPR31 ->
   exists rs',
-     exec_straight ge (loadind_ptr base ofs dst :: k) rs m k rs' m
+     exec_straight ge (loadind_ptr base ofs dst ::g k) rs m k rs' m
   /\ rs'#dst = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> dst -> rs'#r = rs#r.
 Proof.
@@ -1414,7 +1414,7 @@ Lemma storeind_ptr_correct:
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
   base <> GPR31 -> src <> GPR31 ->
   exists rs',
-     exec_straight ge (storeind_ptr src base ofs :: k) rs m k rs' m'
+     exec_straight ge (storeind_ptr src base ofs ::g k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
@@ -1544,17 +1544,20 @@ Proof.
   rewrite D in STORE; clear D. 
   eapply transl_store_access_correct; eauto with asmgen.
 Qed.
+*)
 
+Definition noscroll := 0.
+(* 
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,
-  load_stack m (Vptr stk soff) Tptr f.(fn_link_ofs) = Some (parent_sp cs) ->
-  load_stack m (Vptr stk soff) Tptr f.(fn_retaddr_ofs) = Some (parent_ra cs) ->
+  Mach.load_stack m (Vptr stk soff) Tptr f.(fn_link_ofs) = Some (parent_sp cs) ->
+  Mach.load_stack m (Vptr stk soff) Tptr f.(fn_retaddr_ofs) = Some (parent_ra cs) ->
   Mem.free m stk 0 f.(fn_stacksize) = Some m' ->
   agree ms (Vptr stk soff) rs ->
   Mem.extends m tm ->
   match_stack ge0 cs ->
   exists rs', exists tm',
-     exec_straight ge fn (make_epilogue f k) rs tm k rs' tm'
+     exec_straight ge (make_epilogue f k) rs tm k rs' tm'
   /\ agree ms (parent_sp cs) rs'
   /\ Mem.extends m' tm'
   /\ rs'#RA = parent_ra cs
@@ -1600,8 +1603,7 @@ Proof.
   intros. Simpl.
   rewrite C2; auto.
 Qed.
-
-*)
+ *)
 End CONSTRUCTORS.
 
  
