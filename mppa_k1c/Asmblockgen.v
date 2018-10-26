@@ -878,15 +878,18 @@ Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instr
       | i::c => {| header := hd; body := ((i::c) ++ extract_basic ctl); exit := None |} :: nil
       end
 (* gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil *)
-  | Some (PExpand (Pbuiltin ef args res)) => ({| header := hd; body := c++(Pnop::nil); exit := None |}) :: 
-                                            ((PExpand (Pbuiltin ef args res)) ::b nil)
+  | Some (PExpand (Pbuiltin ef args res)) =>
+      match c with
+      | nil => {| header := hd; body := nil; exit := Some (PExpand (Pbuiltin ef args res)) |} :: nil
+      | _ => {| header := hd; body := c; exit := None |} 
+              :: {| header := nil; body := nil; exit := Some (PExpand (Pbuiltin ef args res)) |} :: nil
+      end
   | Some (PCtlFlow i) => {| header := hd; body := (c ++ extract_basic ctl); exit := Some (PCtlFlow i) |} :: nil
   end
 .
 Next Obligation.
-  bblock_auto_correct. intros. constructor. intro. apply app_eq_nil in H. destruct H. discriminate.
-Qed.
-Next Obligation.
+  bblock_auto_correct. intros. constructor. apply not_eq_sym. auto.
+Qed. Next Obligation.
   bblock_auto_correct.
 Qed.
 

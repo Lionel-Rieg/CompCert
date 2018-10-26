@@ -1134,7 +1134,7 @@ Lemma transl_blocks_nonil:
 Proof.
   intros until ep. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
   destruct (extract_ctl x2).
-  - destruct c0; destruct i; simpl; eauto.
+  - destruct c0; destruct i; simpl; eauto. destruct x1; simpl; eauto.
   - destruct x1; simpl; eauto.
 Qed.
 
@@ -1197,15 +1197,16 @@ Qed.
 Lemma gen_bblocks_nobuiltin:
   forall thd tbdy tex tbb,
   (tbdy <> nil \/ extract_ctl tex <> None) ->
+  (forall ef args res, extract_ctl tex <> Some (PExpand (Pbuiltin ef args res))) ->
   gen_bblocks thd tbdy tex = tbb :: nil ->
      header tbb = thd
   /\ body tbb = tbdy ++ extract_basic tex
   /\ exit tbb = extract_ctl tex.
 Proof.
-  intros until tbb. intros Hnonil GENB. unfold gen_bblocks in GENB.
+  intros until tbb. intros Hnonil Hnobuiltin GENB. unfold gen_bblocks in GENB.
   destruct (extract_ctl tex) eqn:ECTL.
   - destruct c.
-    + destruct i. inv GENB.
+    + destruct i. assert False. eapply Hnobuiltin. eauto. destruct H.
     + inv GENB. simpl. auto.
   - inversion Hnonil.
     + destruct tbdy as [|bi tbdy]; try (contradict H; simpl; auto; fail). inv GENB. auto.
@@ -1263,6 +1264,22 @@ Proof.
   - contradict Hnonil; auto.
 Qed.
 
+Lemma transl_instr_control_nobuiltin:
+  forall f ex x,
+  (forall ef args res, ex <> Some (MBbuiltin ef args res)) ->
+  transl_instr_control f ex = OK x ->
+  (forall ef args res, extract_ctl x <> Some (PExpand (Pbuiltin ef args res))).
+Proof.
+  intros until x. intros Hnobuiltin TIC. intros until res.
+  unfold transl_instr_control in TIC. exploreInst.
+  all: try discriminate.
+  - assert False. eapply Hnobuiltin; eauto. destruct H.
+  - unfold transl_cbranch in TIC. exploreInst.
+    all: try discriminate.
+    + unfold transl_opt_compuimm. exploreInst. all: try discriminate.
+    + unfold transl_opt_compluimm. exploreInst. all: try discriminate.
+Qed.
+
 Theorem match_state_codestate:
   forall mbs abs s fb sp bb c ms m,
   (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
@@ -1282,11 +1299,12 @@ Proof.
   inv AT. clear H0. exploit transl_blocks_nonil; eauto. intros (tbb & tc' & Htc). subst.
   exploit transl_blocks_distrib; eauto. intros (TLB & TLBS). clear H2.
   monadInv TLB. exploit gen_bblocks_nobuiltin; eauto.
-  { inversion Hnotempty.
-    - destruct (MB.body bb) as [|bi bdy]; try (contradict H0; simpl; auto; fail).
-      left. eapply transl_basic_code_nonil; eauto.
-    - destruct (MB.exit bb) as [ei|]; try (contradict H0; simpl; auto; fail).
-      right. eapply transl_instr_control_nonil; eauto. }
+    { inversion Hnotempty.
+      - destruct (MB.body bb) as [|bi bdy]; try (contradict H0; simpl; auto; fail).
+        left. eapply transl_basic_code_nonil; eauto.
+      - destruct (MB.exit bb) as [ei|]; try (contradict H0; simpl; auto; fail).
+        right. eapply transl_instr_control_nonil; eauto. }
+    eapply transl_instr_control_nobuiltin; eauto.
   intros (Hth & Htbdy & Htexit).
   exists {| pstate := (State rs m'); pheader := (Machblock.header bb); pbody1 := x; pbody2 := extract_basic x0;
             pctl := extract_ctl x0; fpok := ep; rem := tc'; cur := Some tbb |}, fb, f, tbb, tc', ep.
@@ -1310,6 +1328,7 @@ Qed.
 Lemma transl_block_nobuiltin:
   forall f bb ep tbb,
   (MB.body bb <> nil \/ MB.exit bb <> None) ->
+  (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   transl_block f bb ep = OK (tbb :: nil) ->
   exists c c',
      transl_basic_code f (MB.body bb) ep = OK c
@@ -1317,11 +1336,11 @@ Lemma transl_block_nobuiltin:
   /\ body tbb = c ++ extract_basic c'
   /\ exit tbb = extract_ctl c'.
 Proof.
-  intros until tbb. intros Hnonil TLB. monadInv TLB. destruct Hnonil.
+  intros until tbb. intros Hnonil Hnobuiltin TLB. monadInv TLB. destruct Hnonil.
   - eexists. eexists. split; eauto. split; eauto. eapply gen_bblocks_nobuiltin; eauto.
-    left. eapply transl_basic_code_nonil; eauto.
+    left. eapply transl_basic_code_nonil; eauto. eapply transl_instr_control_nobuiltin; eauto.
   - eexists. eexists. split; eauto. split; eauto. eapply gen_bblocks_nobuiltin; eauto.
-    right. eapply transl_instr_control_nonil; eauto.
+    right. eapply transl_instr_control_nonil; eauto. eapply transl_instr_control_nobuiltin; eauto.
 Qed.
 
 Lemma nextblock_preserves: 
