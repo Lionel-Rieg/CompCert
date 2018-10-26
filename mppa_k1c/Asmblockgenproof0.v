@@ -90,6 +90,15 @@ Proof.
   intros. apply nextblock_inv. red; intro; subst; discriminate.
 Qed.
 
+Lemma undef_regs_other:
+  forall r rl rs,
+  (forall r', In r' rl -> r <> r') ->
+  undef_regs rl rs r = rs r.
+Proof.
+  induction rl; simpl; intros. auto.
+  rewrite IHrl by auto. rewrite Pregmap.gso; auto.
+Qed.
+
 Fixpoint preg_notin (r: preg) (rl: list mreg) : Prop :=
   match rl with
   | nil => True
@@ -108,6 +117,16 @@ Proof.
   rewrite IHrl. split.
   intros [A B]. intros. destruct H. congruence. auto.
   auto.
+Qed.
+
+Lemma undef_regs_other_2:
+  forall r rl rs,
+  preg_notin r rl ->
+  undef_regs (map preg_of rl) rs r = rs r.
+Proof.
+  intros. apply undef_regs_other. intros.
+  exploit list_in_map_inv; eauto. intros [mr [A B]]. subst.
+  rewrite preg_notin_charact in H. auto.
 Qed.
 
 (** * Agreement between Mach registers and processor registers *)
@@ -347,6 +366,55 @@ Lemma extcall_arguments_match:
 Proof.
   unfold Mach.extcall_arguments, AB.extcall_arguments; intros.
   eapply extcall_args_match; eauto.
+Qed.
+
+Remark builtin_arg_match:
+  forall ge (rs: regset) sp m a v,
+  eval_builtin_arg ge (fun r => rs (preg_of r)) sp m a v ->
+  eval_builtin_arg ge rs sp m (map_builtin_arg preg_of a) v.
+Proof.
+  induction 1; simpl; eauto with barg.
+Qed.
+
+Lemma builtin_args_match:
+  forall ge ms sp rs m m', agree ms sp rs -> Mem.extends m m' ->
+  forall al vl, eval_builtin_args ge ms sp m al vl ->
+  exists vl', eval_builtin_args ge rs sp m' (map (map_builtin_arg preg_of) al) vl'
+           /\ Val.lessdef_list vl vl'.
+Proof.
+  induction 3; intros; simpl.
+  exists (@nil val); split; constructor.
+  exploit (@eval_builtin_arg_lessdef _ ge ms (fun r => rs (preg_of r))); eauto.
+  intros; eapply preg_val; eauto.
+  intros (v1' & A & B).
+  destruct IHlist_forall2 as [vl' [C D]].
+  exists (v1' :: vl'); split; constructor; auto. apply builtin_arg_match; auto.
+Qed.
+
+Lemma agree_set_res:
+  forall res ms sp rs v v',
+  agree ms sp rs ->
+  Val.lessdef v v' ->
+  agree (Mach.set_res res v ms) sp (AB.set_res (map_builtin_res preg_of res) v' rs).
+Proof.
+  induction res; simpl; intros.
+- eapply agree_set_mreg; eauto. rewrite Pregmap.gss. auto.
+  intros. apply Pregmap.gso; auto.
+- auto.
+- apply IHres2. apply IHres1. auto.
+  apply Val.hiword_lessdef; auto.
+  apply Val.loword_lessdef; auto.
+Qed.
+
+Lemma set_res_other:
+  forall r res v rs,
+  data_preg r = false ->
+  set_res (map_builtin_res preg_of res) v rs r = rs r.
+Proof.
+  induction res; simpl; intros.
+- apply Pregmap.gso. red; intros; subst r. rewrite preg_of_data in H; discriminate.
+- auto.
+- rewrite IHres2, IHres1; auto.
 Qed.
 
 (* inspired from Mach *)
