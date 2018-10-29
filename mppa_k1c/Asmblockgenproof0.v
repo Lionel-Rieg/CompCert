@@ -718,8 +718,24 @@ Proof.
       rewrite <- H7. simpl. rewrite H1. auto.
 Qed.
 
-(*     + contradict H4. generalize i1. induction c; simpl; try discriminate.
-        intros i0 X; inversion X. subst. eapply IHc. eauto. *)
+(* Lemma exec_straight_body2:
+  forall c c' l rs1 m1 rs2 m2,
+  exec_straight (c++c') rs1 m1 c' rs2 m2 ->
+  code_to_basics c = Some l ->
+  exec_body ge l rs1 m1 = Next rs2 m2.
+Proof.
+Admitted. *)
+
+Lemma exec_straight_trans:
+  forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
+  exec_straight c1 rs1 m1 c2 rs2 m2 ->
+  exec_straight c2 rs2 m2 c3 rs3 m3 ->
+  exec_straight c1 rs1 m1 c3 rs3 m3.
+Proof.
+  induction 1; intros.
+  apply exec_straight_step with rs2 m2; auto.
+  apply exec_straight_step with rs2 m2; auto.
+Qed.
 
 (* Theorem exec_straight_bblock:
   forall rs1 m1 rs2 m2 rs3 m3 b,
@@ -732,16 +748,6 @@ Proof.
   inv H0. auto.
 Qed. *)
 
-Lemma exec_straight_trans:
-  forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
-  exec_straight c1 rs1 m1 c2 rs2 m2 ->
-  exec_straight c2 rs2 m2 c3 rs3 m3 ->
-  exec_straight c1 rs1 m1 c3 rs3 m3.
-Proof.
-  induction 1; intros.
-  apply exec_straight_step with rs2 m2; auto.
-  apply exec_straight_step with rs2 m2; auto.
-Qed.
 
 Lemma exec_straight_two:
   forall i1 i2 c rs1 m1 rs2 m2 rs3 m3,

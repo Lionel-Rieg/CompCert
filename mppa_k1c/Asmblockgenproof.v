@@ -962,6 +962,13 @@ Qed.
 
 Axiom TODO: False.
 
+Lemma cons3_app {A: Type}:
+  forall a b c (l: list A),
+  a :: b :: c :: l = (a :: b :: c :: nil) ++ l.
+Proof.
+  intros. simpl. auto.
+Qed.
+
 Theorem step_simu_control:
   forall bb' fb fn s sp c ms' m' rs2 m2 E0 S'' rs1 m1 tbb tbdy2 tex cs2,
   MB.body bb' = nil ->
@@ -978,8 +985,10 @@ Theorem step_simu_control:
   /\  exec_control_rel tge fn tex tbb rs3 m3 rs4 m4
   /\  match_states S'' (State rs4 m4)).
 Proof.
-  intros until cs2. intros Hbody Hbuiltin FIND Hpstate Hpbody1 Hpbody2 Hpctl Hcur MCS MAS ESTEP. inv ESTEP.
+  intros until cs2. intros Hbody Hbuiltin FIND Hpstate Hpbody1 Hpbody2 Hpctl Hcur MCS MAS ESTEP.
+  inv ESTEP.
   - inv MCS. inv MAS. simpl in *.
+    inv Hcur. inv Hpstate.
     destruct ctl.
     + (* MBcall *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
@@ -998,16 +1007,15 @@ Proof.
           econstructor; eauto.
         assert (f1 = f) by congruence. subst f1.
         exploit return_address_offset_correct; eauto. intros; subst ra.
-        inv Hcur.
         repeat eexists.
           rewrite H6. econstructor; eauto.
           rewrite H7. econstructor; eauto.
-        inv Hpstate. econstructor; eauto.
+        econstructor; eauto.
           econstructor; eauto. eapply agree_sp_def; eauto. simpl. eapply agree_exten; eauto. intros. Simpl.
         Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. simpl in H14. rewrite H14. auto.
         Simpl. simpl. subst. Simpl. simpl. unfold Val.offset_ptr. rewrite PCeq. auto.
-    + (* MBtailcall *) destruct TODO.
-(*       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+    + (* MBtailcall *) (* destruct TODO. *)
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
 
       assert (f0 = f) by congruence.  subst f0.
@@ -1016,9 +1024,21 @@ Proof.
       exploit Mem.loadv_extends. eauto. eexact H15. auto. simpl. intros [parent' [A B]].
       destruct s1 as [rf|fid]; simpl in H13. 
       * inv H1.
-      * monadInv H1. inv Hpstate. inv Hcur. assert (f = f1) by congruence. subst f1. clear FIND1. clear H14.
-        exploit make_epilogue_correct; eauto.
- *)
+      * monadInv H1. assert (f = f1) by congruence. subst f1. clear FIND1. clear H14.
+        exploit make_epilogue_correct; eauto. intros (rs1 & m1 & U & V & W & X & Y & Z).
+        exploit exec_straight_body; eauto.
+          simpl. eauto.
+        intros EXEB.
+        repeat eexists.
+          rewrite H6. simpl extract_basic. eauto.
+          rewrite H7. simpl extract_ctl. simpl. reflexivity.
+        econstructor; eauto.
+        { apply agree_set_other.
+          - econstructor; auto with asmgen.
+            + apply V.
+            + intro r. destruct r; apply V; auto.
+          - eauto with asmgen. }
+        { Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. rewrite H13. auto. }
     + (* MBbuiltin (contradiction) *)
       assert (MB.exit bb' <> Some (MBbuiltin e l b)) by (apply Hbuiltin).
       rewrite <- H in H1. contradict H1; auto.

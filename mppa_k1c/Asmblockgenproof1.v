@@ -1377,13 +1377,11 @@ Proof.
 - intros. Simpl.
 Qed.
 
-(*
-
 Lemma Pset_correct:
   forall (dst: preg) (src: gpreg) k (rs: regset) m,
   dst = RA ->
   exists rs',
-     exec_straight ge fn (Pset dst src ::i k) rs m k rs' m
+     exec_straight ge (Pset dst src ::g k) rs m k rs' m
   /\ rs'#dst = rs#src
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
@@ -1393,8 +1391,6 @@ Proof.
   Simpl.
   intros. rewrite H. Simpl.
 Qed.
-
-*)
 
 Lemma loadind_ptr_correct:
   forall (base: ireg) ofs (dst: ireg) k (rs: regset) m v,
@@ -1547,7 +1543,7 @@ Qed.
 *)
 
 Definition noscroll := 0.
-(* 
+
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,
   Mach.load_stack m (Vptr stk soff) Tptr f.(fn_link_ofs) = Some (parent_sp cs) ->
@@ -1573,8 +1569,8 @@ Proof.
   unfold make_epilogue. 
   rewrite chunk_of_Tptr in *.
 
-  exploit (loadind_ptr_correct SP (fn_retaddr_ofs f) GPR8 (Pset RA GPR8
-           ::i Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::i k) rs tm).
+  exploit ((loadind_ptr_correct SP (fn_retaddr_ofs f) GPR8 (Pset RA GPR8 ::g Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::g k))
+            rs tm).
   - rewrite <- (sp_val _ _ rs AG). simpl. eexact LRA'.
   - congruence.
   - intros (rs1 & A1 & B1 & C1).
@@ -1583,7 +1579,7 @@ Proof.
       apply mkagree; auto.
       rewrite C1; discriminate || auto.
       intro. rewrite C1; auto; destruct r; simpl; try discriminate.
-    + exploit (Pset_correct RA GPR8 (Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::i k) rs1 tm). auto.
+    + exploit (Pset_correct RA GPR8 (Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::g k) rs1 tm). auto.
       intros (rs2 & A2 & B2 & C2).
       econstructor; econstructor; split.
       * eapply exec_straight_trans.
@@ -1592,8 +1588,8 @@ Proof.
           { eapply A2. }
           { apply exec_straight_one. simpl.
             rewrite (C2 GPR12) by auto with asmgen. rewrite <- (sp_val _ _ rs1 AG1). simpl; rewrite LP'.
-            rewrite FREE'; eauto. auto. } }
-      * split. apply agree_nextinstr. apply agree_set_other; auto with asmgen. 
+            rewrite FREE'; eauto. (* auto. *) } }
+      * split. (* apply agree_nextinstr.  *)apply agree_set_other; auto with asmgen. 
     apply agree_change_sp with (Vptr stk soff).
     apply agree_exten with rs; auto. intros; rewrite C2; auto with asmgen.
     eapply parent_sp_def; eauto.
@@ -1603,7 +1599,7 @@ Proof.
   intros. Simpl.
   rewrite C2; auto.
 Qed.
- *)
+
 End CONSTRUCTORS.
 
  
