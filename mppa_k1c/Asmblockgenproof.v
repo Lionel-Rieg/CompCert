@@ -324,8 +324,9 @@ Qed.
 - destruct (Int.eq n Int.zero); TailNoLabel.
 - eapply transl_cond_op_label; eauto.
 *)
+*)
 
-Remark indexed_memory_access_label:
+(* Remark indexed_memory_access_label:
   forall (mk_instr: ireg -> offset -> instruction) base ofs k,
   (forall r o, nolabel (mk_instr r o)) ->
   tail_nolabel k (indexed_memory_access mk_instr base ofs k).
@@ -334,8 +335,9 @@ Proof.
   (* destruct Archi.ptr64. *)
   destruct (make_immed64 (Ptrofs.to_int64 ofs)); TailNoLabel.
   (* destruct (make_immed32 (Ptrofs.to_int ofs)); TailNoLabel. *)
-Qed.
+Qed. *)
 
+(*
 Remark loadind_label:
   forall base ofs ty dst k c,
   loadind base ofs ty dst k = OK c -> tail_nolabel k c.
@@ -357,13 +359,15 @@ Remark loadind_ptr_label:
 Proof.
   intros. apply indexed_memory_access_label. intros; destruct Archi.ptr64; exact I.
 Qed.
+*)
 
-Remark storeind_ptr_label:
+(* Remark storeind_ptr_label:
   forall src base ofs k, tail_nolabel k (storeind_ptr src base ofs k).
 Proof.
   intros. apply indexed_memory_access_label. intros; destruct Archi.ptr64; exact I.
-Qed.
+Qed. *)
 
+(*
 Remark transl_memory_access_label:
   forall (mk_instr: ireg -> offset -> instruction) addr args k c,
   (forall r o, nolabel (mk_instr r o)) ->
@@ -423,57 +427,171 @@ Proof.
   destruct i; try (intros [A B]; apply B).
   intros. subst c. simpl. auto.
 Qed.
+*)
 
-Lemma transl_code_label:
-  forall lbl f c ep tc,
-  transl_code f c ep = OK tc ->
-  match Mach.find_label lbl c with
+Lemma gen_bblocks_label:
+  forall hd bdy ex tbb tc,
+  gen_bblocks hd bdy ex = tbb::tc ->
+  header tbb = hd.
+Proof.
+  intros until tc. intros GENB. unfold gen_bblocks in GENB.
+  destruct (extract_ctl ex); try destruct c; try destruct i; try destruct bdy.
+  all: inv GENB; simpl; auto.
+Qed.
+
+Lemma gen_bblocks_label2:
+  forall hd bdy ex tbb1 tbb2,
+  gen_bblocks hd bdy ex = tbb1::tbb2::nil ->
+  header tbb2 = nil.
+Proof.
+  intros until tbb2. intros GENB. unfold gen_bblocks in GENB.
+  destruct (extract_ctl ex); try destruct c; try destruct i; try destruct bdy.
+  all: inv GENB; simpl; auto.
+Qed.
+
+Lemma in_dec_transl:
+  forall lbl hd,
+  (if in_dec lbl hd then true else false) = (if MB.in_dec lbl hd then true else false).
+Proof.
+Admitted.
+
+Lemma transl_is_label:
+  forall lbl bb tbb f ep tc,
+  transl_block f bb ep = OK (tbb::tc) ->
+  is_label lbl tbb = MB.is_label lbl bb.
+Proof.
+  intros until tc. intros TLB.
+  destruct tbb as [thd tbdy tex]; simpl in *.
+  monadInv TLB.
+  unfold is_label. simpl.
+  apply gen_bblocks_label in H0. simpl in H0. subst.
+  rewrite in_dec_transl. auto.
+Qed.
+
+Lemma transl_is_label_false2:
+  forall lbl bb f ep tbb1 tbb2,
+  transl_block f bb ep = OK (tbb1::tbb2::nil) ->
+  is_label lbl tbb2 = false.
+Proof.
+  intros until tbb2. intros TLB.
+  destruct tbb2 as [thd tbdy tex]; simpl in *.
+  monadInv TLB. apply gen_bblocks_label2 in H0. simpl in H0. subst.
+  apply is_label_correct_false. simpl. auto.
+Qed.
+
+Lemma transl_is_label2:
+  forall f bb ep tbb1 tbb2 lbl,
+  transl_block f bb ep = OK (tbb1::tbb2::nil) ->
+     is_label lbl tbb1 = MB.is_label lbl bb
+  /\ is_label lbl tbb2 = false.
+Proof.
+  intros. split. eapply transl_is_label; eauto. eapply transl_is_label_false2; eauto.
+Qed.
+
+Lemma transl_block_nonil:
+  forall f c ep tc,
+  transl_block f c ep = OK tc ->
+  tc <> nil.
+Proof.
+  intros. monadInv H. unfold gen_bblocks.
+  destruct (extract_ctl x0); try destruct c0; try destruct x; try destruct i.
+  all: discriminate.
+Qed.
+
+Lemma transl_block_limit: forall f bb ep tbb1 tbb2 tbb3 tc,
+  ~transl_block f bb ep = OK (tbb1 :: tbb2 :: tbb3 :: tc).
+Proof.
+  intros. intro. monadInv H.
+  unfold gen_bblocks in H0.
+  destruct (extract_ctl x0); try destruct x; try destruct c; try destruct i.
+  all: discriminate.
+Qed.
+
+Lemma find_label_transl_false:
+  forall x f lbl bb ep x',
+  transl_block f bb ep = OK x ->
+  MB.is_label lbl bb = false ->
+  find_label lbl (x++x') = find_label lbl x'.
+Proof.
+  intros until x'. intros TLB MBis; simpl; auto.
+  destruct x as [|x0 x1]; simpl; auto.
+  destruct x1 as [|x1 x2]; simpl; auto.
+  - erewrite <- transl_is_label in MBis; eauto. rewrite MBis. auto.
+  - destruct x2 as [|x2 x3]; simpl; auto.
+    + erewrite <- transl_is_label in MBis; eauto. rewrite MBis.
+      erewrite transl_is_label_false2; eauto.
+    + apply transl_block_limit in TLB. destruct TLB.
+Qed.
+
+Lemma transl_blocks_label:
+  forall lbl f c tc ep,
+  transl_blocks f c ep = OK tc ->
+  match MB.find_label lbl c with
   | None => find_label lbl tc = None
-  | Some c' => exists tc', find_label lbl tc = Some tc' /\ transl_code f c' false = OK tc'
+  | Some c' => exists tc', find_label lbl tc = Some tc' /\ transl_blocks f c' false = OK tc'
   end.
 Proof.
   induction c; simpl; intros.
   inv H. auto.
-  monadInv H. rewrite (transl_instr_label' lbl _ _ _ _ _ EQ0).
-  generalize (Mach.is_label_correct lbl a).
-  destruct (Mach.is_label lbl a); intros.
-  subst a. simpl in EQ. exists x; auto.
-  eapply IHc; eauto.
+  monadInv H.
+  destruct (MB.is_label lbl a) eqn:MBis.
+  - destruct x as [|tbb tc]. { apply transl_block_nonil in EQ. contradiction. }
+    simpl find_label. exploit transl_is_label; eauto. intros ABis. rewrite MBis in ABis.
+    rewrite ABis.
+    eexists. eexists. split; eauto. simpl transl_blocks.
+    assert (MB.header a <> nil).
+    { apply MB.is_label_correct_true in MBis.
+      destruct (MB.header a). contradiction. discriminate. }
+    destruct (MB.header a); try contradiction.
+    rewrite EQ. simpl. rewrite EQ1. simpl. auto.
+  - apply IHc in EQ1. destruct (MB.find_label lbl c).
+    + destruct EQ1 as (tc' & FIND & TLBS). exists tc'; eexists; auto.
+      erewrite find_label_transl_false; eauto.
+    + erewrite find_label_transl_false; eauto.
+Qed.
+
+Lemma find_label_nil:
+  forall bb lbl c,
+  header bb = nil ->
+  find_label lbl (bb::c) = find_label lbl c.
+Proof.
+  intros. destruct bb as [hd bdy ex]; simpl in *. subst.
+  assert (is_label lbl {| AB.header := nil; AB.body := bdy; AB.exit := ex; AB.correct := correct |} = false).
+  { erewrite <- is_label_correct_false. simpl. auto. }
+  rewrite H. auto.
 Qed.
 
 Lemma transl_find_label:
   forall lbl f tf,
   transf_function f = OK tf ->
-  match Mach.find_label lbl f.(Mach.fn_code) with
-  | None => find_label lbl tf.(fn_code) = None
-  | Some c => exists tc, find_label lbl tf.(fn_code) = Some tc /\ transl_code f c false = OK tc
+  match MB.find_label lbl f.(MB.fn_code) with
+  | None => find_label lbl tf.(fn_blocks) = None
+  | Some c => exists tc, find_label lbl tf.(fn_blocks) = Some tc /\ transl_blocks f c false = OK tc
   end.
 Proof.
-  intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (list_length_z x.(fn_code))); inv EQ0.
-  monadInv EQ. rewrite transl_code'_transl_code in EQ0. unfold fn_code. 
-  simpl. destruct (storeind_ptr_label GPR8 GPR12 (fn_retaddr_ofs f) x) as [A B]. 
-  (* destruct B. *)
-  eapply transl_code_label; eauto.
+  intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks x))); inv EQ0. clear g.
+  monadInv EQ. simpl fn_blocks. repeat (rewrite find_label_nil); simpl; auto.
+  eapply transl_blocks_label; eauto.
 Qed.
- *)
+
 End TRANSL_LABEL.
 
 (** A valid branch in a piece of Mach code translates to a valid ``go to''
   transition in the generated Asm code. *)
 
-(* Lemma find_label_goto_label:
+Lemma find_label_goto_label:
   forall f tf lbl rs m c' b ofs,
   Genv.find_funct_ptr ge b = Some (Internal f) ->
   transf_function f = OK tf ->
   rs PC = Vptr b ofs ->
-  Mach.find_label lbl f.(Mach.fn_code) = Some c' ->
+  MB.find_label lbl f.(MB.fn_code) = Some c' ->
   exists tc', exists rs',
     goto_label tf lbl rs m = Next rs' m
   /\ transl_code_at_pc ge (rs' PC) b f c' false tf tc'
   /\ forall r, r <> PC -> rs'#r = rs#r.
 Proof.
   intros. exploit (transl_find_label lbl f tf); eauto. rewrite H2.
-  intros [tc [A B]].
+  intros (tc & A & B).
   exploit label_pos_code_tail; eauto. instantiate (1 := 0).
   intros [pos' [P [Q R]]].
   exists tc; exists (rs#PC <- (Vptr b (Ptrofs.repr pos'))).
@@ -484,7 +602,6 @@ Proof.
   generalize (transf_function_no_overflow _ _ H0). omega.
   intros. apply Pregmap.gso; auto.
 Qed.
-*)
 
 (** Existence of return addresses *)
 
@@ -693,7 +810,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (STACKS: match_stack ge s)
         (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
         (MEXT: Mem.extends m m0)
-        (TBC: transl_basic_code f (MB.body bb) ep = OK tbc)
+        (TBC: transl_basic_code f (MB.body bb) (if MB.header bb then ep else false) = OK tbc)
         (TIC: transl_instr_control f (MB.exit bb) = OK tbi)
         (TBLS: transl_blocks f c false = OK tc)
 (*         (TRANS: transl_blocks f (bb::c) ep = OK (tbb::tc)) *)
@@ -732,6 +849,16 @@ Inductive match_asmblock fb: codestate -> Asmblock.state -> Prop :=
         (Asmblock.State rs m)
 .
 
+Ltac exploreInst :=
+  repeat match goal with
+  | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
+  | [ H : OK _ = OK _ |- _ ] => monadInv H
+  | [ |- context[if ?b then _ else _] ] => destruct b
+  | [ |- context[match ?m with | _ => _ end] ] => destruct m
+  | [ |- context[match ?m as _ return _ with | _ => _ end]] => destruct m
+  | [ H : bind _ _ = OK _ |- _ ] => monadInv H
+  | [ H : Error _ = OK _ |- _ ] => inversion H
+  end.
 
 Lemma transl_blocks_nonil:
   forall f bb c tc ep,
@@ -743,16 +870,6 @@ Proof.
   - destruct c0; destruct i; simpl; eauto. destruct x1; simpl; eauto.
   - destruct x1; simpl; eauto.
 Qed.
-
-Ltac exploreInst :=
-  repeat match goal with
-  | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
-  | [ H : OK _ = OK _ |- _ ] => monadInv H
-  | [ |- context[if ?b then _ else _] ] => destruct b
-  | [ |- context[match ?m with | _ => _ end] ] => destruct m
-  | [ H : bind _ _ = OK _ |- _ ] => monadInv H
-  | [ H : Error _ = OK _ |- _ ] => inversion H
-  end.
 
 Lemma no_builtin_preserved:
   forall f ex x2,
@@ -781,7 +898,7 @@ Lemma transl_blocks_distrib:
   forall c f bb tbb tc ep,
   transl_blocks f (bb::c) ep = OK (tbb::tc)
   -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res))
-  -> transl_block f bb ep = OK (tbb :: nil)
+  -> transl_block f bb (if MB.header bb then ep else false) = OK (tbb :: nil)
   /\ transl_blocks f c false = OK tc.
 Proof.
   intros until ep. intros TLBS Hbuiltin.
@@ -1014,7 +1131,7 @@ Proof.
           econstructor; eauto. eapply agree_sp_def; eauto. simpl. eapply agree_exten; eauto. intros. Simpl.
         Simpl. unfold Genv.symbol_address. rewrite symbols_preserved. simpl in H14. rewrite H14. auto.
         Simpl. simpl. subst. Simpl. simpl. unfold Val.offset_ptr. rewrite PCeq. auto.
-    + (* MBtailcall *) (* destruct TODO. *)
+    + (* MBtailcall *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
 
@@ -1043,7 +1160,35 @@ Proof.
       assert (MB.exit bb' <> Some (MBbuiltin e l b)) by (apply Hbuiltin).
       rewrite <- H in H1. contradict H1; auto.
     + (* MBgoto *)
-      destruct TODO.
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC. inv H0.
+
+      assert (f0 = f) by congruence. subst f0. assert (f1 = f) by congruence. subst f1. clear H11.
+      remember (nextblock tbb rs2) as rs2'.
+      (* inv AT. monadInv H4. *)
+      exploit functions_transl. eapply FIND0. eapply TRANSF0. intros FIND'.
+      assert (tf = fn) by congruence. subst tf.
+      exploit find_label_goto_label.
+        eauto. eauto.
+        instantiate (2 := rs2').
+        { subst. unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. eauto. }
+        eauto.
+      intros (tc' & rs' & GOTO & AT2 & INV).
+
+      eexists. eexists. repeat eexists. repeat split.
+        rewrite H6. simpl extract_basic. simpl. eauto.
+        rewrite H7. simpl extract_ctl. simpl. rewrite <- Heqrs2'. eauto.
+      econstructor; eauto.
+        rewrite Heqrs2' in INV. unfold nextblock in INV.
+        eapply agree_exten; eauto with asmgen.
+        assert (forall r : preg, r <> PC -> rs' r = rs2 r).
+        { intros. destruct r.
+          - destruct g. all: rewrite INV; Simpl; auto.
+          - destruct g. all: rewrite INV; Simpl; auto.
+          - rewrite INV; Simpl; auto.
+          - contradiction. }
+        eauto with asmgen.
+        congruence.
     + (* MBcond *)
       destruct TODO.
     + (* MBjumptable *)
@@ -1147,7 +1292,7 @@ Proof.
     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     rewrite <- Hheadereq. subst.
 
-    eapply match_codestate_intro; eauto.
+    eapply match_codestate_intro; eauto. simpl. simpl in EQ. { destruct (MB.header bb); auto. }
     eapply agree_set_mreg; eauto with asmgen.
     intro Hep. simpl in Hep. inv Hep.
   - (* MBsetstack *)
@@ -1173,7 +1318,8 @@ Proof.
     eapply agree_undef_regs; eauto with asmgen.
     simpl; intros. rewrite Q; auto with asmgen.
   - (* MBgetparam *)
-    simpl in EQ0.
+    destruct TODO.
+(*     simpl in EQ0.
 
     assert (f0 = f) by congruence; subst f0.
     unfold Mach.load_stack in *.
@@ -1198,7 +1344,8 @@ Proof.
       exists rs2, m1, ll.
       eexists. eexists. split. instantiate (1 := x). eauto.
       repeat (split; auto).
-        eapply basics_to_code_app; eauto.
+        { eapply basics_to_code_app; eauto.
+          destruct (MB.header bb). eauto. simpl.
       remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
       assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
       rewrite <- Hheadereq. subst.
@@ -1236,7 +1383,7 @@ Proof.
       congruence.
       intros. unfold Pregmap.set. destruct (PregEq.eq r' FP). congruence. auto with asmgen.
       simpl; intros. rewrite U; auto with asmgen.
-      apply preg_of_not_FP; auto.
+      apply preg_of_not_FP; auto. *)
   - (* MBop *)
     destruct TODO.
   - (* MBload *)

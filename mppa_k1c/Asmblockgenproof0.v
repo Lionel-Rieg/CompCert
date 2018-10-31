@@ -666,6 +666,103 @@ Proof.
   congruence.
 Qed.
 
+(** The [find_label] function returns the code tail starting at the
+  given label.  A connection with [code_tail] is then established. *)
+
+Fixpoint find_label (lbl: label) (c: bblocks) {struct c} : option bblocks :=
+  match c with
+  | nil => None
+  | bb1 :: bbl => if is_label lbl bb1 then Some c else find_label lbl bbl
+  end.
+
+Lemma label_pos_code_tail:
+  forall lbl c pos c',
+  find_label lbl c = Some c' ->
+  exists pos',
+  label_pos lbl pos c = Some pos'
+  /\ code_tail (pos' - pos) c c'
+  /\ pos <= pos' <= pos + size_blocks c.
+Proof.
+  induction c.
+  simpl; intros. discriminate.
+  simpl; intros until c'.
+  case (is_label lbl a).
+  - intros. inv H. exists pos. split; auto. split.
+    replace (pos - pos) with 0 by omega. constructor. constructor; try omega.
+    generalize (size_blocks_pos c). generalize (size_positive a). omega.
+  - intros. generalize (IHc (pos+size a) c' H). intros [pos' [A [B C]]].
+  exists pos'. split. auto. split.
+  replace (pos' - pos) with ((pos' - (pos + (size a))) + (size a)) by omega.
+  constructor. auto. generalize (size_positive a). omega.
+Qed.
+
+(** Helper lemmas to reason about
+- the "code is tail of" property
+- correct translation of labels. *)
+
+Definition tail_nolabel (k c: bblocks) : Prop :=
+  is_tail k c /\ forall lbl, find_label lbl c = find_label lbl k.
+
+Lemma tail_nolabel_refl:
+  forall c, tail_nolabel c c.
+Proof.
+  intros; split. apply is_tail_refl. auto.
+Qed.
+
+Lemma tail_nolabel_trans:
+  forall c1 c2 c3, tail_nolabel c2 c3 -> tail_nolabel c1 c2 -> tail_nolabel c1 c3.
+Proof.
+  intros. destruct H; destruct H0; split.
+  eapply is_tail_trans; eauto.
+  intros. rewrite H1; auto.
+Qed.
+
+Definition nolabel (b: bblock) :=
+  match (header b) with nil => True | _ => False end.
+
+Hint Extern 1 (nolabel _) => exact I : labels.
+
+Lemma tail_nolabel_cons:
+  forall b c k,
+  nolabel b -> tail_nolabel k c -> tail_nolabel k (b :: c).
+Proof.
+  intros. destruct H0. split.
+  constructor; auto.
+  intros. simpl. rewrite <- H1. destruct b as [hd bdy ex]; simpl in *.
+  destruct hd as [|l hd]; simpl in *.
+  - assert (is_label lbl {| AB.header := nil; AB.body := bdy; AB.exit := ex; AB.correct := correct |} = false).
+    { apply is_label_correct_false. simpl header. apply in_nil. }
+    rewrite H2. auto.
+  - contradiction.
+Qed.
+
+Hint Resolve tail_nolabel_refl: labels.
+
+Ltac TailNoLabel :=
+  eauto with labels;
+  match goal with
+  | [ |- tail_nolabel _ (_ :: _) ] => apply tail_nolabel_cons; [auto; exact I | TailNoLabel]
+  | [ H: Error _ = OK _ |- _ ] => discriminate
+  | [ H: assertion_failed = OK _ |- _ ] => discriminate
+  | [ H: OK _ = OK _ |- _ ] => inv H; TailNoLabel
+  | [ H: bind _ _ = OK _ |- _ ] => monadInv H;  TailNoLabel
+  | [ H: (if ?x then _ else _) = OK _ |- _ ] => destruct x; TailNoLabel
+  | [ H: match ?x with nil => _ | _ :: _ => _ end = OK _ |- _ ] => destruct x; TailNoLabel
+  | _ => idtac
+  end.
+
+Remark tail_nolabel_find_label:
+  forall lbl k c, tail_nolabel k c -> find_label lbl c = find_label lbl k.
+Proof.
+  intros. destruct H. auto.
+Qed.
+
+Remark tail_nolabel_is_tail:
+  forall k c, tail_nolabel k c -> is_tail k c.
+Proof.
+  intros. destruct H. auto.
+Qed.
+
 Section STRAIGHTLINE.
 
 Variable ge: genv.
