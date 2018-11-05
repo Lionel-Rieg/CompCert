@@ -821,7 +821,7 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
 
 (** Translation of a code sequence *)
 
-Definition it1_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
+Definition fp_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
   match i with
   | MBsetstack src ofs ty => before
   | MBgetparam ofs ty dst => negb (mreg_eq dst R10)
@@ -836,7 +836,7 @@ Fixpoint transl_basic_code (f: Machblock.function) (il: list Machblock.basic_ins
   match il with
   | nil => OK nil
   | i1 :: il' =>
-      do k <- transl_basic_code f il' (it1_is_parent it1p i1);
+      do k <- transl_basic_code f il' (fp_is_parent it1p i1);
       transl_instr_basic f i1 it1p k
   end.
 
@@ -848,7 +848,7 @@ Fixpoint transl_basic_rec (f: Machblock.function) (il: list Machblock.basic_inst
   match il with
   | nil => k nil
   | i1 :: il' =>
-      transl_basic_rec f il' (it1_is_parent it1p i1)
+      transl_basic_rec f il' (fp_is_parent it1p i1)
         (fun c1 => do c2 <- transl_instr_basic f i1 it1p c1; k c2)
   end.
 

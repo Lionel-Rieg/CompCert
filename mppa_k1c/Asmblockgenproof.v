@@ -650,7 +650,7 @@ Lemma exec_straight_steps:
    exists rs2,
        exec_straight tge tf c rs1 m1' k rs2 m2'
     /\ agree ms2 sp rs2
-    /\ (it1_is_parent ep i = true -> rs2#FP = parent_sp s)) ->
+    /\ (fp_is_parent ep i = true -> rs2#FP = parent_sp s)) ->
   exists st',
   plus step tge (State rs1 m1') E0 st' /\
   match_states (Mach.State s fb sp c ms2 m2) st'.
@@ -671,7 +671,7 @@ Lemma exec_straight_steps_goto:
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
   Mach.find_label lbl f.(Mach.fn_code) = Some c' ->
   transl_code_at_pc ge (rs1 PC) fb f (i :: c) ep tf tc ->
-  it1_is_parent ep i = false ->
+  fp_is_parent ep i = false ->
   (forall k c (TR: transl_instr f i ep k = OK c),
    exists jmp, exists k', exists rs2,
        exec_straight tge tf c rs1 m1' (jmp :: k') rs2 m2'
@@ -708,7 +708,7 @@ Lemma exec_straight_opt_steps_goto:
   Genv.find_funct_ptr ge fb = Some (Internal f) ->
   Mach.find_label lbl f.(Mach.fn_code) = Some c' ->
   transl_code_at_pc ge (rs1 PC) fb f (i :: c) ep tf tc ->
-  it1_is_parent ep i = false ->
+  fp_is_parent ep i = false ->
   (forall k c (TR: transl_instr f i ep k = OK c),
    exists jmp, exists k', exists rs2,
        exec_straight_opt tge tf c rs1 m1' (jmp :: k') rs2 m2'
@@ -1196,7 +1196,24 @@ Proof.
     + (* MBjumptable *)
       destruct TODO.
     + (* MBreturn *)
-      destruct TODO.
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC. inv H0.
+
+      assert (f0 = f) by congruence. subst f0.
+      assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
+        eapply transf_function_no_overflow; eauto.
+      exploit make_epilogue_correct; eauto. intros (rs1 & m1 & U & V & W & X & Y & Z).
+      exploit exec_straight_body; eauto.
+        simpl. eauto.
+      intros EXEB.
+      assert (f1 = f) by congruence. subst f1.
+      
+      repeat eexists.
+        rewrite H6. simpl extract_basic. eauto.
+        rewrite H7. simpl extract_ctl. simpl. reflexivity.
+      econstructor; eauto.
+        unfold nextblock. repeat apply agree_set_other; auto with asmgen.
+
   - inv MCS. inv MAS. simpl in *. subst. inv Hpstate. inv Hcur.
 (*     exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
     intros (TLB & TLBS).
@@ -1267,7 +1284,7 @@ Lemma step_simu_basic:
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 l cs2 tbdy',
        cs2 = {| pstate := (State rs2 m2); pheader := nil; pbody1 := tbdy'; pbody2 := pbody2 cs1;
-                pctl := pctl cs1; fpok := it1_is_parent (fpok cs1) bi; rem := rem cs1; cur := cur cs1 |}
+                pctl := pctl cs1; fpok := fp_is_parent (fpok cs1) bi; rem := rem cs1; cur := cur cs1 |}
     /\ tbdy = l ++ tbdy'
     /\ exec_body tge l rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2).
