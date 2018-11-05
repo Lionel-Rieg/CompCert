@@ -1193,6 +1193,21 @@ Proof.
         congruence.
     + (* MBcond *)
       destruct TODO.
+      (* destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC. inv H0.
+
+      * (* MBcond true *)
+        assert (f0 = f) by congruence. subst f0.
+        exploit eval_condition_lessdef.
+          eapply preg_vals; eauto.
+          all: eauto.
+        intros EC.
+        
+
+        repeat eexists.
+          rewrite H6. simpl extract_basic. eauto.
+          rewrite H7. simpl extract_ctl. simpl. reflexivity.
+ *)
     + (* MBjumptable *)
       destruct TODO.
     + (* MBreturn *)

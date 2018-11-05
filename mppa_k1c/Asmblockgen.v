@@ -133,7 +133,7 @@ Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompl (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
 
-(* Definition select_comp (n: int) (c: comparison) : option comparison :=
+Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
     match c with
     | Ceq => Some Ceq
@@ -142,7 +142,7 @@ Definition transl_compl
     end
   else
     None
-  . *)
+  .
 
 Definition transl_opt_compuimm
     (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
