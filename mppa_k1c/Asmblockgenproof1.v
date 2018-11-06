@@ -75,7 +75,7 @@ Proof.
   auto.
 Qed.
 
-(*
+
 
 (** Properties of registers *)
 
@@ -93,7 +93,7 @@ Qed.
 
 Hint Resolve ireg_of_not_GPR31 ireg_of_not_GPR31': asmgen.
 
-*)
+
 (** Useful simplification tactic *)
 
 Ltac Simplif :=
@@ -589,7 +589,7 @@ Proof.
   - (* c = Cge *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
     destruct cmp; discriminate.
 Qed.
-(* 
+
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m',
   transl_cbranch cond args lbl k = OK c ->
@@ -652,7 +652,12 @@ Proof.
     split.
     * apply A.
     * split; auto. apply C. apply EVAL'.
-  + unfold transl_opt_compuimm. rewrite <- Heqselcomp; simpl.
+  + assert (transl_opt_compuimm n c0 x lbl k = loadimm32 GPR31 n ::g transl_comp c0 Unsigned x GPR31 lbl k).
+    { unfold transl_opt_compuimm.
+      destruct (Int.eq n Int.zero) eqn:EQN.
+      all: unfold select_comp in Heqselcomp; rewrite EQN in Heqselcomp; destruct c0; simpl in *; auto.
+      all: discriminate. }
+    rewrite H. clear H.
     exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
     exploit (transl_compu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez GPR31 lbl).
@@ -661,7 +666,7 @@ Proof.
          with (c2 := (transl_comp c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
       eexact A. eexact A'.
     * split; auto.
-      { apply C'; auto. unfold getw. rewrite B, C; eauto with asmgen. }
+      { apply C'; auto. rewrite B, C; eauto with asmgen. }
       { intros. rewrite B'; eauto with asmgen. }
 (* Ccompl *)
 - exploit (transl_compl_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
@@ -688,7 +693,7 @@ Proof.
     * constructor.
     * split; auto.
       destruct c0; simpl; auto;
-      unfold eval_branch; rewrite <- H; unfold getl; rewrite EVAL'; auto.
+      unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
   + exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
     exploit (transl_compl_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez GPR31 lbl).
@@ -697,7 +702,7 @@ Proof.
          with (c2 := (transl_compl c0 Signed x GPR31 lbl k)) (rs2 := rs') (m2 := m').
       eexact A. eexact A'.
     * split; auto.
-      { apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen. }
+      { apply C'; auto. rewrite B, C; eauto with asmgen. }
       { intros. rewrite B'; eauto with asmgen. }
 
 (* Ccompluimm *)
@@ -709,7 +714,12 @@ Proof.
     split.
     * apply A.
     * split; auto. apply C. apply EVAL'.
-  + unfold transl_opt_compluimm. rewrite <- Heqselcomp; simpl.
+  + assert (transl_opt_compluimm n c0 x lbl k = loadimm64 GPR31 n ::g transl_compl c0 Unsigned x GPR31 lbl k).
+    { unfold transl_opt_compluimm.
+      destruct (Int64.eq n Int64.zero) eqn:EQN.
+      all: unfold select_compl in Heqselcomp; rewrite EQN in Heqselcomp; destruct c0; simpl in *; auto.
+      all: discriminate. }
+    rewrite H. clear H.
     exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
     exploit (transl_complu_correct c0 x GPR31 lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez GPR31 lbl).
@@ -718,23 +728,23 @@ Proof.
          with (c2 := (transl_compl c0 Unsigned x GPR31 lbl k)) (rs2 := rs') (m2 := m').
       eexact A. eexact A'.
     * split; auto.
-      { apply C'; auto. unfold getl. rewrite B, C; eauto with asmgen. }
+      { apply C'; auto. rewrite B, C; eauto with asmgen. }
       { intros. rewrite B'; eauto with asmgen. }
 Qed.
- *)
-(* Lemma transl_cbranch_correct_true:
-  forall cond args lbl k c m ms sp rs m',
+
+Lemma transl_cbranch_correct_true:
+  forall cond args lbl k c m ms sp rs m' tbb,
   transl_cbranch cond args lbl k = OK c ->
   eval_condition cond (List.map ms args) m = Some true ->
   agree ms sp rs ->
   Mem.extends m m' ->
   exists rs', exists insn,
-     exec_straight_opt c rs m' (insn :: k) rs' m'
-  /\ exec_instr ge fn insn rs' m' = goto_label fn lbl rs' m'
+     exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
+  /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = goto_label fn lbl (nextblock tbb rs') m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
-Proof.
-  intros. eapply transl_cbranch_correct_1 with (b := true); eauto.
-Qed. 
+Proof. Admitted.
+(*   intros. eapply transl_cbranch_correct_1 with (b := true); eauto.
+Qed.  *)
 
 Lemma transl_cbranch_correct_false:
   forall cond args lbl k c m ms sp rs m',
@@ -742,17 +752,18 @@ Lemma transl_cbranch_correct_false:
   eval_condition cond (List.map ms args) m = Some false ->
   agree ms sp rs ->
   Mem.extends m m' ->
-  exists rs',
-     exec_straight ge fn c rs m' k rs' m'
+  exists rs', exists insn,
+     exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
+  /\ exec_control ge fn (Some insn) rs' m' = Next rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
-  intros. exploit transl_cbranch_correct_1; eauto. simpl. 
-  intros (rs' & insn & A & B & C).
-  exists (nextinstr rs').
+  intros. exploit transl_cbranch_correct_1; eauto.
+(*   intros (rs' & insn & A & B & C).
+  exists rs'.
   split. eapply exec_straight_opt_right; eauto. apply exec_straight_one; auto.
   intros; Simpl. 
-Qed.
- *)
+ *)Qed.
+
 (*
 (** Translation of condition operators *)
 

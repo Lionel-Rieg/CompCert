@@ -815,6 +815,21 @@ Proof.
       rewrite <- H7. simpl. rewrite H1. auto.
 Qed.
 
+Lemma exec_straight_body2:
+  forall c rs1 m1 c' rs2 m2,
+  exec_straight c rs1 m1 c' rs2 m2 ->
+  exists body,
+     exec_body ge body rs1 m1 = Next rs2 m2
+  /\ (basics_to_code body) ++g c' = c.
+Proof.
+  intros until m2. induction 1.
+  - exists (i1::nil). split; auto. simpl. rewrite H. auto.
+  - destruct IHexec_straight as (bdy & EXEB & BTC).
+    exists (i:: bdy). split; simpl.
+    + rewrite H. auto.
+    + congruence.
+Qed.
+
 (* Lemma exec_straight_body2:
   forall c c' l rs1 m1 rs2 m2,
   exec_straight (c++c') rs1 m1 c' rs2 m2 ->

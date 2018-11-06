@@ -1088,6 +1088,52 @@ Proof.
   intros. simpl. auto.
 Qed.
 
+Lemma exec_straight_opt_body2:
+  forall c rs1 m1 c' rs2 m2,
+  exec_straight_opt tge c rs1 m1 c' rs2 m2 ->
+  exists body,
+     exec_body tge body rs1 m1 = Next rs2 m2
+  /\ (basics_to_code body) ++g c' = c.
+Proof.
+  intros until m2. intros EXES.
+  inv EXES.
+  - exists nil. split; auto.
+  - eapply exec_straight_body2. auto.
+Qed.
+
+Lemma extract_basics_to_code:
+  forall lb c,
+  extract_basic (basics_to_code lb ++ c) = lb ++ extract_basic c.
+Proof.
+  induction lb; intros; simpl; congruence.
+Qed.
+
+Lemma extract_ctl_basics_to_code:
+  forall lb c,
+  extract_ctl (basics_to_code lb ++ c) = extract_ctl c.
+Proof.
+  induction lb; intros; simpl; congruence.
+Qed.
+
+(* Lemma goto_label_inv:
+  forall fn tbb l rs m b ofs,
+  rs PC = Vptr b ofs ->
+  goto_label fn l rs m = goto_label fn l (nextblock tbb rs) m.
+Proof.
+  intros.
+  unfold goto_label. rewrite nextblock_pc. unfold Val.offset_ptr. rewrite H.
+  exploreInst; auto.
+  unfold nextblock. rewrite Pregmap.gss.
+  
+Qed.
+
+
+Lemma exec_control_goto_label_inv:
+  exec_control tge fn (Some ctl) rs m = goto_label fn l rs m ->
+  exec_control tge fn (Some ctl) (nextblock tbb rs) m = goto_label fn l (nextblock tbb rs) m.
+Proof.
+Qed. *)
+
 Theorem step_simu_control:
   forall bb' fb fn s sp c ms' m' rs2 m2 E0 S'' rs1 m1 tbb tbdy2 tex cs2,
   MB.body bb' = nil ->
@@ -1192,8 +1238,7 @@ Proof.
         eauto with asmgen.
         congruence.
     + (* MBcond *)
-      destruct TODO.
-      (* destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
 
       * (* MBcond true *)
@@ -1202,12 +1247,30 @@ Proof.
           eapply preg_vals; eauto.
           all: eauto.
         intros EC.
-        
+        exploit transl_cbranch_correct_true; eauto. intros (rs' & jmp & A & B & C).
+        exploit exec_straight_opt_body2. eauto. intros (bdy & EXEB & BTC).
+        assert (PCeq': rs2 PC = rs' PC). { inv A; auto. erewrite <- exec_straight_pc. 2: eapply H. eauto. }
+        rewrite PCeq' in PCeq.
+        assert (f1 = f) by congruence. subst f1.
+        exploit find_label_goto_label.
+          4: eapply H16. 1-2: eauto. instantiate (2 := (nextblock tbb rs')). rewrite nextblock_pc.
+          unfold Val.offset_ptr. rewrite PCeq. eauto.
+        intros (tc' & rs3 & GOTOL & TLPC & Hrs3).
+        exploit functions_transl. eapply FIND1. eapply TRANSF0. intros FIND'.
+        assert (tf = fn) by congruence. subst tf.
 
         repeat eexists.
-          rewrite H6. simpl extract_basic. eauto.
-          rewrite H7. simpl extract_ctl. simpl. reflexivity.
- *)
+          rewrite H6. rewrite <- BTC. rewrite extract_basics_to_code. simpl. rewrite app_nil_r. eauto.
+          rewrite H7. rewrite <- BTC. rewrite extract_ctl_basics_to_code. simpl extract_ctl. rewrite B. eauto.
+
+        econstructor; eauto.
+          eapply agree_exten with rs2; eauto with asmgen.
+          { intros. destruct r; try destruct g; try discriminate.
+            all: rewrite Hrs3; try discriminate; unfold nextblock; Simpl. }
+        intros. discriminate.
+
+      * destruct TODO.
+
     + (* MBjumptable *)
       destruct TODO.
     + (* MBreturn *)

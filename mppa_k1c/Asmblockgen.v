@@ -61,6 +61,7 @@ Definition make_immed64 (val: int64) := Imm64_single val.
 Notation "a ::g b" := (cons (A:=instruction) a b) (at level 49, right associativity).
 Notation "a ::i b" := (cons (A:=basic) a b) (at level 49, right associativity).
 Notation "a ::b lb" := ((bblock_single_inst a) :: lb) (at level 49, right associativity).
+Notation "a ++g b" := (app (A:=instruction) a b) (at level 49, right associativity).
 
 (** Smart constructors for arithmetic operations involving
   a 32-bit or 64-bit integer constant.  Depending on whether the
@@ -155,6 +156,10 @@ Definition transl_opt_compuimm
   else
     loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
   .
+
+(* Definition transl_opt_compuimm
+    (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
+  loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k). *)
 
 (*   match select_comp n c with
   | Some Ceq => Pcbu BTweqz r1 lbl ::g k
