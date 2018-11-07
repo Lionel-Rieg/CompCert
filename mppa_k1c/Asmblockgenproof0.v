@@ -287,7 +287,7 @@ Proof.
 Qed.
  *)
 
-(* Lemma agree_set_undef_mreg:
+Lemma agree_set_undef_mreg:
   forall ms sp rs r v rl rs',
   agree ms sp rs ->
   Val.lessdef v (rs'#(preg_of r)) ->
@@ -300,7 +300,6 @@ Proof.
   congruence. auto.
   intros. rewrite Pregmap.gso; auto.
 Qed.
- *)
 
 Lemma agree_change_sp:
   forall ms sp rs sp',
@@ -865,8 +864,6 @@ Lemma exec_straight_two:
   forall i1 i2 c rs1 m1 rs2 m2 rs3 m3,
   exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
   exec_basic_instr ge i2 rs2 m2 = Next rs3 m3 ->
-  rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
-  rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
   exec_straight (i1 ::g i2 ::g c) rs1 m1 c rs3 m3.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.
@@ -878,9 +875,6 @@ Lemma exec_straight_three:
   exec_basic_instr ge i1 rs1 m1 = Next rs2 m2 ->
   exec_basic_instr ge i2 rs2 m2 = Next rs3 m3 ->
   exec_basic_instr ge i3 rs3 m3 = Next rs4 m4 ->
-  rs2#PC = Val.offset_ptr rs1#PC Ptrofs.one ->
-  rs3#PC = Val.offset_ptr rs2#PC Ptrofs.one ->
-  rs4#PC = Val.offset_ptr rs3#PC Ptrofs.one ->
   exec_straight (i1 ::g i2 ::g i3 ::g c) rs1 m1 c rs4 m4.
 Proof.
   intros. apply exec_straight_step with rs2 m2; auto.

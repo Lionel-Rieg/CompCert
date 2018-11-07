@@ -1298,7 +1298,8 @@ Proof.
             all: rewrite <- C; try discriminate; unfold nextblock; Simpl. }
         intros. discriminate.
     + (* MBjumptable *)
-      destruct TODO.
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC.
     + (* MBreturn *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
@@ -1506,7 +1507,34 @@ Proof.
       simpl; intros. rewrite U; auto with asmgen.
       apply preg_of_not_FP; auto.
   - (* MBop *)
-    destruct TODO.
+    simpl in EQ0. rewrite Hheader in DXP.
+    
+    assert (eval_operation tge sp op (map ms args) m' = Some v).
+      rewrite <- H. apply eval_operation_preserved. exact symbols_preserved.
+    exploit eval_operation_lessdef.
+      eapply preg_vals; eauto.
+      2: eexact H0.
+      all: eauto.
+    intros [v' [A B]]. rewrite (sp_val _ _ _ AG) in A.
+    exploit transl_op_correct; eauto. intros [rs2 [P [Q R]]].
+
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs2, m1, ll.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    rewrite <- Hheadereq. *) subst.
+    eapply match_codestate_intro; eauto. simpl. simpl in EQ. rewrite Hheader in EQ. auto.
+    apply agree_set_undef_mreg with rs1; auto. 
+    apply Val.lessdef_trans with v'; auto.
+    simpl; intros. destruct (andb_prop _ _ H1); clear H1.
+    rewrite R; auto. apply preg_of_not_FP; auto.
+Local Transparent destroyed_by_op.
+    destruct op; simpl; auto; congruence.
   - (* MBload *)
     destruct TODO.
   - (* MBstore *)
