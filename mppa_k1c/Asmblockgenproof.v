@@ -1536,7 +1536,31 @@ Proof.
 Local Transparent destroyed_by_op.
     destruct op; simpl; auto; congruence.
   - (* MBload *)
-    destruct TODO.
+    simpl in EQ0. rewrite Hheader in DXP.
+
+    assert (eval_addressing tge sp addr (map ms args) = Some a).
+      rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
+    exploit eval_addressing_lessdef. eapply preg_vals; eauto. eexact H1.
+    intros [a' [A B]]. rewrite (sp_val _ _ _ AG) in A.
+    exploit Mem.loadv_extends; eauto. intros [v' [C D]].
+    exploit transl_load_correct; eauto.
+    intros [rs2 [P [Q R]]].
+
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs2, m1, ll.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    rewrite <- Hheadereq. *) subst.
+    eapply match_codestate_intro; eauto. simpl. simpl in EQ.
+
+    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
+    simpl; congruence.
+
   - (* MBstore *)
     destruct TODO.
 Qed.

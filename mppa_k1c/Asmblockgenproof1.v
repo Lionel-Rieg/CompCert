@@ -1451,14 +1451,12 @@ Proof.
   intros. unfold Mptr. assert (Archi.ptr64 = true); auto.
 Qed.
 
-
-(*
 Lemma transl_memory_access_correct:
   forall mk_instr addr args k c (rs: regset) m v,
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   exists base ofs rs',
-     exec_straight_opt c rs m (mk_instr base ofs :: k) rs' m
+     exec_straight_opt (basics_to_code c) rs m (mk_instr base ofs ::g (basics_to_code k)) rs' m
   /\ Val.offset_ptr rs'#base (eval_offset ge ofs) = v
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
@@ -1488,15 +1486,15 @@ Proof.
 Qed.
 
 Lemma transl_load_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> instruction) addr args k c rd (rs: regset) m v v',
+  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
   (forall base ofs rs,
-     exec_instr ge fn (mk_instr base ofs) rs m = exec_load ge chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load ge chunk rs m rd base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
   rd <> PC ->
   exists rs',
-     exec_straight ge fn c rs m k rs' m
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
   /\ rs'#rd = v'
   /\ forall r, r <> PC -> r <> GPR31 -> r <> rd -> rs'#r = rs#r.
 Proof.
@@ -1506,19 +1504,19 @@ Proof.
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
   rewrite INSTR. unfold exec_load. rewrite B, LOAD. reflexivity. Simpl. 
-  split; intros; Simpl.
+  split; intros; Simpl. auto.
 Qed.
 
 Lemma transl_store_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> instruction) addr args k c r1 (rs: regset) m v m',
+  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c r1 (rs: regset) m v m',
   (forall base ofs rs,
-     exec_instr ge fn (mk_instr base ofs) rs m = exec_store ge chunk rs m r1 base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk rs m r1 base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.storev chunk m v rs#r1 = Some m' ->
   r1 <> PC -> r1 <> GPR31 ->
   exists rs',
-     exec_straight ge fn c rs m k rs' m'
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros until m'; intros INSTR TR EV STORE NOTPC NOT31. 
@@ -1527,7 +1525,6 @@ Proof.
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
   rewrite INSTR. unfold exec_store. rewrite B, C, STORE by auto. reflexivity. auto.
-  intros; Simpl.
 Qed.
 
 Lemma transl_load_correct:
@@ -1536,7 +1533,7 @@ Lemma transl_load_correct:
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
-     exec_straight ge fn c rs m k rs' m
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
   /\ rs'#(preg_of dst) = v
   /\ forall r, r <> PC -> r <> GPR31 -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
@@ -1544,7 +1541,7 @@ Proof.
   assert (A: exists mk_instr,
       transl_memory_access mk_instr addr args k = OK c
    /\ forall base ofs rs,
-        exec_instr ge fn (mk_instr base ofs) rs m = exec_load ge chunk rs m (preg_of dst) base ofs).
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load ge chunk rs m (preg_of dst) base ofs).
   { unfold transl_load in TR; destruct chunk; ArgsInv; econstructor; (split; [eassumption|auto]). }
   destruct A as (mk_instr & B & C).
   eapply transl_load_access_correct; eauto with asmgen.
@@ -1556,14 +1553,14 @@ Lemma transl_store_correct:
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
   Mem.storev chunk m a rs#(preg_of src) = Some m' ->
   exists rs',
-     exec_straight ge fn c rs m k rs' m'
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TR EV STORE. 
   assert (A: exists mk_instr chunk',
       transl_memory_access mk_instr addr args k = OK c
    /\ (forall base ofs rs,
-        exec_instr ge fn (mk_instr base ofs) rs m = exec_store ge chunk' rs m (preg_of src) base ofs)
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk' rs m (preg_of src) base ofs)
    /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src)).
   { unfold transl_store in TR; destruct chunk; ArgsInv;
     (econstructor; econstructor; split; [eassumption | split; [ intros; simpl; reflexivity | auto]]).
@@ -1574,9 +1571,6 @@ Proof.
   rewrite D in STORE; clear D. 
   eapply transl_store_access_correct; eauto with asmgen.
 Qed.
-*)
-
-Definition noscroll := 0.
 
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,
