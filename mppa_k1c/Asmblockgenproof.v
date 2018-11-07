@@ -1269,8 +1269,34 @@ Proof.
             all: rewrite Hrs3; try discriminate; unfold nextblock; Simpl. }
         intros. discriminate.
 
-      * destruct TODO.
+      * (* MBcond false *)
+        assert (f0 = f) by congruence. subst f0.
+        exploit eval_condition_lessdef.
+          eapply preg_vals; eauto.
+          all: eauto.
+        intros EC.
 
+        exploit transl_cbranch_correct_false; eauto. intros (rs' & jmp & A & B & C).
+        exploit exec_straight_opt_body2. eauto. intros (bdy & EXEB & BTC).
+        assert (PCeq': rs2 PC = rs' PC). { inv A; auto. erewrite <- exec_straight_pc. 2: eapply H. eauto. }
+        rewrite PCeq' in PCeq.
+        exploit functions_transl. eapply FIND1. eapply TRANSF0. intros FIND'.
+        assert (tf = fn) by congruence. subst tf.
+
+        assert (NOOV: size_blocks fn.(fn_blocks) <= Ptrofs.max_unsigned).
+          eapply transf_function_no_overflow; eauto.
+        generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1.
+
+        repeat eexists.
+          rewrite H6. rewrite <- BTC. rewrite extract_basics_to_code. simpl. rewrite app_nil_r. eauto.
+          rewrite H7. rewrite <- BTC. rewrite extract_ctl_basics_to_code. simpl extract_ctl. rewrite B. eauto.
+
+        econstructor; eauto.
+          unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. econstructor; eauto.
+          eapply agree_exten with rs2; eauto with asmgen.
+          { intros. destruct r; try destruct g; try discriminate.
+            all: rewrite <- C; try discriminate; unfold nextblock; Simpl. }
+        intros. discriminate.
     + (* MBjumptable *)
       destruct TODO.
     + (* MBreturn *)

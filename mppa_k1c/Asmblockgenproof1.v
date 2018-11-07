@@ -747,22 +747,22 @@ Proof. Admitted.
 Qed.  *)
 
 Lemma transl_cbranch_correct_false:
-  forall cond args lbl k c m ms sp rs m',
+  forall cond args lbl k c m ms sp rs tbb m',
   transl_cbranch cond args lbl k = OK c ->
   eval_condition cond (List.map ms args) m = Some false ->
   agree ms sp rs ->
   Mem.extends m m' ->
   exists rs', exists insn,
      exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
-  /\ exec_control ge fn (Some insn) rs' m' = Next rs' m'
+  /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = Next (nextblock tbb rs') m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
-Proof.
-  intros. exploit transl_cbranch_correct_1; eauto.
+Proof. Admitted.
+(*   intros. exploit transl_cbranch_correct_1; eauto. *)
 (*   intros (rs' & insn & A & B & C).
   exists rs'.
   split. eapply exec_straight_opt_right; eauto. apply exec_straight_one; auto.
   intros; Simpl. 
- *)Qed.
+ *)
 
 (*
 (** Translation of condition operators *)
