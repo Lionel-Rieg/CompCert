@@ -336,12 +336,13 @@ Proof.
 Qed.
 
 Lemma transl_comp_correct:
-  forall cmp r1 r2 lbl k rs m b,
+  forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
      exec_straight ge (transl_comp cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmp_bool cmp rs#r1 rs#r2 = Some b ->
-       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros. esplit. split.
@@ -350,9 +351,9 @@ Proof.
   + intros; Simpl.
   + intros.
     remember (rs # GPR31 <- (compare_int (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)) as rs'.
-    simpl. assert (Val.cmp_bool Cne rs' # GPR31 (Vint (Int.repr 0)) = Some b).
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # GPR31 (Vint (Int.repr 0)) = Some b).
     { 
-      assert (rs' # GPR31 = (compare_int (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # GPR31 = (compare_int (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmp_bool cmp rs#r1 rs#r2) as cmpbool.
@@ -364,12 +365,13 @@ Proof.
 Qed.
 
 Lemma transl_compu_correct:
-  forall cmp r1 r2 lbl k rs m b,
+  forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
      exec_straight ge (transl_comp cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2 = Some b ->
-       exec_control ge fn (Some (PCtlFlow ((Pcb BTwnez GPR31 lbl)))) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some (PCtlFlow ((Pcb BTwnez GPR31 lbl)))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros. esplit. split.
@@ -378,9 +380,9 @@ Proof.
   + intros; Simpl.
   + intros.
     remember (rs # GPR31 <- (compare_int (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)) as rs'.
-    simpl. assert (Val.cmp_bool Cne rs' # GPR31 (Vint (Int.repr 0)) = Some b).
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # GPR31 (Vint (Int.repr 0)) = Some b).
     { 
-      assert (rs' # GPR31 = (compare_int (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # GPR31 = (compare_int (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmpu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2) as cmpubool.
@@ -391,12 +393,13 @@ Proof.
 Qed.
 
 Lemma transl_compl_correct:
-  forall cmp r1 r2 lbl k rs m b,
+  forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
      exec_straight ge (transl_compl cmp Signed r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmpl_bool cmp rs#r1 rs#r2 = Some b ->
-       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros. esplit. split.
@@ -405,9 +408,9 @@ Proof.
   + intros; Simpl.
   + intros.
     remember (rs # GPR31 <- (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)) as rs'.
-    simpl. assert (Val.cmp_bool Cne rs' # GPR31 (Vint (Int.repr 0)) = Some b).
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # GPR31 (Vint (Int.repr 0)) = Some b).
     { 
-      assert (rs' # GPR31 = (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # GPR31 = (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmpl_bool cmp rs#r1 rs#r2) as cmpbool.
@@ -420,12 +423,13 @@ Proof.
 Qed.
 
 Lemma transl_complu_correct:
-  forall cmp r1 r2 lbl k rs m b,
+  forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
      exec_straight ge (transl_compl cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez GPR31 lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2 = Some b ->
-       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez GPR31 lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros. esplit. split.
@@ -434,9 +438,9 @@ Proof.
   + intros; Simpl.
   + intros.
     remember (rs # GPR31 <- (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)) as rs'.
-    simpl. assert (Val.cmp_bool Cne rs' # GPR31 (Vint (Int.repr 0)) = Some b).
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # GPR31 (Vint (Int.repr 0)) = Some b).
     { 
-      assert (rs' # GPR31 = (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # GPR31 = (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2) as cmpbool.
@@ -449,13 +453,13 @@ Proof.
 Qed.
 
 Lemma transl_opt_compuimm_correct:
-  forall n cmp r1 lbl k rs m b c,
+  forall n cmp r1 lbl k rs m b tbb c,
   select_comp n cmp = Some c ->
   exists rs', exists insn,
      exec_straight_opt (transl_opt_compuimm n cmp r1 lbl k) rs m ((PControl insn) ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
   /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs#r1 (Vint n) = Some b ->
-       exec_control ge fn (Some insn) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some insn) (nextblock tbb rs') m = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros.
@@ -483,6 +487,8 @@ Proof.
     split.
     * constructor.
     * split; auto. simpl. intros.
+      assert (rs r1 = (nextblock tbb rs) r1).
+        unfold nextblock. Simpl. rewrite H1 in H0.
       (*assert (Val.cmp_bool Ceq (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
       { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }*)
       auto;
@@ -508,6 +514,8 @@ Proof.
     split.
     * constructor.
     * split; auto. simpl. intros.
+      assert (rs r1 = (nextblock tbb rs) r1).
+        unfold nextblock. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0. auto.
   - (* c = Clt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
@@ -521,13 +529,13 @@ Proof.
 Qed.
 
 Lemma transl_opt_compluimm_correct:
-  forall n cmp r1 lbl k rs m b c,
+  forall n cmp r1 lbl k rs m b tbb c,
   select_compl n cmp = Some c ->
   exists rs', exists insn,
      exec_straight_opt (transl_opt_compluimm n cmp r1 lbl k) rs m ((PControl insn) ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)
   /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 (Vlong n) = Some b ->
-       exec_control ge fn (Some insn) rs' m = eval_branch fn lbl rs' m (Some b))
+       exec_control ge fn (Some insn) (nextblock tbb rs') m = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
   intros.
@@ -555,6 +563,8 @@ Proof.
     split.
     * constructor.
     * split; auto. simpl. intros.
+      assert (rs r1 = (nextblock tbb rs) r1).
+        unfold nextblock. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0; auto.
   - (* c = Cne *)
@@ -578,6 +588,8 @@ Proof.
     split.
     * constructor.
     * split; auto. simpl. intros.
+      assert (rs r1 = (nextblock tbb rs) r1).
+        unfold nextblock. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0; auto.
   - (* c = Clt *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
@@ -591,17 +603,17 @@ Proof.
 Qed.
 
 Lemma transl_cbranch_correct_1:
-  forall cond args lbl k c m ms b sp rs m',
+  forall cond args lbl k c m ms b sp rs m' tbb,
   transl_cbranch cond args lbl k = OK c ->
   eval_condition cond (List.map ms args) m = Some b ->
   agree ms sp rs ->
   Mem.extends m m' ->
   exists rs', exists insn,
      exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
-  /\ exec_control ge fn (Some insn) rs' m' = eval_branch fn lbl rs' m' (Some b)
+  /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = eval_branch fn lbl (nextblock tbb rs') m' (Some b)
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros until m'; intros TRANSL EVAL AG MEXT.
+  intros until tbb; intros TRANSL EVAL AG MEXT.
   set (vl' := map rs (map preg_of args)). 
   assert (EVAL': eval_condition cond vl' m' = Some b).
   { apply eval_condition_lessdef with (map ms args) m; auto. eapply preg_vals; eauto. }
@@ -631,6 +643,8 @@ Proof.
     split. 
     * constructor.
     * split; auto.
+      assert (rs x = (nextblock tbb rs) x).
+        unfold nextblock. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
   + exploit (loadimm32_correct GPR31 n); eauto. intros (rs' & A & B & C).
@@ -692,6 +706,8 @@ Proof.
     split. 
     * constructor.
     * split; auto.
+      assert (rs x = (nextblock tbb rs) x).
+        unfold nextblock. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
   + exploit (loadimm64_correct GPR31 n); eauto. intros (rs' & A & B & C).
@@ -742,9 +758,9 @@ Lemma transl_cbranch_correct_true:
      exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
   /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = goto_label fn lbl (nextblock tbb rs') m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
-Proof. Admitted.
-(*   intros. eapply transl_cbranch_correct_1 with (b := true); eauto.
-Qed.  *)
+Proof.
+  intros. eapply transl_cbranch_correct_1 with (b := true); eauto.
+Qed. 
 
 Lemma transl_cbranch_correct_false:
   forall cond args lbl k c m ms sp rs tbb m',
@@ -756,8 +772,9 @@ Lemma transl_cbranch_correct_false:
      exec_straight_opt c rs m' ((PControl insn) ::g k) rs' m'
   /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = Next (nextblock tbb rs') m'
   /\ forall r, r <> PC -> r <> GPR31 -> rs'#r = rs#r.
-Proof. Admitted.
-(*   intros. exploit transl_cbranch_correct_1; eauto. *)
+Proof.
+  intros. exploit transl_cbranch_correct_1; eauto.
+Qed.
 (*   intros (rs' & insn & A & B & C).
   exists rs'.
   split. eapply exec_straight_opt_right; eauto. apply exec_straight_one; auto.
