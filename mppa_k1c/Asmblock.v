@@ -1227,7 +1227,65 @@ Inductive final_state: state -> int -> Prop :=
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
 
-Axiom semantics_determinate: forall p, determinate (semantics p).
+Remark extcall_arguments_determ:
+  forall rs m sg args1 args2,
+  extcall_arguments rs m sg args1 -> extcall_arguments rs m sg args2 -> args1 = args2.
+Proof.
+  intros until m.
+  assert (A: forall l v1 v2,
+             extcall_arg rs m l v1 -> extcall_arg rs m l v2 -> v1 = v2).
+  { intros. inv H; inv H0; congruence. }
+  assert (B: forall p v1 v2,
+             extcall_arg_pair rs m p v1 -> extcall_arg_pair rs m p v2 -> v1 = v2).
+  { intros. inv H; inv H0. 
+    eapply A; eauto.
+    f_equal; eapply A; eauto. }
+  assert (C: forall ll vl1, list_forall2 (extcall_arg_pair rs m) ll vl1 ->
+             forall vl2, list_forall2 (extcall_arg_pair rs m) ll vl2 -> vl1 = vl2).
+  {
+    induction 1; intros vl2 EA; inv EA.
+    auto.
+    f_equal; eauto. }
+  intros. eapply C; eauto.
+Qed.
+
+Lemma semantics_determinate: forall p, determinate (semantics p).
+Proof.
+Ltac Equalities :=
+  match goal with
+  | [ H1: ?a = ?b, H2: ?a = ?c |- _ ] =>
+      rewrite H1 in H2; inv H2; Equalities
+  | _ => idtac
+  end.
+  intros; constructor; simpl; intros.
+- (* determ *)
+  inv H; inv H0; Equalities.
+  + split. constructor. auto.
+  + unfold exec_bblock in H4. destruct (exec_body _ _ _ _); try discriminate.
+    rewrite H9 in H4. discriminate.
+  + unfold exec_bblock in H13. destruct (exec_body _ _ _ _); try discriminate.
+    rewrite H4 in H13. discriminate.
+  + assert (vargs0 = vargs) by (eapply eval_builtin_args_determ; eauto). subst vargs0.
+    exploit external_call_determ. eexact H6. eexact H13. intros [A B].
+    split. auto. intros. destruct B; auto. subst. auto.
+  + assert (args0 = args) by (eapply extcall_arguments_determ; eauto). subst args0.
+    exploit external_call_determ. eexact H3. eexact H8. intros [A B].
+    split. auto. intros. destruct B; auto. subst. auto.
+- (* trace length *)
+  red; intros. inv H; simpl.
+  omega.
+  eapply external_call_trace_length; eauto.
+  eapply external_call_trace_length; eauto.
+- (* initial states *)
+  inv H; inv H0. f_equal. congruence.
+- (* final no step *)
+  assert (NOTNULL: forall b ofs, Vnullptr <> Vptr b ofs).
+  { intros; unfold Vnullptr; destruct Archi.ptr64; congruence. }
+  inv H. unfold Vzero in H0. red; intros; red; intros.
+  inv H; rewrite H0 in *; eelim NOTNULL; eauto.
+- (* final states *)
+  inv H; inv H0. congruence.
+Qed.
 
 Definition data_preg (r: preg) : bool :=
   match r with
