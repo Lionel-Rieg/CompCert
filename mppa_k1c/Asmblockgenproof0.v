@@ -829,14 +829,6 @@ Proof.
     + congruence.
 Qed.
 
-(* Lemma exec_straight_body2:
-  forall c c' l rs1 m1 rs2 m2,
-  exec_straight (c++c') rs1 m1 c' rs2 m2 ->
-  code_to_basics c = Some l ->
-  exec_body ge l rs1 m1 = Next rs2 m2.
-Proof.
-Admitted. *)
-
 Lemma exec_straight_trans:
   forall c1 rs1 m1 c2 rs2 m2 c3 rs3 m3,
   exec_straight c1 rs1 m1 c2 rs2 m2 ->

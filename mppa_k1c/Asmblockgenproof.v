@@ -453,7 +453,8 @@ Lemma in_dec_transl:
   forall lbl hd,
   (if in_dec lbl hd then true else false) = (if MB.in_dec lbl hd then true else false).
 Proof.
-Admitted.
+  intros. destruct (in_dec lbl hd), (MB.in_dec lbl hd). all: tauto.
+Qed.
 
 Lemma transl_is_label:
   forall lbl bb tbb f ep tc,
@@ -1079,8 +1080,6 @@ Proof.
   - subst. Simpl.
 Qed.
 
-Axiom TODO: False.
-
 Lemma cons3_app {A: Type}:
   forall a b c (l: list A),
   a :: b :: c :: l = (a :: b :: c :: nil) ++ l.
@@ -1562,7 +1561,29 @@ Local Transparent destroyed_by_op.
     simpl; congruence.
 
   - (* MBstore *)
-    destruct TODO.
+    simpl in EQ0. rewrite Hheader in DXP.
+
+    assert (eval_addressing tge sp addr (map ms args) = Some a).
+      rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
+    exploit eval_addressing_lessdef. eapply preg_vals; eauto. eexact H1.
+    intros [a' [A B]]. rewrite (sp_val _ _ _ AG) in A.
+    assert (Val.lessdef (ms src) (rs1 (preg_of src))). eapply preg_val; eauto.
+    exploit Mem.storev_extends; eauto. intros [m2' [C D]].
+    exploit transl_store_correct; eauto. intros [rs2 [P Q]].
+
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs2, m2', ll.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    subst.
+    eapply match_codestate_intro; eauto. simpl. simpl in EQ.
+
+    eapply agree_undef_regs; eauto with asmgen.
+    simpl; congruence.
 Qed.
 
 Lemma exec_body_trans:
