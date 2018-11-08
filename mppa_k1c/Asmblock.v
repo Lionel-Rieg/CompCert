@@ -405,10 +405,10 @@ Lemma non_empty_bblock_refl:
   non_empty_bblock body exit ->
   Is_true (non_empty_bblockb body exit).
 Proof.
-(*   intros. destruct body; destruct exit.
-  all: unfold non_empty_bblock; try (left; discriminate); try (right; discriminate).
-  simpl in H. inv H. *)
-Admitted.
+  intros. destruct body; destruct exit.
+  all: simpl; auto.
+  inv H; contradiction.
+Qed.
 
 (* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
