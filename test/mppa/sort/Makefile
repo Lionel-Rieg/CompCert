@@ -1,64 +1,40 @@
-PRNG=../lib/prng.c
-CCOMP=../../../ccomp
+K1CC ?= k1-mbr-gcc
+CC ?= gcc
+CCOMP ?= ccomp
+CFLAGS ?= -O2
 
-ALL= insertion-test-x86 insertion-test-k1c\
-     selection-test-x86 selection-test-k1c\
-     merge-test-x86     merge-test-k1c\
-     test-x86           test-k1c\
-     test-ccomp
+PRNG=../prng/prng.c
+
+CFILES=insertion.c merge.c selection.c main.c
+
+ALL= insertion-test-gcc-x86 insertion-test-gcc-k1c\
+     selection-test-gcc-x86 selection-test-gcc-k1c\
+     merge-test-gcc-x86     merge-test-gcc-k1c\
+     main-test-gcc-x86           main-test-gcc-k1c\
+     main-test-ccomp-k1c
 
 all: $(ALL)
 
-%-test-x86: %.c $(PRNG)
-	gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+main-test-gcc-x86: $(CFILES) $(PRNG)
+	$(CC) $(CFLAGS) $^ -o $@
 
-%-test-k1c: %.c $(PRNG)
-	k1-mbr-gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+%-test-gcc-x86: %.c $(PRNG)
+	$(CC) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $^ -o $@
 
-test-x86: selection.c merge.c insertion.c test.c $(PRNG)
-	gcc -g -O2 -std=c99 $^ -o $@
+main-test-gcc-k1c: $(CFILES) $(PRNG)
+	$(K1CC) $(CFLAGS) $^ -o $@
 
-test-k1c: selection.c merge.c insertion.c test.c $(PRNG)
-	k1-mbr-gcc -g -O2 -std=c99 $^ -o $@
+%-test-gcc-k1c: %.c $(PRNG)
+	$(K1CC) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $^ -o $@
 
-%.s: %.c $(CCOMP)
-	ccomp -O2 -S $< -o $@
+main-test-ccomp-k1c: $(CFILES) $(PRNG)
+	$(CCOMP) $(CFLAGS) $^ -o $@
 
-test-ccomp: selection.s merge.s insertion.s test.s $(subst .c,.s,$(PRNG))
-	k1-mbr-gcc $^ -o $@
-
-.PHONY:
-unittest: unittest-x86 unittest-k1c
+%-test-ccomp-k1c: %.c $(PRNG)
+	$(CCOMP) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $^ -o $@
 
 .PHONY:
-check: check-x86 check-k1c
-
-.PHONY:
-compc-check: test-ccomp
-	@if ! k1-cluster -- ./$<; then\
-		>&2 echo "ERROR k1c: sort $< failed";\
-	else\
-		echo "k1c: Test sort $< succeeded";\
-	fi
-
-.PHONY:
-check-x86: test-x86
-	@if ! ./$<; then\
-		>&2 echo "ERROR x86: $< failed";\
-	else\
-		echo "x86: Test $< succeeded";\
-	fi
-
-.PHONY:
-check-k1c: test-k1c
-	@if ! k1-cluster -- ./$<; then\
-		>&2 echo "ERROR k1c: $< failed";\
-	else\
-		echo "k1c: Test $< succeeded";\
-	fi
-
-.PHONY:
-unittest-x86: insertion-test-x86 selection-test-x86 merge-test-x86
+test-x86: insertion-test-gcc-x86 selection-test-gcc-x86 merge-test-gcc-x86 main-test-gcc-x86
 	@for test in $^; do\
 		if ! ./$$test; then\
 			>&2 echo "ERROR x86: $$test failed";\
@@ -68,7 +44,7 @@ unittest-x86: insertion-test-x86 selection-test-x86 merge-test-x86
 	done
 
 .PHONY:
-unittest-k1c: insertion-test-k1c selection-test-k1c merge-test-k1c
+test-k1c: insertion-test-gcc-k1c selection-test-gcc-k1c merge-test-gcc-k1c main-test-gcc-k1c
 	@for test in $^; do\
 		if ! k1-cluster -- ./$$test; then\
 			>&2 echo "ERROR k1c: $$test failed";\
@@ -76,6 +52,17 @@ unittest-k1c: insertion-test-k1c selection-test-k1c merge-test-k1c
 			echo "k1c: Test $$test Succeeded";\
 		fi;\
 	done
+
+.PHONY:
+test: test-x86 test-k1c
+
+.PHONY:
+check: main-test-ccomp-k1c
+	@if ! k1-cluster -- ./$<; then\
+		>&2 echo "ERROR k1c: sort $< failed";\
+	else\
+		echo "k1c: Test sort $< succeeded";\
+	fi
 
 .PHONY:
 clean:

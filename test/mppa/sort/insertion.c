@@ -1,5 +1,5 @@
-#include "../lib/prng.h"
-#include "../lib/types.h"
+#include "../prng/prng.h"
+#include "../prng/types.h"
 
 #ifdef __UNIT_TEST_INSERTION__
 #define SIZE 100
@@ -14,16 +14,18 @@ void swap_ins(uint64_t *a, uint64_t *b){
 }
 
 int insert_sort(uint64_t *res, const uint64_t *T){
+    int i, j;
+
     if (SIZE <= 0)
         return -1;
 
-    for (int i = 0 ; i < SIZE ; i++)
+    for (i = 0 ; i < SIZE ; i++)
         res[i] = T[i];
 
-    for (int i = 0 ; i < SIZE-1 ; i++){
+    for (i = 0 ; i < SIZE-1 ; i++){
         if (res[i] > res[i+1]){
             swap_ins(&res[i], &res[i+1]);
-            for (int j = i ; j > 0 ; j--)
+            for (j = i ; j > 0 ; j--)
                 if (res[j-1] > res[j])
                     swap_ins(&res[j-1], &res[j]);
         }
@@ -36,9 +38,10 @@ int insert_sort(uint64_t *res, const uint64_t *T){
 int main(void){
     uint64_t T[SIZE];
     uint64_t res[SIZE];
+    int i;
     srand(42);
 
-    for (int i = 0 ; i < SIZE ; i++)
+    for (i = 0 ; i < SIZE ; i++)
         T[i] = randlong();
 
     /* Sorting the table */
@@ -46,7 +49,7 @@ int main(void){
 
     /* Computing max(T) */
     uint64_t max = T[0];
-    for (int i = 1 ; i < SIZE ; i++)
+    for (i = 1 ; i < SIZE ; i++)
         if (T[i] > max)
             max = T[i];
 

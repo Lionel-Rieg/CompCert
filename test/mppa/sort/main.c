@@ -1,5 +1,5 @@
-#include "../lib/prng.h"
-#include "../lib/types.h"
+#include "../prng/prng.h"
+#include "../prng/types.h"
 
 #include "test.h"
 #include "insertion.h"
@@ -9,9 +9,10 @@
 int main(void){
     uint64_t T[SIZE];
     uint64_t res1[SIZE], res2[SIZE], res3[SIZE];
+    int i;
     srand(42);
 
-    for (int i = 0 ; i < SIZE ; i++)
+    for (i = 0 ; i < SIZE ; i++)
         T[i] = randlong();
 
     /* insertion sort */
@@ -24,7 +25,7 @@ int main(void){
     if (merge_sort(res3, T) < 0) return -3;
 
     /* We should have: res1[i] == res2[i] == res3[i] */
-    for (int i = 0 ; i < SIZE ; i++){
+    for (i = 0 ; i < SIZE ; i++){
         if (!(res1[i] == res2[i] && res2[i] == res3[i]))
             return -4;
     }

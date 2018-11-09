@@ -19,8 +19,9 @@ uint64_t randlong(void){
 #ifdef __UNIT_TEST_PRNG__
 char bytewise_sum(uint64_t to_check){
     char sum = 0;
+    int i;
 
-    for (int i = 0 ; i < 8 ; i++)
+    for (i = 0 ; i < 8 ; i++)
         sum += (to_check & (uint64_t)(0xFFULL << i*8)) >> i*8;
 
     return sum;
@@ -28,8 +29,9 @@ char bytewise_sum(uint64_t to_check){
 
 int main(void){
     srand(42);
+    int i;
 
-    for (int i = 0 ; i < 1000 ; i++)
+    for (i = 0 ; i < 1000 ; i++)
         randlong();
 
     uint64_t last = randlong();
