@@ -2,7 +2,7 @@ prng-test-x86: prng.c
 	gcc -D__UNIT_TEST_PRNG__ -O2 -std=c99 $< -o $@
 
 prng-test-k1c: prng.c
-	k1-gcc -D__UNIT_TEST_PRNG__ -O2 -std=c99 $< -o $@
+	k1-mbr-gcc -D__UNIT_TEST_PRNG__ -O2 -std=c99 $< -o $@
 
 .PHONY:
 test: test-x86 test-k1c

@@ -13,19 +13,19 @@ all: $(ALL)
 	gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
 
 %-test-k1c: %.c $(PRNG)
-	k1-gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+	k1-mbr-gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
 
 test-x86: selection.c merge.c insertion.c test.c $(PRNG)
 	gcc -g -O2 -std=c99 $^ -o $@
 
 test-k1c: selection.c merge.c insertion.c test.c $(PRNG)
-	k1-gcc -g -O2 -std=c99 $^ -o $@
+	k1-mbr-gcc -g -O2 -std=c99 $^ -o $@
 
 %.s: %.c $(CCOMP)
 	ccomp -O2 -S $< -o $@
 
 test-ccomp: selection.s merge.s insertion.s test.s $(subst .c,.s,$(PRNG))
-	k1-gcc $^ -o $@
+	k1-mbr-gcc $^ -o $@
 
 .PHONY:
 unittest: unittest-x86 unittest-k1c

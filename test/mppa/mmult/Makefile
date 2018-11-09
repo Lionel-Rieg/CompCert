@@ -9,19 +9,19 @@ all: $(ALL)
 	gcc -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
 
 %-test-k1c: %.c $(PRNG)
-	k1-gcc -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+	k1-mbr-gcc -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
 
 test-x86: mmult.c $(PRNG)
 	gcc -O2 -std=c99 $^ -o $@
 
 test-k1c: mmult.c $(PRNG)
-	k1-gcc -O2 -std=c99 $^ -o $@
+	k1-mbr-gcc -O2 -std=c99 $^ -o $@
 
 %.s: %.c $(CCOMP)
 	ccomp -O2 -S $< -o $@
 
 test-ccomp: mmult.s $(subst .c,.s,$(PRNG))
-	k1-gcc $^ -o $@
+	k1-mbr-gcc $^ -o $@
 
 .PHONY:
 unittest: unittest-x86 unittest-k1c

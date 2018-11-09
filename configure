@@ -414,16 +414,17 @@ fi
 if test "$arch" = "mppa_k1c"; then
   #model_options="-march=rv64imafd -mabi=lp64d"
   # FIXME - maybe later add it for NodeOS & cie
-  model_options=-m64
+  #model_options=-m64
+  model_options=
   abi="standard"
-  casm="${toolprefix}gcc"
+  casm="k1-mbr-gcc"
   casm_options="$model_options -c"
-  cc="${toolprefix}gcc $model_options"
-  clinker="${toolprefix}gcc"
+  cc="k1-mbr-gcc $model_options"
+  clinker="k1-mbr-gcc"
   bindir="$HOME/.usr/bin"
   libdir="$HOME/.usr/lib"
   clinker_options="$model_options -L$libdir -Wl,-rpath=$libdir"
-  cprepro="${toolprefix}gcc"
+  cprepro="k1-mbr-gcc"
   cprepro_options="$model_options -std=c99 -U__GNUC__ -E"
   libmath="-lm"
   system="linux"
