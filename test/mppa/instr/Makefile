@@ -5,7 +5,7 @@ CFLAGS ?= -O2
 SIMU ?= k1-cluster
 TIMEOUT ?= 10s
 
-DIR=instr
+DIR=./
 SRCDIR=$(DIR)
 OUTDIR=$(DIR)/out
 BINDIR=$(DIR)/bin
