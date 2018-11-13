@@ -1,3 +1,4 @@
 mmult-test-ccomp-k1c
 mmult-test-gcc-k1c
 mmult-test-gcc-x86
+.zero
