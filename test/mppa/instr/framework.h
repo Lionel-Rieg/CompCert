@@ -1,7 +1,7 @@
 #ifndef __FRAMEWORK_H__
 #define __FRAMEWORK_H__
 
-#include "../lib/prng.c"
+#include "../prng/prng.c"
 
 #define BEGIN_TEST(type)\
     int main(void){\

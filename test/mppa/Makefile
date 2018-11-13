@@ -1,70 +1,111 @@
-DIR=general
-BINDIR=bin
-ASMDIR=asm
+K1CC ?= k1-mbr-gcc
+CC ?= gcc
+CCOMP ?= ccomp
+CFLAGS ?= -O2
+SIMU ?= k1-cluster
+TIMEOUT ?= 10s
+
+DIR=instr
+SRCDIR=$(DIR)
+OUTDIR=$(DIR)/out
+BINDIR=$(DIR)/bin
+ASMDIR=$(DIR)/asm
+
+##
+# Intended flow : .c -> .gcc.s -> .gcc.bin -> .gcc.out
+#                    -> .ccomp.s -> .ccomp.bin -> .ccomp.out
+##
+
+K1CCPATH=$(shell which $(K1CC))
+CCPATH=$(shell which $(CC))
+CCOMPPATH=$(shell which $(CCOMP))
+SIMUPATH=$(shell which $(SIMU))
+
 TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
+X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.out,$(TESTNAMES)))
+GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.out,$(TESTNAMES)))
+CCOMP_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .ccomp.out,$(TESTNAMES)))
 
-CCOMP=../../ccomp
-#TESTS=$(addprefix $(DIR)/,$(TESTNAMES))
-ELF=$(addprefix $(DIR)/$(BINDIR)/,$(addsuffix .bin,$(TESTNAMES)))
-TOK=$(addprefix $(DIR)/$(BINDIR)/,$(addsuffix .tok,$(TESTNAMES)))
-ASM=$(addprefix $(DIR)/$(ASMDIR)/,$(addsuffix .s,$(TESTNAMES)))
-DEBUG:=$(if $(DEBUG),"-dall",)
+OUT=$(X86_GCC_OUT) $(GCC_OUT) $(CCOMP_OUT)
+BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .gcc.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .ccomp.bin,$(TESTNAMES)))
 
-.PHONY: all
-all: $(ELF)
+##
+# Targets
+##
 
-nobin: $(ASM)
+all: $(BIN)
 
-$(DIR)/$(BINDIR)/%.bin: $(DIR)/$(ASMDIR)/%.s
-	@mkdir -p $(@D)
-	ccomp $< -o $@
+.PHONY:
+test: $(X86_GCC_OUT) $(GCC_OUT)
+	@echo "Comparing x86 gcc output to k1 gcc.."
+	@for test in $(TESTNAMES); do\
+		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
+		gccout=$(OUTDIR)/$$test.gcc.out;\
+		if ! diff $$x86out $$gccout; then\
+			>&2 echo "ERROR: $$x86out and $$gccout differ";\
+		else\
+			echo "GOOD: $$x86out and $$gccout concur";\
+		fi;\
+	done
+
+.PHONY:
+check: $(GCC_OUT) $(CCOMP_OUT)
+	@echo "Comparing k1 gcc output to ccomp.."
+	@for test in $(TESTNAMES); do\
+		gccout=$(OUTDIR)/$$test.gcc.out;\
+		ccompout=$(OUTDIR)/$$test.ccomp.out;\
+		if ! diff $$ccompout $$gccout; then\
+			>&2 echo "ERROR: $$ccompout and $$gccout differ";\
+		else\
+			echo "GOOD: $$ccompout and $$gccout concur";\
+		fi;\
+	done
+
+##
+# Rules
+##
 
 .SECONDARY:
-$(DIR)/$(ASMDIR)/%.s: $(DIR)/%.c $(CCOMP)
+# Generating output
+
+$(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
 	@mkdir -p $(@D)
-	ccomp $(DEBUG) -O0 -v -S $< -o $@
+	timeout $(TIMEOUT) ./$< || { ret=$$?; } > $@; echo $$ret >> $@
 
-$(DIR)/$(BINDIR)/%.tok: $(DIR)/$(BINDIR)/%.bin $(DIR)/output/%.bin.exp
+$(OUTDIR)/%.gcc.out: $(BINDIR)/%.gcc.bin $(SIMUPATH)
 	@mkdir -p $(@D)
-	@bash check.sh $< $@
+	timeout $(TIMEOUT) $(SIMU) -- $< || { ret=$$?; } > $@; echo $$ret >> $@
 
-$(DIR)/output/%.bin.exp: $(DIR)/%.c
-	@bash generate.sh $< $@
+$(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
+	@mkdir -p $(@D)
+	timeout $(TIMEOUT) $(SIMU) -- $< || { ret=$$?; } > $@; echo $$ret >> $@
 
-.PHONY: FORCE
-FORCE:
+# Assembly to binary
 
-.PHONY: check
-check: $(TOK) sort mmult
+$(BINDIR)/%.x86-gcc.bin: $(ASMDIR)/%.x86-gcc.s $(CCPATH)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $< -o $@
 
-.PHONY: coverage
-coverage: $(ASM)
-	bash coverage.sh $(DIR)/$(ASMDIR)
+$(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) $< -o $@
 
+$(BINDIR)/%.ccomp.bin: $(ASMDIR)/%.ccomp.s $(CCOMPPATH)
+	@mkdir -p $(@D)
+	$(CCOMP) $(CFLAGS) $< -o $@
 
-.PHONY: sort
-sort: FORCE
-	(cd sort && make compc-check)
+# Source to assembly
 
-.PHONY: mmult
-mmult: FORCE
-	(cd mmult && make compc-check)
+$(ASMDIR)/%.x86-gcc.s: $(SRCDIR)/%.c $(CCPATH)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -S $< -o $@
 
-.PHONY: clean
-clean:
-	rm -f $(DIR)/*.alloctrace
-	rm -f $(DIR)/*.cm
-	rm -f $(DIR)/*.compcert.c
-	rm -f $(DIR)/*.i
-	rm -f $(DIR)/*.light.c
-	rm -f $(DIR)/*.ltl
-	rm -f $(DIR)/*.mach
-	rm -f $(DIR)/*.parsed.c
-	rm -f $(DIR)/*.rtl.?
-	rm -f $(DIR)/$(ASMDIR)/*.s
-	rm -f $(DIR)/$(BINDIR)/*.bin
-	rm -f $(DIR)/$(BINDIR)/*.tok
-	rm -f $(DIR)/output/*.out
-	rm -f $(DIR)/output/*.exp
-	rm -rf $(DIR)/profile/
-	rm -f $(ELF)
+$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) -S $< -o $@
+
+$(ASMDIR)/%.ccomp.s: $(SRCDIR)/%.c $(CCOMPPATH)
+	@mkdir -p $(@D)
+	$(CCOMP) $(CFLAGS) -S $< -o $@
