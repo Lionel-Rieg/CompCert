@@ -21,20 +21,20 @@ STUB_OUT=.zero
 all: $(ALL)
 
 mmult-test-gcc-x86: mmult.c $(PRNG) $(CCPATH)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
 mmult-test-gcc-k1c: mmult.c $(PRNG) $(K1CCPATH)
-	$(K1CC) $(CFLAGS) $^ -o $@
+	$(K1CC) $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
 
 mmult-test-ccomp-k1c: mmult.c $(PRNG) $(CCOMPPATH)
-	$(CCOMP) $(CFLAGS) $^ -o $@
+	$(CCOMP) $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
 
 .SECONDARY:
 %k1c.out: %k1c $(SIMUPATH)
-	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< || { ret=$$?; } > $@; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
 %x86.out: %x86
-	ret=0; timeout $(TIMEOUT) ./$< || { ret=$$?; } > $@; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
 
 .zero:
 	@echo "0" > $@

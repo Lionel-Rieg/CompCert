@@ -72,15 +72,15 @@ check: $(GCC_OUT) $(CCOMP_OUT)
 
 $(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
 	@mkdir -p $(@D)
-	ret=0; timeout $(TIMEOUT) ./$< || { ret=$$?; } > $@; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
 
 $(OUTDIR)/%.gcc.out: $(BINDIR)/%.gcc.bin $(SIMUPATH)
 	@mkdir -p $(@D)
-	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< || { ret=$$?; } > $@; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
 $(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
 	@mkdir -p $(@D)
-	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< || { ret=$$?; } > $@; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
 # Assembly to binary
 
