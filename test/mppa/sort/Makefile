@@ -1,82 +1,91 @@
-PRNG=../lib/prng.c
-CCOMP=../../../ccomp
+K1CC ?= k1-mbr-gcc
+CC ?= gcc
+CCOMP ?= ccomp
+CFLAGS ?= -O2
+SIMU ?= k1-cluster
+TIMEOUT ?= 10s
 
-ALL= insertion-test-x86 insertion-test-k1c\
-     selection-test-x86 selection-test-k1c\
-     merge-test-x86     merge-test-k1c\
-     test-x86           test-k1c\
-     test-ccomp
+K1CCPATH=$(shell which $(K1CC))
+CCPATH=$(shell which $(CC))
+CCOMPPATH=$(shell which $(CCOMP))
+SIMUPATH=$(shell which $(SIMU))
+
+PRNG=../prng/prng.c
+
+CFILES=insertion.c merge.c selection.c main.c
+
+ALL= insertion-gcc-x86 insertion-gcc-k1c insertion-ccomp-k1c\
+     selection-gcc-x86 selection-gcc-k1c selection-ccomp-k1c\
+     merge-gcc-x86 merge-gcc-k1c merge-ccomp-k1c\
+     main-gcc-x86 main-gcc-k1c main-ccomp-k1c
+
+CCOMP_OUT= insertion-ccomp-k1c.out selection-ccomp-k1c.out merge-ccomp-k1c.out\
+		   main-ccomp-k1c.out
+GCC_OUT= insertion-gcc-k1c.out selection-gcc-k1c.out merge-gcc-k1c.out\
+		   main-gcc-k1c.out
+X86_GCC_OUT= insertion-gcc-x86.out selection-gcc-x86.out merge-gcc-x86.out\
+		   main-gcc-x86.out
+STUB_OUT= .zero
 
 all: $(ALL)
 
-%-test-x86: %.c $(PRNG)
-	gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+main-gcc-x86: $(CFILES) $(PRNG) $(CCPATH)
+	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-%-test-k1c: %.c $(PRNG)
-	k1-gcc -g -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ -O2 -std=c99 $^ -o $@
+%-gcc-x86: %.c $(PRNG) $(CCPATH)
+	$(CC) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-test-x86: selection.c merge.c insertion.c test.c $(PRNG)
-	gcc -g -O2 -std=c99 $^ -o $@
+main-gcc-k1c: $(CFILES) $(PRNG) $(CCPATH)
+	$(K1CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-test-k1c: selection.c merge.c insertion.c test.c $(PRNG)
-	k1-gcc -g -O2 -std=c99 $^ -o $@
+%-gcc-k1c: %.c $(PRNG) $(K1CCPATH)
+	$(K1CC) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
 
-%.s: %.c $(CCOMP)
-	ccomp -O2 -S $< -o $@
+main-ccomp-k1c: $(CFILES) $(PRNG) $(CCOMPPATH)
+	$(CCOMP) $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
 
-test-ccomp: selection.s merge.s insertion.s test.s $(subst .c,.s,$(PRNG))
-	k1-gcc $^ -o $@
+%-ccomp-k1c: %.c $(PRNG) $(CCOMPPATH)
+	$(CCOMP) -D__UNIT_TEST_$$(echo $(basename $<) | tr a-z A-Z)__ $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
 
-.PHONY:
-unittest: unittest-x86 unittest-k1c
+.SECONDARY:
+%x86.out: %x86
+	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
 
-.PHONY:
-check: check-x86 check-k1c
+%k1c.out: %k1c $(SIMUPATH)
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
-.PHONY:
-compc-check: test-ccomp
-	@if ! k1-cluster -- ./$<; then\
-		>&2 echo "ERROR k1c: sort $< failed";\
-	else\
-		echo "k1c: Test sort $< succeeded";\
-	fi
+.zero:
+	@echo "0" > $@
 
 .PHONY:
-check-x86: test-x86
-	@if ! ./$<; then\
-		>&2 echo "ERROR x86: $< failed";\
-	else\
-		echo "x86: Test $< succeeded";\
-	fi
-
-.PHONY:
-check-k1c: test-k1c
-	@if ! k1-cluster -- ./$<; then\
-		>&2 echo "ERROR k1c: $< failed";\
-	else\
-		echo "k1c: Test $< succeeded";\
-	fi
-
-.PHONY:
-unittest-x86: insertion-test-x86 selection-test-x86 merge-test-x86
-	@for test in $^; do\
-		if ! ./$$test; then\
+test-x86: $(STUB_OUT) $(X86_GCC_OUT)
+	@for test in $(wordlist 2,100,$^); do\
+		if ! diff $$test $(STUB_OUT); then\
 			>&2 echo "ERROR x86: $$test failed";\
 		else\
-			echo "x86: Test $$test Succeeded";\
+			echo "GOOD x86: $$test succeeded";\
 		fi;\
 	done
 
 .PHONY:
-unittest-k1c: insertion-test-k1c selection-test-k1c merge-test-k1c
-	@for test in $^; do\
-		if ! k1-cluster -- ./$$test; then\
+test-k1c: $(STUB_OUT) $(GCC_OUT)
+	@for test in $(wordlist 2,100,$^); do\
+		if ! diff $$test $(STUB_OUT); then\
 			>&2 echo "ERROR k1c: $$test failed";\
 		else\
-			echo "k1c: Test $$test Succeeded";\
+			echo "GOOD k1c: $$test succeeded";\
 		fi;\
 	done
 
 .PHONY:
-clean:
-	rm -f $(ALL)
+test: test-x86 test-k1c
+
+.PHONY:
+check: $(STUB_OUT) $(CCOMP_OUT)
+	@for test in $(wordlist 2,100,$^); do\
+		if ! diff $$test $(STUB_OUT); then\
+			>&2 echo "ERROR k1c: $$test failed";\
+		else\
+			echo "GOOD k1c: $$test succeeded";\
+		fi;\
+	done

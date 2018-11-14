@@ -1,5 +1,5 @@
-#include "../lib/types.h"
-#include "../lib/prng.h"
+#include "../prng/types.h"
+#include "../prng/prng.h"
 
 #define __UNIT_TEST_MMULT__
 
@@ -10,24 +10,28 @@
 #endif
 
 void mmult_row(uint64_t C[][SIZE], uint64_t A[][SIZE], uint64_t B[][SIZE]){
-    for (int i = 0 ; i < SIZE ; i++)
-        for (int j = 0 ; j < SIZE ; j++)
+    int i, j, k;
+
+    for (i = 0 ; i < SIZE ; i++)
+        for (j = 0 ; j < SIZE ; j++)
             C[i][j] = 0;
 
-    for (int i = 0 ; i < SIZE ; i++)
-        for (int j = 0 ; j < SIZE ; j++)
-            for (int k = 0 ; k < SIZE ; k++)
+    for (i = 0 ; i < SIZE ; i++)
+        for (j = 0 ; j < SIZE ; j++)
+            for (k = 0 ; k < SIZE ; k++)
                 C[i][j] += A[i][k] * B[k][j];
 }
 
 void mmult_col(uint64_t C[][SIZE], uint64_t A[][SIZE], uint64_t B[][SIZE]){
-    for (int i = 0 ; i < SIZE ; i++)
-        for (int j = 0 ; j < SIZE ; j++)
+    int i, j, k;
+
+    for (i = 0 ; i < SIZE ; i++)
+        for (j = 0 ; j < SIZE ; j++)
             C[i][j] = 0;
 
-    for (int k = 0 ; k < SIZE ; k++)
-        for (int i = 0 ; i < SIZE ; i++)
-            for (int j = 0 ; j < SIZE ; j++)
+    for (k = 0 ; k < SIZE ; k++)
+        for (i = 0 ; i < SIZE ; i++)
+            for (j = 0 ; j < SIZE ; j++)
                 C[i][j] += A[i][k] * B[k][j];
 }
 
@@ -41,10 +45,11 @@ typedef struct mblock {
 
 void divac_mul(mblock *C, const mblock *A, const mblock *B){
     const int size = C->imax - C->imin;
+    int i, j, k;
 
-    for (int i = 0 ; i < size ; i++)
-        for (int j = 0 ; j < size ; j++)
-            for (int k = 0 ; k < size ; k++)
+    for (i = 0 ; i < size ; i++)
+        for (j = 0 ; j < size ; j++)
+            for (k = 0 ; k < size ; k++)
                 MAT_IJ(C, i, j) += MAT_IJ(A, i, k) * MAT_IJ(B, k, j);
 }
 
@@ -119,9 +124,10 @@ static uint64_t A[SIZE][SIZE], B[SIZE][SIZE];
 
 int main(void){
     srand(42);
+    int i, j;
 
-    for (int i = 0 ; i < SIZE ; i++)
-        for (int j = 0 ; j < SIZE ; j++){
+    for (i = 0 ; i < SIZE ; i++)
+        for (j = 0 ; j < SIZE ; j++){
             A[i][j] = randlong();
             B[i][j] = randlong();
         }
@@ -130,8 +136,8 @@ int main(void){
     mmult_col(C2, A, B);
     mmult_divac(C3, A, B);
 
-    for (int i = 0 ; i < SIZE ; i++)
-        for (int j = 0 ; j < SIZE ; j++)
+    for (i = 0 ; i < SIZE ; i++)
+        for (j = 0 ; j < SIZE ; j++)
             if (!(C1[i][j] == C2[i][j] && C1[i][j] == C3[i][j]))
                 return -1;
 

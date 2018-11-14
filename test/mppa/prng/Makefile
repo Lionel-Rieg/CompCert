@@ -10,28 +10,26 @@ CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
 
-PRNG=../prng/prng.c
-
-ALL= mmult-test-gcc-x86 mmult-test-gcc-k1c mmult-test-ccomp-k1c
-CCOMP_OUT= mmult-test-ccomp-k1c.out
-GCC_OUT= mmult-test-gcc-k1c.out
-X86_GCC_OUT= mmult-test-gcc-x86.out
+ALL= prng-test-gcc-x86 prng-test-gcc-k1c prng-test-ccomp-k1c
+CCOMP_OUT= prng-test-ccomp-k1c.out
+GCC_OUT= prng-test-gcc-k1c.out
+X86_GCC_OUT= prng-test-gcc-x86.out
 STUB_OUT=.zero
 
 all: $(ALL)
 
-mmult-test-gcc-x86: mmult.c $(PRNG) $(CCPATH)
-	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
+prng-test-gcc-x86: prng.c $(CCPATH)
+	$(CC) -D__UNIT_TEST_PRNG__ $(CFLAGS) $< -o $@
 
-mmult-test-gcc-k1c: mmult.c $(PRNG) $(K1CCPATH)
-	$(K1CC) $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
+prng-test-gcc-k1c: prng.c $(K1CCPATH)
+	$(K1CC) -D__UNIT_TEST_PRNG__ $(CFLAGS) $< -o $@
 
-mmult-test-ccomp-k1c: mmult.c $(PRNG) $(CCOMPPATH)
-	$(CCOMP) $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
+prng-test-ccomp-k1c: prng.c $(CCOMPPATH)
+	$(CCOMP) -D__UNIT_TEST_PRNG__ $(CFLAGS) $< -o $@
 
 .SECONDARY:
 %k1c.out: %k1c $(SIMUPATH)
-	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $<  > $@ || { ret=$$?; }; echo $$ret >> $@
 
 %x86.out: %x86
 	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
@@ -65,3 +63,7 @@ check: $(CCOMP_OUT) $(STUB_OUT)
 	else\
 		echo "GOOD k1c: $< succeeded";\
 	fi
+
+.PHONY:
+clean:
+	rm -f prng-test-gcc-x86 prng-test-gcc-k1c prng-test-ccomp-k1c

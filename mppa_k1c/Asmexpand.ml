@@ -20,6 +20,7 @@
    of the RISC-V assembly code. *)
 
 open Asm
+open Asmgen
 open Asmexpandaux
 open AST
 open Camlcoq
@@ -47,9 +48,9 @@ let align n a = (n + a - 1) land (-a)
   List.iter emit (Asmgen.loadimm32 dst n [])
 *)
 let expand_addptrofs dst src n =
-  List.iter emit (Asmgen.addptrofs dst src n [])
+  List.iter emit (addptrofs dst src n :: [])
 let expand_storeind_ptr src base ofs =
-  List.iter emit (Asmgen.storeind_ptr src base ofs [])
+  List.iter emit (storeind_ptr src base ofs :: [])
 
 (* Built-ins.  They come in two flavors:
    - annotation statements: take their arguments in registers or stack
@@ -61,7 +62,7 @@ let expand_storeind_ptr src base ofs =
 (* Fix-up code around calls to variadic functions.  Floating-point arguments
    residing in FP registers need to be moved to integer registers. *)
 
-let int_param_regs   = [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
+let int_param_regs   = let open Asmblock in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
 (* let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |] *)
 let float_param_regs = [| |]
 
@@ -330,7 +331,7 @@ let rec args_size sz = function
 let arguments_size sg =
   args_size 0 sg.sig_args
 
-let save_arguments first_reg base_ofs =
+let save_arguments first_reg base_ofs = let open Asmblock in
   for i = first_reg to 7 do
     expand_storeind_ptr
       int_param_regs.(i)
@@ -412,82 +413,18 @@ let expand_bswap64 d s = assert false
 
 (* Handling of compiler-inlined builtins *)
 
-let expand_builtin_inline name args res =
+let expand_builtin_inline name args res = let open Asmblock in
   match name, args, res with
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
      ()
-  (* BCU *)
-  | "__builtin_k1_await", [], BR(IR _) -> emit (PExpand (Pawait))
-  | "__builtin_k1_barrier", [], BR(IR _) -> emit (PExpand (Pbarrier))
-  | "__builtin_k1_doze", [], BR(IR _) -> emit (PExpand (Pdoze))
-  | "__builtin_k1_wfxl", [BA(IR a1); BA(IR a2)], BR(IR _) -> emit (PExpand (Pwfxl(a1, a2)))
-  | "__builtin_k1_wfxm", [BA(IR a1); BA(IR a2)], BR(IR _) -> emit (PExpand (Pwfxm(a1, a2)))
-  | "__builtin_k1_invaldtlb", [], BR(IR _) -> emit (PExpand (Pinvaldtlb))
-  | "__builtin_k1_invalitlb", [], BR(IR _) -> emit (PExpand (Pinvalitlb))
-  | "__builtin_k1_probetlb", [], BR(IR _) -> emit (PExpand (Pprobetlb))
-  | "__builtin_k1_readtlb", [], BR(IR _) -> emit (PExpand (Preadtlb))
-  | "__builtin_k1_sleep", [], BR(IR _) -> emit (PExpand (Psleep))
-  | "__builtin_k1_stop", [], BR(IR _) -> emit (PExpand (Pstop))
-  | "__builtin_k1_syncgroup", [BA(IR a1)], BR(IR _) -> emit (PExpand (Psyncgroup(a1)))
-  | "__builtin_k1_tlbwrite", [], BR(IR _) -> emit (PExpand (Ptlbwrite))
-
-  (* LSU *)
-  | "__builtin_k1_afda", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pafda(r, a1, a2)))
-  | "__builtin_k1_aldc", [BA(IR a1)], BR(IR r) -> emit (PExpand (Paldc(r, a1)))
-  | "__builtin_k1_dinval", [], BR(IR _) -> emit (PExpand (Pdinval))
-  | "__builtin_k1_dinvall", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdinvall(a1)))
-  | "__builtin_k1_dtouchl", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdtouchl(a1)))
-  | "__builtin_k1_dzerol", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pdzerol(a1)))
-  | "__builtin_k1_fence", [], BR(IR _) -> emit (PExpand (Pfence))
-  | "__builtin_k1_iinval", [], BR(IR _) -> emit (PExpand (Piinval))
-  | "__builtin_k1_iinvals", [BA(IR a1)], BR(IR _) -> emit (PExpand (Piinvals(a1)))
-  | "__builtin_k1_itouchl", [BA(IR a1)], BR(IR _) -> emit (PExpand (Pitouchl(a1)))
-  | "__builtin_k1_lbsu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plbsu(r, a1)))
-  | "__builtin_k1_lbzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plbzu(r, a1)))
-  | "__builtin_k1_ldu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pldu(r, a1)))
-  | "__builtin_k1_lhsu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plhsu(r, a1)))
-  | "__builtin_k1_lhzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plhzu(r, a1)))
-  | "__builtin_k1_lwzu", [BA(IR a1)], BR(IR r) -> emit (PExpand (Plwzu(r, a1)))
-
-  (* ALU *)
-  | "__builtin_k1_addhp", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Paddhp(r, a1, a2)))
-  | "__builtin_k1_adds", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Padds(r, a1, a2)))
-  | "__builtin_k1_bwlu", [BA(IR a1); BA(IR a2); BA(IR a3); BA(IR a4); BA(IR a5)], BR(IR r) -> 
-          emit (PExpand (Pbwlu(r, a1, a2, a3, a4, a5)))
-  | "__builtin_k1_bwluhp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
-          emit (PExpand (Pbwluhp(r, a1, a2, a3)))
-  | "__builtin_k1_bwluwp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
-          emit (PExpand (Pbwluwp(r, a1, a2, a3)))
-  | "__builtin_k1_cbs", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pcbs(r, a1)))
-  | "__builtin_k1_cbsdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pcbsdl(r, a1)))
-  | "__builtin_k1_clz", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclz(r, a1)))
-  | "__builtin_k1_clzw", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzw(r, a1)))
-  | "__builtin_k1_clzd", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzd(r, a1)))
-  | "__builtin_k1_clzdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pclzdl(r, a1)))
-  | "__builtin_k1_cmove", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
-          emit (PExpand (Pcmove(r, a1, a2, a3)))
-  | "__builtin_k1_ctz", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctz(r, a1)))
-  | "__builtin_k1_ctzw", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzw(r, a1)))
-  | "__builtin_k1_ctzd", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzd(r, a1)))
-  | "__builtin_k1_ctzdl", [BA(IR a1)], BR(IR r) -> emit (PExpand (Pctzdl(r, a1)))
-  | "__builtin_k1_extfz", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
-          emit (PExpand (Pextfz(r, a1, a2, a3)))
-  | "__builtin_k1_landhp", [BA(IR a1); BA(IR a2); BA(IR a3);], BR(IR r) -> 
-          emit (PExpand (Plandhp(r, a1, a2, a3)))
-  | "__builtin_k1_sat", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psat(r, a1, a2)))
-  | "__builtin_k1_satd", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psatd(r, a1, a2)))
-  | "__builtin_k1_sbfhp", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbfhp(r, a1, a2)))
-  | "__builtin_k1_sbmm8", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbmm8(r, a1, a2)))
-  | "__builtin_k1_sbmmt8", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psbmmt8(r, a1, a2)))
-  | "__builtin_k1_sllhps", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psllhps(r, a1, a2)))
-  | "__builtin_k1_srahps", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Psrahps(r, a1, a2)))
-  | "__builtin_k1_stsu", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pstsu(r, a1, a2)))
-  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR r) -> emit (PExpand (Pstsud(r, a1, a2)))
-
   (* Vararg stuff *)
   | "__builtin_va_start", [BA(IR a)], _ ->
      expand_builtin_va_start a
+  | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
+     emit (Pclzll(res, a))
+  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
+     emit (Pstsud(res, a1, a2))
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1
@@ -502,32 +439,32 @@ let expand_builtin_inline name args res =
 
 let expand_instruction instr =
   match instr with
-  | PExpand Pallocframe (sz, ofs) ->
+  | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (PArith (PArithRR (Pmv, GPR10, GPR12)));
+      emit (Pmv (Asmblock.GPR10, Asmblock.GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
-        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg full_sz));
-        expand_storeind_ptr GPR10 GPR12 ofs;
+        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
+        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
         let va_ofs =
           Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.neg sz));
-        expand_storeind_ptr GPR10 GPR12 ofs;
+        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
+        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
         vararg_start_ofs := None
       end
-  | PExpand Pfreeframe (sz, ofs) ->
+  | Pfreeframe (sz, ofs) ->
      let sg = get_current_function_sig() in
      let extra_sz =
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         if n >= 8 then 0 else align 16 ((8 - n) * wordsize)
       end else 0 in
-     expand_addptrofs GPR12 GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
+     expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
 (*| Pseqw(rd, rs1, rs2) ->
       (* emulate based on the fact that x == 0 iff x <u 1 (unsigned cmp) *)
@@ -557,10 +494,10 @@ let expand_instruction instr =
       end else begin
         emit (Pxorl(rd, rs1, rs2)); emit (Psltul(rd, X0, X rd))
       end
-*)| PArith PArithRR (Pcvtl2w,rd, rs) ->
+*)| Pcvtl2w (rd, rs) ->
       assert Archi.ptr64;
-      emit (PArith (PArithRRI32 (Paddiw,rd, rs, Int.zero)))  (* 32-bit sign extension *)
-  | PArith PArithR r -> (* Pcvtw2l *)
+      emit (Paddiw (rd, rs, Int.zero))  (* 32-bit sign extension *)
+  | Pcvtw2l (r) -> (* Pcvtw2l *)
       assert Archi.ptr64
       (* no-operation because the 32-bit integer was kept sign extended already *)
       (* FIXME - is it really the case on the MPPA ? *)
@@ -574,7 +511,7 @@ let expand_instruction instr =
   | Pj_s(symb, sg) ->
       fixup_call sg; emit instr
 
-*)| PExpand Pbuiltin (ef,args,res) ->
+*)| Pbuiltin (ef,args,res) ->
      begin match ef with
      | EF_builtin (name,sg) ->
         expand_builtin_inline (camlstring_of_coqstring name) args res
@@ -596,7 +533,7 @@ let expand_instruction instr =
 
 (* NOTE: Dwarf register maps for RV32G are not yet specified
    officially.  This is just a placeholder.  *)
-let int_reg_to_dwarf = function
+let int_reg_to_dwarf = let open Asmblock in function
    | GPR0  -> 1   | GPR1  -> 2   | GPR2  -> 3   | GPR3  -> 4   | GPR4  -> 5
    | GPR5  -> 6   | GPR6  -> 7   | GPR7  -> 8   | GPR8  -> 9   | GPR9  -> 10
    | GPR10 -> 11  | GPR11 -> 12  | GPR12 -> 13  | GPR13 -> 14  | GPR14 -> 15
@@ -611,7 +548,7 @@ let int_reg_to_dwarf = function
    | GPR55 -> 56  | GPR56 -> 57  | GPR57 -> 58  | GPR58 -> 59  | GPR59 -> 60
    | GPR60 -> 61  | GPR61 -> 62  | GPR62 -> 63  | GPR63 -> 64
 
-let preg_to_dwarf = function
+let preg_to_dwarf = let open Asmblock in function
    | IR r -> int_reg_to_dwarf r
    | FR r -> int_reg_to_dwarf r
    | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)

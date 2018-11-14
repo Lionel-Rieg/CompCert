@@ -95,7 +95,9 @@ BACKEND=\
   Debugvar.v Debugvarproof.v \
   Mach.v \
   Bounds.v Stacklayout.v Stacking.v Stackingproof.v \
-  Asm.v Asmgen.v Asmgenproof0.v Asmgenproof1.v Asmgenproof.v
+  Machblock.v Machblockgen.v Machblockgenproof.v \
+  Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v \
+  Asm.v Asmgen.v Asmgenproof.v
 
 # C front-end modules (in cfrontend/)
 
@@ -118,7 +120,7 @@ PARSER=Cabs.v Parser.v
 
 # Putting everything together (in driver/)
 
-DRIVER=Compopts.v Compiler.v Complements.v
+DRIVER=Compopts.v Compiler.v Complements.v ForwardSimulationBlock.v
 
 # All source files
 

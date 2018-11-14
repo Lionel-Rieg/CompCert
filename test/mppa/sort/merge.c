@@ -1,5 +1,5 @@
-#include "../lib/prng.h"
-#include "../lib/types.h"
+#include "../prng/prng.h"
+#include "../prng/types.h"
 
 //https://en.wikipedia.org/wiki/Merge_sort
 
@@ -15,8 +15,8 @@ int min(int a, int b){
 
 void BottomUpMerge(const uint64_t *A, int iLeft, int iRight, int iEnd, uint64_t *B)
 {
-    int i = iLeft, j = iRight;
-    for (int k = iLeft; k < iEnd; k++) {
+    int i = iLeft, j = iRight, k;
+    for (k = iLeft; k < iEnd; k++) {
         if (i < iRight && (j >= iEnd || A[i] <= A[j])) {
             B[k] = A[i];
             i = i + 1;
@@ -30,18 +30,20 @@ void BottomUpMerge(const uint64_t *A, int iLeft, int iRight, int iEnd, uint64_t 
 void CopyArray(uint64_t *to, const uint64_t *from)
 {
     const int n = SIZE;
+    int i;
 
-    for(int i = 0; i < n; i++)
+    for(i = 0; i < n; i++)
         to[i] = from[i];
 }
 
 void BottomUpMergeSort(uint64_t *A, uint64_t *B)
 {
     const int n = SIZE;
+    int width, i;
 
-    for (int width = 1; width < n; width = 2 * width)
+    for (width = 1; width < n; width = 2 * width)
     {
-        for (int i = 0; i < n; i = i + 2 * width)
+        for (i = 0; i < n; i = i + 2 * width)
         {
             BottomUpMerge(A, i, min(i+width, n), min(i+2*width, n), B);
         }
@@ -50,12 +52,14 @@ void BottomUpMergeSort(uint64_t *A, uint64_t *B)
 }
 
 int merge_sort(uint64_t *res, const uint64_t *T){
+    int i;
+
     if (SIZE <= 0)
         return -1;
 
     uint64_t B[SIZE];
     uint64_t *A = res;
-    for (int i = 0 ; i < SIZE ; i++)
+    for (i = 0 ; i < SIZE ; i++)
         A[i] = T[i];
 
     BottomUpMergeSort(A, B);
@@ -67,9 +71,10 @@ int merge_sort(uint64_t *res, const uint64_t *T){
 int main(void){
     uint64_t T[SIZE];
     uint64_t res[SIZE];
+    int i;
     srand(42);
 
-    for (int i = 0 ; i < SIZE ; i++)
+    for (i = 0 ; i < SIZE ; i++)
         T[i] = randlong();
 
     /* Sorting the table */
@@ -77,7 +82,7 @@ int main(void){
 
     /* Computing max(T) */
     uint64_t max = T[0];
-    for (int i = 1 ; i < SIZE ; i++)
+    for (i = 1 ; i < SIZE ; i++)
         if (T[i] > max)
             max = T[i];
 
