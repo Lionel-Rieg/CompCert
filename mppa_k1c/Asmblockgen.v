@@ -34,10 +34,10 @@ Local Open Scope error_monad_scope.
 (** Extracting integer or float registers. *)
 
 Definition ireg_of (r: mreg) : res ireg :=
-  match preg_of r with IR mr => OK mr | _ => Error(msg "Asmgen.ireg_of") end.
+  match preg_of r with IR mr => OK mr | _ => Error(msg "Asmgenblock.ireg_of") end.
 
 Definition freg_of (r: mreg) : res freg :=
-  match preg_of r with IR mr => OK mr | _ => Error(msg "Asmgen.freg_of") end.
+  match preg_of r with IR mr => OK mr | _ => Error(msg "Asmgenblock.freg_of") end.
 
 (*
 (** Decomposition of 32-bit integer constants.  They are split into either
@@ -254,7 +254,7 @@ Definition transl_cbranch
       let (insn, normal) := transl_cond_single c rd r1 r2 in
       OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
 *)| _, _ =>
-      Error(msg "Asmgen.transl_cbranch")
+      Error(msg "Asmgenblock.transl_cbranch")
   end.
 
 (** Translation of a condition operator.  The generated code sets the
@@ -329,7 +329,7 @@ Definition transl_cond_op
       let (insn, normal) := transl_cond_single c rd r1 r2 in
       OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
 *)| _, _ =>
-      Error(msg "Asmgen.transl_cond_op")
+      Error(msg "Asmgenblock.transl_cond_op")
 end.
 
 (** Translation of the arithmetic operation [r <- op(args)].
@@ -341,7 +341,7 @@ Definition transl_op
   | Omove, a1 :: nil =>
       match preg_of res, preg_of a1 with
       | IR r, IR a => OK (Pmv r a ::i k)
-      |  _  ,  _   => Error(msg "Asmgen.Omove")
+      |  _  ,  _   => Error(msg "Asmgenblock.Omove")
       end
   | Ointconst n, nil =>
       do rd <- ireg_of res;
@@ -639,7 +639,7 @@ Definition transl_op
       transl_cond_op cmp rd args k
   
   | _, _ =>
-      Error(msg "Asmgen.transl_op")
+      Error(msg "Asmgenblock.transl_op")
   end.
 
 (** Accessing data in the stack frame. *)
@@ -664,7 +664,7 @@ Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :
   | Tfloat,  IR rd => OK (indexed_memory_access (Pfld rd) base ofs ::i k)
   | Tany32,  IR rd => OK (indexed_memory_access (Plw_a rd) base ofs ::i k)
   | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs ::i k)
-  | _, _           => Error (msg "Asmgen.loadind")
+  | _, _           => Error (msg "Asmgenblock.loadind")
   end.
 
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: bcode) :=
@@ -675,7 +675,7 @@ Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: bcode) 
   | Tfloat,  IR rd => OK (indexed_memory_access (Pfsd rd) base ofs ::i k)
   | Tany32,  IR rd => OK (indexed_memory_access (Psw_a rd) base ofs ::i k)
   | Tany64,  IR rd => OK (indexed_memory_access (Psd_a rd) base ofs ::i k)
-  | _, _           => Error (msg "Asmgen.storeind")
+  | _, _           => Error (msg "Asmgenblock.storeind")
   end.
 
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) :=
@@ -698,7 +698,7 @@ Definition transl_memory_access
   | Ainstack ofs, nil =>
       OK (indexed_memory_access mk_instr SP ofs ::i k)
   | _, _ =>
-      Error(msg "Asmgen.transl_memory_access")
+      Error(msg "Asmgenblock.transl_memory_access")
   end.
 
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
@@ -729,7 +729,7 @@ Definition transl_load (chunk: memory_chunk) (addr: addressing)
       do r <- freg_of dst;
       transl_memory_access (Pfld r) addr args k
   | _ =>
-      Error (msg "Asmgen.transl_load")
+      Error (msg "Asmgenblock.transl_load")
   end.
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
@@ -754,7 +754,7 @@ Definition transl_store (chunk: memory_chunk) (addr: addressing)
       do r <- freg_of src;
       transl_memory_access (Pfsd r) addr args k
   | _ =>
-      Error (msg "Asmgen.transl_store")
+      Error (msg "Asmgenblock.transl_store")
   end.
 
 (** Function epilogue *)
@@ -813,7 +813,7 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
         OK (make_epilogue f (Pret ::g nil))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)
     | _ =>
-        Error (msg "Asmgen.transl_instr")
+        Error (msg "Asmgenblock.transl_instr")
     end
   end.
 
