@@ -1,9 +1,14 @@
+CCOMP ?= ccomp
+CFLAGS ?= -O2 -D__K1_TINYK1__
+
 CFILES=$(wildcard *.c)
 SFILES=$(subst .c,.s,$(CFILES))
+
+CCOMPPATH=$(shell which $(CCOMP))
 
 all: $(SFILES)
 
 .SECONDARY:
-%.S: %.c
-	ccomp -O2 -S $< -o $@
+%.s: %.c $(CCOMPPATH)
+	$(CCOMP) $(CFLAGS) -S $< -o $@
 	sed -i -e 's/i64_/__compcert_i64_/g' $@

@@ -70,3 +70,8 @@
 /doc/html/
 # MacOS metadata
 .DS_Store
+runtime/mppa_k1c/i64_sdiv.s
+runtime/mppa_k1c/i64_smod.s
+runtime/mppa_k1c/i64_udiv.s
+runtime/mppa_k1c/i64_udivmod.s
+runtime/mppa_k1c/i64_umod.s
