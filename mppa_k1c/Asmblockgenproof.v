@@ -2088,6 +2088,7 @@ Local Transparent destroyed_at_function_entry.
   unfold loc_external_result.
   apply agree_set_other; auto.
   apply agree_set_pair; auto.
+  apply agree_undef_caller_save_regs; auto.
 
 - (* return *) 
   inv MS.

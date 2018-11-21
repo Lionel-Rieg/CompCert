@@ -62,6 +62,7 @@ Notation "a ::g b" := (cons (A:=instruction) a b) (at level 49, right associativ
 Notation "a ::i b" := (cons (A:=basic) a b) (at level 49, right associativity).
 Notation "a ::b lb" := ((bblock_single_inst a) :: lb) (at level 49, right associativity).
 Notation "a ++g b" := (app (A:=instruction) a b) (at level 49, right associativity).
+Notation "a @@ b" := (app a b) (at level 49, right associativity).
 
 (** Smart constructors for arithmetic operations involving
   a 32-bit or 64-bit integer constant.  Depending on whether the
@@ -910,7 +911,7 @@ Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) (ep:
   | mb :: lmb => 
       do lb <- transl_block f mb (if Machblock.header mb then ep else false);
       do lb' <- transl_blocks f lmb false;
-      OK (lb ++ lb')
+      OK (lb @@ lb')
   end
 .
 

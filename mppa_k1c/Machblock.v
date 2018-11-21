@@ -327,7 +327,7 @@ Inductive step: state -> trace -> state -> Prop :=
       Genv.find_funct_ptr ge fb = Some (External ef) ->
       extcall_arguments rs m (parent_sp s) (ef_sig ef) args ->
       external_call ef ge args m t res m' ->
-      rs' = set_pair (loc_result (ef_sig ef)) res rs ->
+      rs' = set_pair (loc_result (ef_sig ef)) res (undef_caller_save_regs rs) ->
       step (Callstate s fb rs m)
          t (Returnstate s rs' m')
   | exec_return:

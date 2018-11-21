@@ -3,7 +3,7 @@ CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2
 SIMU ?= k1-cluster
-TIMEOUT ?= 10s
+TIMEOUT ?= --signal=SIGTERM 20s
 
 DIR=./
 SRCDIR=$(DIR)
@@ -37,7 +37,7 @@ BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 
 all: $(BIN)
 
-.PHONY:
+.PHONY: 
 test: $(X86_GCC_OUT) $(GCC_OUT)
 	@echo "Comparing x86 gcc output to k1 gcc.."
 	@for test in $(TESTNAMES); do\
@@ -70,6 +70,20 @@ check: $(GCC_OUT) $(CCOMP_OUT)
 .SECONDARY:
 # Generating output
 
+## Version sans les timeout
+#$(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
+#	@mkdir -p $(@D)
+#	./$< > $@; echo $$? >> $@
+#
+#$(OUTDIR)/%.gcc.out: $(BINDIR)/%.gcc.bin $(SIMUPATH)
+#	@mkdir -p $(@D)
+#	$(SIMU) -- $< > $@ ; echo $$? >> $@
+#
+#$(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
+#	@mkdir -p $(@D)
+#	$(SIMU) -- $< > $@ ; echo $$? >> $@
+
+## Version avec timeout
 $(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
 	@mkdir -p $(@D)
 	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@

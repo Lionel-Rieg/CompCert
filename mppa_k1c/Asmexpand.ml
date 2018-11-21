@@ -24,7 +24,7 @@ open Asmgen
 open Asmexpandaux
 open AST
 open Camlcoq
-open Integers
+open !Integers
 
 exception Error of string
 
@@ -557,10 +557,7 @@ let preg_to_dwarf = let open Asmblock in function
 let expand_function id fn =
   try
     set_current_function fn;
-    if !Clflags.option_g then
-      expand_debug id (* sp= *) 2 preg_to_dwarf expand_instruction fn.fn_code
-    else
-      List.iter expand_instruction fn.fn_code;
+    expand id (* sp= *) 2 preg_to_dwarf expand_instruction fn.fn_code;
     Errors.OK (get_current_function ())
   with Error s ->
     Errors.Error (Errors.msg (coqstring_of_camlstring s))
