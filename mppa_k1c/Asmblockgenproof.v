@@ -758,9 +758,9 @@ Qed. *)
   the unwanted behaviour. *)
 
 
-Remark preg_of_not_FP: forall r, negb (mreg_eq r R10) = true -> IR FP <> preg_of r.
+Remark preg_of_not_FP: forall r, negb (mreg_eq r R14) = true -> IR FP <> preg_of r.
 Proof.
-  intros. change (IR FP) with (preg_of R10). red; intros.
+  intros. change (IR FP) with (preg_of R14). red; intros.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
 Qed.
 
@@ -1455,7 +1455,7 @@ Proof.
 (*     left; eapply exec_straight_steps; eauto; intros. monadInv TR. *)
     monadInv EQ0. rewrite Hheader. rewrite Hheader in DXP.
     destruct ep eqn:EPeq.
-  (* GPR31 contains parent *)
+  (* RTMP contains parent *)
     + exploit loadind_correct. eexact EQ1.
       instantiate (2 := rs1). rewrite DXP; eauto. congruence.
       intros [rs2 [P [Q R]]].
@@ -2006,25 +2006,25 @@ Proof.
   (* Execution of function prologue *)
   monadInv EQ0. (* rewrite transl_code'_transl_code in EQ1. *)
   set (tfbody := Pallocframe (fn_stacksize f) (fn_link_ofs f) ::b
-                 Pget GPR8 RA ::b
-                 storeind_ptr GPR8 SP (fn_retaddr_ofs f) ::b x0) in *.
+                 Pget GPRA RA ::b
+                 storeind_ptr GPRA SP (fn_retaddr_ofs f) ::b x0) in *.
   set (tf := {| fn_sig := MB.fn_sig f; fn_blocks := tfbody |}) in *.
   set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
-                          (rs0#FP <- (parent_sp s) #SP <- sp #GPR31 <- Vundef)).
-  exploit (Pget_correct tge GPR8 RA nil rs2 m2'); auto.
+                          (rs0#FP <- (parent_sp s) #SP <- sp #RTMP <- Vundef)).
+  exploit (Pget_correct tge GPRA RA nil rs2 m2'); auto.
   intros (rs' & U' & V').
   exploit (exec_straight_through_singleinst); eauto.
   intro W'. remember (nextblock _ rs') as rs''.
-  exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPR8 nil rs'' m2').
+  exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPRA nil rs'' m2').
     rewrite chunk_of_Tptr in P.
-    assert (rs' GPR8 = rs0 RA). { apply V'. }
-    assert (rs'' GPR8 = rs' GPR8). { subst. Simpl. }
-    assert (rs' GPR12 = rs2 GPR12). { apply V'; discriminate. }
-    assert (rs'' GPR12 = rs' GPR12). { subst. Simpl. }
+    assert (rs' GPRA = rs0 RA). { apply V'. }
+    assert (rs'' GPRA = rs' GPRA). { subst. Simpl. }
+    assert (rs' SP = rs2 SP). { apply V'; discriminate. }
+    assert (rs'' SP = rs' SP). { subst. Simpl. }
     rewrite H4. rewrite H3. rewrite H6. rewrite H5.
-    (* change (rs' GPR8) with (rs0 RA). *)
+    (* change (rs' GPRA) with (rs0 RA). *)
     rewrite ATLR.
-    change (rs2 GPR12) with sp. eexact P.
+    change (rs2 SP) with sp. eexact P.
     congruence. congruence.
   intros (rs3 & U & V).
   exploit (exec_straight_through_singleinst); eauto.
@@ -2061,16 +2061,16 @@ Local Transparent destroyed_at_function_entry.
   unfold sp; congruence.
 
   intros.
-  assert (r <> GPR31). { contradict H3; rewrite H3; unfold data_preg; auto. }
+  assert (r <> RTMP). { contradict H3; rewrite H3; unfold data_preg; auto. }
   rewrite Heqrs3'. Simpl. rewrite V. rewrite Heqrs''. Simpl. inversion V'. rewrite H6. auto.
-  assert (r <> GPR8). { contradict H3; rewrite H3; unfold data_preg; auto. }
-  assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }
+  assert (r <> GPRA). { contradict H3; rewrite H3; unfold data_preg; auto. }
+  assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
   (* rewrite H8; auto. *)
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
   auto. intros. rewrite Heqrs3'. Simpl. rewrite V by auto with asmgen.
-  assert (forall r : preg, r <> PC -> r <> GPR8 -> rs' r = rs2 r). { apply V'. }
+  assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
   rewrite Heqrs''. Simpl.
   rewrite H4 by auto with asmgen. reflexivity.
 - (* external function *)

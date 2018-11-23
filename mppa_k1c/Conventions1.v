@@ -34,14 +34,15 @@ Require Import AST Machregs Locations.
 
 Definition is_callee_save (r: mreg) : bool :=
   match r with
-  | R15 | R16 | R17 | R18 | R19 | R20 | R21 | R22
-  | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 => true
+  (* | R15 | R16 | R17 *) | R18 | R19 | R20 | R21 | R22
+  | R23 | R24 | R25 | R26 | R27 | R28 | R29 | R30 | R31 => true
   | _ => false
   end.
 
 Definition int_caller_save_regs :=
-     R0  :: R1  :: R2  :: R3  :: R4  :: R5  :: R6  :: R7         :: R9
-  :: R32 :: R33 :: R34 :: R35 :: R36 :: R37 :: R38 :: R39 :: R40 :: R41
+     R0  :: R1  :: R2  :: R3  :: R4  :: R5  :: R6  :: R7  :: R8  :: R9
+  :: R10 :: R11 :: R15 (* :: R16 *) :: R17
+  (* :: R32 *) :: R33 :: R34 :: R35 :: R36 :: R37 :: R38 :: R39 :: R40 :: R41
   :: R42 :: R43 :: R44 :: R45 :: R46 :: R47 :: R48 :: R49 :: R50 :: R51
   :: R52 :: R53 :: R54 :: R55 :: R56 :: R57 :: R58 :: R59 :: R60 :: R61
   :: R62 :: R63 :: nil.
@@ -49,8 +50,8 @@ Definition int_caller_save_regs :=
 Definition float_caller_save_regs := R62 :: nil. (* FIXME - for the dummy_float_reg *)
 
 Definition int_callee_save_regs :=
-     R15 :: R16 :: R17 :: R18 :: R19 :: R20 :: R21 :: R22
-  :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30        :: nil.
+     (* R15 :: R16 :: R17 ::  *)R18 :: R19 :: R20 :: R21 :: R22
+  :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30 :: R31 :: nil.
 
 Definition float_callee_save_regs := @nil mreg.
 
@@ -179,7 +180,7 @@ code can be introduced in the Asmexpand pass.
 *)
 
 Definition param_regs :=
-  R0 :: R1 :: R2 :: R3 :: R4 :: R5 :: R6 :: R7 :: nil.
+  R0 :: R1 :: R2 :: R3 :: R4 :: R5 :: R6 :: R7 :: R8 :: R9 :: R10 :: R11 :: nil.
 
 Definition one_arg (regs: list mreg) (rn: Z) (ofs: Z) (ty: typ)
                            (rec: Z -> Z -> list (rpair loc)) :=

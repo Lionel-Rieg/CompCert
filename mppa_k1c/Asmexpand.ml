@@ -62,7 +62,7 @@ let expand_storeind_ptr src base ofs =
 (* Fix-up code around calls to variadic functions.  Floating-point arguments
    residing in FP registers need to be moved to integer registers. *)
 
-let int_param_regs   = let open Asmblock in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7 |]
+let int_param_regs   = let open Asmblock in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7; GPR8; GPR9; GPR10; GPR11 |]
 (* let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |] *)
 let float_param_regs = [| |]
 
@@ -441,20 +441,20 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (Asmblock.GPR10, Asmblock.GPR12));
+      emit (Pmv (Asmblock.GPR14, Asmblock.GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
-        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
+        expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
         let va_ofs =
           Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
-        expand_storeind_ptr Asmblock.GPR10 Asmblock.GPR12 ofs;
+        expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->

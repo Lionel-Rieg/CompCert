@@ -86,8 +86,9 @@ Module Pregmap := EMap(PregEq).
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
-Notation "'FP'" := GPR10 (only parsing) : asm.
-Notation "'RTMP'" := GPR31 (only parsing) : asm.
+Notation "'FP'" := GPR14 (only parsing) : asm.
+Notation "'GPRA'" := GPR16 (only parsing) : asm.
+Notation "'RTMP'" := GPR32 (only parsing) : asm.
 
 Inductive btest: Type :=
   | BTdnez                              (**r Double Not Equal to Zero *)
@@ -935,7 +936,7 @@ Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :
       let sp := (Vptr stk Ptrofs.zero) in
       match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
       | None => Stuck
-      | Some m2 => Next (rs #FP <- (rs SP) #SP <- sp #GPR31 <- Vundef) m2
+      | Some m2 => Next (rs #FP <- (rs SP) #SP <- sp #RTMP <- Vundef) m2
       end
 
   | Pfreeframe sz pos =>
@@ -946,7 +947,7 @@ Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :
           | Vptr stk ofs =>
               match Mem.free m stk 0 sz with
               | None => Stuck
-              | Some m' => Next (rs#SP <- v #GPR31 <- Vundef) m'
+              | Some m' => Next (rs#SP <- v #RTMP <- Vundef) m'
               end
           | _ => Stuck
           end
@@ -1112,16 +1113,16 @@ Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcom
   register is reserved as temporary, to be used by the generated RV32G
   code.  *)
 
-  (* FIXME - R31 is not there *)
+  (* FIXME - R16 and R32 are excluded *)
 Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
-  | R5  => GPR5  | R6  => GPR6  | R7  => GPR7                 | R9  => GPR9
-  | R10 => GPR10 (*| R11 => GPR11 | R12 => GPR12 | R13 => GPR13 | R14  => GPR14 *)
-  | R15 => GPR15 | R16 => GPR16 | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
+  | R5  => GPR5  | R6  => GPR6  | R7  => GPR7  | R8  => GPR8  | R9  => GPR9
+  | R10 => GPR10 | R11 => GPR11 (* | R12 => GPR12 | R13 => GPR13 | *) | R14  => GPR14
+  | R15 => GPR15 (* | R16 => GPR16 *) | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
   | R20 => GPR20 | R21 => GPR21 | R22 => GPR22 | R23 => GPR23 | R24  => GPR24
   | R25 => GPR25 | R26 => GPR26 | R27 => GPR27 | R28 => GPR28 | R29  => GPR29
-  | R30 => GPR30 |                R32 => GPR32 | R33 => GPR33 | R34  => GPR34
+  | R30 => GPR30 | R31 => GPR31 (* | R32 => GPR32 *) | R33 => GPR33 | R34  => GPR34
   | R35 => GPR35 | R36 => GPR36 | R37 => GPR37 | R38 => GPR38 | R39  => GPR39
   | R40 => GPR40 | R41 => GPR41 | R42 => GPR42 | R43 => GPR43 | R44  => GPR44
   | R45 => GPR45 | R46 => GPR46 | R47 => GPR47 | R48 => GPR48 | R49  => GPR49
@@ -1199,7 +1200,7 @@ Inductive step: state -> trace -> state -> Prop :=
       rs' = nextblock bi
               (set_res res vres
                 (undef_regs (map preg_of (destroyed_by_builtin ef))
-                   (rs#GPR31 <- Vundef))) ->
+                   (rs#RTMP <- Vundef))) ->
       step (State rs m) t (State rs' m')
   | exec_step_external:
       forall b ef args res rs m t rs' m',
@@ -1300,8 +1301,8 @@ Qed.
 Definition data_preg (r: preg) : bool :=
   match r with
   | RA  => false
-  | IR GPR31 => false
-  | IR GPR8 => false
+  | IR GPRA => false
+  | IR RTMP => false
   | IR _   => true
   | FR _   => true
   | PC     => false
