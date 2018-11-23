@@ -30,4 +30,12 @@ cat << EOF
 ##
 EOF
 (cd instr && make $1 -j8)
+
+cat << EOF
+
+##
+# Interoperability with GCC
+##
+EOF
+(cd interop && make $1 -j8)
 }
