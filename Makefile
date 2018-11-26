@@ -16,9 +16,9 @@
 include Makefile.config
 
 ifeq ($(wildcard $(ARCH)_$(BITSIZE)),)
-ARCHDIRS=$(ARCH)
+ARCHDIRS?=$(ARCH)
 else
-ARCHDIRS=$(ARCH)_$(BITSIZE) $(ARCH)
+ARCHDIRS?=$(ARCH)_$(BITSIZE) $(ARCH)
 endif
 
 DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
@@ -27,7 +27,7 @@ DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
 
 RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
 
-COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) compcert.$(d))
+COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) $(subst /,.,compcert.$(d)))
 
 COQC="$(COQBIN)coqc" -q $(COQINCLUDES) $(COQCOPTS)
 COQDEP="$(COQBIN)coqdep" $(COQINCLUDES)

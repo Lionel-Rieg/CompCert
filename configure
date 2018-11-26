@@ -799,6 +799,12 @@ RESPONSEFILE="none"
 EOF
 fi
 
+if [ "$arch" = "mppa_k1c" ]; then
+cat >> Makefile.config <<EOF
+ARCHDIRS=$arch $arch/lib
+EOF
+fi
+
 #
 # Clean up target-dependent files to force their recompilation
 #
