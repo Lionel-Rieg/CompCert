@@ -26,9 +26,7 @@ let emit i = current_code := i :: !current_code
 
 (* Generation of fresh labels *)
 
-(** dummy_funtion is now defined in Asm.v *)
-(* let dummy_function = { fn_code = []; fn_sig = signature_main } *)
-
+let dummy_function = { fn_code = []; fn_sig = signature_main }
 let current_function = ref dummy_function
 let next_label = ref (None: label option)
 
@@ -122,7 +120,7 @@ let expand_debug id sp preg simple l =
         begin
           match kind with
           | 1->
-              emit i; aux lbl scopes rest
+              emit i;aux lbl scopes rest
           | 2 ->
               aux  lbl scopes rest
           | 3 ->
@@ -163,7 +161,7 @@ let expand_debug id sp preg simple l =
     | i::rest -> simple i; aux None scopes rest in
   (* We need to move all closing debug annotations before the last real statement *)
   let rec move_debug acc bcc = function
-    | (Pbuiltin(EF_debug (kind,_,_),_,_)) as i::rest ->
+    | (Pbuiltin(EF_debug (kind,_,_),_,_) as i)::rest ->
         let kind = (P.to_int kind) in
         if kind = 1 then
           move_debug acc (i::bcc) rest (* Do not move debug line *)

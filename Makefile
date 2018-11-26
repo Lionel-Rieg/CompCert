@@ -21,6 +21,8 @@ else
 ARCHDIRS?=$(ARCH)_$(BITSIZE) $(ARCH)
 endif
 
+BACKENDLIB?=Asmgenproof0.v Asmgenproof1.v
+
 DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
   flocq/Core flocq/Prop flocq/Calc flocq/Appli exportclight \
   cparser cparser/MenhirLib
@@ -95,9 +97,8 @@ BACKEND=\
   Debugvar.v Debugvarproof.v \
   Mach.v \
   Bounds.v Stacklayout.v Stacking.v Stackingproof.v \
-  Machblock.v Machblockgen.v Machblockgenproof.v \
-  Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v \
-  Asm.v Asmgen.v Asmgenproof.v
+  Asm.v Asmgen.v Asmgenproof.v \
+  $(BACKENDLIB)
 
 # C front-end modules (in cfrontend/)
 
@@ -120,7 +121,7 @@ PARSER=Cabs.v Parser.v
 
 # Putting everything together (in driver/)
 
-DRIVER=Compopts.v Compiler.v Complements.v ForwardSimulationBlock.v
+DRIVER=Compopts.v Compiler.v Complements.v
 
 # All source files
 

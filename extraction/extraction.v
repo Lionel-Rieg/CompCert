@@ -167,7 +167,6 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
-   Asm.dummy_function Asmgen.addptrofs Asmgen.storeind_ptr
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env
