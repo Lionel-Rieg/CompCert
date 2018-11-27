@@ -2,7 +2,7 @@ K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2
-SIMU ?= k1-cluster
+SIMU ?= k1-mppa
 TIMEOUT ?= 10s
 
 K1CCPATH=$(shell which $(K1CC))

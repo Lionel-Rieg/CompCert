@@ -2,7 +2,7 @@ K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2
-SIMU ?= k1-cluster
+SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 20s
 
 DIR=./
@@ -29,12 +29,14 @@ SIMUPATH=$(shell which $(SIMU))
 TESTNAMES=$(filter-out $(COMMON),$(notdir $(subst .c,,$(wildcard $(DIR)/*.c))))
 X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.out,$(TESTNAMES)))
 GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.out,$(TESTNAMES)))
+GCC_REV_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.rev.out,$(TESTNAMES)))
 CCOMP_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .ccomp.out,$(TESTNAMES)))
 
-OUT=$(X86_GCC_OUT) $(GCC_OUT) $(CCOMP_OUT)
+OUT=$(X86_GCC_OUT) $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
 BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 	$(addprefix $(BINDIR)/,$(addsuffix .gcc.bin,$(TESTNAMES)))\
-	$(addprefix $(BINDIR)/,$(addsuffix .ccomp.bin,$(TESTNAMES)))
+	$(addprefix $(BINDIR)/,$(addsuffix .ccomp.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .gcc.rev.bin,$(TESTNAMES)))
 
 ##
 # Targets
@@ -56,15 +58,21 @@ test: $(X86_GCC_OUT) $(GCC_OUT)
 	done
 
 .PHONY:
-check: $(GCC_OUT) $(CCOMP_OUT)
+check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
 	@echo "Comparing k1 gcc output to ccomp.."
 	@for test in $(TESTNAMES); do\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		ccompout=$(OUTDIR)/$$test.ccomp.out;\
+		gccrevout=$(OUTDIR)/$$test.gcc.rev.out;\
 		if ! diff $$ccompout $$gccout; then\
 			>&2 echo "ERROR: $$ccompout and $$gccout differ";\
 		else\
 			echo "GOOD: $$ccompout and $$gccout concur";\
+		fi;\
+		if ! diff $$gccrevout $$gccout; then\
+			>&2 echo "ERROR: $$gccrevout and $$gccout differ";\
+		else\
+			echo "GOOD: $$gccrevout and $$gccout concur";\
 		fi;\
 	done
 
@@ -100,6 +108,10 @@ $(OUTDIR)/%.gcc.out: $(BINDIR)/%.gcc.bin $(SIMUPATH)
 	@mkdir -p $(@D)
 	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
+$(OUTDIR)/%.gcc.rev.out: $(BINDIR)/%.gcc.rev.bin $(SIMUPATH)
+	@mkdir -p $(@D)
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
+
 $(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
 	@mkdir -p $(@D)
 	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
@@ -128,9 +140,14 @@ $(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).gcc.o $(K1CCPATH)
 	@mkdir -p $(@D)
 	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
-$(BINDIR)/%.ccomp.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(COMMON).ccomp.o $(CCOMPPATH)
+$(BINDIR)/%.gcc.rev.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).ccomp.o $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+
+$(BINDIR)/%.ccomp.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(COMMON).gcc.o $(CCOMPPATH)
 	@mkdir -p $(@D)
 	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+
 
 ##
 # Assembly to object
