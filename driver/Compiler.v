@@ -69,7 +69,7 @@ Require Linearizeproof.
 Require CleanupLabelsproof.
 Require Debugvarproof.
 Require Stackingproof.
-Require Asmgenproof.
+Require Import Asmgenproof.
 (** Command-line flags. *)
 Require Import Compopts.
 

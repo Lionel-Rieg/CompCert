@@ -160,3 +160,11 @@ End PRESERVATION.
 
 Instance TransfAsm: TransfLink match_prog := pass_match_link (compose_passes block_passes).
 
+(*******************************************)
+(* Stub actually needed by driver/Compiler *)
+
+Module Asmgenproof0.
+
+Definition return_address_offset := return_address_offset.
+
+End Asmgenproof0.
