@@ -291,9 +291,6 @@ Fixpoint unfold (lb: bblocks) :=
 Record function : Type := mkfunction { fn_sig: signature; fn_blocks: bblocks; fn_code: code; 
                                        correct: unfold fn_blocks = fn_code }.
 
-(* For OCaml code *)
-Program Definition dummy_function := {| fn_code := nil; fn_sig := signature_main; fn_blocks := nil |}.
-
 Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.
 Definition genv := Genv.t fundef unit.

@@ -15,6 +15,7 @@
    pseudo-instructions *)
 
 open Asm
+open Asmaux
 open AST
 open Camlcoq
 
@@ -26,7 +27,10 @@ let emit i = current_code := i :: !current_code
 
 (* Generation of fresh labels *)
 
+(* now imported from Asmaux.ml
 let dummy_function = { fn_code = []; fn_sig = signature_main }
+*)
+  
 let current_function = ref dummy_function
 let next_label = ref (None: label option)
 

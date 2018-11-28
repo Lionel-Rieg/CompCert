@@ -97,7 +97,7 @@ BACKEND=\
   Debugvar.v Debugvarproof.v \
   Mach.v \
   Bounds.v Stacklayout.v Stacking.v Stackingproof.v \
-  Asm.v Asmgen.v Asmgenproof.v \
+  Asm.v Asmgen.v Asmgenproof.v Asmaux.v \
   $(BACKENDLIB)
 
 # C front-end modules (in cfrontend/)

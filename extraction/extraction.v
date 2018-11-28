@@ -35,6 +35,7 @@ Require Compiler.
 Require Parser.
 Require Initializers.
 Require Int31.
+Require Asmaux.
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
@@ -184,7 +185,7 @@ Separate Extraction
    Machregs.mregs_for_operation Machregs.mregs_for_builtin
    Machregs.two_address_op Machregs.is_stack_reg
    Machregs.destroyed_at_indirect_call
-   AST.signature_main
+   AST.signature_main Asmaux
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
    Parser.translation_unit_file.
