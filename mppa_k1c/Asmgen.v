@@ -21,11 +21,6 @@ Require Import Errors.
 
 Local Open Scope error_monad_scope.
 
-(** For OCaml code *)
-Definition addptrofs (rd rs: ireg) (n: ptrofs) := basic_to_instruction (addptrofs rd rs n).
-Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) := 
-  basic_to_instruction (storeind_ptr src base ofs).
-
 Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := Machblockgen.transf_program p in
   do abp <- Asmblockgen.transf_program mbp;
