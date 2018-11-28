@@ -5,7 +5,7 @@ cat << EOF
 # PRNG tests
 ##
 EOF
-(cd prng && make $1 -j8)
+(cd prng && make $1 -j4)
 
 cat << EOF
 
@@ -13,7 +13,7 @@ cat << EOF
 # Matrix Multiplication tests
 ##
 EOF
-(cd mmult && make $1 -j8)
+(cd mmult && make $1 -j4)
 
 cat << EOF
 
@@ -21,7 +21,7 @@ cat << EOF
 # List sort tests
 ##
 EOF
-(cd sort && make $1 -j8)
+(cd sort && make $1 -j4)
 
 cat << EOF
 
@@ -29,7 +29,7 @@ cat << EOF
 # Instruction unit tests
 ##
 EOF
-(cd instr && make $1 -j8)
+(cd instr && make $1 -j4)
 
 cat << EOF
 
@@ -37,5 +37,5 @@ cat << EOF
 # Interoperability with GCC
 ##
 EOF
-(cd interop && make $1 -j8)
+(cd interop && make $1 -j4)
 }
