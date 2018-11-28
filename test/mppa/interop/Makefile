@@ -1,7 +1,7 @@
 K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
-CFLAGS ?= -O2
+CFLAGS ?= -O2 -Wno-varargs
 SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 40s
 
@@ -12,6 +12,7 @@ BINDIR=$(DIR)/bin
 ASMDIR=$(DIR)/asm
 OBJDIR=$(DIR)/obj
 COMMON=common
+VAARG_COMMON=vaarg_common
 
 ##
 # Intended flow : .c -> .gcc.s -> .gcc.o -> .gcc.bin -> .gcc.out
@@ -19,6 +20,7 @@ COMMON=common
 #                    -> .x86-gcc.s -> .x86-gcc.o -> .x86-gcc.bin -> .x86-gcc.out
 #
 # The .o -> .bin part uses $(COMMON).gcc.o or $(COMMON).x86-gcc.o depending on the architecture
+# There is also a $(VAARG_COMMON) that is the same than $(COMMON) but with va_arg
 ##
 
 K1CCPATH=$(shell which $(K1CC))
@@ -26,17 +28,28 @@ CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
 
-TESTNAMES=$(filter-out $(COMMON),$(notdir $(subst .c,,$(wildcard $(DIR)/*.c))))
+TESTNAMES=$(filter-out $(VAARG_COMMON),$(filter-out $(COMMON),$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))))
+
 X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.out,$(TESTNAMES)))
 GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.out,$(TESTNAMES)))
 GCC_REV_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.rev.out,$(TESTNAMES)))
 CCOMP_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .ccomp.out,$(TESTNAMES)))
 
-OUT=$(X86_GCC_OUT) $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
+VAARG_X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.vaarg.out,$(TESTNAMES)))
+VAARG_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.vaarg.out,$(TESTNAMES)))
+VAARG_GCC_REV_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.rev.vaarg.out,$(TESTNAMES)))
+VAARG_CCOMP_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .ccomp.vaarg.out,$(TESTNAMES)))
+
+OUT=$(X86_GCC_OUT) $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)\
+		$(VAARG_GCC_OUT) $(VAARG_GCC_OUT) $(VAARG_CCOMP_OUT) $(VAARG_GCC_REV_OUT)
 BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 	$(addprefix $(BINDIR)/,$(addsuffix .gcc.bin,$(TESTNAMES)))\
 	$(addprefix $(BINDIR)/,$(addsuffix .ccomp.bin,$(TESTNAMES)))\
-	$(addprefix $(BINDIR)/,$(addsuffix .gcc.rev.bin,$(TESTNAMES)))
+	$(addprefix $(BINDIR)/,$(addsuffix .gcc.rev.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.vaarg.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .gcc.vaarg.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .ccomp.vaarg.bin,$(TESTNAMES)))\
+	$(addprefix $(BINDIR)/,$(addsuffix .gcc.rev.vaarg.bin,$(TESTNAMES)))
 
 ##
 # Targets
@@ -45,25 +58,35 @@ BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 all: $(BIN)
 
 .PHONY: 
-test: $(X86_GCC_OUT) $(GCC_OUT)
+test: $(X86_GCC_OUT) $(GCC_OUT) $(VAARG_X86_GCC_OUT) $(VAARG_GCC_OUT)
 	@echo "Comparing x86 gcc output to k1 gcc.."
 	@for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
+		vaarg_x86out=$(OUTDIR)/$$test.x86-gcc.vaarg.out;\
+		vaarg_gccout=$(OUTDIR)/$$test.gcc.vaarg.out;\
 		if ! diff $$x86out $$gccout; then\
 			>&2 echo "ERROR: $$x86out and $$gccout differ";\
 		else\
 			echo "GOOD: $$x86out and $$gccout concur";\
 		fi;\
+		if ! diff $$vaarg_x86out $$vaarg_gccout; then\
+			>&2 echo "ERROR: $$vaarg_x86out and $$vaarg_gccout differ";\
+		else\
+			echo "GOOD: $$vaarg_x86out and $$vaarg_gccout concur";\
+		fi;\
 	done
 
 .PHONY:
-check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
+check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT) $(VAARG_GCC_OUT) $(VAARG_CCOMP_OUT) $(VAARG_GCC_REV_OUT)
 	@echo "Comparing k1 gcc output to ccomp.."
 	@for test in $(TESTNAMES); do\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		ccompout=$(OUTDIR)/$$test.ccomp.out;\
 		gccrevout=$(OUTDIR)/$$test.gcc.rev.out;\
+		vaarg_gccout=$(OUTDIR)/$$test.gcc.vaarg.out;\
+		vaarg_ccompout=$(OUTDIR)/$$test.ccomp.vaarg.out;\
+		vaarg_gccrevout=$(OUTDIR)/$$test.gcc.rev.vaarg.out;\
 		if ! diff $$ccompout $$gccout; then\
 			>&2 echo "ERROR: $$ccompout and $$gccout differ";\
 		else\
@@ -73,6 +96,16 @@ check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
 			>&2 echo "ERROR: $$gccrevout and $$gccout differ";\
 		else\
 			echo "GOOD: $$gccrevout and $$gccout concur";\
+		fi;\
+		if ! diff $$vaarg_ccompout $$vaarg_gccout; then\
+			>&2 echo "ERROR: $$vaarg_ccompout and $$vaarg_gccout differ";\
+		else\
+			echo "GOOD: $$vaarg_ccompout and $$vaarg_gccout concur";\
+		fi;\
+		if ! diff $$vaarg_gccrevout $$vaarg_gccout; then\
+			>&2 echo "ERROR: $$vaarg_gccrevout and $$vaarg_gccout differ";\
+		else\
+			echo "GOOD: $$vaarg_gccrevout and $$vaarg_gccout concur";\
 		fi;\
 	done
 
@@ -99,7 +132,8 @@ check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT)
 #	@mkdir -p $(@D)
 #	$(SIMU) -- $< > $@ ; echo $$? >> $@
 
-## Version avec timeout
+## No vaarg
+
 $(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
 	@mkdir -p $(@D)
 	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
@@ -116,9 +150,29 @@ $(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
 	@mkdir -p $(@D)
 	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
 
+## With vaarg
+
+$(OUTDIR)/%.x86-gcc.vaarg.out: $(BINDIR)/%.x86-gcc.vaarg.bin
+	@mkdir -p $(@D)
+	ret=0; timeout $(TIMEOUT) ./$< > $@ || { ret=$$?; }; echo $$ret >> $@
+
+$(OUTDIR)/%.gcc.vaarg.out: $(BINDIR)/%.gcc.vaarg.bin $(SIMUPATH)
+	@mkdir -p $(@D)
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
+
+$(OUTDIR)/%.gcc.rev.vaarg.out: $(BINDIR)/%.gcc.rev.vaarg.bin $(SIMUPATH)
+	@mkdir -p $(@D)
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
+
+$(OUTDIR)/%.ccomp.vaarg.out: $(BINDIR)/%.ccomp.vaarg.bin $(SIMUPATH)
+	@mkdir -p $(@D)
+	ret=0; timeout $(TIMEOUT) $(SIMU) -- $< > $@ || { ret=$$?; }; echo $$ret >> $@
+
 ##
 # Object to binary
 ##
+
+## common
 
 $(BINDIR)/$(COMMON).x86-gcc.bin: $(OBJDIR)/$(COMMON).x86-gcc.o $(CCPATH)
 	@mkdir -p $(@D)
@@ -131,6 +185,22 @@ $(BINDIR)/$(COMMON).gcc.bin: $(OBJDIR)/$(COMMON).gcc.o $(K1CCPATH)
 $(BINDIR)/$(COMMON).ccomp.bin: $(OBJDIR)/$(COMMON).ccomp.o $(CCOMPPATH)
 	@mkdir -p $(@D)
 	$(CCOMP) $(CFLAGS) $< -o $@
+
+## vaarg_common
+
+$(BINDIR)/$(VAARG_COMMON).x86-gcc.bin: $(OBJDIR)/$(VAARG_COMMON).x86-gcc.o $(CCPATH)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BINDIR)/$(VAARG_COMMON).gcc.bin: $(OBJDIR)/$(VAARG_COMMON).gcc.o $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) $< -o $@
+
+$(BINDIR)/$(VAARG_COMMON).ccomp.bin: $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(CCOMPPATH)
+	@mkdir -p $(@D)
+	$(CCOMP) $(CFLAGS) $< -o $@
+
+## no vaarg
 
 $(BINDIR)/%.x86-gcc.bin: $(OBJDIR)/%.x86-gcc.o $(OBJDIR)/$(COMMON).x86-gcc.o $(CCPATH)
 	@mkdir -p $(@D)
@@ -148,6 +218,23 @@ $(BINDIR)/%.ccomp.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(COMMON).gcc.o $(CCOMPPATH
 	@mkdir -p $(@D)
 	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
+## with vaarg
+
+$(BINDIR)/%.x86-gcc.vaarg.bin: $(OBJDIR)/%.x86-gcc.o $(OBJDIR)/$(VAARG_COMMON).x86-gcc.o $(CCPATH)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+
+$(BINDIR)/%.gcc.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+
+$(BINDIR)/%.gcc.rev.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(K1CCPATH)
+	@mkdir -p $(@D)
+	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+
+$(BINDIR)/%.ccomp.vaarg.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(CCOMPPATH)
+	@mkdir -p $(@D)
+	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
 ##
 # Assembly to object

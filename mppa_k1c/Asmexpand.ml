@@ -340,14 +340,13 @@ let save_arguments first_reg base_ofs = let open Asmblock in
 
 let vararg_start_ofs : Z.t option ref = ref None
 
-let expand_builtin_va_start r = assert false
-(*match !vararg_start_ofs with
+let expand_builtin_va_start r = (* assert false *)
+match !vararg_start_ofs with
   | None ->
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
-      expand_addptrofs X31 X2 (Ptrofs.repr ofs);
-      expand_storeind_ptr X31 r Ptrofs.zero
-*)
+      expand_addptrofs Asmblock.GPR32 Asmblock.GPR12 (Ptrofs.repr ofs);
+      expand_storeind_ptr Asmblock.GPR32 r Ptrofs.zero
 
 (* Auxiliary for 64-bit integer arithmetic built-ins.  They expand to
    two instructions, one computing the low 32 bits of the result,
