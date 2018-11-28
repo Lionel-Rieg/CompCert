@@ -3,4 +3,4 @@
 
 source do_test.sh
 
-do_test test
+do_test test $1
