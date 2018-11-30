@@ -3,7 +3,7 @@ CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2 -Wno-varargs
 SIMU ?= k1-mppa
-TIMEOUT ?= --signal=SIGTERM 40s
+TIMEOUT ?= --signal=SIGTERM 80s
 
 DIR=./
 SRCDIR=$(DIR)
@@ -212,7 +212,7 @@ $(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).gcc.o $(K1CCPATH)
 
 $(BINDIR)/%.gcc.rev.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).ccomp.o $(K1CCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
 $(BINDIR)/%.ccomp.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(COMMON).gcc.o $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -230,7 +230,7 @@ $(BINDIR)/%.gcc.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(K
 
 $(BINDIR)/%.gcc.rev.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(K1CCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
 $(BINDIR)/%.ccomp.vaarg.bin: $(OBJDIR)/%.ccomp.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(CCOMPPATH)
 	@mkdir -p $(@D)

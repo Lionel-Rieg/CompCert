@@ -330,8 +330,11 @@ let rec args_size sz = function
 let arguments_size sg =
   args_size 0 sg.sig_args
 
+let _nbregargs_ = 12
+let _alignment_ = 8
+
 let save_arguments first_reg base_ofs = let open Asmblock in
-  for i = first_reg to 7 do
+  for i = first_reg to (_nbregargs_ - 1) do
     expand_storeind_ptr
       int_param_regs.(i)
       GPR12
@@ -442,12 +445,13 @@ let expand_instruction instr =
       emit (Pmv (Asmblock.GPR14, Asmblock.GPR12));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
-        let extra_sz = if n >= 8 then 0 else align 16 ((8 - n) * wordsize) in
+        let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
         expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
         let va_ofs =
-          Z.add full_sz (Z.of_sint ((n - 8) * wordsize)) in
+            sz in
+          (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
@@ -460,7 +464,7 @@ let expand_instruction instr =
      let extra_sz =
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
-        if n >= 8 then 0 else align 16 ((8 - n) * wordsize)
+        if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize)
       end else 0 in
      expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
