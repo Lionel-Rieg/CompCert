@@ -47,6 +47,7 @@ Inductive instruction : Type :=
   | Ploadsymbol (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the address of a symbol *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> instruction   (**r built-in function (pseudo) *)
+  | Psemi                                           (**r semi colon separating bundles *)
   | Pnop                                            (**r instruction that does nothing *)
 
   (** builtins *)
@@ -280,7 +281,7 @@ Definition unfold_exit (oc: option control) :=
   | Some c => control_to_instruction c :: nil
   end.
 
-Definition unfold_bblock (b: bblock) := unfold_label (header b) ++ unfold_body (body b) ++ unfold_exit (exit b).
+Definition unfold_bblock (b: bblock) := unfold_label (header b) ++ unfold_body (body b) ++ unfold_exit (exit b) ++ Psemi :: nil.
 
 Fixpoint unfold (lb: bblocks) :=
   match lb with
