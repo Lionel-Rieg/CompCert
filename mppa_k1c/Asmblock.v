@@ -492,6 +492,14 @@ Proof.
 
 Definition bblocks := list bblock.
 
+Fixpoint size_blocks (l: bblocks): Z :=
+  match l with
+  | nil => 0
+  | b :: l =>
+     (size b) + (size_blocks l)
+  end
+  .
+
 Record function : Type := mkfunction { fn_sig: signature; fn_blocks: bblocks }.
 Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.

@@ -924,20 +924,11 @@ Definition transl_function (f: Machblock.function) :=
          Pget GPRA RA ::b
          storeind_ptr GPRA SP f.(fn_retaddr_ofs) ::b lb)).
 
-Fixpoint size_blocks (l: bblocks): Z :=
-  match l with
-  | nil => 0
-  | b :: l =>
-     (size b) + (size_blocks l)
-  end
-  .
-
 Definition transf_function (f: Machblock.function) : res Asmblock.function :=
   do tf <- transl_function f;
   if zlt Ptrofs.max_unsigned (size_blocks tf.(fn_blocks))
   then Error (msg "code size exceeded")
   else OK tf.
-
 
 Definition transf_fundef (f: Machblock.fundef) : res Asmblock.fundef :=
   transf_partial_fundef transf_function f.
