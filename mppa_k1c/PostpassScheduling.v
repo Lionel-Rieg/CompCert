@@ -10,30 +10,36 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-Require Import Coqlib Errors AST.
+Require Import Coqlib Errors AST Integers.
 Require Import Asmblock.
 
 Local Open Scope error_monad_scope.
 
 (** Oracle taking as input a basic block,
-    returns a basic block with its instructions reordered *)
-Axiom schedule: bblock -> bblock.
+    returns a schedule expressed as a list of bundles *)
+Axiom schedule: bblock -> list bblock.
 
 (* TODO - implement the verificator *)
-Definition transf_block (b : bblock) : res bblock := OK (schedule b).
+Definition verified_schedule (bb : bblock) : res (list bblock) := OK (schedule bb).
 
-Fixpoint transf_blocks (lb : list bblock) : res (list bblock) :=
-  match lb with
+Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=
+  match lbb with
   | nil => OK nil
-  | (cons b lb) =>
-      do lb' <- transf_blocks lb;
-      do b' <- transf_block b;
-      OK (b' :: lb')
+  | (cons bb lbb) =>
+      do tlbb <- transf_blocks lbb;
+      do tbb <- verified_schedule bb;
+      OK (tbb ++ tlbb)
   end.
 
-Definition transf_function (f: function) : res function :=
-  do lb <- transf_blocks (fn_blocks f);
+Definition transl_function (f: function) : res function :=
+  do lb <- transf_blocks (fn_blocks f); 
   OK (mkfunction (fn_sig f) lb).
+
+Definition transf_function (f: function) : res function :=
+  do tf <- transl_function f;
+  if zlt Ptrofs.max_unsigned (size_blocks tf.(fn_blocks))
+  then Error (msg "code size exceeded")
+  else OK tf.
 
 Definition transf_fundef (f: fundef) : res fundef :=
   transf_partial_fundef transf_function f.

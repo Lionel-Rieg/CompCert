@@ -10,15 +10,14 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Correctness proof for the [Debugvar] pass. *)
-
 Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
+Require Import Asmblockgenproof0.
 Require Import PostpassScheduling.
 
-(** * Relational characterization of the transformation *)
+Local Open Scope error_monad_scope.
 
 Definition match_prog (p tp: Asmblock.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
@@ -29,15 +28,60 @@ Proof.
   intros. eapply match_transform_partial_program; eauto.
 Qed.
 
-Inductive transf_block_spec (ge: Genv.t fundef unit) (f: function) (bb tbb: bblock) :=
-  | transf_block_spec_intro:
+Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
+  | bblock_equiv_intro:
       (forall rs m,
-      exec_bblock ge f bb rs m = exec_bblock ge f tbb rs m) ->
-      transf_block_spec ge f bb tbb.
+      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
+      bblock_equiv ge f bb bb'.
 
-Axiom transf_block_inv:
-  forall ge f bb tbb,
-  transf_block bb = OK tbb -> transf_block_spec ge f bb tbb.
+Lemma app_nonil {A: Type} (l l': list A) : l <> nil -> l ++ l' <> nil.
+Proof.
+  intros. destruct l; simpl.
+  - contradiction.
+  - discriminate.
+Qed.
+
+Program Definition concat2 (bb bb': bblock) : res bblock :=
+  match (exit bb) with
+  | None => 
+      match (header bb') with
+      | nil => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+      | _ => Error (msg "PostpassSchedulingproof.concat2")
+      end
+  | _ => Error (msg "PostpassSchedulingproof.concat2")
+  end.
+Next Obligation.
+  apply non_empty_bblock_refl.
+  destruct bb as [hd bdy ex COR]; destruct bb' as [hd' bdy' ex' COR']. simpl in *.
+  apply non_empty_bblock_refl in COR. apply non_empty_bblock_refl in COR'.
+  inv COR.
+  - left. apply app_nonil. auto.
+  - contradiction.
+Qed.
+
+Fixpoint concat_all (lbb: list bblock) : res bblock :=
+  match lbb with
+  | nil => Error (msg "PostpassSchedulingproof.concatenate: empty list")
+  | bb::nil => OK bb
+  | bb::lbb =>
+      do bb' <- concat_all lbb;
+      concat2 bb bb'
+  end.
+
+Axiom verified_schedule_correct:
+  forall ge f bb lbb,
+  verified_schedule bb = OK lbb ->
+  exists tbb, 
+     concat_all lbb = OK tbb
+  /\ bblock_equiv ge f bb tbb.
+
+Theorem concat_exec_straight (ge: Genv.t fundef unit) (f: function) :
+  forall lbb bb rs m rs' m' c,
+  concat_all lbb = OK bb ->
+  exec_bblock ge f bb rs m = Next rs' m' ->
+  exec_straight_blocks ge f (lbb++c) rs m c rs' m'.
+Proof.
+Admitted.
 
 Section PRESERVATION.
 
@@ -117,17 +161,16 @@ Lemma transf_find_bblock:
   forall ofs f bb tf,
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bb ->
   transf_function f = OK tf ->
-  exists tbb,
-    find_bblock (Ptrofs.unsigned ofs) (fn_blocks tf) = Some tbb
-    /\ transf_block bb = OK tbb.
+  exists lbb,
+     verified_schedule bb = OK lbb
+  /\ exists c, code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) (lbb ++ c).
 Proof.
 Admitted.
 
 Lemma transf_exec_bblock:
-  forall f tf bb rs m rs' m',
-  exec_bblock ge f bb rs m = Next rs' m' ->
+  forall f tf bb rs m,
   transf_function f = OK tf ->
-  exec_bblock tge tf bb rs m = Next rs' m'.
+  exec_bblock ge f bb rs m = exec_bblock tge tf bb rs m.
 Proof.
 Admitted.
 
@@ -136,16 +179,20 @@ Axiom TODO: False.
 Theorem transf_step_correct:
   forall s1 t s2, step ge s1 t s2 ->
   forall s1' (MS: match_states s1 s1'),
-  (exists s2', step tge s1' t s2' /\ match_states s2 s2').
+  (exists s2', plus step tge s1' t s2' /\ match_states s2 s2').
 Proof.
   induction 1; intros; inv MS.
-  - exploit function_ptr_translated; eauto. intros (tf & A & B). monadInv B.
-    exploit transf_find_bblock; eauto. intros (tbb & C & D).
-    exists (State rs' m'); split; try (constructor; auto).
-    econstructor; eauto.
-    exploit transf_block_inv; eauto. intros E. inv E.
-    erewrite <- H3.
-    eapply transf_exec_bblock; eauto.
+  - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
+    exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
+    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
+    erewrite transf_exec_bblock in H2; eauto.
+    exploit concat_exec_straight; eauto.
+      { inv BBEQ. erewrite <- H3. eauto. }
+      intros ESB.
+    eexists. split.
+    + eapply exec_straight_steps_1; eauto.
+      monadInv EQ. destruct (zlt _ _). discriminate. monadInv EQ1. omega.
+    + econstructor; eauto.
   - destruct TODO.
   - destruct TODO.
 Admitted.
@@ -153,7 +200,7 @@ Admitted.
 Theorem transf_program_correct:
   forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
 Proof.
-  eapply forward_simulation_step.
+  eapply forward_simulation_plus.
   - apply senv_preserved.
   - apply transf_initial_states.
   - apply transf_final_states.

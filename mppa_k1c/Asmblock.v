@@ -403,12 +403,16 @@ Definition non_empty_bblockb (body: list basic) (exit: option control): bool := 
 
 Lemma non_empty_bblock_refl:
   forall body exit,
-  non_empty_bblock body exit ->
+  non_empty_bblock body exit <->
   Is_true (non_empty_bblockb body exit).
 Proof.
-  intros. destruct body; destruct exit.
-  all: simpl; auto.
-  inv H; contradiction.
+  intros. split.
+  - destruct body; destruct exit.
+    all: simpl; auto. intros. inversion H; contradiction.
+  - destruct body; destruct exit.
+    all: simpl; auto.
+    all: intros; try (right; discriminate); try (left; discriminate).
+    contradiction.
 Qed.
 
 (* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
