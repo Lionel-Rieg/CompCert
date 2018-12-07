@@ -38,4 +38,13 @@ cat << EOF
 ##
 EOF
 (cd interop && make $1 -j$2)
+
+cat << EOF
+
+##
+# printf wrapper test
+##
+(cd lib && make $1 -j$2)
+EOF
+
 }
