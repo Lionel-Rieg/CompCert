@@ -181,7 +181,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RR *)
   | PArithRR Asmblock.Pmv rd rs     => Pmv rd rs
   | PArithRR Asmblock.Pnegw rd rs   => Pnegw rd rs
-  | PArithRR Asmblock.Pnegl rd rs   => Pfnegd rd rs
+  | PArithRR Asmblock.Pnegl rd rs   => Pnegl rd rs
   | PArithRR Asmblock.Pcvtl2w rd rs => Pcvtl2w rd rs
   | PArithRR Asmblock.Pmvw2l rd rs  => Pmvw2l rd rs
   | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
