@@ -1,15 +1,17 @@
 K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
-CFLAGS ?= -O2
+CFLAGS ?= -O2 -Wl,--wrap=printf
 SIMU ?= k1-mppa
-TIMEOUT ?= --signal=SIGTERM 60s
+TIMEOUT ?= --signal=SIGTERM 120s
 
 DIR=./
 SRCDIR=$(DIR)
 OUTDIR=$(DIR)/out
 BINDIR=$(DIR)/bin
 ASMDIR=$(DIR)/asm
+LIB=../lib/system.x86-gcc.a
+K1LIB=../lib/system.gcc.a
 
 ##
 # Intended flow : .c -> .gcc.s -> .gcc.bin -> .gcc.out
@@ -37,16 +39,20 @@ BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 
 all: $(BIN)
 
+GREEN=\033[0;32m
+RED=\033[0;31m
+NC=\033[0m
+
 .PHONY: 
 test: $(X86_GCC_OUT) $(GCC_OUT)
 	@echo "Comparing x86 gcc output to k1 gcc.."
 	@for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
-		if ! diff $$x86out $$gccout; then\
-			>&2 echo "ERROR: $$x86out and $$gccout differ";\
+		if diff -q $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
+			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$x86out and $$gccout concur";\
+			printf "$(GREEN)GOOD: $$x86out and $$gccout concur$(NC)\n";\
 		fi;\
 	done
 
@@ -56,10 +62,10 @@ check: $(GCC_OUT) $(CCOMP_OUT)
 	@for test in $(TESTNAMES); do\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		ccompout=$(OUTDIR)/$$test.ccomp.out;\
-		if ! diff $$ccompout $$gccout; then\
-			>&2 echo "ERROR: $$ccompout and $$gccout differ";\
+		if diff -q $$ccompout $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
+			>&2 printf "$(RED)ERROR: $$ccompout and $$gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$ccompout and $$gccout concur";\
+			printf "$(GREEN)GOOD: $$ccompout and $$gccout concur$(NC)\n";\
 		fi;\
 	done
 
@@ -68,20 +74,13 @@ check: $(GCC_OUT) $(CCOMP_OUT)
 ##
 
 .SECONDARY:
-# Generating output
+$(LIB):
+	(cd $(dir $(LIB)) && make)
 
-## Version sans les timeout
-#$(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
-#	@mkdir -p $(@D)
-#	./$< > $@; echo $$? >> $@
-#
-#$(OUTDIR)/%.gcc.out: $(BINDIR)/%.gcc.bin $(SIMUPATH)
-#	@mkdir -p $(@D)
-#	$(SIMU) -- $< > $@ ; echo $$? >> $@
-#
-#$(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
-#	@mkdir -p $(@D)
-#	$(SIMU) -- $< > $@ ; echo $$? >> $@
+$(K1LIB):
+	(cd $(dir $(LIB)) && make)
+
+# Generating output
 
 ## Version avec timeout
 $(OUTDIR)/%.x86-gcc.out: $(BINDIR)/%.x86-gcc.bin
@@ -98,17 +97,17 @@ $(OUTDIR)/%.ccomp.out: $(BINDIR)/%.ccomp.bin $(SIMUPATH)
 
 # Assembly to binary
 
-$(BINDIR)/%.x86-gcc.bin: $(ASMDIR)/%.x86-gcc.s $(CCPATH)
+$(BINDIR)/%.x86-gcc.bin: $(ASMDIR)/%.x86-gcc.s $(LIB) $(CCPATH)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-$(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1CCPATH)
+$(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1LIB) $(K1CCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $< -o $@
+	$(K1CC) $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
 
-$(BINDIR)/%.ccomp.bin: $(ASMDIR)/%.ccomp.s $(CCOMPPATH)
+$(BINDIR)/%.ccomp.bin: $(ASMDIR)/%.ccomp.s $(K1LIB) $(CCOMPPATH)
 	@mkdir -p $(@D)
-	$(CCOMP) $(CFLAGS) $< -o $@
+	$(CCOMP) $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
 
 # Source to assembly
 

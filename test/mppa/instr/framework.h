@@ -3,6 +3,8 @@
 
 #include "../prng/prng.c"
 
+int printf(const char *, ...);
+
 #define BEGIN_TEST_N(type, N)\
     int main(void){\
         type t[N], c, i, j, S;\
@@ -28,6 +30,7 @@
 /* In between BEGIN_TEST and END_TEST : definition of c */
 
 #define END_TEST()\
+            printf("%llu\n", c);\
             S += c;\
         }\
         return S;\
