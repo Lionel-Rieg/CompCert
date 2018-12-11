@@ -52,18 +52,22 @@ int i_manyiargs(char a0, ...)
 {
   STACK;
   VA_START(vl, a0);
+  VA_START(vl2, a0);
   int a1 = va_arg(vl, int);
   char a2 = va_arg(vl, int);
   int a3 = va_arg(vl, int);
   char a4 = va_arg(vl,  int);
   char a5 = va_arg(vl, int);
+  char b1 = va_arg(vl2, int);
   int a6 = va_arg(vl, int);
   int a7 = va_arg(vl, int);
   char a8 = va_arg(vl, int);
+  char b2 = va_arg(vl2, int);
   int a9 = va_arg(vl, int);
   char a10 = va_arg(vl, int);
   int a11 = va_arg(vl, int);
   char a12 = va_arg(vl, int);
+  char b3 = va_arg(vl2, int);
   int a13 = va_arg(vl, int);
   char a14 = va_arg(vl, int);
   char a15 = va_arg(vl, int);
@@ -78,13 +82,15 @@ int i_manyiargs(char a0, ...)
   char a24 = va_arg(vl, int);
   char a25 = va_arg(vl, int);
   int a26 = va_arg(vl, int);
+  char b4 = va_arg(vl2, int);
   int a27 = va_arg(vl, int);
   char a28 = va_arg(vl, int);
   int a29 = va_arg(vl, int);
   VA_END(vl);
-  return MANYARG_OP(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9,
-                   a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,
-                   a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
+  VA_END(vl);
+  return MANYARG_OP(a0, a1, a2, a3, a4, (a5*b2), a6, a7, a8, a9,
+                   (a10*b3), a11, a12, a13, a14, a15, a16, a17, a18, a19,
+                   a20, (a21*b1), a22, a23, (a24*b3), a25, a26, a27, a28, a29);
 }
 
 //int ll_onellarg(long long arg){
