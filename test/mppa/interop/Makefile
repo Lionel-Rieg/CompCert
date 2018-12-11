@@ -3,7 +3,7 @@ CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2 -Wno-varargs
 SIMU ?= k1-mppa
-TIMEOUT ?= --signal=SIGTERM 80s
+TIMEOUT ?= --signal=SIGTERM 120s
 
 DIR=./
 SRCDIR=$(DIR)

@@ -14,7 +14,7 @@
           a10 + a11 - a12 ^ a13 + a14 - a15 + a16 ^ a17 + a18 + a19 +\
           a20 + a21 + a22 * a23 + a24 + a25 << a26 & a27 + a28 + a29)
 
-#define VA_START(vl, n) va_list vl; va_start(vl, n)
+#define VA_START(vl, arg) va_list vl; va_start(vl, arg)
 #define VA_END(vl) va_end(vl)
 
 void void_void(void){
@@ -29,7 +29,7 @@ long long ll_void(void){
 // int i_oneiarg(int arg){
 int i_oneiarg(int arg, ...){
   STACK;
-  VA_START(vl, 0);
+  VA_START(vl, arg);
   VA_END(vl);
   return ONEARG_OP(arg);
 }
@@ -37,7 +37,7 @@ int i_oneiarg(int arg, ...){
 //int i_multiiargs(int arg1, char arg2, char arg3, int arg4){
 int i_multiiargs(int arg1, ...){
   STACK;
-  VA_START(vl, 3);
+  VA_START(vl, arg1);
   char arg2 = va_arg(vl, int);
   char arg3 = va_arg(vl, int);
   int arg4 = va_arg(vl, int);
@@ -51,7 +51,7 @@ int i_multiiargs(int arg1, ...){
 int i_manyiargs(char a0, ...)
 {
   STACK;
-  VA_START(vl, 29);
+  VA_START(vl, a0);
   int a1 = va_arg(vl, int);
   char a2 = va_arg(vl, int);
   int a3 = va_arg(vl, int);
@@ -90,7 +90,7 @@ int i_manyiargs(char a0, ...)
 //int ll_onellarg(long long arg){
 int ll_onellarg(long long arg, ...){
   STACK;
-  VA_START(vl, 0);
+  VA_START(vl, arg);
   VA_END(vl);
   return ONEARG_OP(arg);
 }
@@ -98,7 +98,7 @@ int ll_onellarg(long long arg, ...){
 //long long ll_multillargs(long long arg1, char arg2, char arg3, long long arg4){
 long long ll_multillargs(long long arg1, ...){
   STACK;
-  VA_START(vl, 3);
+  VA_START(vl, arg1);
   char arg2 = va_arg(vl, int);
   char arg3 = va_arg(vl, int);
   long long arg4 = va_arg(vl, long long);
@@ -112,7 +112,7 @@ long long ll_multillargs(long long arg1, ...){
 long long ll_manyllargs(char a0, ...)
 {
   STACK;
-  VA_START(vl, 29);
+  VA_START(vl, a0);
   int a1 = va_arg(vl, int);
   char a2 = va_arg(vl, int);
   long long a3 = va_arg(vl, long long);
@@ -153,7 +153,7 @@ long long ll_manyllargs(char a0, ...)
 //                char a20, int a21, char a22, long long a23, char a24, char a25, long long a26, int a27, char a28, long long a29)
 long long stackhell(char a0, ...)
 {
-  VA_START(vl, 29);
+  VA_START(vl, a0);
   int a1 = va_arg(vl, int);
   char a2 = va_arg(vl, int);
   long long a3 = va_arg(vl, long long);
