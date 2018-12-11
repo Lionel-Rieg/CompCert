@@ -1,7 +1,8 @@
 K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
-CFLAGS ?= -O2 -Wl,--wrap=printf
+OPTIM ?= -O2
+CFLAGS ?= $(OPTIM) -Wl,--wrap=printf
 SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 120s
 
@@ -23,7 +24,7 @@ CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
 
-TESTNAMES=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
+TESTNAMES?=$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))
 X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.out,$(TESTNAMES)))
 GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.out,$(TESTNAMES)))
 CCOMP_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .ccomp.out,$(TESTNAMES)))
