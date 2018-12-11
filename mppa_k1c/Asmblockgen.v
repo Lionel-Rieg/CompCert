@@ -398,19 +398,19 @@ Definition transl_op
   | Omulhu, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulhuw rd rs1 rs2 :: k)
-  | Odiv, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivw rd rs1 rs2 :: k)
-  | Odivu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivuw rd rs1 rs2 :: k)
-  | Omod, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Premw rd rs1 rs2 :: k)
-  | Omodu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Premuw rd rs1 rs2 :: k)
-*)| Oand, a1 :: a2 :: nil =>
+*)| Odiv, a1 :: a2 :: nil => Error(msg "32-bits division not supported yet. Please use 64-bits.")
+      (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pdivw rd rs1 rs2 :: k) *)
+  | Odivu, a1 :: a2 :: nil => Error(msg "32-bits division not supported yet. Please use 64-bits.")
+      (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pdivuw rd rs1 rs2 :: k) *)
+  | Omod, a1 :: a2 :: nil => Error(msg "32-bits modulo not supported yet. Please use 64-bits.")
+      (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Premw rd rs1 rs2 :: k) *)
+  | Omodu, a1 :: a2 :: nil => Error(msg "32-bits modulo not supported yet. Please use 64-bits.")
+      (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Premuw rd rs1 rs2 :: k) *)
+  | Oand, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandw rd rs1 rs2 ::i k)
   | Oandimm n, a1 :: nil =>
