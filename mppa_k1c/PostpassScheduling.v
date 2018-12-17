@@ -19,6 +19,8 @@ Local Open Scope error_monad_scope.
     returns a schedule expressed as a list of bundles *)
 Axiom schedule: bblock -> list bblock.
 
+Extract Constant schedule => "PostpassSchedulingOracle.schedule".
+
 (* TODO - implement the verificator *)
 Definition verified_schedule (bb : bblock) : res (list bblock) := OK (schedule bb).
 

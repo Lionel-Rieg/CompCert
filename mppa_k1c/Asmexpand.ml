@@ -448,6 +448,7 @@ let expand_instruction instr =
         let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
+        emit Psemi;
         expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
         let va_ofs =
             sz in
@@ -456,6 +457,7 @@ let expand_instruction instr =
         save_arguments n va_ofs
       end else begin
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
+        emit Psemi;
         expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
         vararg_start_ofs := None
       end
