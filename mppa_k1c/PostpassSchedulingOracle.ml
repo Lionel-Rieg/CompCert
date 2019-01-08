@@ -1,7 +1,7 @@
 open Asmblock
 open Printf
 open Camlcoq
-(* open InstructionScheduler *)
+open InstructionScheduler
 
 (**
  * Extracting infos from Asmblock instructions
@@ -63,6 +63,7 @@ type inst_info = {
   write_regs : gpreg list;
   read_regs : gpreg list;
   usage: int array; (* resources consumed by the instruction *)
+  latency: int;
 }
 
 (** Figuring out whether an immediate is s10, u27l10 or e27u27l10 *)
@@ -144,23 +145,30 @@ let alu_tiny_y : int array = let resmap = fun r -> match r with
 
 type real_instruction = Addw | Addd
 
+let real_inst_to_str = function
+  | Addw -> "addw"
+  | Addd -> "addd"
+
 let ab_inst_to_real = function
-  | "Paddl" | "Paddil" -> "addd"
-  | "Paddw" | "Paddiw" -> "addw"
+  | "Paddl" | "Paddil" -> Addd
+  | "Paddw" | "Paddiw" -> Addw
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm i)
   and real_inst = ab_inst_to_real r.inst
-  and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" i
+  and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" (real_inst_to_str i)
   in match real_inst with
-  | "addw" -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> fail real_inst)
-  | "addd" -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> alu_tiny_y)
-  | s -> fail s
+  | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> fail real_inst)
+  | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> alu_tiny_y)
+
+let real_inst_to_latency = function
+  | Addw | Addd -> 1
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
-  in { write_regs = r.write_regs; read_regs = r.read_regs; usage=usage }
+  and latency = real_inst_to_latency @@ ab_inst_to_real r.inst
+  in { write_regs = r.write_regs; read_regs = r.read_regs; usage=usage; latency=latency }
 
 let instruction_infos bb = List.map rec_to_info (instruction_recs bb)
 
@@ -177,24 +185,28 @@ let rec get_accesses lregs laccs =
   | [] -> []
   | reg :: lregs -> (accesses reg laccs) @ (get_accesses lregs laccs)
 
-let latency_constraints bb =  failwith "latency_constraints: not implemented" 
-  (*
+let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
   and read = ref []
   and count = ref 0
   and constraints = ref []
-  in let step i = 
+  in let step (i: inst_info) = 
     let write_accesses = List.map (fun reg -> { inst= !count; reg=reg }) i.write_regs
     and read_accesses = List.map (fun reg -> { inst= !count; reg=reg }) i.read_regs
-    in let raw = get_accesses !written read_accesses
-    and waw = get_accesses !written write_accesses
-    and war = get_accesses !read write_accesses
+    and written_regs = List.map (fun acc -> acc.reg) !written
+    and read_regs = List.map (fun acc -> acc.reg) !read
+    in let raw = get_accesses written_regs read_accesses
+    and waw = get_accesses written_regs write_accesses
+    and war = get_accesses read_regs write_accesses
     in begin
-      (* TODO *) failwith "latency_constraints: not implemented"
+      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = i.latency} :: !constraints) (raw @ waw);
+      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
+      written := write_accesses @ !written;
+      read := read_accesses @ !read;
+      count := !count + 1
     end
   and instr_infos = instruction_infos bb
   in List.iter step instr_infos
-  *)
 
 (** Dumb schedule if the above doesn't work *)
 
