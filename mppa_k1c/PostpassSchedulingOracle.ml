@@ -176,7 +176,10 @@ let instruction_usages bb =
   let usages = List.map (fun info -> info.usage) (instruction_infos bb)
   in Array.of_list usages
 
-(** Latency constraints building *)
+(**
+ * Latency constraints building
+ *)
+
 type access = { inst: int; reg: ireg }
 
 let rec get_accesses lregs laccs =
@@ -206,9 +209,87 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
       count := !count + 1
     end
   and instr_infos = instruction_infos bb
-  in List.iter step instr_infos
+  in (List.iter step instr_infos; !constraints)
 
-(** Dumb schedule if the above doesn't work *)
+(**
+ * Using the InstructionScheduler
+ *)
+
+let build_problem bb = 
+  { max_latency = 5000; resource_bounds = resource_bounds;
+    instruction_usages = instruction_usages bb; latency_constraints = latency_constraints bb }
+
+let rec find_min (l: int option list) =
+  match l with
+  | [] -> None 
+  | e :: l ->
+    begin match find_min l with
+    | None -> e
+    | Some m ->
+      begin match e with
+      | None -> Some m
+      | Some n -> if n < m then Some n else Some m
+      end
+    end
+
+let rec filter_indexes predicate = function
+  | [] -> []
+  | e :: l -> if (predicate e) then e :: (filter_indexes predicate l) else filter_indexes predicate l
+
+let get_from_indexes indexes l = List.map (List.nth l) indexes
+
+let is_basic = function PBasic _ -> true | _ -> false
+let is_control = function PControl _ -> true | _ -> false
+let to_basic = function PBasic i -> i | _ -> failwith "to_basic: control instruction found"
+let to_control = function PControl i -> i | _ -> failwith "to_control: basic instruction found"
+
+let bundlize li hd =
+  let last = List.nth li (List.length li - 1)
+  in if is_control last then
+      let cut_li = Array.to_list @@ Array.sub (Array.of_list li) 0 (List.length li - 1)
+      in let bli = List.map to_basic cut_li
+      in { header = hd; body = bli; exit = Some (to_control last) }
+    else 
+      let bli = List.map to_basic li
+      in { header = hd; body = bli; exit = None }
+
+let apply_pbasic b = PBasic b
+let extract_some o = match o with Some e -> e | None -> failwith "extract_some: None found"
+
+let bundlize_solution bb sol =
+  let times = ref (Array.to_list @@ Array.map (fun t -> Some t) (Array.sub sol 0 (Array.length sol - 1)))
+  and is_first = ref true
+  and lbb = ref []
+  and instrs = (List.map apply_pbasic bb.body) @ (match bb.exit with None -> [] | Some e -> [PControl e])
+  in let next_instrs = 
+    let next_time = find_min !times
+    in match next_time with
+    | None -> []
+    | Some t -> 
+        let next_indexes = filter_indexes (fun e -> match e with None -> false | Some tt -> t = tt) !times
+        in begin
+          times := List.map (fun e -> match e with None -> None | Some tt -> if (t = tt) then None else Some tt) !times;
+          get_from_indexes (List.map extract_some next_indexes) instrs
+        end
+  in let to_bundlize = ref [] 
+  in begin 
+    while (match next_instrs with [] -> false | li -> (to_bundlize := li; true)) do
+      let hd = if !is_first then (is_first := false; bb.header) else []
+      in lbb := !lbb @ [bundlize !to_bundlize hd]
+    done;
+    !lbb
+  end
+
+let smart_schedule bb =
+  let problem = build_problem bb
+  in let solution = validated_scheduler list_scheduler problem
+  in match solution with
+  | None -> failwith "Could not find a valid schedule"
+  | Some sol -> bundlize_solution bb sol
+
+(**
+ * Dumb schedule if the above doesn't work
+ *)
 
 let bundlize_label l =
   match l with
@@ -229,4 +310,13 @@ let dumb_schedule (bb : bblock) : bblock list = bundlize_label bb.header @ bundl
 
 (** Called schedule function from Coq *)
 
-let schedule bb = dumb_schedule bb (* TODO - raccorder le scheduler de David ici *)
+let schedule bb = 
+  try smart_schedule bb
+  with e ->
+    let msg = Printexc.to_string e
+    and stack = Printexc.get_backtrace ()
+    in begin
+      Printf.eprintf "Postpass scheduling could not complete: %s\n%s" msg stack;
+      Printf.eprintf "Issuing one instruction per bundle instead\n\n";
+      dumb_schedule bb
+    end
