@@ -2,12 +2,13 @@ open Asmblock
 open Printf
 open Camlcoq
 open InstructionScheduler
+(* open TargetPrinter.Target *)
 
 (**
  * Extracting infos from Asmblock instructions
  *)
 
-type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int
+type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int | Off of offset
 
 type ab_inst_rec = {
   inst: string; (* name of the pseudo instruction *)
@@ -16,19 +17,96 @@ type ab_inst_rec = {
   imm : immediate option;
 }
 
-let arith_rrr_rec i rd rs1 rs2 = match i with
-  | Paddl -> { inst="Paddl" ; write_regs = [rd]; read_regs = [rs1; rs2]; imm = None}
-  | _ -> failwith "arith_rrr_rec: unrecognized constructor"
+(** Asmblock constructor to string functions *)
 
-let arith_rri32_rec i rd rs imm32 = match i with
-  | Paddiw -> 
-      { inst = "Paddiw"; write_regs = [rd]; read_regs = [rs]; imm=imm32 }
-  | _ -> failwith "arith_rri32_rec: unrecognized constructor"
+(* Because of a bug (from OCaml?), I cannot use TargetPrinter.Target.icond_name (unbound value error). Copy pasting instead *)
+let icond_name = function
+  | ITne | ITneu -> "ne"
+  | ITeq | ITequ -> "eq"
+  | ITlt   -> "lt"
+  | ITge   -> "ge"
+  | ITle   -> "le"
+  | ITgt   -> "gt"
+  | ITltu  -> "ltu"
+  | ITgeu  -> "geu"
+  | ITleu  -> "leu"
+  | ITgtu  -> "gtu"
+  | ITall  -> "all"
+  | ITnall -> "nall"
+  | ITany  -> "any"
+  | ITnone -> "none"
 
-let arith_rri64_rec i rd rs imm64 = match i with
-  | Paddil ->
-      { inst = "Paddil"; write_regs = [rd]; read_regs = [rs]; imm=imm64 }
-  | _ -> failwith "arith_rri64_rec: unrecognized constructor"
+let bcond_name = function
+  | BTwnez -> "wnez"
+  | BTweqz -> "weqz"
+  | BTwltz -> "wltz"
+  | BTwgez -> "wgez"
+  | BTwlez -> "wlez"
+  | BTwgtz -> "wgtz"
+  | BTdnez -> "dnez"
+  | BTdeqz -> "deqz"
+  | BTdltz -> "dltz"
+  | BTdgez -> "dgez"
+  | BTdlez -> "dlez"
+  | BTdgtz -> "dgtz"
+
+let arith_rrr_str = function
+  | Pcompw it -> "Pcompw" ^ (icond_name it)
+  | Pcompl it -> "Pcompl" ^ (icond_name it)
+  | Paddw -> "Paddw"
+  | Psubw -> "Psubw"
+  | Pmulw -> "Pmulw"
+  | Pandw -> "Pandw"
+  | Porw -> "Porw"
+  | Pxorw -> "Pxorw"
+  | Psraw -> "Psraw"
+  | Psrlw -> "Psrlw"
+  | Psllw -> "Psllw"
+  | Paddl -> "Paddl"
+  | Psubl -> "Psubl"
+  | Pandl -> "Pandl"
+  | Porl -> "Porl"
+  | Pxorl -> "Pxorl"
+  | Pmull -> "Pmull"
+  | Pslll -> "Pslll"
+  | Psrll -> "Psrll"
+  | Psral -> "Psral"
+
+let arith_rri32_str = function
+  | Pcompiw it -> "Pcompiw" ^ (icond_name it)
+  | Paddiw -> "Paddiw"
+  | Pandiw -> "Pandiw"
+  | Poriw -> "Poriw"
+  | Pxoriw -> "Pxoriw"
+  | Psraiw -> "Psraiw"
+  | Psrliw -> "Psrliw"
+  | Pslliw -> "Pslliw"
+  | Psllil -> "Psllil"
+  | Psrlil -> "Psrlil"
+  | Psrail -> "Psrail"
+
+let arith_rri64_str = function
+  | Pcompil it -> "Pcompil" ^ (icond_name it)
+  | Paddil -> "Paddil"
+  | Pandil -> "Pandil"
+  | Poril -> "Poril"
+  | Pxoril -> "Pxoril"
+
+let store_str = function
+  | Psb -> "Psb"
+  | Psh -> "Psh"
+  | Psw -> "Psw"
+  | Psw_a -> "Psw_a"
+  | Psd -> "Psd"
+  | Psd_a -> "Psd_a"
+  | Pfss -> "Pfss"
+  | Pfsd -> "Pfsd"
+
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_regs = [rd]; read_regs = [rs1; rs2]; imm = None}
+
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_regs = [rd]; read_regs = [rs]; imm = imm32 }
+
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_regs = [rd]; read_regs = [rs]; imm = imm64 }
 
 let arith_rec i =
   match i with
@@ -37,9 +115,24 @@ let arith_rec i =
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i rd rs1 rs2
   | _ -> failwith "arith_rec: unrecognized constructor"
 
+let load_rec i = failwith "load_rec: not implemented"
+
+let store_rec i = match i with
+  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_regs = []; read_regs = [rs1; rs2]; imm = (Some (Off imm)) }
+
+let get_rec rd rs = failwith "get_rec: not implemented"
+
+let set_rec rd rs = failwith "set_rec: not implemented"
+
 let basic_rec i =
   match i with
   | PArith i -> arith_rec i
+  | PLoad i -> load_rec i
+  | PStore i -> store_rec i
+  | Pallocframe (_, _) -> failwith "basic_rec: Pallocframe"
+  | Pfreeframe (_, _) -> failwith "basic_rec: Pfreeframe"
+  | Pget (rd, rs) -> get_rec rd rs
+  | Pset (rd, rs) -> set_rec rd rs
   | _ -> failwith "basic_rec: unrecognized constructor"
 
 let control_rec i = failwith "control_rec: not implemented"
@@ -156,6 +249,7 @@ let ab_inst_to_real = function
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm i)
+                                  | Some (Off i) -> failwith "Offset encoding not supported yet"
   and real_inst = ab_inst_to_real r.inst
   and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" (real_inst_to_str i)
   in match real_inst with
