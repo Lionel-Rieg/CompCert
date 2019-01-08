@@ -88,7 +88,7 @@ let vector_subtract a b =
 
 (* The version with critical path ordering is much better! *)
 type list_scheduler_order =
-  | INSTRUCTION_ORDER
+  (* | INSTRUCTION_ORDER *)
   | CRITICAL_PATH_ORDER;;
 
 let int_max (x : int) (y : int) =
@@ -134,9 +134,10 @@ let critical_paths successors =
      done;
      path_lengths;;
 
-let maximum_critical_path problem =
+(* let maximum_critical_path problem =
   let paths = critical_paths (get_successors problem) in
   Array.fold_left int_max 0 paths;;
+*)
 
 let get_earliest_dates predecessors =
   let nr_instructions = (Array.length predecessors)-1 in
@@ -185,7 +186,7 @@ let priority_list_scheduler (order : list_scheduler_order)
   and times = Array.make (nr_instructions+1) (-1) in
 
   let priorities = match order with
-    | INSTRUCTION_ORDER -> None
+    (* | INSTRUCTION_ORDER -> None *)
     | CRITICAL_PATH_ORDER -> Some (critical_paths successors) in
   
   let module InstrSet =
@@ -629,20 +630,21 @@ let line_to_pb_solution sol line nr_pb_variables =
   List.iter
     begin
       function "" -> ()
-	     | item ->
-		(match String.get item 0 with
-		 | '+' ->
-		    assert ((String.length item) >= 3);
-		    assert ((String.get item 1) = 'x');
-		    assign (String.sub item 2 ((String.length item)-2)) Positive
-		 | '-' ->
-		    assert ((String.length item) >= 3);
-		    assert ((String.get item 1) = 'x');
-		    assign (String.sub item 2 ((String.length item)-2)) Negative
-		 | 'x' ->
-		    assert ((String.length item) >= 2);
-		    assign (String.sub item 1 ((String.length item)-1)) Positive
-		)
+       | item ->
+    (match String.get item 0 with
+     | '+' ->
+        assert ((String.length item) >= 3);
+        assert ((String.get item 1) = 'x');
+        assign (String.sub item 2 ((String.length item)-2)) Positive
+     | '-' ->
+        assert ((String.length item) >= 3);
+        assert ((String.get item 1) = 'x');
+        assign (String.sub item 2 ((String.length item)-2)) Negative
+     | 'x' ->
+        assert ((String.length item) >= 2);
+        assign (String.sub item 1 ((String.length item)-1)) Positive
+     |  c -> failwith @@ Printf.sprintf "line_to_pb_solution: unrecognized character: %c" c
+    )
     end
     (String.split_on_char ' ' (String.sub line 2 ((String.length line)-2)));;
 
@@ -737,7 +739,7 @@ let pseudo_boolean_solver = ref "java -jar sat4j-pb.jar CuttingPlanesStar"
 
 let pseudo_boolean_scheduler pb_type problem =
   try
-    let filename_in = "problem.opb" and filename_out = "problem.sol" in
+    let filename_in = "problem.opb" (* and filename_out = "problem.sol" *) in
     let opb_problem = open_out filename_in in
     let mapper = pseudo_boolean_print_problem opb_problem problem pb_type in
     close_out opb_problem;

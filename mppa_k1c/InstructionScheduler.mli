@@ -11,18 +11,19 @@ type latency_constraint = {
   instr_to : int;
   latency : int;
 }
+
 (** A scheduling problem.
 
 In addition to the latency constraints, the resource constraints should be satisfied: at every clock tick, the sum of vectors of resources used by the instructions scheduled at that tick does not exceed the resource bounds.
 *)
 type problem = {
-    (** An optional maximal total latency of the problem, after which the problem is deemed not schedulable. -1 means there should be no maximum. *)
+    (* An optional maximal total latency of the problem, after which the problem is deemed not schedulable. -1 means there should be no maximum. *)
     max_latency : int;
 
-    (** An array of number of units available indexed by the kind of resources to be allocated. It can be empty, in which case the problem is scheduling without resource constraints. *)
+    (* An array of number of units available indexed by the kind of resources to be allocated. It can be empty, in which case the problem is scheduling without resource constraints. *)
     resource_bounds : int array;
 
-    (** At index {i i} the vector of resources used by instruction number {i i}. It must be the same length as [resource_bounds] *)
+    (* At index {i i} the vector of resources used by instruction number {i i}. It must be the same length as [resource_bounds] *)
     instruction_usages: int array array;
     latency_constraints : latency_constraint list
   };;
