@@ -181,10 +181,10 @@ let signed_length i =
   let rec f i n = 
     let interv = signed_interval n
     in if (within i interv) then n else f i (n+1)
-  in f i 0
+  in f i 1
 
 let encode_imm imm =
-  let i = Z.to_int imm
+  let i = Int64.to_int imm
   in let length = signed_length i
   in if length <= 10 then S10
   else if length <= 37 then U27l10
@@ -234,30 +234,48 @@ let alu_tiny_y : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 3 | "TINY" -> 1 | _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let lsu_acc : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let lsu_acc_x : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let lsu_acc_y : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
 (** Real instructions *)
 
-type real_instruction = Addw | Addd
+type real_instruction = Addw | Addd | Sd
 
 let real_inst_to_str = function
   | Addw -> "addw"
   | Addd -> "addd"
+  | Sd -> "sd"
 
 let ab_inst_to_real = function
   | "Paddl" | "Paddil" -> Addd
   | "Paddw" | "Paddiw" -> Addw
+  | "Psd" -> Sd
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
 
 let rec_to_usage r =
-  let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm i)
-                                  | Some (Off i) -> failwith "Offset encoding not supported yet"
+  let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm @@ Z.to_int64 i)
+                                  | Some (Off (Ofsimm ptr)) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
+                                  | Some (Off (Ofslow (_, _))) -> Some E27u27l10 (* FIXME *) 
+                                  (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" (real_inst_to_str i)
   in match real_inst with
   | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> fail real_inst)
   | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> alu_tiny_y)
+  | Sd ->   (match encoding with None | Some S10 -> lsu_acc | Some U27l10 -> lsu_acc_x | Some E27u27l10 -> lsu_acc_y)
 
 let real_inst_to_latency = function
   | Addw | Addd -> 1
+  | Sd -> 5 (* FIXME - random value *)
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
