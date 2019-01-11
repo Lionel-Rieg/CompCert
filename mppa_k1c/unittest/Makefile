@@ -7,6 +7,7 @@ TEST_CMX=mppa_k1c/unittest/postpass_test.cmx
 
 UNITTEST_OBJS:=$(shell $(MODORDER) $(TEST_CMX))
 
-postpass_test: $(TEST_CMX) $(UNITTEST_OBJS)
-	@echo "Linking $@"
+postpass_test: $(UNITTEST_OBJS)
+	@echo "Linking $@ $(UNITTEST_OBJS)"
 	@$(OCAMLOPT) -o $@ $(LIBS) $(LINK_OPT) $+
+
