@@ -12,7 +12,7 @@ let debug = false
 
 type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int | Off of offset
 
-type location = Reg of gpreg | Mem
+type location = Reg of preg | Mem
 
 type ab_inst_rec = {
   inst: string; (* name of the pseudo instruction *)
@@ -83,15 +83,15 @@ let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Re
 
 let arith_rec i =
   match i with
-  | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i rd rs (Some (I32 imm32))
-  | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i rd rs (Some (I64 imm64))
-  | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i rd rs1 rs2
+  | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
+  | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
+  | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
   | _ -> failwith "arith_rec: unrecognized constructor"
 
 let load_rec i = failwith "load_rec: not implemented"
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg rs1; Reg rs2]; imm = (Some (Off imm)) }
+  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm)) }
 
 let get_rec rd rs = failwith "get_rec: not implemented"
 
@@ -110,7 +110,13 @@ let basic_rec i =
 
 let expand_rec i = failwith "expand_rec: not implemented"
 
-let ctl_flow_rec i = failwith "ctl_flow_rec: not implemented"
+let ctl_flow_rec = function
+  | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None }
+  | Pcall lbl -> { inst = "Pcall"; write_locs = [Reg RA]; read_locs = []; imm = None }
+  | Pgoto lbl -> { inst = "Pcall"; write_locs = []; read_locs = []; imm = None }
+  | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None }
+  | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None }
+  | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None }
 
 let control_rec i =
   match i with
