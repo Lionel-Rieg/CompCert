@@ -27,7 +27,7 @@ open Fileinfo
 
 (* Module containing the printing functions *)
 
-module Target : TARGET =
+module Target (*: TARGET*) =
   struct
 
 (* Basic printing functions *)
@@ -411,7 +411,6 @@ module Target : TARGET =
     let print_instructions oc fn =
       current_function_sig := fn.fn_sig;
       List.iter (print_instruction oc) fn.fn_code
-
 
 (* Data *)
 

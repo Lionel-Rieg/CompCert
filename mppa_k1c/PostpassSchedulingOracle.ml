@@ -2,7 +2,9 @@ open Asmblock
 open Printf
 open Camlcoq
 open InstructionScheduler
-(* open TargetPrinter.Target *)
+open TargetPrinter.Target
+
+let debug = true
 
 (**
  * Extracting infos from Asmblock instructions
@@ -18,37 +20,6 @@ type ab_inst_rec = {
 }
 
 (** Asmblock constructor to string functions *)
-
-(* Because of a bug (from OCaml?), I cannot use TargetPrinter.Target.icond_name (unbound value error). Copy pasting instead *)
-let icond_name = function
-  | ITne | ITneu -> "ne"
-  | ITeq | ITequ -> "eq"
-  | ITlt   -> "lt"
-  | ITge   -> "ge"
-  | ITle   -> "le"
-  | ITgt   -> "gt"
-  | ITltu  -> "ltu"
-  | ITgeu  -> "geu"
-  | ITleu  -> "leu"
-  | ITgtu  -> "gtu"
-  | ITall  -> "all"
-  | ITnall -> "nall"
-  | ITany  -> "any"
-  | ITnone -> "none"
-
-let bcond_name = function
-  | BTwnez -> "wnez"
-  | BTweqz -> "weqz"
-  | BTwltz -> "wltz"
-  | BTwgez -> "wgez"
-  | BTwlez -> "wlez"
-  | BTwgtz -> "wgtz"
-  | BTdnez -> "dnez"
-  | BTdeqz -> "deqz"
-  | BTdltz -> "dltz"
-  | BTdgez -> "dgez"
-  | BTdlez -> "dlez"
-  | BTdgtz -> "dgtz"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw" ^ (icond_name it)
@@ -392,12 +363,24 @@ let bundlize_solution bb sol =
     !lbb
   end
 
+let print_inst oc = function
+  | Asm.Pallocframe(sz, ofs) -> fprintf oc "	Pallocframe\n"
+  | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
+  | i -> print_instruction oc i
+
+let print_bb bb =
+  let asm_instructions = Asm.unfold_bblock bb
+  in List.iter (print_inst stdout) asm_instructions
+
+(* let[@warning "-26"] smart_schedule bb = print_bb bb; failwith "done" *)
 let smart_schedule bb =
+  ( printf "Attempting to schedule the basicblock:\n"; print_bb bb; printf "-----------------------------------\n";
   let problem = build_problem bb
   in let solution = validated_scheduler list_scheduler problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> bundlize_solution bb sol
+  )
 
 (**
  * Dumb schedule if the above doesn't work
@@ -423,7 +406,8 @@ let dumb_schedule (bb : bblock) : bblock list = bundlize_label bb.header @ bundl
 (** Called schedule function from Coq *)
 
 let schedule bb = 
-  try smart_schedule bb
+  ( if debug then print_bb bb;
+    try smart_schedule bb
   with e ->
     let msg = Printexc.to_string e
     and stack = Printexc.get_backtrace ()
@@ -432,3 +416,4 @@ let schedule bb =
       Printf.eprintf "Issuing one instruction per bundle instead\n\n";
       dumb_schedule bb
     end
+  )
