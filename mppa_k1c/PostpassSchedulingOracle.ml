@@ -4,7 +4,7 @@ open Camlcoq
 open InstructionScheduler
 open TargetPrinter.Target
 
-let debug = true
+let debug = false
 
 (**
  * Extracting infos from Asmblock instructions
@@ -302,11 +302,11 @@ let build_problem bb =
   { max_latency = 5000; resource_bounds = resource_bounds;
     instruction_usages = instruction_usages bb; latency_constraints = latency_constraints bb }
 
-let rec find_min (l: int option list) =
+let rec find_min_opt (l: int option list) =
   match l with
   | [] -> None 
   | e :: l ->
-    begin match find_min l with
+    begin match find_min_opt l with
     | None -> e
     | Some m ->
       begin match e with
@@ -339,42 +339,54 @@ let bundlize li hd =
 let apply_pbasic b = PBasic b
 let extract_some o = match o with Some e -> e | None -> failwith "extract_some: None found"
 
+let rec find_min = function
+  | [] -> None
+  | e :: l ->
+    match find_min l with
+    | None -> Some e
+    | Some m -> if (e < m) then Some e else Some m
+
+let rec remove_all m = function
+  | [] -> []
+  | e :: l -> if m=e then remove_all m l
+                     else e :: (remove_all m l)
+
+let rec find_mins l = match find_min l with
+  | None -> []
+  | Some m -> m :: find_mins (remove_all m l)
+
+let find_all_indices m l = 
+  let rec find m off = function
+    | [] -> []
+    | e :: l -> if m=e then off :: find m (off+1) l
+                       else find m (off+1) l
+  in find m 0 l
+
+(* [0, 2, 3, 1, 1, 2, 4, 5] -> [[0], [3, 4], [1, 5], [2], [6], [7]] *)
+let minpack_list l =
+  let mins = find_mins l
+  in List.map (fun m -> find_all_indices m l) mins
+
 let bundlize_solution bb sol =
-  let times = ref (Array.to_list @@ Array.map (fun t -> Some t) (Array.sub sol 0 (Array.length sol - 1)))
-  and is_first = ref true
-  and lbb = ref []
+  let packs = minpack_list (Array.to_list @@ Array.sub sol 0 (Array.length sol - 1))
   and instrs = (List.map apply_pbasic bb.body) @ (match bb.exit with None -> [] | Some e -> [PControl e])
-  in let next_instrs = 
-    let next_time = find_min !times
-    in match next_time with
-    | None -> []
-    | Some t -> 
-        let next_indexes = filter_indexes (fun e -> match e with None -> false | Some tt -> t = tt) !times
-        in begin
-          times := List.map (fun e -> match e with None -> None | Some tt -> if (t = tt) then None else Some tt) !times;
-          get_from_indexes (List.map extract_some next_indexes) instrs
-        end
-  in let to_bundlize = ref [] 
-  in begin 
-    while (match next_instrs with [] -> false | li -> (to_bundlize := li; true)) do
-      let hd = if !is_first then (is_first := false; bb.header) else []
-      in lbb := !lbb @ [bundlize !to_bundlize hd]
-    done;
-    !lbb
-  end
+  in let rec bund hd = function
+    | [] -> []
+    | pack :: packs -> bundlize (get_from_indexes pack instrs) hd :: (bund [] packs)
+  in bund bb.header packs
 
 let print_inst oc = function
   | Asm.Pallocframe(sz, ofs) -> fprintf oc "	Pallocframe\n"
   | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
   | i -> print_instruction oc i
 
-let print_bb bb =
+let print_bb oc bb =
   let asm_instructions = Asm.unfold_bblock bb
-  in List.iter (print_inst stdout) asm_instructions
+  in List.iter (print_inst oc) asm_instructions
 
 (* let[@warning "-26"] smart_schedule bb = print_bb bb; failwith "done" *)
 let smart_schedule bb =
-  ( printf "Attempting to schedule the basicblock:\n"; print_bb bb; printf "-----------------------------------\n";
+  (
   let problem = build_problem bb
   in let solution = validated_scheduler list_scheduler problem
   in match solution with
@@ -406,12 +418,15 @@ let dumb_schedule (bb : bblock) : bblock list = bundlize_label bb.header @ bundl
 (** Called schedule function from Coq *)
 
 let schedule bb = 
-  ( if debug then print_bb bb;
+  ( if debug then (print_bb stdout bb; printf "--------------------------\n");
+    (* print_problem (build_problem bb); *)
     try smart_schedule bb
   with e ->
     let msg = Printexc.to_string e
     and stack = Printexc.get_backtrace ()
     in begin
+      Printf.eprintf "In regards to this group of instructions:";
+      print_bb stderr bb;
       Printf.eprintf "Postpass scheduling could not complete: %s\n%s" msg stack;
       Printf.eprintf "Issuing one instruction per bundle instead\n\n";
       dumb_schedule bb
