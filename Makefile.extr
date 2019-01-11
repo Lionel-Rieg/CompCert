@@ -89,7 +89,7 @@ ifeq ($(wildcard .depend.extr),.depend.extr)
 CCOMP_OBJS:=$(shell $(MODORDER) driver/Driver.cmx)
 
 ccomp: $(CCOMP_OBJS)
-	@echo "Linking $@ with "$(CCOMP_OBJS)
+	@echo "Linking $@"
 	@$(OCAMLOPT) -o $@ $(LIBS) $(LINK_OPT) $+
 
 ccomp.byte: $(CCOMP_OBJS:.cmx=.cmo)

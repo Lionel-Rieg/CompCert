@@ -12,10 +12,12 @@ let debug = false
 
 type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int | Off of offset
 
+type location = Reg of gpreg | Mem
+
 type ab_inst_rec = {
   inst: string; (* name of the pseudo instruction *)
-  write_regs : gpreg list;
-  read_regs : gpreg list;
+  write_locs : location list;
+  read_locs : location list;
   imm : immediate option;
 }
 
@@ -73,11 +75,11 @@ let store_str = function
   | Pfss -> "Pfss"
   | Pfsd -> "Pfsd"
 
-let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_regs = [rd]; read_regs = [rs1; rs2]; imm = None}
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None}
 
-let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_regs = [rd]; read_regs = [rs]; imm = imm32 }
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32 }
 
-let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_regs = [rd]; read_regs = [rs]; imm = imm64 }
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64 }
 
 let arith_rec i =
   match i with
@@ -89,7 +91,7 @@ let arith_rec i =
 let load_rec i = failwith "load_rec: not implemented"
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_regs = []; read_regs = [rs1; rs2]; imm = (Some (Off imm)) }
+  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg rs1; Reg rs2]; imm = (Some (Off imm)) }
 
 let get_rec rd rs = failwith "get_rec: not implemented"
 
@@ -106,7 +108,14 @@ let basic_rec i =
   | Pset (rd, rs) -> set_rec rd rs
   | _ -> failwith "basic_rec: unrecognized constructor"
 
-let control_rec i = failwith "control_rec: not implemented"
+let expand_rec i = failwith "expand_rec: not implemented"
+
+let ctl_flow_rec i = failwith "ctl_flow_rec: not implemented"
+
+let control_rec i =
+  match i with
+  | PExpand i -> expand_rec i
+  | PCtlFlow i -> ctl_flow_rec i
 
 let rec basic_recs body = match body with
   | [] -> []
@@ -124,8 +133,8 @@ let instruction_recs bb = (basic_recs bb.body) @ (exit_rec bb.exit)
 
 (** Abstraction providing all the necessary informations for solving the scheduling problem *)
 type inst_info = {
-  write_regs : gpreg list;
-  read_regs : gpreg list;
+  write_locs : location list;
+  read_locs : location list;
   usage: int array; (* resources consumed by the instruction *)
   latency: int;
 }
@@ -251,7 +260,7 @@ let real_inst_to_latency = function
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
   and latency = real_inst_to_latency @@ ab_inst_to_real r.inst
-  in { write_regs = r.write_regs; read_regs = r.read_regs; usage=usage; latency=latency }
+  in { write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency }
 
 let instruction_infos bb = List.map rec_to_info (instruction_recs bb)
 
@@ -263,13 +272,13 @@ let instruction_usages bb =
  * Latency constraints building
  *)
 
-type access = { inst: int; reg: ireg }
+type access = { inst: int; loc: location }
 
-let rec get_accesses lregs laccs =
-  let accesses reg laccs = List.filter (fun acc -> acc.reg = reg) laccs
-  in match lregs with
+let rec get_accesses llocs laccs =
+  let accesses loc laccs = List.filter (fun acc -> acc.loc = loc) laccs
+  in match llocs with
   | [] -> []
-  | reg :: lregs -> (accesses reg laccs) @ (get_accesses lregs laccs)
+  | loc :: llocs -> (accesses loc laccs) @ (get_accesses llocs laccs)
 
 let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
@@ -277,13 +286,13 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
   and count = ref 0
   and constraints = ref []
   in let step (i: inst_info) = 
-    let write_accesses = List.map (fun reg -> { inst= !count; reg=reg }) i.write_regs
-    and read_accesses = List.map (fun reg -> { inst= !count; reg=reg }) i.read_regs
-    and written_regs = List.map (fun acc -> acc.reg) !written
-    and read_regs = List.map (fun acc -> acc.reg) !read
-    in let raw = get_accesses written_regs read_accesses
-    and waw = get_accesses written_regs write_accesses
-    and war = get_accesses read_regs write_accesses
+    let write_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.write_locs
+    and read_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.read_locs
+    and written_locs = List.map (fun acc -> acc.loc) !written
+    and read_locs = List.map (fun acc -> acc.loc) !read
+    in let raw = get_accesses written_locs read_accesses
+    and waw = get_accesses written_locs write_accesses
+    and war = get_accesses read_locs write_accesses
     in begin
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = i.latency} :: !constraints) (raw @ waw);
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
@@ -384,7 +393,6 @@ let print_bb oc bb =
   let asm_instructions = Asm.unfold_bblock bb
   in List.iter (print_inst oc) asm_instructions
 
-(* let[@warning "-26"] smart_schedule bb = print_bb bb; failwith "done" *)
 let smart_schedule bb =
   (
   let problem = build_problem bb

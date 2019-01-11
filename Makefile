@@ -140,6 +140,7 @@ all:
 	$(MAKE) proof
 	$(MAKE) extraction
 	$(MAKE) ccomp
+	$(MAKE) ccomp.byte
 ifeq ($(HAS_RUNTIME_LIB),true)
 	$(MAKE) runtime
 endif
