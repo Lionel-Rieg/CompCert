@@ -375,6 +375,7 @@ let print_bb bb =
 (* let[@warning "-26"] smart_schedule bb = print_bb bb; failwith "done" *)
 let smart_schedule bb =
   ( printf "Attempting to schedule the basicblock:\n"; print_bb bb; printf "-----------------------------------\n";
+    flush stdout;
   let problem = build_problem bb
   in let solution = validated_scheduler list_scheduler problem
   in match solution with
