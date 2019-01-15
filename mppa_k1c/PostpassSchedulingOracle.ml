@@ -4,7 +4,7 @@ open Camlcoq
 open InstructionScheduler
 open TargetPrinter.Target
 
-let debug = false
+let debug = true
 
 (**
  * Extracting infos from Asmblock instructions
@@ -67,6 +67,10 @@ let arith_rri64_str = function
   | Poril -> "Poril"
   | Pxoril -> "Pxoril"
 
+let arith_ri32_str = "Pmake"
+
+let arith_ri64_str = "Pmakel"
+
 let store_str = function
   | Psb -> "Psb"
   | Psh -> "Psh"
@@ -76,6 +80,21 @@ let store_str = function
   | Psd_a -> "Psd_a"
   | Pfss -> "Pfss"
   | Pfsd -> "Pfsd"
+
+let load_str = function
+  | Plb -> "Plb"
+  | Plbu -> "Plbu"
+  | Plh -> "Plh"
+  | Plhu -> "Plhu"
+  | Plw -> "Plw"
+  | Plw_a -> "Plw_a"
+  | Pld -> "Pld"
+  | Pld_a -> "Pld_a"
+  | Pfls -> "Pfls"
+  | Pfld -> "Pfld"
+
+let set_str = "Pset"
+let get_str = "Pget"
 
 let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None}
 
@@ -88,16 +107,19 @@ let arith_rec i =
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
+  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) }
+  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) }
   | _ -> failwith "arith_rec: unrecognized constructor"
 
-let load_rec i = failwith "load_rec: not implemented"
+let load_rec i = match i with
+  | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) }
 
 let store_rec i = match i with
   | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm)) }
 
-let get_rec rd rs = failwith "get_rec: not implemented"
+let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None }
 
-let set_rec rd rs = failwith "set_rec: not implemented"
+let set_rec rd (rs:gpreg) = { inst = set_str; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None }
 
 let basic_rec i =
   match i with
@@ -148,7 +170,7 @@ type inst_info = {
 }
 
 (** Figuring out whether an immediate is s10, u27l10 or e27u27l10 *)
-type imm_encoding = S10 | U27l10 | E27u27l10
+type imm_encoding = S10 | U27L10 | E27U27L10
 
 let rec pow a = function
   | 0 -> 1
@@ -175,8 +197,8 @@ let encode_imm imm =
   let i = Int64.to_int imm
   in let length = signed_length i
   in if length <= 10 then S10
-  else if length <= 37 then U27l10
-  else if length <= 64 then E27u27l10
+  else if length <= 37 then U27L10
+  else if length <= 64 then E27U27L10
   else failwith @@ sprintf "encode_imm: integer too big! (%d)" i
 
 (** Resources *)
@@ -222,6 +244,10 @@ let alu_tiny_y : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 3 | "TINY" -> 1 | _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let bcu : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 1 | "BCU" -> 1 | _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
 let lsu_acc : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
@@ -234,36 +260,60 @@ let lsu_acc_y : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
+let lsu_data : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let lsu_data_x : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let lsu_data_y : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
 (** Real instructions *)
 
-type real_instruction = Addw | Addd | Sd
+type real_instruction = Addw | Addd | Ld | Make | Sd | Set
 
 let real_inst_to_str = function
   | Addw -> "addw"
   | Addd -> "addd"
+  | Ld -> "ld"
+  | Make -> "make"
   | Sd -> "sd"
+  | Set -> "set"
 
 let ab_inst_to_real = function
   | "Paddl" | "Paddil" -> Addd
   | "Paddw" | "Paddiw" -> Addw
+  | "Pld" -> Ld
+  | "Pmake" | "Pmakel" -> Make
   | "Psd" -> Sd
+  | "Pset" -> Set
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
+
+exception InvalidEncoding
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm @@ Z.to_int64 i)
                                   | Some (Off (Ofsimm ptr)) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
-                                  | Some (Off (Ofslow (_, _))) -> Some E27u27l10 (* FIXME *) 
+                                  | Some (Off (Ofslow (_, _))) -> Some E27U27L10 (* FIXME *) 
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" (real_inst_to_str i)
   in match real_inst with
-  | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> fail real_inst)
-  | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27l10 -> alu_tiny_x | Some E27u27l10 -> alu_tiny_y)
-  | Sd ->   (match encoding with None | Some S10 -> lsu_acc | Some U27l10 -> lsu_acc_x | Some E27u27l10 -> lsu_acc_y)
+  | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> fail real_inst)
+  | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y)
+  | Ld -> (match encoding with None | Some S10 -> lsu_data | Some U27L10 -> lsu_data_x | Some E27U27L10 -> lsu_data_y)
+  | Make -> (match encoding with        Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y | _ -> raise InvalidEncoding)
+  | Sd ->   (match encoding with None | Some S10 -> lsu_acc | Some U27L10 -> lsu_acc_x | Some E27U27L10 -> lsu_acc_y)
+  | Set -> bcu
 
 let real_inst_to_latency = function
-  | Addw | Addd -> 1
-  | Sd -> 5 (* FIXME - random value *)
+  | Addw | Addd | Make -> 1
+  | Ld | Sd -> 3 (* FIXME - random value *)
+  | Set -> 3
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
@@ -296,11 +346,9 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
   in let step (i: inst_info) = 
     let write_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.write_locs
     and read_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.read_locs
-    and written_locs = List.map (fun acc -> acc.loc) !written
-    and read_locs = List.map (fun acc -> acc.loc) !read
-    in let raw = get_accesses written_locs read_accesses
-    and waw = get_accesses written_locs write_accesses
-    and war = get_accesses read_locs write_accesses
+    in let raw = get_accesses i.read_locs !written
+    and waw = get_accesses i.write_locs !written
+    and war = get_accesses i.write_locs !read
     in begin
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = i.latency} :: !constraints) (raw @ waw);
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
@@ -404,13 +452,20 @@ let print_bb oc bb =
   in List.iter (print_inst oc) asm_instructions
 
 let do_schedule bb =
-  (
   let problem = build_problem bb
   in let solution = validated_scheduler list_scheduler problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
-  | Some sol -> bundlize_solution bb sol
-  )
+  | Some sol -> let bundles = bundlize_solution bb sol in 
+      (if debug then
+      begin
+        Printf.eprintf "Scheduling the following group of instructions:\n";
+        print_bb stderr bb;
+        Printf.eprintf "Gave the following solution:\n";
+        List.iter (print_bb stderr) bundles;
+        Printf.eprintf "--------------------------------\n"
+      end;
+      bundles)
 
 (**
  * Dumb schedule if the above doesn't work
@@ -480,6 +535,6 @@ let smart_schedule bb =
 (** Called schedule function from Coq *)
 
 let schedule bb = 
-  if debug then (print_bb stdout bb; printf "--------------------------\n");
+  if debug then (eprintf "###############################\n"; Printf.eprintf "SCHEDULING\n"; print_bb stderr bb);
   (* print_problem (build_problem bb); *)
   smart_schedule bb
