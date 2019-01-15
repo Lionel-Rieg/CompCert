@@ -23,6 +23,8 @@ type ab_inst_rec = {
 
 (** Asmblock constructor to string functions *)
 
+exception OpaqueInstruction
+
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw" ^ (icond_name it)
   | Pcompl it -> "Pcompl" ^ (icond_name it)
@@ -102,8 +104,8 @@ let basic_rec i =
   | PArith i -> arith_rec i
   | PLoad i -> load_rec i
   | PStore i -> store_rec i
-  | Pallocframe (_, _) -> failwith "basic_rec: Pallocframe"
-  | Pfreeframe (_, _) -> failwith "basic_rec: Pfreeframe"
+  | Pallocframe (_, _) -> raise OpaqueInstruction
+  | Pfreeframe (_, _) -> raise OpaqueInstruction
   | Pget (rd, rs) -> get_rec rd rs
   | Pset (rd, rs) -> set_rec rd rs
   | _ -> failwith "basic_rec: unrecognized constructor"
@@ -382,9 +384,11 @@ let minpack_list l =
   let mins = find_mins l
   in List.map (fun m -> find_all_indices m l) mins
 
+let bb_to_instrs bb = (List.map apply_pbasic bb.body) @ (match bb.exit with None -> [] | Some e -> [PControl e])
+
 let bundlize_solution bb sol =
   let packs = minpack_list (Array.to_list @@ Array.sub sol 0 (Array.length sol - 1))
-  and instrs = (List.map apply_pbasic bb.body) @ (match bb.exit with None -> [] | Some e -> [PControl e])
+  and instrs = bb_to_instrs bb
   in let rec bund hd = function
     | [] -> []
     | pack :: packs -> bundlize (get_from_indexes pack instrs) hd :: (bund [] packs)
@@ -399,7 +403,7 @@ let print_bb oc bb =
   let asm_instructions = Asm.unfold_bblock bb
   in List.iter (print_inst oc) asm_instructions
 
-let smart_schedule bb =
+let do_schedule bb =
   (
   let problem = build_problem bb
   in let solution = validated_scheduler list_scheduler problem
@@ -429,20 +433,53 @@ let bundlize_exit e =
 
 let dumb_schedule (bb : bblock) : bblock list = bundlize_label bb.header @ bundlize_basic bb.body @ bundlize_exit bb.exit
 
+(**
+ * Separates the opaque instructions such as Pfreeframe and Pallocframe
+ *)
+
+let is_opaque = function
+  | PBasic (Pallocframe (_, _)) | PBasic (Pfreeframe (_, _)) -> true
+  | _ -> false
+
+let rec biggest_wo_opaque = function
+  | [] -> ([], [])
+  | [i] -> ([i], [])
+  | i1 :: i2 :: li -> if is_opaque i2 || is_opaque i1 then ([i1], i2::li) 
+                     else let big, rem = biggest_wo_opaque li in (i1 :: i2 :: big, rem)
+
+let separate_opaque bb =
+  let instrs = bb_to_instrs bb
+  in let rec f hd = function
+  | [] -> []
+  | li ->
+    let sub_li, li = biggest_wo_opaque li
+    in (bundlize sub_li hd) :: (f [] li)
+  in f bb.header instrs
+
+let smart_schedule bb =
+  let lbb = separate_opaque bb
+  in let rec f = function
+  | [] -> []
+  | bb :: lbb -> 
+      let bundles =
+        try do_schedule bb
+        with OpaqueInstruction -> dumb_schedule bb
+        | e -> 
+          let msg = Printexc.to_string e
+          and stack = Printexc.get_backtrace ()
+          in begin
+            Printf.eprintf "In regards to this group of instructions:\n";
+            print_bb stderr bb;
+            Printf.eprintf "Postpass scheduling could not complete: %s\n%s" msg stack;
+            Printf.eprintf "Issuing one instruction per bundle instead\n\n";
+            dumb_schedule bb
+          end
+      in bundles @ (f lbb)
+  in f lbb
+
 (** Called schedule function from Coq *)
 
 let schedule bb = 
-  ( if debug then (print_bb stdout bb; printf "--------------------------\n");
-    (* print_problem (build_problem bb); *)
-    try smart_schedule bb
-  with e ->
-    let msg = Printexc.to_string e
-    and stack = Printexc.get_backtrace ()
-    in begin
-      Printf.eprintf "In regards to this group of instructions:";
-      print_bb stderr bb;
-      Printf.eprintf "Postpass scheduling could not complete: %s\n%s" msg stack;
-      Printf.eprintf "Issuing one instruction per bundle instead\n\n";
-      dumb_schedule bb
-    end
-  )
+  if debug then (print_bb stdout bb; printf "--------------------------\n");
+  (* print_problem (build_problem bb); *)
+  smart_schedule bb
