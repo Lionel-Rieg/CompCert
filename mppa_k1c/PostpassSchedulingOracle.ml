@@ -19,6 +19,7 @@ type ab_inst_rec = {
   write_locs : location list;
   read_locs : location list;
   imm : immediate option;
+  is_control : bool;
 }
 
 (** Asmblock constructor to string functions *)
@@ -104,40 +105,42 @@ let load_str = function
 let set_str = "Pset"
 let get_str = "Pget"
 
-let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32 }
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
 
-let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64 }
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
 
-let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None}
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
-let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None}
+let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
 
 let arith_r_rec i rd = match i with
     (* FIXME - this instruction is expanded to nothing, yet it still has a semantic in Asmblock.v.
      *          It will introduce unneeded dependencies.. *)
-  | Pcvtw2l -> { inst = "Pcvtw2l"; write_locs = [Reg rd]; read_locs = [Reg rd]; imm = None }
+  | Pcvtw2l -> { inst = "Pcvtw2l"; write_locs = [Reg rd]; read_locs = [Reg rd]; imm = None ; is_control = false}
     (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
-  | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed)}
+  | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
 
 let arith_rec i =
   match i with
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
-  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) }
-  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) }
+  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
+  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
   | PArithRR (i, rd, rs) -> arith_rr_rec i (IR rd) (IR rs)
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
-  | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) }
+  | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm))
+                                      ; is_control = false}
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm)) }
+  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+                                      ; is_control = false}
 
-let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None }
+let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
 
-let set_rec rd (rs:gpreg) = { inst = set_str; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None }
+let set_rec rd (rs:gpreg) = { inst = set_str; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None; is_control = false }
 
 let basic_rec i =
   match i with
@@ -148,18 +151,18 @@ let basic_rec i =
   | Pfreeframe (_, _) -> raise OpaqueInstruction
   | Pget (rd, rs) -> get_rec rd rs
   | Pset (rd, rs) -> set_rec rd rs
-  | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None }
+  | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None ; is_control = false}
 
 let expand_rec = function
   | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
-  | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None }
-  | Pcall lbl -> { inst = "Pcall"; write_locs = [Reg RA]; read_locs = []; imm = None }
-  | Pgoto lbl -> { inst = "Pcall"; write_locs = []; read_locs = []; imm = None }
-  | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None }
-  | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None }
-  | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None }
+  | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true}
+  | Pcall lbl -> { inst = "Pcall"; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true}
+  | Pgoto lbl -> { inst = "Pcall"; write_locs = []; read_locs = []; imm = None ; is_control = true}
+  | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None ; is_control = true}
+  | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
+  | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
 
 let control_rec i =
   match i with
@@ -184,12 +187,13 @@ let instruction_recs bb = (basic_recs bb.body) @ (exit_rec bb.exit)
 type inst_info = {
   write_locs : location list;
   read_locs : location list;
+  is_control : bool;
   usage: int array; (* resources consumed by the instruction *)
   latency: int;
 }
 
 (** Figuring out whether an immediate is s10, u27l10 or e27u27l10 *)
-type imm_encoding = S10 | U27L10 | E27U27L10
+type imm_encoding = U6 | S10 | U27L5 | U27L10 | E27U27L10
 
 let rec pow a = function
   | 0 -> 1
@@ -215,7 +219,9 @@ let signed_length i =
 let encode_imm imm =
   let i = Int64.to_int imm
   in let length = signed_length i
-  in if length <= 10 then S10
+  in if length <= 6 then U6
+  else if length <= 10 then S10
+  else if length <= 32 then U27L5
   else if length <= 37 then U27L10
   else if length <= 64 then E27U27L10
   else failwith @@ sprintf "encode_imm: integer too big! (%d)" i
@@ -263,8 +269,32 @@ let alu_tiny_y : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 3 | "TINY" -> 1 | _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let alu_lite : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
+let alu_nop : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 1 | "NOP" -> 1 | _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
+let mau : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 1 | "TINY" -> 1 | "MAU" -> 1 |  _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_x : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 2 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_y : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 3 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
 let bcu : int array = let resmap = fun r -> match r with 
   | "ISSUE" -> 1 | "BCU" -> 1 | _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
+let bcu_tiny_tiny_mau_xnop : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 1 | "TINY" -> 2 | "MAU" -> 1 | "BCU" -> 1 | "NOP" -> 4 | _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_acc : int array = let resmap = fun r -> match r with
@@ -293,25 +323,63 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 (** Real instructions *)
 
-type real_instruction = Addw | Addd | Ld | Make | Ret | Sd | Set
-
-let real_inst_to_str = function
-  | Addw -> "addw"
-  | Addd -> "addd"
-  | Ld -> "ld"
-  | Make -> "make"
-  | Ret -> "ret"
-  | Sd -> "sd"
-  | Set -> "set"
+type real_instruction = 
+  (* ALU *) 
+  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
+  | Make | Nop 
+  (* LSU *)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld
+  | Sb | Sh | Sw | Sd 
+  (* BCU *)
+  | Call | Cb | Goto | Ret | Get | Set
+  (* FPU *)
+  | Fnegd
 
 let ab_inst_to_real = function
-  | "Paddl" | "Paddil" -> Addd
   | "Paddw" | "Paddiw" -> Addw
-  | "Pld" -> Ld
-  | "Pmake" | "Pmakel" -> Make
+  | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
+  | "Pandw" | "Pandiw" -> Andw
+  | "Pandl" | "Pandil" -> Andd
+  | "Pcompw" | "Pcompiw" -> Compw
+  | "Pcompl" | "Pcompil" -> Compd
+  | "Pmulw" -> Mulw
+  | "Pmull" -> Muld
+  | "Porw" | "Poriw" -> Orw
+  | "Porl" | "Poril" -> Ord
+  | "Psubw" | "Pnegw" -> Sbfw
+  | "Psubl" | "Pnegl" -> Sbfd
+  | "Psraw" | "Psraiw" -> Sraw
+  | "Psral" | "Psrail" -> Srad
+  | "Psrlw" | "Psrliw" -> Srlw
+  | "Psrll" | "Psrlil" -> Srld
+  | "Psllw" | "Pslliw" -> Sllw
+  | "Pslll" | "Psllil" -> Slld
+  | "Pxorw" | "Pxoriw" -> Xorw
+  | "Pxord" | "Pxoril" -> Xord
+  | "Pmake" | "Pmakel" | "Ploadsymbol" -> Make
+  | "Pnop" | "Pcvtwl2w" -> Nop
+
+  | "Plb" -> Lbs
+  | "Plbu" -> Lbz
+  | "Plh" -> Lhs
+  | "Plhu" -> Lhz 
+  | "Plw" | "Plw_a" | "Pfls" -> Lws 
+  | "Pld" | "Pfld" | "Pld_a" -> Ld
+
+  | "Psb" -> Sb
+  | "Psh" -> Sh 
+  | "Psw" | "Psw_a" | "Pfss" -> Sw
+  | "Psd" | "Psd_a" | "Pfsd" -> Sd
+
+  | "Pcb" | "Pcbu" -> Cb
+  | "Pcall" -> Call
+  | "Pgoto" | "Pj_l" -> Goto
+  | "Pget" -> Get
   | "Pret" -> Ret
-  | "Psd" -> Sd
   | "Pset" -> Set
+
+  | "Pfnegd" -> Fnegd
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
 
 exception InvalidEncoding
@@ -322,25 +390,63 @@ let rec_to_usage r =
                                   | Some (Off (Ofslow (_, _))) -> Some E27U27L10 (* FIXME *) 
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
-  and fail i = failwith @@ sprintf "rec_to_usage: failed with instruction %s" (real_inst_to_str i)
   in match real_inst with
-  | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> fail real_inst)
-  | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y)
-  | Make -> (match encoding with        Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y | _ -> raise InvalidEncoding)
-  | Ld -> (match encoding with None | Some S10 -> lsu_data | Some U27L10 -> lsu_data_x | Some E27U27L10 -> lsu_data_y)
-  | Sd ->   (match encoding with None | Some S10 -> lsu_acc | Some U27L10 -> lsu_acc_x | Some E27U27L10 -> lsu_acc_y)
-  | Ret | Set -> bcu
+  | Addw | Andw | Orw | Sbfw | Xorw -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_tiny 
+                          | Some U27L5 | Some U27L10 -> alu_tiny_x
+                          | _ -> raise InvalidEncoding)
+  | Addd | Andd | Ord | Sbfd | Xord -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_tiny 
+                          | Some U27L5 | Some U27L10 -> alu_tiny_x
+                          | Some E27U27L10 -> alu_tiny_y)
+  | Compw -> (match encoding with None -> alu_tiny
+                                | Some U6 | Some S10 | Some U27L5 -> alu_tiny_x
+                                | _ -> raise InvalidEncoding)
+  | Compd -> (match encoding with None | Some U6 | Some S10 -> alu_tiny
+                                | Some U27L5 | Some U27L10 -> alu_tiny_x
+                                | Some E27U27L10 -> alu_tiny_y)
+  | Make -> (match encoding with Some U6 | Some S10 -> alu_tiny 
+                          | Some U27L5 | Some U27L10 -> alu_tiny_x 
+                          | Some E27U27L10 -> alu_tiny_y 
+                          | _ -> raise InvalidEncoding)
+  | Mulw -> (match encoding with None -> mau
+                                | Some U6 | Some S10 | Some U27L5 -> mau_x
+                                | _ -> raise InvalidEncoding)
+  | Muld -> (match encoding with None | Some U6 | Some S10 -> mau
+                                | Some U27L5 | Some U27L10 -> mau_x
+                                | Some E27U27L10 -> mau_y)
+  | Nop -> alu_nop
+  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
+      (match encoding with None | Some U6 | Some S10 -> lsu_data 
+                          | Some U27L5 | Some U27L10 -> lsu_data_x 
+                          | Some E27U27L10 -> lsu_data_y)
+  | Sb | Sh | Sw | Sd ->
+      (match encoding with None | Some U6 | Some S10 -> lsu_acc 
+                          | Some U27L5 | Some U27L10 -> lsu_acc_x 
+                          | Some E27U27L10 -> lsu_acc_y)
+  | Call | Cb | Goto | Ret | Set -> bcu
+  | Get -> bcu_tiny_tiny_mau_xnop
+  | Fnegd -> alu_lite
 
 let real_inst_to_latency = function
-  | Addw | Addd | Make -> 1
-  | Ld | Sd -> 3 (* FIXME - random value *)
-  | Set -> 3 (* FIXME *)
-  | Ret -> 5 (* Should not matter since it's the final instruction of the basic block *)
+  | Nop -> 0 (* Only goes through ID *)
+  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
+        -> 1
+  | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld
+  | Sb | Sh | Sw | Sd 
+        -> 3 (* FIXME - random value *)
+  | Get -> 1
+  | Set -> 3
+  | Call | Cb | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
+  | Fnegd -> 1
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
   and latency = real_inst_to_latency @@ ab_inst_to_real r.inst
-  in { write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency }
+  in { write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency; is_control=r.is_control }
 
 let instruction_infos bb = List.map rec_to_info (instruction_recs bb)
 
@@ -360,6 +466,11 @@ let rec get_accesses llocs laccs =
   | [] -> []
   | loc :: llocs -> (accesses loc laccs) @ (get_accesses llocs laccs)
 
+let rec intlist n =
+  if n < 0 then failwith "intlist: n < 0"
+  else if n = 0 then []
+  else n :: (intlist (n-1))
+
 let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
   and read = ref []
@@ -374,6 +485,8 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
     in begin
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = i.latency} :: !constraints) (raw @ waw);
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
+      (* If it's a control instruction, add an extra 0-lat dependency between this instruction and all the previous ones *)
+      if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
       written := write_accesses @ !written;
       read := read_accesses @ !read;
       count := !count + 1
