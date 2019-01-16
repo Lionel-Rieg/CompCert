@@ -268,7 +268,8 @@ module Target (*: TARGET*) =
          fprintf oc "	sd	%a[%a] = %a\n" offset ofs ireg ra ireg rd
 
       (* Arith R instructions *)
-      | Pcvtw2l(rd) -> assert false
+      | Pcvtw2l(rd) -> assert false 
+        (* Converted to no instruction in Asmexpand *)
 
       (* Arith RR instructions *)
       | Pmv(rd, rs) | Pmvw2l(rd, rs) ->

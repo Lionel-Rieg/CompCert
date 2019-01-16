@@ -4,7 +4,7 @@ open Camlcoq
 open InstructionScheduler
 open TargetPrinter.Target
 
-let debug = true
+let debug = false
 
 (**
  * Extracting infos from Asmblock instructions
@@ -24,6 +24,14 @@ type ab_inst_rec = {
 (** Asmblock constructor to string functions *)
 
 exception OpaqueInstruction
+
+let arith_rr_str = function
+  | Pmv -> "Pmv"
+  | Pnegw -> "Pnegw"
+  | Pnegl -> "Pnegl"
+  | Pfnegd -> "Pfnegd"
+  | Pcvtl2w -> "Pcvtl2w"
+  | Pmvw2l -> "Pmvw2l"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw" ^ (icond_name it)
@@ -96,11 +104,20 @@ let load_str = function
 let set_str = "Pset"
 let get_str = "Pget"
 
-let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None}
-
 let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32 }
 
 let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64 }
+
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None}
+
+let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None}
+
+let arith_r_rec i rd = match i with
+    (* FIXME - this instruction is expanded to nothing, yet it still has a semantic in Asmblock.v.
+     *          It will introduce unneeded dependencies.. *)
+  | Pcvtw2l -> { inst = "Pcvtw2l"; write_locs = [Reg rd]; read_locs = [Reg rd]; imm = None }
+    (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
+  | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed)}
 
 let arith_rec i =
   match i with
@@ -109,7 +126,8 @@ let arith_rec i =
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) }
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) }
-  | _ -> failwith "arith_rec: unrecognized constructor"
+  | PArithRR (i, rd, rs) -> arith_rr_rec i (IR rd) (IR rs)
+  | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
   | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) }
@@ -130,9 +148,10 @@ let basic_rec i =
   | Pfreeframe (_, _) -> raise OpaqueInstruction
   | Pget (rd, rs) -> get_rec rd rs
   | Pset (rd, rs) -> set_rec rd rs
-  | _ -> failwith "basic_rec: unrecognized constructor"
+  | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None }
 
-let expand_rec i = failwith "expand_rec: not implemented"
+let expand_rec = function
+  | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
   | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None }
@@ -274,13 +293,14 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 (** Real instructions *)
 
-type real_instruction = Addw | Addd | Ld | Make | Sd | Set
+type real_instruction = Addw | Addd | Ld | Make | Ret | Sd | Set
 
 let real_inst_to_str = function
   | Addw -> "addw"
   | Addd -> "addd"
   | Ld -> "ld"
   | Make -> "make"
+  | Ret -> "ret"
   | Sd -> "sd"
   | Set -> "set"
 
@@ -289,6 +309,7 @@ let ab_inst_to_real = function
   | "Paddw" | "Paddiw" -> Addw
   | "Pld" -> Ld
   | "Pmake" | "Pmakel" -> Make
+  | "Pret" -> Ret
   | "Psd" -> Sd
   | "Pset" -> Set
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
@@ -305,15 +326,16 @@ let rec_to_usage r =
   in match real_inst with
   | Addw -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> fail real_inst)
   | Addd -> (match encoding with None | Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y)
-  | Ld -> (match encoding with None | Some S10 -> lsu_data | Some U27L10 -> lsu_data_x | Some E27U27L10 -> lsu_data_y)
   | Make -> (match encoding with        Some S10 -> alu_tiny | Some U27L10 -> alu_tiny_x | Some E27U27L10 -> alu_tiny_y | _ -> raise InvalidEncoding)
+  | Ld -> (match encoding with None | Some S10 -> lsu_data | Some U27L10 -> lsu_data_x | Some E27U27L10 -> lsu_data_y)
   | Sd ->   (match encoding with None | Some S10 -> lsu_acc | Some U27L10 -> lsu_acc_x | Some E27U27L10 -> lsu_acc_y)
-  | Set -> bcu
+  | Ret | Set -> bcu
 
 let real_inst_to_latency = function
   | Addw | Addd | Make -> 1
   | Ld | Sd -> 3 (* FIXME - random value *)
-  | Set -> 3
+  | Set -> 3 (* FIXME *)
+  | Ret -> 5 (* Should not matter since it's the final instruction of the basic block *)
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
@@ -445,6 +467,7 @@ let bundlize_solution bb sol =
 let print_inst oc = function
   | Asm.Pallocframe(sz, ofs) -> fprintf oc "	Pallocframe\n"
   | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
+  | Asm.Pbuiltin(ef, args, res) -> fprintf oc "	Pbuiltin\n"
   | i -> print_instruction oc i
 
 let print_bb oc bb =
@@ -493,7 +516,7 @@ let dumb_schedule (bb : bblock) : bblock list = bundlize_label bb.header @ bundl
  *)
 
 let is_opaque = function
-  | PBasic (Pallocframe (_, _)) | PBasic (Pfreeframe (_, _)) -> true
+  | PBasic (Pallocframe _) | PBasic (Pfreeframe _) | PControl (PExpand (Pbuiltin _)) -> true
   | _ -> false
 
 let rec biggest_wo_opaque = function
