@@ -46,7 +46,7 @@ void modint_mat_mul3(unsigned m, unsigned n, unsigned p,
     for(unsigned k=0; k<p; k++) {
       modint total0 = 0, total1 = 0;
       unsigned j;
-      for(j=0; j<n; j+=2) {
+      for(j=0; j+1<n; j+=2) {
 	total0 += a[i*stride_a + j] * b[j*stride_b + k];
 	total1 += a[i*stride_a + (j+1)] * b[(j+1)*stride_b + k];
       }
