@@ -37,4 +37,14 @@ int printf(const char *, ...);
     }
     /* END END_TEST */
 
+#define END_TEST32()\
+            printf("%u\n", c);\
+            S += c;\
+        }\
+        return S;\
+    }
+    /* END END_TEST32 */
+
 #endif
+
+
