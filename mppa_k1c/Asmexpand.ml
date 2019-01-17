@@ -350,6 +350,7 @@ match !vararg_start_ofs with
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
       expand_addptrofs Asmblock.GPR32 Asmblock.GPR12 (Ptrofs.repr ofs);
+      emit Psemi;
       expand_storeind_ptr Asmblock.GPR32 r Ptrofs.zero
 
 (* Auxiliary for 64-bit integer arithmetic built-ins.  They expand to
