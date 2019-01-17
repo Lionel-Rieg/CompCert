@@ -3,7 +3,7 @@ CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2 -Wno-varargs
 SIMU ?= k1-mppa
-TIMEOUT ?= --signal=SIGTERM 80s
+TIMEOUT ?= --signal=SIGTERM 120s
 
 DIR=./
 SRCDIR=$(DIR)
@@ -57,6 +57,10 @@ BIN=$(addprefix $(BINDIR)/,$(addsuffix .x86-gcc.bin,$(TESTNAMES)))\
 
 all: $(BIN)
 
+GREEN=\033[0;32m
+RED=\033[0;31m
+NC=\033[0m
+
 .PHONY: 
 test: $(X86_GCC_OUT) $(GCC_OUT) $(VAARG_X86_GCC_OUT) $(VAARG_GCC_OUT)
 	@echo "Comparing x86 gcc output to k1 gcc.."
@@ -65,15 +69,15 @@ test: $(X86_GCC_OUT) $(GCC_OUT) $(VAARG_X86_GCC_OUT) $(VAARG_GCC_OUT)
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		vaarg_x86out=$(OUTDIR)/$$test.x86-gcc.vaarg.out;\
 		vaarg_gccout=$(OUTDIR)/$$test.gcc.vaarg.out;\
-		if ! diff $$x86out $$gccout; then\
-			>&2 echo "ERROR: $$x86out and $$gccout differ";\
+		if ! diff $$x86out $$gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$x86out and $$gccout concur";\
+			printf "$(GREEN)GOOD: $$x86out and $$gccout concur$(NC)\n";\
 		fi;\
-		if ! diff $$vaarg_x86out $$vaarg_gccout; then\
-			>&2 echo "ERROR: $$vaarg_x86out and $$vaarg_gccout differ";\
+		if ! diff $$vaarg_x86out $$vaarg_gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$vaarg_x86out and $$vaarg_gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$vaarg_x86out and $$vaarg_gccout concur";\
+			printf "$(GREEN)GOOD: $$vaarg_x86out and $$vaarg_gccout concur$(NC)\n";\
 		fi;\
 	done
 
@@ -87,25 +91,25 @@ check: $(GCC_OUT) $(CCOMP_OUT) $(GCC_REV_OUT) $(VAARG_GCC_OUT) $(VAARG_CCOMP_OUT
 		vaarg_gccout=$(OUTDIR)/$$test.gcc.vaarg.out;\
 		vaarg_ccompout=$(OUTDIR)/$$test.ccomp.vaarg.out;\
 		vaarg_gccrevout=$(OUTDIR)/$$test.gcc.rev.vaarg.out;\
-		if ! diff $$ccompout $$gccout; then\
-			>&2 echo "ERROR: $$ccompout and $$gccout differ";\
+		if ! diff $$ccompout $$gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$ccompout and $$gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$ccompout and $$gccout concur";\
+			printf "$(GREEN)GOOD: $$ccompout and $$gccout concur$(NC)\n";\
 		fi;\
-		if ! diff $$gccrevout $$gccout; then\
-			>&2 echo "ERROR: $$gccrevout and $$gccout differ";\
+		if ! diff $$gccrevout $$gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$gccrevout and $$gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$gccrevout and $$gccout concur";\
+			printf "$(GREEN)GOOD: $$gccrevout and $$gccout concur$(NC)\n";\
 		fi;\
-		if ! diff $$vaarg_ccompout $$vaarg_gccout; then\
-			>&2 echo "ERROR: $$vaarg_ccompout and $$vaarg_gccout differ";\
+		if ! diff $$vaarg_ccompout $$vaarg_gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$vaarg_ccompout and $$vaarg_gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$vaarg_ccompout and $$vaarg_gccout concur";\
+			printf "$(GREEN)GOOD: $$vaarg_ccompout and $$vaarg_gccout concur$(NC)\n";\
 		fi;\
-		if ! diff $$vaarg_gccrevout $$vaarg_gccout; then\
-			>&2 echo "ERROR: $$vaarg_gccrevout and $$vaarg_gccout differ";\
+		if ! diff $$vaarg_gccrevout $$vaarg_gccout > /dev/null; then\
+			>&2 printf "$(RED)ERROR: $$vaarg_gccrevout and $$vaarg_gccout differ$(NC)\n";\
 		else\
-			echo "GOOD: $$vaarg_gccrevout and $$vaarg_gccout concur";\
+			printf "$(GREEN)GOOD: $$vaarg_gccrevout and $$vaarg_gccout concur$(NC)\n";\
 		fi;\
 	done
 

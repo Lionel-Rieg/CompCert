@@ -1,4 +1,4 @@
-CCOMP ?= ccomp
+CCOMP ?= ../../ccomp
 CFLAGS ?= -O2 -D__K1_TINYK1__
 
 CFILES=$(wildcard *.c)

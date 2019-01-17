@@ -59,6 +59,7 @@ let builtins = {
       "__builtin_k1_lwzu", (TInt(IUInt, []), [TPtr(TVoid [], [])], false);
 
       (* ALU Instructions *)
+      "__builtin_clzll", (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
       (* "__builtin_k1_addhp", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
       (* "__builtin_k1_adds", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
       (* "__builtin_k1_bwlu", (TInt(IUInt, []), 
