@@ -582,6 +582,7 @@ let print_inst oc = function
   | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
   | Asm.Pbuiltin(ef, args, res) -> fprintf oc "	Pbuiltin\n"
   | Asm.Pcvtl2w(rd, rs) -> fprintf oc "	Pcvtl2w	%a = %a\n" ireg rd ireg rs
+  | Asm.Pcvtw2l rd -> fprintf oc "	Pcvtw2l	%a\n" ireg rd
   | i -> print_instruction oc i
 
 let print_bb oc bb =

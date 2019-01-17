@@ -334,12 +334,13 @@ let _nbregargs_ = 12
 let _alignment_ = 8
 
 let save_arguments first_reg base_ofs = let open Asmblock in
-  for i = first_reg to (_nbregargs_ - 1) do
+  for i = first_reg to (_nbregargs_ - 1) do begin
     expand_storeind_ptr
       int_param_regs.(i)
       GPR12
-      (Ptrofs.repr (Z.add base_ofs (Z.of_uint ((i - first_reg) * wordsize))))
-  done
+      (Ptrofs.repr (Z.add base_ofs (Z.of_uint ((i - first_reg) * wordsize))));
+    emit Psemi
+  end done
 
 let vararg_start_ofs : Z.t option ref = ref None
 
@@ -450,6 +451,7 @@ let expand_instruction instr =
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
         emit Psemi;
         expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
+        emit Psemi;
         let va_ofs =
             sz in
           (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
@@ -459,6 +461,7 @@ let expand_instruction instr =
         expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
         emit Psemi;
         expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
+        emit Psemi;
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
