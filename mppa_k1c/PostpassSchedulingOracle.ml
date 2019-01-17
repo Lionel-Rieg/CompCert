@@ -35,8 +35,8 @@ let arith_rr_str = function
   | Pmvw2l -> "Pmvw2l"
 
 let arith_rrr_str = function
-  | Pcompw it -> "Pcompw" ^ (icond_name it)
-  | Pcompl it -> "Pcompl" ^ (icond_name it)
+  | Pcompw it -> "Pcompw"
+  | Pcompl it -> "Pcompl"
   | Paddw -> "Paddw"
   | Psubw -> "Psubw"
   | Pmulw -> "Pmulw"
@@ -57,7 +57,7 @@ let arith_rrr_str = function
   | Psral -> "Psral"
 
 let arith_rri32_str = function
-  | Pcompiw it -> "Pcompiw" ^ (icond_name it)
+  | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
   | Pandiw -> "Pandiw"
   | Poriw -> "Poriw"
@@ -70,7 +70,7 @@ let arith_rri32_str = function
   | Psrail -> "Psrail"
 
 let arith_rri64_str = function
-  | Pcompil it -> "Pcompil" ^ (icond_name it)
+  | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
   | Pandil -> "Pandil"
   | Poril -> "Poril"
@@ -337,7 +337,7 @@ type real_instruction =
   | Fnegd
 
 let ab_inst_to_real = function
-  | "Paddw" | "Paddiw" -> Addw
+  | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
   | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
   | "Pandw" | "Pandiw" -> Andw
   | "Pandl" | "Pandil" -> Andd
@@ -581,6 +581,7 @@ let print_inst oc = function
   | Asm.Pallocframe(sz, ofs) -> fprintf oc "	Pallocframe\n"
   | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
   | Asm.Pbuiltin(ef, args, res) -> fprintf oc "	Pbuiltin\n"
+  | Asm.Pcvtl2w(rd, rs) -> fprintf oc "	Pcvtl2w	%a = %a\n" ireg rd ireg rs
   | i -> print_instruction oc i
 
 let print_bb oc bb =
