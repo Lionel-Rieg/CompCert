@@ -1,11 +1,4 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-typedef uint32_t modint;
-
-#define MODULUS 257
+#include "modint.h"
 
 void modint_mat_mul1(unsigned m, unsigned n, unsigned p,
 		     modint * restrict c, unsigned stride_c,
@@ -71,22 +64,4 @@ bool modint_mat_equal(unsigned m,
     }
   }
   return true;
-}
-
-int main() {
-  const unsigned m = 200, n = 100, p = 150;
-  modint *a = malloc(sizeof(modint) * m * n);
-  modint_mat_random(m, n, a, n);
-  modint *b = malloc(sizeof(modint) * n * p);
-  modint_mat_random(n, p, b, p);
-  modint *c1 = malloc(sizeof(modint) * m * p);
-  modint_mat_mul1(m, n, p, c1, p, a, n, b, p);  
-  modint *c2 = malloc(sizeof(modint) * m * p);
-  modint_mat_mul2(m, n, p, c2, p, a, n, b, p);
-  printf("equal = %s\n", modint_mat_equal(m, n, c1, p, c2, p)?"true":"false");
-  free(a);
-  free(b);
-  free(c1);
-  free(c2);
-  return 0;
 }
