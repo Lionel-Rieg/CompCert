@@ -356,9 +356,9 @@ let ab_inst_to_real = function
   | "Psllw" | "Pslliw" -> Sllw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
-  | "Pxord" | "Pxoril" -> Xord
+  | "Pxorl" | "Pxoril" -> Xord
   | "Pmake" | "Pmakel" | "Ploadsymbol" -> Make
-  | "Pnop" | "Pcvtwl2w" -> Nop
+  | "Pnop" | "Pcvtw2l" -> Nop
 
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
