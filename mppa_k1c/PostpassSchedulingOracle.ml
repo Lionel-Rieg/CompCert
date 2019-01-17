@@ -469,7 +469,7 @@ let rec get_accesses llocs laccs =
 let rec intlist n =
   if n < 0 then failwith "intlist: n < 0"
   else if n = 0 then []
-  else n :: (intlist (n-1))
+  else (n-1) :: (intlist (n-1))
 
 let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
