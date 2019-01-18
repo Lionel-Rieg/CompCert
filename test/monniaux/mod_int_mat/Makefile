@@ -1,7 +1,7 @@
 CFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
 K1C_CFLAGS=-Wall -O3 -std=c99
-K1C_CCOMP=../../ccomp
+K1C_CCOMP=../../../ccomp
 K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int
 
 PRODUCTS=int_mat.host int_mat.gcc.k1c.out int_mat.ccomp.k1c.out int_mat.ccomp.k1c.s int_mat.gcc.k1c.s
