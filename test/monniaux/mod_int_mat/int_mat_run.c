@@ -69,28 +69,39 @@ int main() {
   modint_mat_mul6(m, n, p, c6, p, a, n, b, p);
   c6_time = get_cycle()-c6_time;
   
+  modint *c7 = malloc(sizeof(modint) * m * p);
+  cycle_t c7_time = get_cycle();
+  modint_mat_mul7(m, n, p, c7, p, a, n, b, p);
+  c7_time = get_cycle()-c7_time;
+  
   printf("c1==c2: %s\n"
 	 "c1==c3: %s\n"
 	 "c1==c4: %s\n"
 	 "c1==c5: %s\n"
 	 "c1==c6: %s\n"
+	 "c1==c7: %s\n"
 	 "c1_time = %" PRIu64 "\n"
 	 "c2_time = %" PRIu64 "\n"
 	 "c3_time = %" PRIu64 "\n"
 	 "c4_time = %" PRIu64 "\n"
 	 "c5_time = %" PRIu64 "\n"
-	 "c6_time = %" PRIu64 "\n",
+	 "c6_time = %" PRIu64 "\n"
+	 "c7_time = %" PRIu64 "\n",
+	
 	 modint_mat_equal(m, n, c1, p, c2, p)?"true":"false",
 	 modint_mat_equal(m, n, c1, p, c3, p)?"true":"false",
 	 modint_mat_equal(m, n, c1, p, c4, p)?"true":"false",
 	 modint_mat_equal(m, n, c1, p, c5, p)?"true":"false",
 	 modint_mat_equal(m, n, c1, p, c6, p)?"true":"false",
+	 modint_mat_equal(m, n, c1, p, c7, p)?"true":"false",
+	 
 	 c1_time,
 	 c2_time,
 	 c3_time,
 	 c4_time,
 	 c5_time,
-	 c6_time);
+	 c6_time,
+	 c7_time);
   
   free(a);
   free(b);

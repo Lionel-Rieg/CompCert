@@ -122,18 +122,65 @@ void modint_mat_mul6(unsigned m, unsigned n, unsigned p,
       unsigned j2=0, n2=n/2;
       if (n2 > 0) {
 	do {
-	  modint p0 = *pa_i_j * *pb_j_k;
+	  total += *pa_i_j * *pb_j_k;
 	  pa_i_j ++;
 	  pb_j_k += stride_b;
-	  modint p1 = *pa_i_j * *pb_j_k;
+	  total += *pa_i_j * *pb_j_k;
 	  pa_i_j ++;
 	  pb_j_k += stride_b;
-	  total += p0 + p1;
 	  j2++;
 	} while (j2 < n2);
       }
       if (n%2) {
 	total += *pa_i_j * *pb_j_k;
+      }
+      pc_i[k] = total % MODULUS;
+    }
+    pa_i += stride_a;
+    pc_i += stride_c;
+  }
+}
+
+void modint_mat_mul7(unsigned m, unsigned n, unsigned p,
+		     modint * c, unsigned stride_c,
+		     const modint *a, unsigned stride_a,
+		     const modint *b, unsigned stride_b) {
+  const modint *pa_i = a;
+  modint * pc_i = c;
+  for(unsigned i=0; i<m; i++) {
+    for(unsigned k=0; k<p; k++) {
+      const modint *pb_j_k = b+k, *pa_i_j = pa_i;
+      modint total = 0;
+      {
+	unsigned j4=0, n4=n/4;
+	if (n4 > 0) {
+	  do {
+	    total += *pa_i_j * *pb_j_k;
+	    pa_i_j ++;
+	    pb_j_k += stride_b;
+	    total += *pa_i_j * *pb_j_k;
+	    pa_i_j ++;
+	    pb_j_k += stride_b;
+	    total += *pa_i_j * *pb_j_k;
+	    pa_i_j ++;
+	    pb_j_k += stride_b;
+	    total += *pa_i_j * *pb_j_k;
+	    pa_i_j ++;
+	    pb_j_k += stride_b;
+	    j4++;
+	  } while (j4 < n4);
+	}
+      }
+      {
+	unsigned j4=0, n4=n%4;
+	if (n4 > 0) {
+	  do {
+	    total += *pa_i_j * *pb_j_k;
+	    pa_i_j ++;
+	    pb_j_k += stride_b;
+	    j4++;
+	  } while (j4 < n4);
+	}
       }
       pc_i[k] = total % MODULUS;
     }
