@@ -219,9 +219,9 @@ let signed_length i =
 let encode_imm imm =
   let i = Int64.to_int imm
   in let length = signed_length i
-  in if length <= 6 then U6
+  in if length <= 7 then U6 (* Unsigned -> 1 bit less needed *)
   else if length <= 10 then S10
-  else if length <= 32 then U27L5
+  else if length <= 32 then U27L5 (* Upper 27 Lower 5 is signed *)
   else if length <= 37 then U27L10
   else if length <= 64 then E27U27L10
   else failwith @@ sprintf "encode_imm: integer too big! (%d)" i
