@@ -735,7 +735,7 @@ let adjust_check_solution mapper solution =
 (* let pseudo_boolean_solver = ref "/home/monniaux/progs/CP/naps/naps" *)
 (* let pseudo_boolean_solver = ref "/home/monniaux/progs/CP/minisatp/build/release/bin/minisatp" *)
 
-let pseudo_boolean_solver = ref "java -jar sat4j-pb.jar CuttingPlanesStar"
+let pseudo_boolean_solver = ref "java -jar /opt/sat4j/sat4j-pb.jar CuttingPlanesStar"
 
 let pseudo_boolean_scheduler pb_type problem =
   try
@@ -752,14 +752,18 @@ let pseudo_boolean_scheduler pb_type problem =
   | Unschedulable -> None;;
 				 
 let rec reoptimizing_scheduler (scheduler : scheduler) (previous_solution : solution) (problem : problem) =
-  Printf.printf "reoptimizing < %d\n" (get_max_latency previous_solution);
-  flush stdout;
-  match scheduler
-          { problem with max_latency = (get_max_latency previous_solution)-1 }
-  with
-  | None -> previous_solution
-  | Some solution -> reoptimizing_scheduler scheduler solution problem;;
-     
+  if (get_max_latency previous_solution) > 1 then
+    begin
+      Printf.printf "reoptimizing < %d\n" (get_max_latency previous_solution);
+      flush stdout;
+      match scheduler
+              { problem with max_latency = (get_max_latency previous_solution)-1 }
+      with
+      | None -> previous_solution
+      | Some solution -> reoptimizing_scheduler scheduler solution problem
+    end
+  else previous_solution;;
+  
 let cascaded_scheduler (problem : problem) =
   match validated_scheduler list_scheduler problem with
   | None -> None
