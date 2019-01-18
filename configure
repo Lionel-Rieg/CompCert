@@ -448,7 +448,7 @@ if test "$arch" = "mppa_k1c"; then
   libdir="$HOME/.usr/lib"
   clinker_options="$model_options -L$libdir -Wl,-rpath=$libdir"
   cprepro="k1-mbr-gcc"
-  cprepro_options="$model_options -std=c99 -U__GNUC__ -E"
+  cprepro_options="$model_options -std=c99 -U__GNUC__ -E -D__thread='' -D__int128='int'"
   libmath="-lm"
   system="linux"
 fi
