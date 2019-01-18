@@ -58,6 +58,28 @@ void modint_mat_mul3(unsigned m, unsigned n, unsigned p,
   }
 }
 
+void modint_mat_mul4(unsigned m, unsigned n, unsigned p,
+		     modint * c, unsigned stride_c,
+		     const modint *a, unsigned stride_a,
+		     const modint *b, unsigned stride_b) {
+  const modint *pa_i = a;
+  modint * pc_i = c;
+  for(unsigned i=0; i<m; i++) {
+    for(unsigned k=0; k<p; k++) {
+      const modint *pb_j_k = b+k, *pa_i_j = pa_i;
+      modint total = 0;
+      for(unsigned j=0; j<n; j++) {
+	total += *pa_i_j * *pb_j_k;
+	pa_i_j ++;
+	pb_j_k += stride_b;
+      }
+      pc_i[k] = total % MODULUS;
+    }
+    pa_i += stride_a;
+    pc_i += stride_c;
+  }
+}
+
 modint modint_random(void) {
   static uint64_t next = 1325997111;
   next = next * 1103515245 + 12345;

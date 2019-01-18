@@ -19,6 +19,11 @@ void modint_mat_mul3(unsigned m, unsigned n, unsigned p,
 		     const modint *a, unsigned stride_a,
 		     const modint *b, unsigned stride_b);
 
+void modint_mat_mul4(unsigned m, unsigned n, unsigned p,
+		     modint * restrict c, unsigned stride_c,
+		     const modint *a, unsigned stride_a,
+		     const modint *b, unsigned stride_b);
+
 modint modint_random(void);
 
 void modint_mat_random(unsigned m,
