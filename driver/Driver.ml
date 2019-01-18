@@ -193,6 +193,7 @@ Processing options:
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
+  -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
@@ -249,7 +250,7 @@ let dump_mnemonics destfile =
   exit 0
 
 let optimization_options = [
-  option_ftailcalls; option_fconstprop; option_fcse; option_fredundancy; option_finline_functions_called_once;
+  option_ftailcalls; option_fconstprop; option_fcse; option_fredundancy; option_fpostpass; option_finline_functions_called_once;
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -361,6 +362,7 @@ let cmdline_actions =
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
+  @ f_opt "postpass" option_fpostpass
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
 (* Code generation options *)

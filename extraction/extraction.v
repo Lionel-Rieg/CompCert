@@ -111,6 +111,8 @@ Extract Constant Compopts.optim_CSE =>
   "fun _ -> !Clflags.option_fcse".
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
+Extract Constant Compopts.optim_postpass =>
+  "fun _ -> !Clflags.option_fpostpass".
 Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
@@ -188,4 +190,5 @@ Separate Extraction
    AST.signature_main Asmaux
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
-   Parser.translation_unit_file.
+   Parser.translation_unit_file
+   Compopts.optim_postpass.

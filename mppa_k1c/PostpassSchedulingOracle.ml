@@ -675,4 +675,4 @@ let smart_schedule bb =
 let schedule bb = 
   if debug then (eprintf "###############################\n"; Printf.eprintf "SCHEDULING\n"; print_bb stderr bb);
   (* print_problem (build_problem bb); *)
-  smart_schedule bb
+  if Compopts.optim_postpass () then smart_schedule bb else dumb_schedule bb

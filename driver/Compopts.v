@@ -39,6 +39,9 @@ Parameter optim_CSE: unit -> bool.
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 
+(** Flag -fpostpass. Postpass scheduling for K1 architecture *)
+Parameter optim_postpass: unit -> bool.
+
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.
 
