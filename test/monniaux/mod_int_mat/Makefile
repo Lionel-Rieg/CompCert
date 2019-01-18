@@ -4,7 +4,7 @@ K1C_CFLAGS=-Wall -O3 -std=c99
 K1C_CCOMP=../../../ccomp
 K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int
 
-PRODUCTS=int_mat.host int_mat.gcc.k1c.out int_mat.ccomp.k1c.out int_mat.ccomp.k1c.s int_mat.gcc.k1c.s
+PRODUCTS=int_mat.host int_mat.gcc.k1c.out int_mat.ccomp.k1c.out int_mat.ccomp.k1c.s int_mat.gcc.k1c.s int_mat.gcc.k1c int_mat.ccomp.k1c
 
 all:	$(PRODUCTS)
 
@@ -41,6 +41,6 @@ int_mat.ccomp.k1c: int_mat.ccomp.k1c.o int_mat_run.gcc.k1c.o
 	k1-cluster --cycle-based -- $< | tee $@
 
 clean:
-	$(RM) -f $(PRODUCTS) int_mat.gcc.k1c.o int_mat.ccomp.k1c.o
+	$(RM) -f $(PRODUCTS) int_mat.gcc.k1c.o int_mat.ccomp.k1c.o int_mat_run.gcc.k1c.o
 
 .PHONY: clean
