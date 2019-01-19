@@ -191,7 +191,7 @@ void modint_mat_mul7(unsigned m, unsigned n, unsigned p,
 
 modint modint_random(void) {
   static uint64_t next = 1325997111;
-  next = next * 1103515245 + 12345;
+  next = next * 1103515249 + 12345;
   return next % MODULUS;
 }
 

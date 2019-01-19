@@ -6,7 +6,7 @@
 
 int main (void) {
   cycle_count_config();
-  unsigned len=10000;
+  unsigned len=30000;
   data *vec = malloc(sizeof(data) * len);
   data_vec_random(vec, len);
   cycle_t quicksort_time = get_cycle();

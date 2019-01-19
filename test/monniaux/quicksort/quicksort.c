@@ -24,7 +24,7 @@ void quicksort(data *A, int len) {
 
 data data_random(void) {
   static uint64_t next = 1325997111;
-  next = next * 1103515245 + 12345;
+  next = next * 1103515249 + 12345;
   return next;
 }
 
