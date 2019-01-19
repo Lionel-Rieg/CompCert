@@ -14,22 +14,16 @@ all:	$(PRODUCTS)
 %.gcc.k1c.o: %.gcc.k1c.s
 	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
 
-%.gcc.k1c.o: %.gcc.k1c.c
-	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
-
 %.ccomp.k1c.s: %.c
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -S $< -o $@
 
 %.ccomp.k1c.o: %.ccomp.k1c.s
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
 
-%.ccomp.k1c.o: %.ccomp.k1c.c
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
-
 int_mat.host: int_mat.c int_mat_run.c modint.h
 	$(CC) $(CFLAGS) int_mat.c int_mat_run.c -o $@
 
-int_mat.gcc.k1c.s int_mat.ccomp.k1c.s: modint.h
+int_mat.gcc.k1c.s int_mat.ccomp.k1c.s int_mat_run.gcc.k1c.s: modint.h
 
 int_mat.gcc.k1c: int_mat.gcc.k1c.o int_mat_run.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
