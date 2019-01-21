@@ -75,13 +75,57 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
+Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
+  forall a bb rs m lbb rs'' m'',
+  lbb <> nil ->
+  concat_all (a :: lbb) = OK bb ->
+  exec_bblock ge f bb rs m = Next rs'' m'' ->
+  exists bb' rs' m',
+       concat_all lbb = OK bb'
+    /\ exec_bblock ge f a rs m = Next rs' m'
+    /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size a))
+    /\ exec_bblock ge f bb' rs' m' = Next rs'' m''.
+Proof.
+  
+Admitted.
+
+Lemma concat_all_size :
+  forall a lbb bb bb',
+  concat_all (a :: lbb) = OK bb ->
+  concat_all lbb = OK bb' ->
+  size bb = size a + size bb'.
+Proof.
+Admitted.
+
+Lemma ptrofs_add_repr :
+  forall a b,
+  Ptrofs.unsigned (Ptrofs.add (Ptrofs.repr a) (Ptrofs.repr b)) = Ptrofs.unsigned (Ptrofs.repr (a + b)).
+Proof.
+  intros a b.
+  rewrite Ptrofs.add_unsigned. repeat (rewrite Ptrofs.unsigned_repr_eq).
+  rewrite <- Zplus_mod. auto.
+Qed.
+
 Theorem concat_exec_straight (ge: Genv.t fundef unit) (f: function) :
   forall lbb bb rs m rs' m' c,
   concat_all lbb = OK bb ->
   exec_bblock ge f bb rs m = Next rs' m' ->
+  rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb)) ->
   exec_straight_blocks ge f (lbb++c) rs m c rs' m'.
 Proof.
-Admitted.
+  induction lbb; try discriminate.
+  intros until c. intros CONC EXEB.
+  destruct lbb as [| b lbb].
+  - simpl in CONC. inv CONC. simpl. econstructor; eauto.
+  - exploit concat_exec_bblock_nonil; eauto; try discriminate. 
+    intros (bb' & rs0 & m0 & CONC' & EXEB0 & PCeq & EXEB1). intros PCeq'.
+    eapply exec_straight_blocks_trans; eauto.
+    instantiate (3 := (b :: lbb) ++ c).
+    econstructor; eauto.
+    eapply IHlbb; eauto.
+    rewrite PCeq. rewrite Val.offset_ptr_assoc.
+    erewrite concat_all_size in PCeq'; eauto.
+Admitted. (* FIXME - attention à l'hypothèse rs' PC qui n'est pas forcément vraie *)
 
 Section PRESERVATION.
 
@@ -188,6 +232,8 @@ Proof.
     erewrite transf_exec_bblock in H2; eauto.
     exploit concat_exec_straight; eauto.
       { inv BBEQ. erewrite <- H3. eauto. }
+      { destruct TODO. }
+      (* FIXME - ce n'est pas forcément le cas en fait !! *)
       intros ESB.
     eexists. split.
     + eapply exec_straight_steps_1; eauto.
