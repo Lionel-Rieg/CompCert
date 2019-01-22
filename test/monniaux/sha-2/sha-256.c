@@ -121,6 +121,7 @@ static int calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state * state)
  *   for bit string lengths that are not multiples of eight, and it really operates on arrays of bytes.
  *   In particular, the len parameter is a number of bytes.
  */
+#if USE_ORIGINAL
 void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 {
 	/*
@@ -208,3 +209,105 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		hash[j++] = (uint8_t) h[i];
 	}
 }
+#else
+/* Modified by D. Monniaux */
+void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
+{
+	/*
+	 * Note 1: All integers (expect indexes) are 32-bit unsigned integers and addition is calculated modulo 2^32.
+	 * Note 2: For each round, there is one round constant k[i] and one entry in the message schedule array w[i], 0 = i = 63
+	 * Note 3: The compression function uses 8 working variables, a through h
+	 * Note 4: Big-endian convention is used when expressing the constants in this pseudocode,
+	 *     and when parsing message block data from bytes to words, for example,
+	 *     the first word of the input message "abc" after padding is 0x61626380
+	 */
+
+	/*
+	 * Initialize hash values:
+	 * (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
+	 */
+	uint32_t h[] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
+	int i, j;
+
+	/* 512-bit chunks is what we will operate on. */
+	uint8_t chunk[64];
+
+	struct buffer_state state;
+
+	init_buf_state(&state, input, len);
+
+	while (calc_chunk(chunk, &state)) {
+	        uint32_t ah0, ah1, ah2, ah3, ah4, ah5, ah6, ah7;
+		
+		/*
+		 * create a 64-entry message schedule array w[0..63] of 32-bit words
+		 * (The initial values in w[0..63] don't matter, so many implementations zero them here)
+		 * copy chunk into first 16 words w[0..15] of the message schedule array
+		 */
+		uint32_t w[64];
+		const uint8_t *p = chunk;
+
+		memset(w, 0x00, sizeof w);
+		for (i = 0; i < 16; i++) {
+			w[i] = (uint32_t) p[0] << 24 | (uint32_t) p[1] << 16 |
+				(uint32_t) p[2] << 8 | (uint32_t) p[3];
+			p += 4;
+		}
+
+		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
+		for (i = 16; i < 64; i++) {
+			const uint32_t s0 = right_rot(w[i - 15], 7) ^ right_rot(w[i - 15], 18) ^ (w[i - 15] >> 3);
+			const uint32_t s1 = right_rot(w[i - 2], 17) ^ right_rot(w[i - 2], 19) ^ (w[i - 2] >> 10);
+			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+		}
+		
+		/* Initialize working variables to current hash value: */
+		ah0 = h[0];
+		ah1 = h[1];
+		ah2 = h[2];
+		ah3 = h[3];
+		ah4 = h[4];
+		ah5 = h[5];
+		ah6 = h[6];
+		ah7 = h[7];
+
+		/* Compression function main loop: */
+		for (i = 0; i < 64; i++) {
+			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
+			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
+			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
+			const uint32_t temp2 = s0 + maj;
+
+			ah7 = ah6;
+			ah6 = ah5;
+			ah5 = ah4;
+			ah4 = ah3 + temp1;
+			ah3 = ah2;
+			ah2 = ah1;
+			ah1 = ah0;
+			ah0 = temp1 + temp2;
+		}
+
+		/* Add the compressed chunk to the current hash value: */
+		h[0] += ah0;
+		h[1] += ah1;
+		h[2] += ah2;
+		h[3] += ah3;
+		h[4] += ah4;
+		h[5] += ah5;
+		h[6] += ah6;
+		h[7] += ah7;
+	}
+
+	/* Produce the final hash value (big-endian): */
+	for (i = 0, j = 0; i < 8; i++)
+	{
+		hash[j++] = (uint8_t) (h[i] >> 24);
+		hash[j++] = (uint8_t) (h[i] >> 16);
+		hash[j++] = (uint8_t) (h[i] >> 8);
+		hash[j++] = (uint8_t) h[i];
+	}
+}
+#endif
