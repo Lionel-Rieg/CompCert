@@ -44,6 +44,7 @@ static const struct string_vector STRING_VECTORS[] = {
 };
 
 #define LARGE_MESSAGES 0
+#define LARGER_MESSAGES 0
 
 static uint8_t data1[] = { 0xbd };
 static uint8_t data2[] = { 0xc9, 0x8c, 0x8e, 0x55 };
@@ -110,14 +111,14 @@ static struct vector vectors[] = {
 		data9,
 		sizeof data9,
 		"f4d62ddec0f3dd90ea1380fa16a5ff8dc4c54b21740650f24afc4120903552b0"
-	}
+	},
 #if LARGE_MESSAGES
-	,
 	{
 		NULL,
 		1000000,
 		"d29751f2649b32ff572b5e0a9f541ea660a50f94ff0beedfb0b692b924cc8025"
 	},
+#if LARGER_MESSAGES
 	{
 		NULL,
 		SIZEOF_DATA11,
@@ -133,6 +134,7 @@ static struct vector vectors[] = {
 		SIZEOF_DATA13,
 		"c23ce8a7895f4b21ec0daf37920ac0a262a220045a03eb2dfed48ef9b05aabea"
 	}
+#endif
 #endif
 };
 
@@ -153,6 +155,7 @@ static void construct_binary_messages(void)
 	memset(data8, 0x41, sizeof data8);
 	memset(data9, 0x55, sizeof data9);
 #if LARGE_MESSAGES
+#if LARGER_MESSAGES
 	/*
 	 * Heap allocation as a workaround for some linkers not liking
 	 * large BSS segments.
@@ -167,15 +170,23 @@ static void construct_binary_messages(void)
 	vectors[10].input = data11;
 	vectors[11].input = data12;
 	vectors[12].input = data13;
+#else
+	vectors[9].input = data12 = my_malloc(vectors[9].input_len);
+	memset(data12, 0x00, vectors[9].input_len);
+#endif
 #endif
 }
 
 static void destruct_binary_messages(void)
 {
 #if LARGE_MESSAGES
+#if LARGER_MESSAGES
 	free(data11);
 	free(data12);
 	free(data13);
+#else
+	free(data12);
+#endif
 #endif
 }
 
@@ -229,7 +240,11 @@ static int test(const uint8_t * input, size_t input_len, const char output[])
 {
 	uint8_t hash[32];
 	char hash_string[65];
+
+	cycle_count_start();
 	calc_sha_256(hash, input, input_len);
+	cycle_count_end();
+
 	hash_to_string(hash_string, hash);
 	printf("input starts with 0x%02x, length %lu\n", *input, (unsigned long) input_len);
 	printf("hash : %s\n", hash_string);
