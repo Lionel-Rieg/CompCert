@@ -27,12 +27,13 @@ type ab_inst_rec = {
 exception OpaqueInstruction
 
 let arith_rr_str = function
+  | Pcvtl2w -> "Pcvtl2w"
   | Pmv -> "Pmv"
   | Pnegw -> "Pnegw"
   | Pnegl -> "Pnegl"
   | Pfnegd -> "Pfnegd"
-  | Pcvtl2w -> "Pcvtl2w"
-  | Pmvw2l -> "Pmvw2l"
+  | Psxwd -> "Psxwd"
+  | Pzxwd -> "Pzxwd"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw"
@@ -116,7 +117,6 @@ let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_
 let arith_r_rec i rd = match i with
     (* FIXME - this instruction is expanded to nothing, yet it still has a semantic in Asmblock.v.
      *          It will introduce unneeded dependencies.. *)
-  | Pcvtw2l -> { inst = "Pcvtw2l"; write_locs = [Reg rd]; read_locs = [Reg rd]; imm = None ; is_control = false}
     (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
   | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
 
@@ -327,7 +327,7 @@ type real_instruction =
   (* ALU *) 
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
-  | Make | Nop 
+  | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
@@ -359,6 +359,8 @@ let ab_inst_to_real = function
   | "Pxorl" | "Pxoril" -> Xord
   | "Pmake" | "Pmakel" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
+  | "Psxwd" -> Sxwd
+  | "Pzxwd" -> Zxwd
 
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
@@ -417,6 +419,7 @@ let rec_to_usage r =
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
@@ -433,6 +436,7 @@ let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
+  | Sxwd | Zxwd
         -> 1
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -582,7 +586,6 @@ let print_inst oc = function
   | Asm.Pfreeframe(sz, ofs) -> fprintf oc "	Pfreeframe\n"
   | Asm.Pbuiltin(ef, args, res) -> fprintf oc "	Pbuiltin\n"
   | Asm.Pcvtl2w(rd, rs) -> fprintf oc "	Pcvtl2w	%a = %a\n" ireg rd ireg rs
-  | Asm.Pcvtw2l rd -> fprintf oc "	Pcvtw2l	%a\n" ireg rd
   | i -> print_instruction oc i
 
 let print_bb oc bb =

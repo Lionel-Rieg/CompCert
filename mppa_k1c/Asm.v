@@ -87,16 +87,14 @@ Inductive instruction : Type :=
   | Pfss    (rs: freg) (ra: ireg) (ofs: offset)     (**r store float *)
   | Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
 
-  (** Arith R *)
-  | Pcvtw2l (rd: ireg)                              (**r Convert Word to Long *)
-
   (** Arith RR *)
   | Pmv     (rd rs: ireg)                           (**r register move *)
   | Pnegw   (rd rs: ireg)                           (**r negate word *)
   | Pnegl   (rd rs: ireg)                           (**r negate long *)
   | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
   | Pcvtl2w (rd rs: ireg)                           (**r Convert Long to Word *)
-  | Pmvw2l  (rd rs: ireg)                           (**r Move Convert Word to Long *)
+  | Psxwd   (rd rs: ireg)                           (**r Sign Extend Word to Double Word *)
+  | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
 
   (** Arith RI32 *)
   | Pmake   (rd: ireg) (imm: int)                   (**r load immediate *)
@@ -175,7 +173,6 @@ Definition basic_to_instruction (b: basic) :=
 
   (** PArith basics *)
   (* R *)
-  | PArithR Asmblock.Pcvtw2l r              => Pcvtw2l r
   | PArithR (Asmblock.Ploadsymbol id ofs) r => Ploadsymbol r id ofs
 
   (* RR *)
@@ -183,7 +180,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmblock.Pnegw rd rs   => Pnegw rd rs
   | PArithRR Asmblock.Pnegl rd rs   => Pnegl rd rs
   | PArithRR Asmblock.Pcvtl2w rd rs => Pcvtl2w rd rs
-  | PArithRR Asmblock.Pmvw2l rd rs  => Pmvw2l rd rs
+  | PArithRR Asmblock.Psxwd rd rs  => Psxwd rd rs
+  | PArithRR Asmblock.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
 
   (* RI32 *)
