@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <inttypes.h>
+#include "../cycles.h"
 #include "sha-256.h"
 
 struct string_vector {
@@ -42,7 +43,7 @@ static const struct string_vector STRING_VECTORS[] = {
 	}
 };
 
-#define LARGE_MESSAGES 1
+#define LARGE_MESSAGES 0
 
 static uint8_t data1[] = { 0xbd };
 static uint8_t data2[] = { 0xc9, 0x8c, 0x8e, 0x55 };
@@ -135,6 +136,7 @@ static struct vector vectors[] = {
 #endif
 };
 
+#if LARGE_MESSAGES
 static void *my_malloc(size_t size) {
   void *p=malloc(size);
   if (p==0) {
@@ -143,6 +145,7 @@ static void *my_malloc(size_t size) {
   }
   return p;
 }
+#endif
 
 static void construct_binary_messages(void)
 {
@@ -183,12 +186,26 @@ static void hash_to_string(char string[65], const uint8_t hash[32])
 		string += sprintf(string, "%02x", hash[i]);
 	}
 }	
-	
+
+static cycle_t cycle_total, cycle_start_time;
+
+static void cycle_count_start(void) {
+  cycle_start_time=get_cycle();
+}
+
+static void cycle_count_end(void) {
+  cycle_total += get_cycle()-cycle_start_time;
+}
+
 static int string_test(const char input[], const char output[])
 {
 	uint8_t hash[32];
 	char hash_string[65];
+
+	cycle_count_start();
 	calc_sha_256(hash, input, strlen(input));
+	cycle_count_end();
+	
 	hash_to_string(hash_string, hash);
 	printf("input: %s\n", input);
 	printf("hash : %s\n", hash_string);
@@ -227,6 +244,7 @@ static int test(const uint8_t * input, size_t input_len, const char output[])
 
 int main(void)
 {
+        cycle_count_config();
 	size_t i;
 	for (i = 0; i < (sizeof STRING_VECTORS / sizeof (struct string_vector)); i++) {
 		const struct string_vector *vector = &STRING_VECTORS[i];
@@ -243,5 +261,6 @@ int main(void)
 		}
 	}
 	destruct_binary_messages();
+	printf("total cycles = %" PRIu64 "\n", cycle_total);
 	return 0;
 }
