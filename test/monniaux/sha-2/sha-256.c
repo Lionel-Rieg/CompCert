@@ -1,5 +1,10 @@
 #include <stdint.h>
 #include <string.h>
+#if 0 /* __COMPCERT__ */
+#define my_memcpy(dst, src, size) __builtin_memcpy_aligned(dst, src, size, 1)
+#else
+#define my_memcpy(dst, src, size) memcpy(dst, src, size)
+#endif
 
 #include "sha-256.h"
 
@@ -66,7 +71,7 @@ static int calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state * state)
 	}
 
 	if (state->len >= CHUNK_SIZE) {
-		memcpy(chunk, state->p, CHUNK_SIZE);
+		my_memcpy(chunk, state->p, CHUNK_SIZE);
 		state->p += CHUNK_SIZE;
 		state->len -= CHUNK_SIZE;
 		return 1;
