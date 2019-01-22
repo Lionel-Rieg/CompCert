@@ -230,6 +230,12 @@ Proof.
     exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
     exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
     erewrite transf_exec_bblock in H2; eauto.
+    inv BBEQ. rewrite H3 in H2.
+    eexists. split.
+    eapply plus_one. econstructor; eauto.
+    eapply find_bblock_tail. (* TODO - continue in this direction ? *)
+    all: destruct TODO.
+(*  OLD VERSION
     exploit concat_exec_straight; eauto.
       { inv BBEQ. erewrite <- H3. eauto. }
       { destruct TODO. }
@@ -238,7 +244,7 @@ Proof.
     eexists. split.
     + eapply exec_straight_steps_1; eauto.
       monadInv EQ. destruct (zlt _ _). discriminate. monadInv EQ1. omega.
-    + econstructor; eauto.
+    + econstructor; eauto. *)
   - destruct TODO.
   - destruct TODO.
 Admitted.

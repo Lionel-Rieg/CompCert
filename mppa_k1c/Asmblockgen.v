@@ -115,12 +115,6 @@ Definition sltimm64 := opimm64 Psltl Psltil.
 Definition sltuimm64 := opimm64 Psltul Psltiul.
 *)
 
-Definition cast32signed (rd rs: ireg) := 
-  if (ireg_eq rd rs)
-    then Pcvtw2l rd
-    else Pmvw2l rd rs
-  .
-
 Definition addptrofs (rd rs: ireg) (n: ptrofs) :=
   if Ptrofs.eq_dec n Ptrofs.zero then
     Pmv rd rs
@@ -460,11 +454,12 @@ Definition transl_op
       OK (Pcvtl2w rd rs ::i k)  
   | Ocast32signed, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (cast32signed rd rs ::i k)
+      OK (Psxwd rd rs ::i k)
   | Ocast32unsigned, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      assertion (ireg_eq rd rs);
-      OK (Pcvtw2l rd ::i Psllil rd rd (Int.repr 32) ::i Psrlil rd rd (Int.repr 32) ::i k)
+      OK (Pzxwd rd rs ::i k)
+(*       assertion (ireg_eq rd rs);
+      OK (Pcvtw2l rd ::i Psllil rd rd (Int.repr 32) ::i Psrlil rd rd (Int.repr 32) ::i k) *)
   | Oaddl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Paddl rd rs1 rs2 ::i k)

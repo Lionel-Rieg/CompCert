@@ -505,10 +505,6 @@ let expand_instruction instr =
 *)| Pcvtl2w (rd, rs) ->
       assert Archi.ptr64;
       emit (Paddiw (rd, rs, Int.zero))  (* 32-bit sign extension *)
-  | Pcvtw2l (r) -> (* Pcvtw2l *)
-      assert Archi.ptr64
-      (* no-operation because the 32-bit integer was kept sign extended already *)
-      (* FIXME - is it really the case on the MPPA ? *)
 
 (*| Pjal_r(r, sg) ->
       fixup_call sg; emit instr

@@ -269,7 +269,6 @@ Coercion PStoreRRO:       store_name_rro        >-> Funclass.
 
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
-  | Pcvtw2l                                         (**r Convert Word to Long *)
   | Ploadsymbol (id: ident) (ofs: ptrofs)           (**r load the address of a symbol *)
 .
 
@@ -279,7 +278,8 @@ Inductive arith_name_rr : Type :=
   | Pnegl                                           (**r negate long *)
   | Pfnegd                                          (**r float negate double *)
   | Pcvtl2w                                         (**r Convert Long to Word *)
-  | Pmvw2l                                          (**r Move Convert Word to Long *)
+  | Psxwd                                           (**r Sign Extend Word to Double Word *)
+  | Pzxwd                                           (**r Zero Extend Word to Double Word *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -797,7 +797,6 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
   match ai with
   | PArithR n d =>
       match n with
-      | Pcvtw2l => rs#d <- (Val.longofint rs#d)
       | Ploadsymbol s ofs => rs#d <- (Genv.symbol_address ge s ofs)
       end
 
@@ -808,7 +807,8 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pnegl => rs#d <- (Val.negl rs#s)
       | Pfnegd => rs#d <- (Val.negf rs#s)
       | Pcvtl2w => rs#d <- (Val.loword rs#s)
-      | Pmvw2l => rs#d <- (Val.longofint rs#s)
+      | Psxwd => rs#d <- (Val.longofint rs#s)
+      | Pzxwd => rs#d <- (Val.longofintu rs#s)
       end
 
   | PArithRI32 n d i =>

@@ -1068,7 +1068,7 @@ Qed.
 
 (** Some arithmetic properties. *)
 
-Remark cast32unsigned_from_cast32signed:
+(* Remark cast32unsigned_from_cast32signed:
   forall i, Int64.repr (Int.unsigned i) = Int64.zero_ext 32 (Int64.repr (Int.signed i)).
 Proof.
   intros. apply Int64.same_bits_eq; intros. 
@@ -1096,7 +1096,7 @@ Proof.
   + split.
     * Simpl.
     * intros. destruct r; Simpl.
-Qed.
+Qed. *)
 
 (* Translation of arithmetic operations *)
 
@@ -1169,12 +1169,12 @@ Opaque Int.eq.
   eapply exec_straight_step. simpl; reflexivity. auto. 
   apply exec_straight_one. simpl; reflexivity. auto. 
   split; intros; Simpl.
-- (* Ocast32signed *)
+(* - (* Ocast32signed *)
   exploit cast32signed_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split; eauto. split. apply B.
   intros. assert (r <> PC). { destruct r; auto; contradict H; discriminate. }
   apply C; auto.
-- (* longofintu *)
+ *)(* - (* longofintu *)
   econstructor; split.
   eapply exec_straight_three. simpl; eauto. simpl; eauto. simpl; eauto.
   split; intros; Simpl. (* unfold Pregmap.set; Simpl. *) destruct (PregEq.eq x0 x0).
@@ -1182,7 +1182,7 @@ Opaque Int.eq.
     assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
     rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
     rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
-  + contradict n. auto.
+  + contradict n. auto. *)
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.

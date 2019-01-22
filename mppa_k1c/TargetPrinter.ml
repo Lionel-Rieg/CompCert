@@ -268,11 +268,9 @@ module Target (*: TARGET*) =
          fprintf oc "	sd	%a[%a] = %a\n" offset ofs ireg ra ireg rd
 
       (* Arith R instructions *)
-      | Pcvtw2l(rd) -> assert false 
-        (* Converted to no instruction in Asmexpand *)
 
       (* Arith RR instructions *)
-      | Pmv(rd, rs) | Pmvw2l(rd, rs) ->
+      | Pmv(rd, rs) ->
          fprintf oc "	addd	%a = %a, 0\n"     ireg rd ireg rs
       | Pcvtl2w(rd, rs) -> assert false
       | Pnegl(rd, rs) -> assert Archi.ptr64;
@@ -281,6 +279,10 @@ module Target (*: TARGET*) =
          fprintf oc "	negw	%a = %a\n" ireg rd ireg rs
       | Pfnegd(rd, rs) ->
          fprintf oc "	fnegd	%a = %a\n" ireg rs ireg rd
+      | Psxwd(rd, rs) ->
+         fprintf oc "	sxwd	%a = %a\n" ireg rd ireg rs
+      | Pzxwd(rd, rs) ->
+         fprintf oc "	zxwd	%a = %a\n" ireg rd ireg rs
 
       (* Arith RI32 instructions *)
       | Pmake (rd, imm) ->
