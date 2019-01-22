@@ -126,6 +126,9 @@ static int calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state * state)
  *   for bit string lengths that are not multiples of eight, and it really operates on arrays of bytes.
  *   In particular, the len parameter is a number of bytes.
  */
+#define DO_NOT_UNROLL 1
+#define AUTOINCREMENT 1
+
 #if USE_ORIGINAL
 void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 {
@@ -278,10 +281,18 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		ah7 = h[7];
 
 		/* Compression function main loop: */
+#if AUTOINCREMENT
+		const uint32_t *ki = k, *wi = w;
+#endif
 		for (i = 0; i < 64; i++) {
 			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
+			const uint32_t temp1 = ah7 + s1 + ch +
+#if AUTOINCREMENT
+			  *(ki++) + *(wi++);
+#else
+			  k[i] + w[i];
+#endif
 			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
