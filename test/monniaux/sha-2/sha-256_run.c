@@ -135,6 +135,15 @@ static struct vector vectors[] = {
 #endif
 };
 
+static void *my_malloc(size_t size) {
+  void *p=malloc(size);
+  if (p==0) {
+    fprintf(stderr, "malloc(%zu) failed\n", size);
+    abort();
+  }
+  return p;
+}
+
 static void construct_binary_messages(void)
 {
 	memset(data7, 0x00, sizeof data7);
@@ -145,9 +154,9 @@ static void construct_binary_messages(void)
 	 * Heap allocation as a workaround for some linkers not liking
 	 * large BSS segments.
 	 */
-	data11 = malloc(SIZEOF_DATA11);
-	data12 = malloc(SIZEOF_DATA12);
-	data13 = malloc(SIZEOF_DATA13);
+	data11 = my_malloc(SIZEOF_DATA11);
+	data12 = my_malloc(SIZEOF_DATA12);
+	data13 = my_malloc(SIZEOF_DATA13);
 	memset(data11, 0x5a, SIZEOF_DATA11);
 	memset(data12, 0x00, SIZEOF_DATA12);
 	memset(data13, 0x42, SIZEOF_DATA13);
