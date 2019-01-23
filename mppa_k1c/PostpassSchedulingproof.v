@@ -41,11 +41,12 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma app_nonil2 {A: Type} : forall (l': list A) l, l' <> nil -> l ++ l' <> nil.
+Lemma app_nonil2 {A: Type} : forall (l: list A) l', l' <> nil -> l ++ l' <> nil.
 Proof.
-  induction l'; try contradiction.
-  intros. cutrewrite (l ++ a :: l' = (l ++ a :: nil) ++ l'). apply app_nonil.
-Admitted.
+  destruct l.
+  - intros. simpl. auto.
+  - intros. rewrite <- app_comm_cons. discriminate.
+Qed.
 
 Program Definition concat2 (bb bb': bblock) : res bblock :=
   match (exit bb) with
