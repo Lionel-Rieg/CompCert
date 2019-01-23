@@ -30,6 +30,7 @@ Require Import Smallstep.
 Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
+Require Import Errors.
 
 (** * Abstract syntax *)
 
@@ -384,6 +385,17 @@ Coercion PCtlFlow:  cf_instruction >-> control.
 
 (** * Definition of a bblock *)
 
+Ltac exploreInst :=
+  repeat match goal with
+  | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
+  | [ H : OK _ = OK _ |- _ ] => monadInv H
+  | [ |- context[if ?b then _ else _] ] => destruct b
+  | [ |- context[match ?m with | _ => _ end] ] => destruct m
+  | [ |- context[match ?m as _ return _ with | _ => _ end]] => destruct m
+  | [ H : bind _ _ = OK _ |- _ ] => monadInv H
+  | [ H : Error _ = OK _ |- _ ] => inversion H
+  end.
+
 Definition non_empty_bblock (body: list basic) (exit: option control): Prop
  := body <> nil \/ exit <> None.
 
@@ -415,12 +427,54 @@ Proof.
     contradiction.
 Qed.
 
-(* Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
+Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
   exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
- *)
 
-(* Definition wf_bblock (header: list label) (body: list basic) (exit: option control) :=
-  non_empty_bblock body exit (* /\ builtin_alone body exit *). *)
+Definition builtin_aloneb (body: list basic) (exit: option control) :=
+  match exit with
+  | Some (PExpand (Pbuiltin _ _ _)) =>
+    match body with
+    | nil => true
+    | _ => false
+    end
+  | _ => true
+  end.
+
+Lemma builtin_alone_refl:
+  forall body exit,
+  builtin_alone body exit <-> Is_true (builtin_aloneb body exit).
+Proof.
+  intros. split.
+  - destruct body; destruct exit.
+    all: simpl; auto.
+    all: exploreInst; simpl; auto.
+    unfold builtin_alone. intros. assert (Some (Pbuiltin e l b0) = Some (Pbuiltin e l b0)); auto.
+    assert (b :: body = nil). eapply H; eauto. discriminate.
+  - destruct body; destruct exit.
+    all: simpl; auto; try constructor.
+    + exploreInst.
+        simpl. contradiction.
+        discriminate.
+    + intros. discriminate.
+Qed.
+
+Definition wf_bblockb (body: list basic) (exit: option control) :=
+  (non_empty_bblockb body exit) && (builtin_aloneb body exit).
+
+Definition wf_bblock (body: list basic) (exit: option control) :=
+  non_empty_bblock body exit /\ builtin_alone body exit.
+
+Lemma wf_bblock_refl:
+  forall body exit,
+  wf_bblock body exit <-> Is_true (wf_bblockb body exit).
+Proof.
+  intros. split.
+  - intros. inv H. apply non_empty_bblock_refl in H0. apply builtin_alone_refl in H1.
+    apply andb_prop_intro. auto.
+  - intros. apply andb_prop_elim in H. inv H.
+    apply non_empty_bblock_refl in H0. apply builtin_alone_refl in H1.
+    unfold wf_bblock. split; auto.
+Qed.
 
 (** A bblock is well-formed if he contains at least one instruction,
     and if there is a builtin then it must be alone in this bblock. *)
@@ -429,7 +483,7 @@ Record bblock := mk_bblock {
   header: list label;
   body: list basic;
   exit: option control;
-  correct: Is_true (non_empty_bblockb body exit)
+  correct: Is_true (wf_bblockb body exit)
 }.
 
 Ltac bblock_auto_correct := (apply non_empty_bblock_refl; try discriminate; try (left; discriminate); try (right; discriminate)).
@@ -582,8 +636,14 @@ Program Definition bblock_single_inst (i: instruction) :=
   | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
   | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
   end.
+Next Obligation.
+  apply wf_bblock_refl. constructor.
+    right. discriminate.
+    constructor.
+Qed.
 
-Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
+(** This definition is not used anymore *)
+(* Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
   match i with
   | Some i => {| header:=nil; body:=c; exit:=Some i |}
   | None =>
@@ -596,7 +656,7 @@ Next Obligation.
   bblock_auto_correct.
 Qed. Next Obligation.
   bblock_auto_correct.
-Qed.
+Qed. *)
 
 
 (** * Operational semantics *)

@@ -41,22 +41,38 @@ Proof.
   - discriminate.
 Qed.
 
+Lemma app_nonil2 {A: Type} : forall (l': list A) l, l' <> nil -> l ++ l' <> nil.
+Proof.
+  induction l'; try contradiction.
+  intros. cutrewrite (l ++ a :: l' = (l ++ a :: nil) ++ l'). apply app_nonil.
+Admitted.
+
 Program Definition concat2 (bb bb': bblock) : res bblock :=
   match (exit bb) with
   | None => 
       match (header bb') with
-      | nil => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+      | nil => 
+          match (exit bb') with 
+          | Some (PExpand (Pbuiltin _ _ _)) => Error (msg "PostpassSchedulingproof.concat2: builtin not alone")
+          | _ => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+          end
       | _ => Error (msg "PostpassSchedulingproof.concat2")
       end
   | _ => Error (msg "PostpassSchedulingproof.concat2")
   end.
 Next Obligation.
-  apply non_empty_bblock_refl.
-  destruct bb as [hd bdy ex COR]; destruct bb' as [hd' bdy' ex' COR']. simpl in *.
-  apply non_empty_bblock_refl in COR. apply non_empty_bblock_refl in COR'.
-  inv COR.
-  - left. apply app_nonil. auto.
-  - contradiction.
+  apply wf_bblock_refl. constructor.
+  - destruct bb' as [hd' bdy' ex' WF']. destruct bb as [hd bdy ex WF]. simpl in *.
+    apply wf_bblock_refl in WF'. apply wf_bblock_refl in WF.
+    inversion_clear WF'. inversion_clear WF. clear H1 H3.
+    inversion H2; inversion H0.
+    + left. apply app_nonil. auto.
+    + right. auto.
+    + left. apply app_nonil2. auto.
+    + right. auto.
+  - unfold builtin_alone. intros. rewrite H0 in H.
+    assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
+    apply (H ef args res). contradict H1. auto.
 Qed.
 
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
@@ -74,6 +90,14 @@ Axiom verified_schedule_correct:
   exists tbb, 
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
+
+Lemma verified_schedule_builtin_idem:
+  forall bi ef args res lbb,
+  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bi = OK lbb ->
+  lbb = bi :: nil.
+Proof.
+Admitted.
 
 Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
   forall a bb rs m lbb rs'' m'',
@@ -97,6 +121,18 @@ Lemma concat_all_size :
 Proof.
 Admitted.
 
+Lemma concat_all_equiv_cons:
+  forall tge tf bb lbb tbb rs m rs'' m'',
+  concat_all (bb::lbb) = OK tbb ->
+  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
+  exists tbb' rs' m',
+     exec_bblock tge tf bb rs m = Next rs' m'
+  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
+  /\ concat_all lbb = OK tbb'
+  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
+Proof.
+Admitted.
+
 Lemma ptrofs_add_repr :
   forall a b,
   Ptrofs.unsigned (Ptrofs.add (Ptrofs.repr a) (Ptrofs.repr b)) = Ptrofs.unsigned (Ptrofs.repr (a + b)).
@@ -105,27 +141,6 @@ Proof.
   rewrite Ptrofs.add_unsigned. repeat (rewrite Ptrofs.unsigned_repr_eq).
   rewrite <- Zplus_mod. auto.
 Qed.
-
-Theorem concat_exec_straight (ge: Genv.t fundef unit) (f: function) :
-  forall lbb bb rs m rs' m' c,
-  concat_all lbb = OK bb ->
-  exec_bblock ge f bb rs m = Next rs' m' ->
-  rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb)) ->
-  exec_straight_blocks ge f (lbb++c) rs m c rs' m'.
-Proof.
-  induction lbb; try discriminate.
-  intros until c. intros CONC EXEB.
-  destruct lbb as [| b lbb].
-  - simpl in CONC. inv CONC. simpl. econstructor; eauto.
-  - exploit concat_exec_bblock_nonil; eauto; try discriminate. 
-    intros (bb' & rs0 & m0 & CONC' & EXEB0 & PCeq & EXEB1). intros PCeq'.
-    eapply exec_straight_blocks_trans; eauto.
-    instantiate (3 := (b :: lbb) ++ c).
-    econstructor; eauto.
-    eapply IHlbb; eauto.
-    rewrite PCeq. rewrite Val.offset_ptr_assoc.
-    erewrite concat_all_size in PCeq'; eauto.
-Admitted. (* FIXME - attention à l'hypothèse rs' PC qui n'est pas forcément vraie *)
 
 Section PRESERVATION.
 
@@ -226,20 +241,6 @@ Lemma transf_exec_bblock:
 Proof.
 Admitted.
 
-Axiom TODO: False.
-
-Lemma concat_all_equiv_cons:
-  forall tge tf bb lbb tbb rs m rs'' m'',
-  concat_all (bb::lbb) = OK tbb ->
-  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
-  exists tbb' rs' m',
-     exec_bblock tge tf bb rs m = Next rs' m'
-  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
-  /\ concat_all lbb = OK tbb'
-  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
-Proof.
-Admitted.
-
 Lemma transf_step_simu:
   forall tf b lbb ofs c tbb rs m rs' m',
   Genv.find_funct_ptr tge b = Some (Internal tf) ->
@@ -274,13 +275,30 @@ Proof.
     exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
     assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto. 
+
     erewrite transf_exec_bblock in H2; eauto.
     inv BBEQ. rewrite H3 in H2.
     exists (State rs' m'). split; try (constructor; auto).
     eapply transf_step_simu; eauto.
-  - destruct TODO.
-  - destruct TODO.
-Admitted.
+
+  - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
+    exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
+    exploit verified_schedule_builtin_idem; eauto. intros. subst lbb.
+
+    remember (State (nextblock _ _) _) as s'. exists s'.
+    split; try constructor; auto.
+    eapply plus_one. subst s'.
+    eapply exec_step_builtin.
+      3: eapply find_bblock_tail. simpl in TAIL. 3: eauto.
+      all: eauto.
+    eapply eval_builtin_args_preserved with (ge1 := ge). exact symbols_preserved. eauto.
+    eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+
+  - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
+    remember (State _ m') as s'. exists s'. split; try constructor; auto.
+    subst s'. eapply plus_one. eapply exec_step_external; eauto.
+    eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+Qed.
 
 Theorem transf_program_correct:
   forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
