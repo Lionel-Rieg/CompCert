@@ -134,6 +134,14 @@ Hypothesis TRANSL: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
+Lemma transf_function_no_overflow:
+  forall f tf,
+  transf_function f = OK tf -> size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned.
+Proof.
+  intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0.
+  omega.
+Qed.
+
 Lemma symbols_preserved:
   forall id,
   Genv.find_symbol tge id = Genv.find_symbol ge id.
@@ -220,6 +228,41 @@ Admitted.
 
 Axiom TODO: False.
 
+Lemma concat_all_equiv_cons:
+  forall tge tf bb lbb tbb rs m rs'' m'',
+  concat_all (bb::lbb) = OK tbb ->
+  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
+  exists tbb' rs' m',
+     exec_bblock tge tf bb rs m = Next rs' m'
+  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
+  /\ concat_all lbb = OK tbb'
+  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
+Proof.
+Admitted.
+
+Lemma transf_step_simu:
+  forall tf b lbb ofs c tbb rs m rs' m',
+  Genv.find_funct_ptr tge b = Some (Internal tf) ->
+  size_blocks (fn_blocks tf) <= Ptrofs.max_unsigned ->
+  rs PC = Vptr b ofs ->
+  code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) (lbb ++ c) ->
+  concat_all lbb = OK tbb ->
+  exec_bblock tge tf tbb rs m = Next rs' m' ->
+  plus step tge (State rs m) E0 (State rs' m').
+Proof.
+  induction lbb.
+  - intros until m'. simpl. intros. discriminate.
+  - intros until m'. intros GFIND SIZE PCeq TAIL CONC EXEB.
+    exploit concat_all_equiv_cons; eauto.
+    intros (tbb0 & rs0 & m0 & EXEB0 & PCeq' & CONC0 & EXEB1).
+    eapply plus_left.
+    econstructor.
+      3: eapply find_bblock_tail. rewrite <- app_comm_cons in TAIL. 3: eauto.
+      all: eauto.
+    eapply plus_star. eapply IHlbb; eauto. rewrite PCeq in PCeq'. simpl in PCeq'. all: eauto.
+    eapply code_tail_next_int; eauto.
+Qed.
+
 Theorem transf_step_correct:
   forall s1 t s2, step ge s1 t s2 ->
   forall s1' (MS: match_states s1 s1'),
@@ -229,22 +272,12 @@ Proof.
   - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
     exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
     exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
+    assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
+      eapply transf_function_no_overflow; eauto. 
     erewrite transf_exec_bblock in H2; eauto.
     inv BBEQ. rewrite H3 in H2.
-    eexists. split.
-    eapply plus_one. econstructor; eauto.
-    eapply find_bblock_tail. (* TODO - continue in this direction ? *)
-    all: destruct TODO.
-(*  OLD VERSION
-    exploit concat_exec_straight; eauto.
-      { inv BBEQ. erewrite <- H3. eauto. }
-      { destruct TODO. }
-      (* FIXME - ce n'est pas forcément le cas en fait !! *)
-      intros ESB.
-    eexists. split.
-    + eapply exec_straight_steps_1; eauto.
-      monadInv EQ. destruct (zlt _ _). discriminate. monadInv EQ1. omega.
-    + econstructor; eauto. *)
+    exists (State rs' m'). split; try (constructor; auto).
+    eapply transf_step_simu; eauto.
   - destruct TODO.
   - destruct TODO.
 Admitted.
