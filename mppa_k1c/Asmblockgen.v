@@ -891,9 +891,13 @@ Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instr
   end
 .
 Next Obligation.
-  bblock_auto_correct. intros. constructor. apply not_eq_sym. auto.
+  apply wf_bblock_refl. constructor.
+    left. auto.
+    discriminate.
 Qed. Next Obligation.
-  bblock_auto_correct.
+  apply wf_bblock_refl. constructor.
+    right. discriminate.
+    discriminate.
 Qed.
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) (ep: bool) : res (list bblock) :=

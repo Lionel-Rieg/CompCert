@@ -41,22 +41,38 @@ Proof.
   - discriminate.
 Qed.
 
+Lemma app_nonil2 {A: Type} : forall (l': list A) l, l' <> nil -> l ++ l' <> nil.
+Proof.
+  induction l'; try contradiction.
+  intros. cutrewrite (l ++ a :: l' = (l ++ a :: nil) ++ l'). apply app_nonil.
+Admitted.
+
 Program Definition concat2 (bb bb': bblock) : res bblock :=
   match (exit bb) with
   | None => 
       match (header bb') with
-      | nil => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+      | nil => 
+          match (exit bb') with 
+          | Some (PExpand (Pbuiltin _ _ _)) => Error (msg "PostpassSchedulingproof.concat2: builtin not alone")
+          | _ => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+          end
       | _ => Error (msg "PostpassSchedulingproof.concat2")
       end
   | _ => Error (msg "PostpassSchedulingproof.concat2")
   end.
 Next Obligation.
-  apply non_empty_bblock_refl.
-  destruct bb as [hd bdy ex COR]; destruct bb' as [hd' bdy' ex' COR']. simpl in *.
-  apply non_empty_bblock_refl in COR. apply non_empty_bblock_refl in COR'.
-  inv COR.
-  - left. apply app_nonil. auto.
-  - contradiction.
+  apply wf_bblock_refl. constructor.
+  - destruct bb' as [hd' bdy' ex' WF']. destruct bb as [hd bdy ex WF]. simpl in *.
+    apply wf_bblock_refl in WF'. apply wf_bblock_refl in WF.
+    inversion_clear WF'. inversion_clear WF. clear H1 H3.
+    inversion H2; inversion H0.
+    + left. apply app_nonil. auto.
+    + right. auto.
+    + left. apply app_nonil2. auto.
+    + right. auto.
+  - unfold builtin_alone. intros. rewrite H0 in H.
+    assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
+    apply (H ef args res). contradict H1. auto.
 Qed.
 
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
