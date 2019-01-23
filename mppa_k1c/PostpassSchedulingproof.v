@@ -303,12 +303,10 @@ Proof.
     inv BBEQ. rewrite H3 in H2.
     exists (State rs' m'). split; try (constructor; auto).
     eapply transf_step_simu; eauto.
+
   - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
     exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
     exploit verified_schedule_builtin_idem; eauto. intros. subst lbb.
-    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
-    assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
-      eapply transf_function_no_overflow; eauto.
 
     remember (State (nextblock _ _) _) as s'. exists s'.
     split; try constructor; auto.
@@ -318,9 +316,12 @@ Proof.
       all: eauto.
     eapply eval_builtin_args_preserved with (ge1 := ge). exact symbols_preserved. eauto.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
-  - destruct TODO.
-Admitted.
 
+  - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
+    remember (State _ m') as s'. exists s'. split; try constructor; auto.
+    subst s'. eapply plus_one. eapply exec_step_external; eauto.
+    eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+Qed.
 
 Theorem transf_program_correct:
   forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
