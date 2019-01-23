@@ -91,6 +91,14 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
+Lemma verified_schedule_builtin_idem:
+  forall bi ef args res lbb,
+  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bi = OK lbb ->
+  lbb = bi :: nil.
+Proof.
+Admitted.
+
 Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
   forall a bb rs m lbb rs'' m'',
   lbb <> nil ->
@@ -113,6 +121,18 @@ Lemma concat_all_size :
 Proof.
 Admitted.
 
+Lemma concat_all_equiv_cons:
+  forall tge tf bb lbb tbb rs m rs'' m'',
+  concat_all (bb::lbb) = OK tbb ->
+  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
+  exists tbb' rs' m',
+     exec_bblock tge tf bb rs m = Next rs' m'
+  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
+  /\ concat_all lbb = OK tbb'
+  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
+Proof.
+Admitted.
+
 Lemma ptrofs_add_repr :
   forall a b,
   Ptrofs.unsigned (Ptrofs.add (Ptrofs.repr a) (Ptrofs.repr b)) = Ptrofs.unsigned (Ptrofs.repr (a + b)).
@@ -121,27 +141,6 @@ Proof.
   rewrite Ptrofs.add_unsigned. repeat (rewrite Ptrofs.unsigned_repr_eq).
   rewrite <- Zplus_mod. auto.
 Qed.
-
-Theorem concat_exec_straight (ge: Genv.t fundef unit) (f: function) :
-  forall lbb bb rs m rs' m' c,
-  concat_all lbb = OK bb ->
-  exec_bblock ge f bb rs m = Next rs' m' ->
-  rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb)) ->
-  exec_straight_blocks ge f (lbb++c) rs m c rs' m'.
-Proof.
-  induction lbb; try discriminate.
-  intros until c. intros CONC EXEB.
-  destruct lbb as [| b lbb].
-  - simpl in CONC. inv CONC. simpl. econstructor; eauto.
-  - exploit concat_exec_bblock_nonil; eauto; try discriminate. 
-    intros (bb' & rs0 & m0 & CONC' & EXEB0 & PCeq & EXEB1). intros PCeq'.
-    eapply exec_straight_blocks_trans; eauto.
-    instantiate (3 := (b :: lbb) ++ c).
-    econstructor; eauto.
-    eapply IHlbb; eauto.
-    rewrite PCeq. rewrite Val.offset_ptr_assoc.
-    erewrite concat_all_size in PCeq'; eauto.
-Admitted. (* FIXME - attention à l'hypothèse rs' PC qui n'est pas forcément vraie *)
 
 Section PRESERVATION.
 
@@ -239,28 +238,6 @@ Lemma transf_exec_bblock:
   forall f tf bb rs m,
   transf_function f = OK tf ->
   exec_bblock ge f bb rs m = exec_bblock tge tf bb rs m.
-Proof.
-Admitted.
-
-Axiom TODO: False.
-
-Lemma concat_all_equiv_cons:
-  forall tge tf bb lbb tbb rs m rs'' m'',
-  concat_all (bb::lbb) = OK tbb ->
-  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
-  exists tbb' rs' m',
-     exec_bblock tge tf bb rs m = Next rs' m'
-  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
-  /\ concat_all lbb = OK tbb'
-  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
-Proof.
-Admitted.
-
-Lemma verified_schedule_builtin_idem:
-  forall bi ef args res lbb,
-  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
-  verified_schedule bi = OK lbb ->
-  lbb = bi :: nil.
 Proof.
 Admitted.
 
