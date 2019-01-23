@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <inttypes.h>
+#include "../cycles.h"
 #include "sha-256.h"
 
 struct string_vector {
@@ -42,7 +43,8 @@ static const struct string_vector STRING_VECTORS[] = {
 	}
 };
 
-#define LARGE_MESSAGES 1
+#define LARGE_MESSAGES 0
+#define LARGER_MESSAGES 0
 
 static uint8_t data1[] = { 0xbd };
 static uint8_t data2[] = { 0xc9, 0x8c, 0x8e, 0x55 };
@@ -109,14 +111,14 @@ static struct vector vectors[] = {
 		data9,
 		sizeof data9,
 		"f4d62ddec0f3dd90ea1380fa16a5ff8dc4c54b21740650f24afc4120903552b0"
-	}
+	},
 #if LARGE_MESSAGES
-	,
 	{
 		NULL,
 		1000000,
 		"d29751f2649b32ff572b5e0a9f541ea660a50f94ff0beedfb0b692b924cc8025"
 	},
+#if LARGER_MESSAGES
 	{
 		NULL,
 		SIZEOF_DATA11,
@@ -133,7 +135,19 @@ static struct vector vectors[] = {
 		"c23ce8a7895f4b21ec0daf37920ac0a262a220045a03eb2dfed48ef9b05aabea"
 	}
 #endif
+#endif
 };
+
+#if LARGE_MESSAGES
+static void *my_malloc(size_t size) {
+  void *p=malloc(size);
+  if (p==0) {
+    fprintf(stderr, "malloc(%zu) failed\n", size);
+    abort();
+  }
+  return p;
+}
+#endif
 
 static void construct_binary_messages(void)
 {
@@ -141,13 +155,14 @@ static void construct_binary_messages(void)
 	memset(data8, 0x41, sizeof data8);
 	memset(data9, 0x55, sizeof data9);
 #if LARGE_MESSAGES
+#if LARGER_MESSAGES
 	/*
 	 * Heap allocation as a workaround for some linkers not liking
 	 * large BSS segments.
 	 */
-	data11 = malloc(SIZEOF_DATA11);
-	data12 = malloc(SIZEOF_DATA12);
-	data13 = malloc(SIZEOF_DATA13);
+	data11 = my_malloc(SIZEOF_DATA11);
+	data12 = my_malloc(SIZEOF_DATA12);
+	data13 = my_malloc(SIZEOF_DATA13);
 	memset(data11, 0x5a, SIZEOF_DATA11);
 	memset(data12, 0x00, SIZEOF_DATA12);
 	memset(data13, 0x42, SIZEOF_DATA13);
@@ -155,15 +170,23 @@ static void construct_binary_messages(void)
 	vectors[10].input = data11;
 	vectors[11].input = data12;
 	vectors[12].input = data13;
+#else
+	vectors[9].input = data12 = my_malloc(vectors[9].input_len);
+	memset(data12, 0x00, vectors[9].input_len);
+#endif
 #endif
 }
 
 static void destruct_binary_messages(void)
 {
 #if LARGE_MESSAGES
+#if LARGER_MESSAGES
 	free(data11);
 	free(data12);
 	free(data13);
+#else
+	free(data12);
+#endif
 #endif
 }
 
@@ -174,12 +197,26 @@ static void hash_to_string(char string[65], const uint8_t hash[32])
 		string += sprintf(string, "%02x", hash[i]);
 	}
 }	
-	
+
+static cycle_t cycle_total, cycle_start_time;
+
+static void cycle_count_start(void) {
+  cycle_start_time=get_cycle();
+}
+
+static void cycle_count_end(void) {
+  cycle_total += get_cycle()-cycle_start_time;
+}
+
 static int string_test(const char input[], const char output[])
 {
 	uint8_t hash[32];
 	char hash_string[65];
+
+	cycle_count_start();
 	calc_sha_256(hash, input, strlen(input));
+	cycle_count_end();
+	
 	hash_to_string(hash_string, hash);
 	printf("input: %s\n", input);
 	printf("hash : %s\n", hash_string);
@@ -203,7 +240,11 @@ static int test(const uint8_t * input, size_t input_len, const char output[])
 {
 	uint8_t hash[32];
 	char hash_string[65];
+
+	cycle_count_start();
 	calc_sha_256(hash, input, input_len);
+	cycle_count_end();
+
 	hash_to_string(hash_string, hash);
 	printf("input starts with 0x%02x, length %lu\n", *input, (unsigned long) input_len);
 	printf("hash : %s\n", hash_string);
@@ -218,6 +259,7 @@ static int test(const uint8_t * input, size_t input_len, const char output[])
 
 int main(void)
 {
+        cycle_count_config();
 	size_t i;
 	for (i = 0; i < (sizeof STRING_VECTORS / sizeof (struct string_vector)); i++) {
 		const struct string_vector *vector = &STRING_VECTORS[i];
@@ -234,5 +276,6 @@ int main(void)
 		}
 	}
 	destruct_binary_messages();
+	printf("total cycles = %" PRIu64 "\n", cycle_total);
 	return 0;
 }
