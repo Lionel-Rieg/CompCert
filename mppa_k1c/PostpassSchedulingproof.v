@@ -256,6 +256,14 @@ Lemma concat_all_equiv_cons:
 Proof.
 Admitted.
 
+Lemma verified_schedule_builtin_idem:
+  forall bi ef args res lbb,
+  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bi = OK lbb ->
+  lbb = bi :: nil.
+Proof.
+Admitted.
+
 Lemma transf_step_simu:
   forall tf b lbb ofs c tbb rs m rs' m',
   Genv.find_funct_ptr tge b = Some (Internal tf) ->
@@ -290,13 +298,29 @@ Proof.
     exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
     assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto. 
+
     erewrite transf_exec_bblock in H2; eauto.
     inv BBEQ. rewrite H3 in H2.
     exists (State rs' m'). split; try (constructor; auto).
     eapply transf_step_simu; eauto.
-  - destruct TODO.
+  - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
+    exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
+    exploit verified_schedule_builtin_idem; eauto. intros. subst lbb.
+    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
+    assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
+      eapply transf_function_no_overflow; eauto.
+
+    remember (State (nextblock _ _) _) as s'. exists s'.
+    split; try constructor; auto.
+    eapply plus_one. subst s'.
+    eapply exec_step_builtin.
+      3: eapply find_bblock_tail. simpl in TAIL. 3: eauto.
+      all: eauto.
+    eapply eval_builtin_args_preserved with (ge1 := ge). exact symbols_preserved. eauto.
+    eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   - destruct TODO.
 Admitted.
+
 
 Theorem transf_program_correct:
   forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
