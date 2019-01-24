@@ -41,11 +41,12 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma app_nonil2 {A: Type} : forall (l': list A) l, l' <> nil -> l ++ l' <> nil.
+Lemma app_nonil2 {A: Type} : forall (l l': list A), l' <> nil -> l ++ l' <> nil.
 Proof.
-  induction l'; try contradiction.
-  intros. cutrewrite (l ++ a :: l' = (l ++ a :: nil) ++ l'). apply app_nonil.
-Admitted.
+  destruct l.
+  - intros. simpl; auto.
+  - intros. rewrite <- app_comm_cons. discriminate.
+Qed.
 
 Program Definition concat2 (bb bb': bblock) : res bblock :=
   match (exit bb) with
@@ -91,13 +92,30 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
-Lemma verified_schedule_builtin_idem:
-  forall bi ef args res lbb,
-  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
-  verified_schedule bi = OK lbb ->
-  lbb = bi :: nil.
+Remark builtin_body_nil:
+  forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
+Proof.
+  intros. destruct bb as [hd bdy ex WF]. simpl in *.
+  apply wf_bblock_refl in WF. inv WF. unfold builtin_alone in H1.
+  eapply H1; eauto.
+Qed.
+
+Lemma verified_schedule_single_inst:
+  forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 Proof.
 Admitted.
+
+Lemma verified_schedule_builtin_idem:
+  forall bb ef args res lbb,
+  exit bb = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bb = OK lbb ->
+  lbb = bb :: nil.
+Proof.
+  intros. exploit builtin_body_nil; eauto. intros.
+  rewrite verified_schedule_single_inst in H0.
+  - inv H0. auto.
+  - unfold size. rewrite H. rewrite H1. simpl. auto.
+Qed.
 
 Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
   forall a bb rs m lbb rs'' m'',
