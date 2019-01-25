@@ -41,10 +41,10 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma app_nonil2 {A: Type} : forall (l: list A) l', l' <> nil -> l ++ l' <> nil.
+Lemma app_nonil2 {A: Type} : forall (l l': list A), l' <> nil -> l ++ l' <> nil.
 Proof.
   destruct l.
-  - intros. simpl. auto.
+  - intros. simpl; auto.
   - intros. rewrite <- app_comm_cons. discriminate.
 Qed.
 
@@ -92,12 +92,65 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
-Lemma verified_schedule_builtin_idem:
-  forall bi ef args res lbb,
-  exit bi = Some (PExpand (Pbuiltin ef args res)) ->
-  verified_schedule bi = OK lbb ->
-  lbb = bi :: nil.
+Axiom verified_schedule_single_inst: forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
+
+Remark builtin_body_nil:
+  forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
 Proof.
+  intros. destruct bb as [hd bdy ex WF]. simpl in *.
+  apply wf_bblock_refl in WF. inv WF. unfold builtin_alone in H1.
+  eapply H1; eauto.
+Qed.
+
+Lemma verified_schedule_builtin_idem:
+  forall bb ef args res lbb,
+  exit bb = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bb = OK lbb ->
+  lbb = bb :: nil.
+Proof.
+  intros. exploit builtin_body_nil; eauto. intros.
+  rewrite verified_schedule_single_inst in H0.
+  - inv H0. auto.
+  - unfold size. rewrite H. rewrite H1. simpl. auto.
+Qed.
+
+Lemma concat2_noexit:
+  forall a b bb,
+  concat2 a b = OK bb ->
+  exit a = None.
+Proof.
+  intros. destruct a as [hd bdy ex WF]; simpl in *.
+  destruct ex as [e|]; simpl in *; auto.
+  unfold concat2 in H. simpl in H. discriminate.
+Qed.
+
+Lemma concat2_decomp:
+  forall a b bb,
+  concat2 a b = OK bb ->
+     body bb = body a ++ body b
+  /\ exit bb = exit b.
+Proof.
+  intros. exploit concat2_noexit; eauto. intros.
+  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bd ex WF]; simpl in *.
+  subst exa.
+  unfold concat2 in H; simpl in H.
+  destruct hdb.
+Admitted.
+
+Lemma concat2_straight:
+  forall a b bb rs m rs'' m'' f ge,
+  concat2 a b = OK bb ->
+  exec_bblock ge f bb rs m = Next rs'' m'' ->
+  exists rs' m',
+       exec_bblock ge f a rs m = Next rs' m'
+    /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size a))
+    /\ exec_bblock ge f b rs' m' = Next rs'' m''.
+Proof.
+  intros.
+  
+
+  apply concat2_noexit in H. destruct a as [hd bdy ex WF]. simpl in *. subst ex.
+  repeat eexists. unfold exec_bblock. simpl.
 Admitted.
 
 Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
@@ -111,8 +164,12 @@ Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
     /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size a))
     /\ exec_bblock ge f bb' rs' m' = Next rs'' m''.
 Proof.
-  
+  intros until m''. intros Hnonil CONC EXEB.
+  simpl in CONC.
+  destruct lbb as [|b lbb]; try contradiction. clear Hnonil.
+  monadInv CONC. exists x.
 Admitted.
+
 
 Lemma concat_all_size :
   forall a lbb bb bb',
