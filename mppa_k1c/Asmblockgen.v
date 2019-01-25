@@ -789,9 +789,9 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
   | None => OK nil
   | Some i =>
     match i with
-(*| Mcall sig (inl r) =>
-      do r1 <- ireg_of r; OK (Pjal_r r1 sig :: k)
-*)  | MBcall sig (inr symb) =>
+    | MBcall sig (inl r) =>
+        do r1 <- ireg_of r; OK ((Picall r1) ::g nil)
+    | MBcall sig (inr symb) =>
         OK ((Pcall symb) ::g nil)
 (*| Mtailcall sig (inl r) =>
       do r1 <- ireg_of r;

@@ -159,6 +159,7 @@ let expand_rec = function
 let ctl_flow_rec = function
   | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true}
   | Pcall lbl -> { inst = "Pcall"; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true}
+  | Picall r -> { inst = "Picall"; write_locs = [Reg RA]; read_locs = [Reg (IR r)]; imm = None; is_control = true}
   | Pgoto lbl -> { inst = "Pcall"; write_locs = []; read_locs = []; imm = None ; is_control = true}
   | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None ; is_control = true}
   | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
@@ -332,7 +333,7 @@ type real_instruction =
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
   (* BCU *)
-  | Call | Cb | Goto | Ret | Get | Set
+  | Icall | Call | Cb | Goto | Ret | Get | Set
   (* FPU *)
   | Fnegd
 
@@ -376,6 +377,7 @@ let ab_inst_to_real = function
 
   | "Pcb" | "Pcbu" -> Cb
   | "Pcall" -> Call
+  | "Picall" -> Icall
   | "Pgoto" | "Pj_l" -> Goto
   | "Pget" -> Get
   | "Pret" -> Ret
@@ -428,7 +430,7 @@ let rec_to_usage r =
       (match encoding with None | Some U6 | Some S10 -> lsu_acc 
                           | Some U27L5 | Some U27L10 -> lsu_acc_x 
                           | Some E27U27L10 -> lsu_acc_y)
-  | Call | Cb | Goto | Ret | Set -> bcu
+  | Icall | Call | Cb | Goto | Ret | Set -> bcu
   | Get -> bcu_tiny_tiny_mau_xnop
   | Fnegd -> alu_lite
 
@@ -444,7 +446,7 @@ let real_inst_to_latency = function
         -> 3 (* FIXME - random value *)
   | Get -> 1
   | Set -> 3
-  | Call | Cb | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
+  | Icall | Call | Cb | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
   | Fnegd -> 1
 
 let rec_to_info r : inst_info =

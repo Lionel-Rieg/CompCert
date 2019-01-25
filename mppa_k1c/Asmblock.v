@@ -220,6 +220,7 @@ table:  .long   table[0], table[1], ...
 Inductive cf_instruction : Type :=
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
+  | Picall  (r: ireg)                               (**r function call on register value *)
 
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
@@ -1148,6 +1149,8 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
       Next (rs#RA <- (rs#PC) #PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
+  | Picall r =>
+      Next (rs#RA <- (rs#PC) #PC <- (rs#r)) m
   | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pj_l l =>

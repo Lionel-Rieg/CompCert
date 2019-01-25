@@ -59,6 +59,7 @@ Inductive instruction : Type :=
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
+  | Picall  (rs: ireg)                              (**r function call on register *)
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
   | Pj_l    (l: label)                              (**r jump to label *)
@@ -156,6 +157,7 @@ Definition control_to_instruction (c: control) :=
   | PExpand (Asmblock.Pbuiltin ef args res) => Pbuiltin ef args res
   | PCtlFlow Asmblock.Pret                  => Pret
   | PCtlFlow (Asmblock.Pcall l)             => Pcall l
+  | PCtlFlow (Asmblock.Picall r)            => Picall r
   | PCtlFlow (Asmblock.Pgoto l)             => Pgoto l
   | PCtlFlow (Asmblock.Pj_l l)              => Pj_l l
   | PCtlFlow (Asmblock.Pcb bt r l)          => Pcb bt r l
