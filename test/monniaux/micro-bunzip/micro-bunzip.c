@@ -520,6 +520,8 @@ extern char *uncompressStream(int src_fd, int dst_fd)
 int main(int argc, char *argv[])
 {
   char *c=uncompressStream(0,1);
-  fprintf(stderr, "%s\ncycles=%llu\n", c ? c : "Completed OK", get_total_clock());
+  extern FILE *fdopen(int fd, const char *mode);
+  FILE *err = fdopen(2, "w");
+  fprintf(err, "%s\ncycles=%llu\n", c ? c : "Completed OK", get_total_clock());
   return 0;
 }

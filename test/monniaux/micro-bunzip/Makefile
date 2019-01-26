@@ -1,4 +1,4 @@
-all: testfile.txt testfile.txt.2ccomp testfile.txt.2gcc
+all: testfile.txt testfile.txt.2ccomp testfile.txt.2gcc testfile.txt.ccomp.out testfile.txt.gcc.out
 	cmp testfile.txt testfile.txt.2ccomp
 	cmp testfile.txt testfile.txt.2gcc
 
@@ -27,9 +27,9 @@ testfile.txt: micro-bunzip.c
 #	sha512sum micro-bunzip.c >> $@
 #x	cat micro-bunzip.c >> $@
 
-testfile.txt.2ccomp: testfile.txt micro-bunzip.ccomp.k1c
-	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.ccomp.k1c > $@
+testfile.txt.2ccomp testfile.txt.ccomp.out: testfile.txt micro-bunzip.ccomp.k1c
+	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.ccomp.k1c > testfile.txt.2ccomp 2> testfile.txt.ccomp.out
 
-testfile.txt.2gcc: testfile.txt micro-bunzip.gcc.k1c
-	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.gcc.k1c > $@
+testfile.txt.2gcc testfile.txt.gcc.out: testfile.txt micro-bunzip.gcc.k1c
+	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.gcc.k1c > testfile.txt.2gcc 2> testfile.txt.gcc.out
 
