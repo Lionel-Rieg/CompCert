@@ -12,6 +12,8 @@
 	(LGPL) version 2, available at http://www.gnu.org/copyleft/lgpl.html
 */
 
+#include "../clock.h"
+
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,8 +86,10 @@ static unsigned int get_bits(bunzip_data *bd, char bits_wanted)
 	while (bd->inbufBitCount<bits_wanted) {
 		/* If we need to read more data from file into byte buffer, do so */
 		if(bd->inbufPos==bd->inbufCount) {
+		        clock_stop();
 			if(!(bd->inbufCount = read(bd->in_fd, bd->inbuf, IOBUF_SIZE)))
 				longjmp(bd->jmpbuf,RETVAL_UNEXPECTED_INPUT_EOF);
+			clock_start();
 			bd->inbufPos=0;
 		}
 		/* Avoid 32-bit overflow (dump bit buffer to top of output) */
@@ -359,8 +363,10 @@ extern int read_bunzip_data(bunzip_data *bd)
 extern void flush_bunzip_outbuf(bunzip_data *bd, int out_fd)
 {
 	if(bd->outbufPos) {
+	        clock_stop();
 		if(write(out_fd, bd->outbuf, bd->outbufPos) != bd->outbufPos)
 			longjmp(bd->jmpbuf,RETVAL_UNEXPECTED_OUTPUT_EOF);
+	        clock_start();
 		bd->outbufPos=0;
 	}
 }
@@ -498,11 +504,13 @@ extern char *uncompressStream(int src_fd, int dst_fd)
 	bunzip_data *bd;
 	int i;
 
+	clock_start();
 	if(!(i=start_bunzip(&bd,src_fd,0,0))) {
 		i=write_bunzip_data(bd,dst_fd,0,0);
 		if(i==RETVAL_LAST_BLOCK && bd->headerCRC==bd->totalCRC) i=RETVAL_OK;
 	}
 	flush_bunzip_outbuf(bd,dst_fd);
+	clock_stop();
 	if(bd->dbuf) free(bd->dbuf);
 	free(bd);
 	return bunzip_errors[-i];
@@ -511,6 +519,7 @@ extern char *uncompressStream(int src_fd, int dst_fd)
 /* Dumb little test thing, decompress stdin to stdout */
 int main(int argc, char *argv[])
 {
-	char *c=uncompressStream(0,1);
-	fprintf(stderr,"\n%s\n", c ? c : "Completed OK");
+  char *c=uncompressStream(0,1);
+  fprintf(stderr, "%s\ncycles=%llu\n", c ? c : "Completed OK", get_total_clock());
+  return 0;
 }

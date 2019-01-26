@@ -1,24 +1,35 @@
-all: testfile.txt testfile.txt.2
-	cmp testfile.txt testfile.txt.2
+all: testfile.txt testfile.txt.2ccomp testfile.txt.2gcc
+	cmp testfile.txt testfile.txt.2ccomp
+	cmp testfile.txt testfile.txt.2gcc
 
-micro-bunzip.k1c: micro-bunzip.c
-	../../../ccomp -O3 $< -U __SIZEOF_INT128__ -D __SIZE_TYPE__='long long' -o $@
+../clock.gcc.k1c.o : ../clock.c ../cycles.h 
+	k1-mbr-gcc -c -Wall -O3 $< -o $@
+
+micro-bunzip.ccomp.k1c: micro-bunzip.c ../clock.gcc.k1c.o
+	../../../ccomp -Wall -O3 $+ -U __SIZEOF_INT128__ -D __SIZE_TYPE__='unsigned long long' -o $@
+
+# TODO: -O3 buggy??
+micro-bunzip.gcc.k1c: micro-bunzip.c ../clock.gcc.k1c.o
+	k1-mbr-gcc -Wall -O2 $+ -o $@
 
 testfile.txt: micro-bunzip.c
 	cat micro-bunzip.c > $@
 	sha1sum micro-bunzip.c >> $@
 	cat micro-bunzip.c >> $@
 	md5sum micro-bunzip.c >> $@
-	cat micro-bunzip.c >> $@
-	sha224sum micro-bunzip.c >> $@
-	cat micro-bunzip.c >> $@
-	sha256sum micro-bunzip.c >> $@
-	cat micro-bunzip.c >> $@
-	sha384sum micro-bunzip.c >> $@
-	cat micro-bunzip.c >> $@
-	sha512sum micro-bunzip.c >> $@
-	cat micro-bunzip.c >> $@
+#	cat micro-bunzip.c >> $@
+#	sha224sum micro-bunzip.c >> $@
+#	cat micro-bunzip.c >> $@
+#	sha256sum micro-bunzip.c >> $@
+#	cat micro-bunzip.c >> $@
+#	sha384sum micro-bunzip.c >> $@
+#	cat micro-bunzip.c >> $@
+#	sha512sum micro-bunzip.c >> $@
+#x	cat micro-bunzip.c >> $@
 
-testfile.txt.2: testfile.txt micro-bunzip.k1c
-	bzip2 <testfile.txt | k1-cluster --syscall=libstd_scalls.so -- micro-bunzip.k1c > $@
+testfile.txt.2ccomp: testfile.txt micro-bunzip.ccomp.k1c
+	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.ccomp.k1c > $@
+
+testfile.txt.2gcc: testfile.txt micro-bunzip.gcc.k1c
+	bzip2 <testfile.txt | k1-cluster --cycle-based --syscall=libstd_scalls.so -- micro-bunzip.gcc.k1c > $@
 
