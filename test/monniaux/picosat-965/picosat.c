@@ -56,9 +56,6 @@ IN THE SOFTWARE.
 #define VISCORES 
  */
 
-/* DM disable */
-#define NGETRUSAGE
-
 #ifdef VISCORES
 // #define WRITEGIF		/* ... to generate a video */
 #endif

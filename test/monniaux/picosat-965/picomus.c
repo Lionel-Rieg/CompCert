@@ -235,11 +235,15 @@ int main (int argc, char ** argv) {
   if (input_name && strcmp (input_name, "-")) {
     len = strlen (input_name);
     if (len >= 3 && !strcmp (input_name + len - 3, ".gz")) {
+#ifdef NZIP
+      input_file=NULL;
+#else
       cmd = malloc (len + 20);
       sprintf (cmd, "gunzip -c %s 2>/dev/null", input_name);
       input_file = popen (cmd, "r");
       pclose_input = 1;
       free (cmd);
+#endif
     } else input_file = fopen (input_name, "r"), fclose_input = 1;
     if (!input_file) die ("can not read '%s'", input_name);
   } else input_file = stdin, input_name = "-";
@@ -249,7 +253,9 @@ int main (int argc, char ** argv) {
     exit (1);
   }
   if (fclose_input) fclose (input_file);
+#ifdef NZIP
   if (pclose_input) pclose (input_file);
+#endif
   ps = picosat_init ();
   picosat_set_prefix (ps, "c [picosat] ");
   picosat_set_output (ps, stdout);

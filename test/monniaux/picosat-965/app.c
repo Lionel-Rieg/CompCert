@@ -12,8 +12,6 @@
 #define BUNZIP2 "bzcat %s"
 #define GZIP "gzip -c -f > %s"
 
-#define NALARM
-
 FILE * popen (const char *, const char*);
 int pclose (FILE *);
 
@@ -336,14 +334,14 @@ write_to_file (PicoSAT * picosat,
 
   if (zipped)
     {
-#if ZIP
+#ifdef NZIP
+      file = NULL;
+#else
       cmd = malloc (strlen (GZIP) + strlen (name));
       sprintf (cmd, GZIP, name);
       file = popen (cmd, "w");
       free (cmd);
       pclose_file = 1;
-#else
-      file = NULL;
 #endif
     }
   else
@@ -901,7 +899,10 @@ picosat_main (int argc, char **argv)
 	}
       else if (has_suffix (argv[i], ".gz"))
 	{
-#if ZIP
+#ifdef NZIP
+          file=NULL;
+	  err=1;
+#else
 	  char *cmd = malloc (strlen (GUNZIP) + strlen (argv[i]));
 	  sprintf (cmd, GUNZIP, argv[i]);
 	  if ((file = popen (cmd, "r")))
@@ -918,14 +919,14 @@ picosat_main (int argc, char **argv)
 	      err = 1;
 	    }
 	  free (cmd);
-#else
-          file=NULL;
-	  err=1;
 #endif
 	}
       else if (has_suffix (argv[i], ".bz2"))
 	{
-#if ZIP
+#ifdef NZIP
+	  file=NULL;
+	  err=1;
+#else
 	  char *cmd = malloc (strlen (BUNZIP2) + strlen (argv[i]));
 	  sprintf (cmd, BUNZIP2, argv[i]);
 	  if ((file = popen (cmd, "r")))
@@ -942,9 +943,6 @@ picosat_main (int argc, char **argv)
 	      err = 1;
 	    }
 	  free (cmd);
-#else
-	  file=NULL;
-	  err=1;
 #endif
 	}
       else if (!(file = fopen (argv[i], "r")))	/* TODO .gz ? */
@@ -1200,8 +1198,10 @@ NEXT_SOLUTION:
   if (close_input)
     fclose (input);
 
+#ifndef NZIP
   if (pclose_input)
     pclose (input);
+#endif
 
   if (output_name)
     fclose (output);
