@@ -529,8 +529,18 @@ let expand_instruction instr =
         expand_builtin_memcpy (Z.to_int sz) (Z.to_int al) args
      | EF_annot _ | EF_debug _ | EF_inline_asm _ ->
         emit instr
-   *)| _ ->
-        assert false
+    *)
+     | EF_memcpy _ -> failwith "asmexpand: memcpy"
+     | EF_malloc -> failwith "asmexpand: malloc"
+     | EF_free -> failwith "asmexpand: free"
+     | EF_vload _ -> failwith "asmexpand: vload"
+     | EF_vstore _ -> failwith "asmexpand: vstore"
+     | EF_debug _ -> failwith "asmexpand: debug"
+     | EF_annot _ -> failwith "asmexpand: annot"
+     | EF_annot_val _ -> failwith "asmexpand: annot_val"
+     | EF_external _ -> failwith "asmexpand: external"
+     | EF_inline_asm _ -> failwith "asmexpand: inline asm"
+     | EF_runtime _ -> failwith "asmexpand: runtime"
      end
   | _ ->
      emit instr
