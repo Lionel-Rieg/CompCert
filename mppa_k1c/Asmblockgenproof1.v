@@ -1318,13 +1318,13 @@ Lemma indexed_load_access_correct:
      exec_basic_instr ge (mk_instr base ofs) rs m = exec_load ge chunk rs m rd base ofs) ->
   forall (base: ireg) ofs k (rs: regset) v,
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
-  base <> RTMP -> rd <> PC ->
+  base <> RTMP ->
   exists rs',
      exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m
   /\ rs'#rd = v
   /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
 Proof.
-  intros until m; intros EXEC; intros until v; intros LOAD NOT31 NOTPC.
+  intros until m; intros EXEC; intros until v; intros LOAD NOT31.
   exploit indexed_memory_access_correct; eauto.
   intros (base' & ofs' & rs' & A & B & C).
   econstructor; split.
@@ -1339,18 +1339,22 @@ Lemma indexed_store_access_correct:
      exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk rs m r1 base ofs) ->
   forall (base: ireg) ofs k (rs: regset) m',
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
-  base <> RTMP -> r1 <> RTMP -> r1 <> PC ->
+  base <> RTMP -> r1 <> RTMP ->
   exists rs',
      exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m'
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31' NOTPC.
+  intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31'.
   exploit indexed_memory_access_correct. instantiate (1 := base). eauto.
   intros (base' & ofs' & rs' & A & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_store. rewrite B, C, STORE. eauto. eauto. auto.
-  intros; Simpl. rewrite C; auto.
+  unfold exec_store. rewrite B, C, STORE.
+    eauto.
+    discriminate.
+    { intro. inv H. contradiction. }
+  auto.
+(*   intros; Simpl. rewrite C; auto. *)
 Qed.
 
 Lemma loadind_correct:
@@ -1364,14 +1368,15 @@ Lemma loadind_correct:
   /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
   intros until v; intros TR LOAD NOT31. 
-  assert (A: exists mk_instr,
-                c = indexed_memory_access mk_instr base ofs :: k
+  assert (A: exists mk_instr rd,
+                preg_of dst = IR rd
+             /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_load ge (chunk_of_type ty) rs' m (preg_of dst) base' ofs').
+                   exec_load ge (chunk_of_type ty) rs' m rd base' ofs').
   { unfold loadind in TR.
-    destruct ty, (preg_of dst); inv TR; econstructor; split; eauto. }
-  destruct A as (mk_instr & B & C). subst c. 
+    destruct ty, (preg_of dst); inv TR; econstructor; esplit; eauto. }
+  destruct A as (mk_instr & rd & rdEq & B & C). subst c. rewrite rdEq.
   eapply indexed_load_access_correct; eauto with asmgen. 
 Qed.
 
@@ -1385,14 +1390,17 @@ Lemma storeind_correct:
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TR STORE NOT31.
-  assert (A: exists mk_instr,
-                c = indexed_memory_access mk_instr base ofs :: k
+  assert (A: exists mk_instr rr,
+                preg_of src = IR rr
+             /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_store ge (chunk_of_type ty) rs' m (preg_of src) base' ofs').
-  { unfold storeind in TR. destruct ty, (preg_of src); inv TR; econstructor; split; eauto. }
-  destruct A as (mk_instr & B & C). subst c. 
-  eapply indexed_store_access_correct; eauto with asmgen. 
+                   exec_store ge (chunk_of_type ty) rs' m rr base' ofs').
+  { unfold storeind in TR. destruct ty, (preg_of src); inv TR; econstructor; esplit; eauto. }
+  destruct A as (mk_instr & rr & rsEq & B & C). subst c.
+  eapply indexed_store_access_correct; eauto with asmgen.
+  congruence.
+  destruct rr; try discriminate. destruct src; try discriminate.
 Qed.
 
 Ltac bsimpl := unfold exec_bblock; simpl.
@@ -1492,13 +1500,12 @@ Lemma transl_load_access_correct:
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
-  rd <> PC ->
   exists rs',
      exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
   /\ rs'#rd = v'
   /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
 Proof.
-  intros until v'; intros INSTR TR EV LOAD NOTPC. 
+  intros until v'; intros INSTR TR EV LOAD. 
   exploit transl_memory_access_correct; eauto.
   intros (base & ofs & rs' & A & B & C).
   econstructor; split.
@@ -1514,17 +1521,19 @@ Lemma transl_store_access_correct:
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.storev chunk m v rs#r1 = Some m' ->
-  r1 <> PC -> r1 <> RTMP ->
+  r1 <> RTMP ->
   exists rs',
      exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros until m'; intros INSTR TR EV STORE NOTPC NOT31. 
+  intros until m'; intros INSTR TR EV STORE NOT31. 
   exploit transl_memory_access_correct; eauto.
   intros (base & ofs & rs' & A & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_store. rewrite B, C, STORE by auto. reflexivity. auto.
+  rewrite INSTR. unfold exec_store. rewrite B. rewrite C; try discriminate. rewrite STORE. auto.
+  intro. inv H. contradiction.
+  auto.
 Qed.
 
 Lemma transl_load_correct:
@@ -1538,12 +1547,13 @@ Lemma transl_load_correct:
   /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
   intros until v; intros TR EV LOAD. 
-  assert (A: exists mk_instr,
-      transl_memory_access mk_instr addr args k = OK c
+  assert (A: exists mk_instr rd,
+      preg_of dst = IR rd
+   /\ transl_memory_access mk_instr addr args k = OK c
    /\ forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load ge chunk rs m (preg_of dst) base ofs).
-  { unfold transl_load in TR; destruct chunk; ArgsInv; econstructor; (split; [eassumption|auto]). }
-  destruct A as (mk_instr & B & C).
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load ge chunk rs m rd base ofs).
+  { unfold transl_load in TR; destruct chunk; ArgsInv; econstructor; (esplit; eauto). }
+  destruct A as (mk_instr & rd & rdEq & B & C). rewrite rdEq.
   eapply transl_load_access_correct; eauto with asmgen.
 Qed.
 
@@ -1557,19 +1567,21 @@ Lemma transl_store_correct:
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TR EV STORE. 
-  assert (A: exists mk_instr chunk',
-      transl_memory_access mk_instr addr args k = OK c
+  assert (A: exists mk_instr chunk' rr,
+      preg_of src = IR rr
+   /\ transl_memory_access mk_instr addr args k = OK c
    /\ (forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk' rs m (preg_of src) base ofs)
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_store ge chunk' rs m rr base ofs)
    /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src)).
   { unfold transl_store in TR; destruct chunk; ArgsInv;
-    (econstructor; econstructor; split; [eassumption | split; [ intros; simpl; reflexivity | auto]]).
+    (econstructor; econstructor; econstructor; split; [eauto | split; [eassumption | split; [ intros; simpl; reflexivity | auto]]]).
     destruct a; auto. apply Mem.store_signed_unsigned_8. 
     destruct a; auto. apply Mem.store_signed_unsigned_16. 
   }
-  destruct A as (mk_instr & chunk' & B & C & D).
+  destruct A as (mk_instr & chunk' & rr & rrEq & B & C & D).
   rewrite D in STORE; clear D. 
-  eapply transl_store_access_correct; eauto with asmgen.
+  eapply transl_store_access_correct; eauto with asmgen. congruence.
+  destruct rr; try discriminate. destruct src; try discriminate.
 Qed.
 
 Lemma make_epilogue_correct:

@@ -958,14 +958,14 @@ Definition eval_offset (ofs: offset) : ptrofs :=
   end.
 
 Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
-                     (d: preg) (a: ireg) (ofs: offset) :=
+                     (d: ireg) (a: ireg) (ofs: offset) :=
   match Mem.loadv chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) with
   | None => Stuck
   | Some v => Next (rs#d <- v) m
   end.
 
 Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
-                      (s: preg) (a: ireg) (ofs: offset) :=
+                      (s: ireg) (a: ireg) (ofs: offset) :=
   match Mem.storev chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) (rs s) with
   | None => Stuck
   | Some m' => Next rs m'

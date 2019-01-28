@@ -17,6 +17,7 @@ Require Import Op Locations Machblock Conventions Asmblock.
 Require Import Asmblockgenproof0.
 Require Import PostpassScheduling.
 Require Import Asmblockgenproof.
+Require Import Axioms.
 
 Local Open Scope error_monad_scope.
 
@@ -173,13 +174,86 @@ Proof.
     erewrite exec_basic_instr_pc; eauto.
 Qed.
 
-(* Lemma exec_basic_instr_pc_var:
+Lemma next_eq {A: Type}:
+  forall (rs rs':A) m m',
+  rs = rs' -> m = m' -> Next rs m = Next rs' m'.
+Proof.
+  intros. congruence.
+Qed.
+
+Lemma regset_double_set:
+  forall r1 r2 (rs: regset) v1 v2,
+  r1 <> r2 ->
+  (rs # r1 <- v1 # r2 <- v2) = (rs # r2 <- v2 # r1 <- v1).
+Proof.
+  intros. apply functional_extensionality. intros r. destruct (preg_eq r r1).
+  - subst. rewrite Pregmap.gso; auto. repeat (rewrite Pregmap.gss). auto.
+  - destruct (preg_eq r r2).
+    + subst. rewrite Pregmap.gss. rewrite Pregmap.gso; auto. rewrite Pregmap.gss. auto.
+    + repeat (rewrite Pregmap.gso; auto).
+Qed.
+
+Lemma regset_double_set_id:
+  forall r (rs: regset) v1 v2,
+  (rs # r <- v1 # r <- v2) = (rs # r <- v2).
+Proof.
+  intros. apply functional_extensionality. intros. destruct (preg_eq r x).
+  - subst r. repeat (rewrite Pregmap.gss; auto).
+  - repeat (rewrite Pregmap.gso); auto.
+Qed.
+
+Lemma exec_load_pc_var:
+  forall ge t rs m rd ra ofs rs' m' v,
+  exec_load ge t rs m rd ra ofs = Next rs' m' ->
+  exec_load ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - discriminate.
+Qed.
+
+Lemma exec_store_pc_var:
+  forall ge t rs m rd ra ofs rs' m' v,
+  exec_store ge t rs m rd ra ofs = Next rs' m' ->
+  exec_store ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
+Lemma exec_basic_instr_pc_var:
   forall ge i rs m rs' m' v,
   exec_basic_instr ge i rs m = Next rs' m' ->
   exec_basic_instr ge i (rs # PC <- v) m = Next (rs' # PC <- v) m'.
 Proof.
-  intros. unfold exec_basic_instr in *. exploreInst.
-    - inv H. unfold exec_arith_instr. exploreInst. Search (_ # _ <- _).
+  intros. unfold exec_basic_instr in *. destruct i.
+  - unfold exec_arith_instr in *. exploreInst.
+      all: try (inv H; apply next_eq; auto;
+      apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
+  - exploreInst; apply exec_load_pc_var; auto.
+  - exploreInst; apply exec_store_pc_var; auto.
+  - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
+    destruct (Mem.storev _ _ _ _); try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros.
+    rewrite (regset_double_set GPR32 PC); try discriminate.
+    rewrite (regset_double_set GPR12 PC); try discriminate.
+    rewrite (regset_double_set GPR14 PC); try discriminate. reflexivity.
+  - repeat (rewrite Pregmap.gso; try discriminate).
+    destruct (Mem.loadv _ _ _); try discriminate.
+    destruct (rs GPR12); try discriminate.
+    destruct (Mem.free _ _ _ _); try discriminate.
+    inv H. apply next_eq; auto.
+    rewrite (regset_double_set GPR32 PC).
+    rewrite (regset_double_set GPR12 PC). reflexivity.
+    all: discriminate.
+  - destruct rs0; try discriminate. inv H. apply next_eq; auto.
+    repeat (rewrite Pregmap.gso; try discriminate). apply regset_double_set; discriminate.
+  - destruct rd; try discriminate. inv H. apply next_eq; auto.
+    repeat (rewrite Pregmap.gso; try discriminate). apply regset_double_set; discriminate.
+  - inv H. apply next_eq; auto.
 Qed.
 
 Lemma exec_body_pc_var:
@@ -190,10 +264,23 @@ Proof.
   induction l.
   - intros. simpl. simpl in H. inv H. auto.
   - intros. simpl in *.
-    destruct (exec_basic_instr ge a rs m) eqn:EXEBI.
-    + 
-Qed. *)
+    destruct (exec_basic_instr ge a rs m) eqn:EXEBI; try discriminate.
+    erewrite exec_basic_instr_pc_var; eauto.
+Qed.
 
+Axiom TODO: False.
+
+Lemma pc_set_add:
+  forall rs v r x y,
+  rs # r <- (Val.offset_ptr v (Ptrofs.repr (x + y))) = rs # r <- (Val.offset_ptr (rs # r <- (Val.offset_ptr v (Ptrofs.repr x)) r) (Ptrofs.repr y)).
+Proof.
+  intros. apply functional_extensionality. intros r0. destruct (preg_eq r r0).
+  - subst. repeat (rewrite Pregmap.gss); auto.
+    destruct v; simpl; auto.
+    rewrite Ptrofs.add_assoc.
+    destruct TODO.
+  - repeat (rewrite Pregmap.gso; auto).
+Admitted.
 
 Lemma concat2_straight:
   forall a b bb rs m rs'' m'' f ge,
@@ -208,16 +295,22 @@ Proof.
   exploit concat2_noexit; eauto. intros.
   exploit concat2_decomp; eauto. intros. inv H2.
 (*   destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bd ex WF]. *)
-  unfold exec_bblock in H0. destruct (exec_body ge (body bb) rs m) eqn:EXEB.
-  - rewrite H3 in EXEB. apply exec_body_app in EXEB. destruct EXEB as (rs1 & m1 & EXEB1 & EXEB2).
-    repeat eexists.
-      unfold exec_bblock. rewrite EXEB1. rewrite H1. simpl. eauto.
-      exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H2. auto.
-      unfold exec_bblock.
-Admitted.
+  unfold exec_bblock in H0. destruct (exec_body ge (body bb) rs m) eqn:EXEB; try discriminate.
+  rewrite H3 in EXEB. apply exec_body_app in EXEB. destruct EXEB as (rs1 & m1 & EXEB1 & EXEB2).
+  repeat eexists.
+    unfold exec_bblock. rewrite EXEB1. rewrite H1. simpl. eauto.
+    exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H2. auto.
+    unfold exec_bblock. unfold nextblock. erewrite exec_body_pc_var; eauto.
+    rewrite <- H4. unfold nextblock in H0. rewrite regset_double_set_id.
+    assert (size bb = size a + size b).
+    { unfold size. rewrite H3. rewrite H4. rewrite app_length. rewrite H1. simpl. rewrite Nat.add_0_r.
+      repeat (rewrite Nat2Z.inj_add). omega. }
+    clear H1 H3 H4. rewrite H2 in H0.
+    assert (rs1 PC = rs0 PC). { apply exec_body_pc in EXEB2. auto. }
+    rewrite H1. rewrite <- pc_set_add. auto.
+Qed.
 
-
-Lemma concat_exec_bblock_nonil (ge: Genv.t fundef unit) (f: function) :
+Lemma concat_all_exec_bblock (ge: Genv.t fundef unit) (f: function) :
   forall a bb rs m lbb rs'' m'',
   lbb <> nil ->
   concat_all (a :: lbb) = OK bb ->
@@ -231,29 +324,33 @@ Proof.
   intros until m''. intros Hnonil CONC EXEB.
   simpl in CONC.
   destruct lbb as [|b lbb]; try contradiction. clear Hnonil.
-  monadInv CONC. exists x.
-Admitted.
+  monadInv CONC. exploit concat2_straight; eauto. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
+  exists x. repeat econstructor. all: eauto.
+Qed.
 
+Lemma concat2_size:
+  forall a b bb, concat2 a b = OK bb -> size bb = size a + size b.
+Proof.
+  intros. unfold concat2 in H.
+  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bdy ex WF]; simpl in *.
+  destruct exa; try discriminate. destruct hdb; try discriminate. destruct exb; try discriminate.
+  - destruct c.
+    + destruct i; try discriminate.
+    + inv H. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
+  - inv H. unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
+Qed.
 
 Lemma concat_all_size :
-  forall a lbb bb bb',
+  forall lbb a bb bb',
   concat_all (a :: lbb) = OK bb ->
   concat_all lbb = OK bb' ->
   size bb = size a + size bb'.
 Proof.
-Admitted.
-
-Lemma concat_all_equiv_cons:
-  forall tge tf bb lbb tbb rs m rs'' m'',
-  concat_all (bb::lbb) = OK tbb ->
-  exec_bblock tge tf tbb rs m = Next rs'' m'' ->
-  exists tbb' rs' m',
-     exec_bblock tge tf bb rs m = Next rs' m'
-  /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size bb))
-  /\ concat_all lbb = OK tbb'
-  /\ exec_bblock tge tf tbb' rs' m' = Next rs'' m''.
-Proof.
-Admitted.
+  intros. unfold concat_all in H. fold concat_all in H.
+  destruct lbb; try discriminate.
+  monadInv H. rewrite H0 in EQ. inv EQ.
+  apply concat2_size. assumption.
+Qed.
 
 Lemma ptrofs_add_repr :
   forall a b,
@@ -376,8 +473,10 @@ Proof.
   induction lbb.
   - intros until m'. simpl. intros. discriminate.
   - intros until m'. intros GFIND SIZE PCeq TAIL CONC EXEB.
-    exploit concat_all_equiv_cons; eauto.
-    intros (tbb0 & rs0 & m0 & EXEB0 & PCeq' & CONC0 & EXEB1).
+    destruct lbb.
+    + simpl in *. clear IHlbb. inv CONC. eapply plus_one. econstructor; eauto. eapply find_bblock_tail; eauto.
+    + exploit concat_all_exec_bblock; eauto; try discriminate.
+    intros (tbb0 & rs0 & m0 & CONC0 & EXEB0 & PCeq' & EXEB1).
     eapply plus_left.
     econstructor.
       3: eapply find_bblock_tail. rewrite <- app_comm_cons in TAIL. 3: eauto.
