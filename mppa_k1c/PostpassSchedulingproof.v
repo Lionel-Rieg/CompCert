@@ -268,22 +268,26 @@ Proof.
     erewrite exec_basic_instr_pc_var; eauto.
 Qed.
 
-Axiom TODO: False.
-
 Lemma pc_set_add:
   forall rs v r x y,
+  0 <= x <= Ptrofs.max_unsigned ->
+  0 <= y <= Ptrofs.max_unsigned ->
   rs # r <- (Val.offset_ptr v (Ptrofs.repr (x + y))) = rs # r <- (Val.offset_ptr (rs # r <- (Val.offset_ptr v (Ptrofs.repr x)) r) (Ptrofs.repr y)).
 Proof.
   intros. apply functional_extensionality. intros r0. destruct (preg_eq r r0).
   - subst. repeat (rewrite Pregmap.gss); auto.
     destruct v; simpl; auto.
     rewrite Ptrofs.add_assoc.
-    destruct TODO.
+    cutrewrite (Ptrofs.repr (x + y) = Ptrofs.add (Ptrofs.repr x) (Ptrofs.repr y)); auto.
+    unfold Ptrofs.add.
+    cutrewrite (x + y = Ptrofs.unsigned (Ptrofs.repr x) + Ptrofs.unsigned (Ptrofs.repr y)); auto.
+    repeat (rewrite Ptrofs.unsigned_repr); auto.
   - repeat (rewrite Pregmap.gso; auto).
-Admitted.
+Qed.
 
 Lemma concat2_straight:
   forall a b bb rs m rs'' m'' f ge,
+  size a <= Ptrofs.max_unsigned -> size b <= Ptrofs.max_unsigned ->
   concat2 a b = OK bb ->
   exec_bblock ge f bb rs m = Next rs'' m'' ->
   exists rs' m',
@@ -291,27 +295,30 @@ Lemma concat2_straight:
     /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size a))
     /\ exec_bblock ge f b rs' m' = Next rs'' m''.
 Proof.
-  intros.
-  exploit concat2_noexit; eauto. intros.
-  exploit concat2_decomp; eauto. intros. inv H2.
-(*   destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bd ex WF]. *)
-  unfold exec_bblock in H0. destruct (exec_body ge (body bb) rs m) eqn:EXEB; try discriminate.
-  rewrite H3 in EXEB. apply exec_body_app in EXEB. destruct EXEB as (rs1 & m1 & EXEB1 & EXEB2).
+  intros until ge. intros LTA LTB CONC2 EXEB.
+  exploit concat2_noexit; eauto. intros EXA.
+  exploit concat2_decomp; eauto. intros. inv H.
+  unfold exec_bblock in EXEB. destruct (exec_body ge (body bb) rs m) eqn:EXEB'; try discriminate.
+  rewrite H0 in EXEB'. apply exec_body_app in EXEB'. destruct EXEB' as (rs1 & m1 & EXEB1 & EXEB2).
   repeat eexists.
-    unfold exec_bblock. rewrite EXEB1. rewrite H1. simpl. eauto.
-    exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H2. auto.
+    unfold exec_bblock. rewrite EXEB1. rewrite EXA. simpl. eauto.
+    exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H. auto.
     unfold exec_bblock. unfold nextblock. erewrite exec_body_pc_var; eauto.
-    rewrite <- H4. unfold nextblock in H0. rewrite regset_double_set_id.
+    rewrite <- H1. unfold nextblock in EXEB. rewrite regset_double_set_id.
     assert (size bb = size a + size b).
-    { unfold size. rewrite H3. rewrite H4. rewrite app_length. rewrite H1. simpl. rewrite Nat.add_0_r.
+    { unfold size. rewrite H0. rewrite H1. rewrite app_length. rewrite EXA. simpl. rewrite Nat.add_0_r.
       repeat (rewrite Nat2Z.inj_add). omega. }
-    clear H1 H3 H4. rewrite H2 in H0.
+    clear EXA H0 H1. rewrite H in EXEB.
     assert (rs1 PC = rs0 PC). { apply exec_body_pc in EXEB2. auto. }
-    rewrite H1. rewrite <- pc_set_add. auto.
+    rewrite H0. rewrite <- pc_set_add; auto.
+    exploit AB.size_positive. instantiate (1 := a). intro. omega.
+    exploit AB.size_positive. instantiate (1 := b). intro. omega.
 Qed.
 
+Axiom TODO: False.
+
 Lemma concat_all_exec_bblock (ge: Genv.t fundef unit) (f: function) :
-  forall a bb rs m lbb rs'' m'',
+  forall a bb rs m lbb rs'' m'', 
   lbb <> nil ->
   concat_all (a :: lbb) = OK bb ->
   exec_bblock ge f bb rs m = Next rs'' m'' ->
@@ -324,9 +331,9 @@ Proof.
   intros until m''. intros Hnonil CONC EXEB.
   simpl in CONC.
   destruct lbb as [|b lbb]; try contradiction. clear Hnonil.
-  monadInv CONC. exploit concat2_straight; eauto. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
+  monadInv CONC. exploit concat2_straight; eauto. 1-2: destruct TODO. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
   exists x. repeat econstructor. all: eauto.
-Qed.
+Admitted.
 
 Lemma concat2_size:
   forall a b bb, concat2 a b = OK bb -> size bb = size a + size b.
