@@ -793,25 +793,21 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
         do r1 <- ireg_of r; OK ((Picall r1) ::g nil)
     | MBcall sig (inr symb) =>
         OK ((Pcall symb) ::g nil)
-(*| Mtailcall sig (inl r) =>
-      do r1 <- ireg_of r;
-      OK (make_epilogue f (Pcall :: k))
-*)  | MBtailcall sig (inr symb) =>
+    | MBtailcall sig (inr symb) =>
         OK (make_epilogue f ((Pgoto symb) ::g nil))
     | MBbuiltin ef args res =>
         OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) ::g nil)
-(*   | Mlabel lbl =>
-      OK (Plabel lbl ::i k) *)
     | MBgoto lbl =>
         OK (Pj_l lbl ::g nil)
     | MBcond cond args lbl =>
         transl_cbranch cond args lbl nil
-(*| Mjumptable arg tbl => do r <- ireg_of arg; OK (Pbtbl r tbl :: k)
-*)  | MBreturn =>
+    | MBreturn =>
         OK (make_epilogue f (Pret ::g nil))
-      (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*)
-    | _ =>
-        Error (msg "Asmgenblock.transl_instr")
+      (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*) 
+    | MBtailcall _ (inl _) =>
+        Error (msg "Asmgenblock.transl_instr_control MBtailcall inl")
+    | MBjumptable _ _ =>
+        Error (msg "Asmgenblock.transl_instr_control MBjumptable")
     end
   end.
 
