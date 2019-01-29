@@ -23,7 +23,7 @@ mandir = $(prefix)/man/man$(manext)
 CC= ./ccomp.sh
 
 # You may need to adjust these cc options:
-CFLAGS= -DNO_DOUBLE -DNO_32BIT_DIVISION -DNO_FLOAT -DNO_SWITCH -DTAIL_CALL_MISSING  -I$(srcdir)
+CFLAGS= -DNO_DOUBLE -DNO_32BIT_DIVISION -DNO_FLOAT -DNO_SWITCH -DTAIL_CALL_MISSING -DMEMCPY_MISSING -I$(srcdir)
 # Generally, we recommend defining any configuration symbols in jconfig.h,
 # NOT via -D switches here.
 # However, any special defines for ansi2knr.c may be included here:

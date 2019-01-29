@@ -33,7 +33,11 @@ extern void free JPP((void *ptr));
 GLOBAL(void *)
 jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
 {
-  return (void *) malloc(sizeofobject);
+  void *p= (void *) malloc(sizeofobject);
+  if (p==NULL) { /* DM */
+    printf("malloc (%zu) failed\n", sizeofobject);
+  }
+  return p;
 }
 
 GLOBAL(void)

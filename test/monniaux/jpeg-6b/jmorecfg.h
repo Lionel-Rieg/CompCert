@@ -17,10 +17,17 @@
 #define MODULO(x, y) ((x) % (y))
 #define DIVISION(x, y) ((x) / (y))
 #endif
+
 #ifdef TAIL_CALL_MISSING
 #define KILL_TAIL_CALL { int val = 1; }
 #else
 #define KILL_TAIL_CALL
+#endif
+
+#ifdef MEMCPY_MISSING
+#define ASSIGN_FUNPTR(x, y)
+#else
+#define ASSIGN_FUNPTR(x, y) x = y
 #endif
 
 /*

@@ -641,10 +641,8 @@ jinit_huff_decoder (j_decompress_ptr cinfo)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				SIZEOF(huff_entropy_decoder));
   cinfo->entropy = (struct jpeg_entropy_decoder *) entropy;
-#ifdef DMONNIAUX_MEMCPY
-  entropy->pub.start_pass = start_pass_huff_decoder;
-  entropy->pub.decode_mcu = decode_mcu;
-#endif
+  ASSIGN_FUNPTR(entropy->pub.start_pass, start_pass_huff_decoder);
+  ASSIGN_FUNPTR(entropy->pub.decode_mcu, decode_mcu);
 
   /* Mark tables unallocated */
   for (i = 0; i < NUM_HUFF_TBLS; i++) {
