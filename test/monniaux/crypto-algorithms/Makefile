@@ -1,12 +1,17 @@
 CFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
-K1C_CFLAGS=-Wall -O3 -std=c99
+K1C_CFLAGS=-Wall -O3
 K1C_CCOMP=../../../ccomp
-K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int
+K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int -U __SIZE_TYPE__ -D __SIZE_TYPE__='unsigned long long'
 
-PRODUCTS=md2_test.host md2_test.gcc.k1c.out md2_test.ccomp.k1c.out md2_test.ccomp.k1c.s md2_test.gcc.k1c.s md2_test.gcc.k1c md2_test.ccomp.k1c
 
-all:	$(PRODUCTS)
+all:	md2.all md5.all sha1.all sha256.all
+
+md2.all : md2_test.ccomp.k1c.out md2_test.gcc.k1c.out
+md5.all : md5_test.ccomp.k1c.out md5_test.gcc.k1c.out
+rot-13.all : rot-13_test.ccomp.k1c.out rot-13_test.gcc.k1c.out
+sha1.all : sha1_test.ccomp.k1c.out sha1_test.gcc.k1c.out
+sha256.all : sha256_test.ccomp.k1c.out sha256_test.gcc.k1c.out
 
 %.gcc.k1c.s: %.c
 	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
@@ -35,6 +40,6 @@ all:	$(PRODUCTS)
 	k1-cluster --cycle-based -- $< | tee $@
 
 clean:
-	$(RM) -f $(PRODUCTS) *.o
+	$(RM) -f *.s *.o *.out *.k1c *.host
 
-.PHONY: clean
+.PHONY: clean all md2.all md5.all rot-13.all sha1.all sha256.all
