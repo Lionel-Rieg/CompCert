@@ -1,0 +1,24 @@
+make -C src all
+make[1]: Entering directory '/home/monniaux/progs/compcert/tests/uzlib/src'
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o tinflate.o -c tinflate.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o tinfgzip.o -c tinfgzip.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o tinfzlib.o -c tinfzlib.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o adler32.o -c adler32.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o crc32.o -c crc32.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o defl_static.o -c defl_static.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -Os -o genlz77.o -c genlz77.c
+rm -f ../lib/libtinf.a
+ar -frs ../lib/libtinf.a tinflate.o tinfgzip.o tinfzlib.o adler32.o crc32.o defl_static.o genlz77.o
+ar: creating ../lib/libtinf.a
+ranlib ../lib/libtinf.a
+make[1]: Leaving directory '/home/monniaux/progs/compcert/tests/uzlib/src'
+make -C examples/tgzip all
+make[1]: Entering directory '/home/monniaux/progs/compcert/tests/uzlib/examples/tgzip'
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -I../../src -Os -c tgzip.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -I../../src -Os -s -Wl,-Map,ld.map -o tgzip tgzip.o ../../lib/libtinf.a ../../lib/libtinf.a
+make[1]: Leaving directory '/home/monniaux/progs/compcert/tests/uzlib/examples/tgzip'
+make -C examples/tgunzip all
+make[1]: Entering directory '/home/monniaux/progs/compcert/tests/uzlib/examples/tgunzip'
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -I../../src -Os -c tgunzip.c
+/opt/CompCert/3.4/x86_64-linux/bin/ccomp -Wall -I../../src -Os -s -Wl,-Map,ld.map -o tgunzip tgunzip.o ../../lib/libtinf.a ../../lib/libtinf.a
+make[1]: Leaving directory '/home/monniaux/progs/compcert/tests/uzlib/examples/tgunzip'
