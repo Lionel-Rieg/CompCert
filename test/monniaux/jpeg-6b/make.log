@@ -1,0 +1,41 @@
+./ccomp.sh -DNO_DOUBLE -DNO_32BIT_DIVISION -DNO_FLOAT -DNO_SWITCH -DTAIL_CALL_MISSING  -I.   -c -o rdbmp.o rdbmp.c
+./ccomp.sh -DNO_DOUBLE -DNO_32BIT_DIVISION -DNO_FLOAT -DNO_SWITCH -DTAIL_CALL_MISSING  -I.   -c -o rdswitch.o rdswitch.c
+./ccomp.sh -DNO_DOUBLE -DNO_32BIT_DIVISION -DNO_FLOAT -DNO_SWITCH -DTAIL_CALL_MISSING  -I.   -c -o cdjpeg.o cdjpeg.c
+./ccomp.sh  -o cjpeg cjpeg.o rdppm.o rdgif.o rdtarga.o rdrle.o rdbmp.o rdswitch.o cdjpeg.o libjpeg.a 
+rdppm.o: In function `start_input_ppm':
+(.text+0xc9c): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jcparam.o): In function `jpeg_quality_scaling':
+(.text+0x254): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jcmaster.o): In function `per_scan_setup':
+(.text+0x270): undefined reference to `__compcert_i64_smod'
+libjpeg.a(jcmaster.o): In function `per_scan_setup':
+(.text+0x294): undefined reference to `__compcert_i64_smod'
+libjpeg.a(jcmaster.o): In function `per_scan_setup':
+(.text+0x360): undefined reference to `__compcert_i64_smod'
+libjpeg.a(jcprepct.o): In function `jinit_c_prep_controller':
+(.text+0x66c): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jcprepct.o): In function `jinit_c_prep_controller':
+(.text+0x750): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jccoefct.o): In function `compress_first_pass':
+(.text+0x558): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jccoefct.o): In function `compress_first_pass':
+(.text+0x580): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jccoefct.o): In function `compress_first_pass':
+(.text+0x654): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jcsample.o):(.text+0x200): more undefined references to `__compcert_i64_sdiv' follow
+libjpeg.a(jmemmgr.o): In function `alloc_sarray':
+(.text+0x3b8): undefined reference to `__compcert_i64_udiv'
+libjpeg.a(jmemmgr.o): In function `alloc_barray':
+(.text+0x50c): undefined reference to `__compcert_i64_udiv'
+libjpeg.a(jmemmgr.o): In function `realize_virt_arrays':
+(.text+0x8d4): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jmemmgr.o): In function `realize_virt_arrays':
+(.text+0x918): undefined reference to `__compcert_i64_sdiv'
+libjpeg.a(jmemmgr.o): In function `realize_virt_arrays':
+(.text+0x9cc): undefined reference to `__compcert_i64_sdiv'
+collect2: error: ld returned 1 exit status
+ccomp: error: linker command failed with exit code 1 (use -v to see invocation)
+
+1 error detected.
+Makefile:177: recipe for target 'cjpeg' failed
+make: *** [cjpeg] Error 2
