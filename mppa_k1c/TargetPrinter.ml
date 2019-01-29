@@ -237,6 +237,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ret	\n"
       | Pcall(s) ->
          fprintf oc "	call	%a\n" symbol s
+      | Picall(rs) ->
+         fprintf oc "	icall	%a\n" ireg rs
       | Pgoto(s) ->
          fprintf oc "	goto	%a\n" symbol s
       | Pj_l(s) ->

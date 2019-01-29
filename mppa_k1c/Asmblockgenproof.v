@@ -1162,7 +1162,27 @@ Proof.
       assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
         eapply transf_function_no_overflow; eauto.
       destruct s1 as [rf|fid]; simpl in H7.
-      * (* Indirect call *) inv H1.
+      * (* Indirect call *)
+        monadInv H1.
+        assert (ms' rf = Vptr f' Ptrofs.zero).
+        { unfold find_function_ptr in H14. destruct (ms' rf); try discriminate.
+          revert H14; predSpec Ptrofs.eq Ptrofs.eq_spec i Ptrofs.zero; intros; congruence. }
+        assert (rs2 x = Vptr f' Ptrofs.zero).
+        { exploit ireg_val; eauto. rewrite H; intros LD; inv LD; auto. }
+        generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1.
+        remember (Ptrofs.add _ _) as ofs'.
+        assert (TCA: transl_code_at_pc ge (Vptr fb ofs') fb f c false tf tc).
+        { econstructor; eauto. }
+        assert (f1 = f) by congruence. subst f1.
+        exploit return_address_offset_correct; eauto. intros; subst ra.
+
+        repeat eexists.
+          rewrite H6. econstructor; eauto.
+          rewrite H7. econstructor; eauto.
+        econstructor; eauto.
+          econstructor; eauto. eapply agree_sp_def; eauto. simpl. eapply agree_exten; eauto. intros. Simpl.
+        simpl. Simpl. rewrite PCeq. rewrite Heqofs'. simpl. auto.
+
       * (* Direct call *)
         monadInv H1.
         generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1.

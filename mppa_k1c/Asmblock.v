@@ -220,6 +220,7 @@ table:  .long   table[0], table[1], ...
 Inductive cf_instruction : Type :=
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
+  | Picall  (r: ireg)                               (**r function call on register value *)
 
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
@@ -958,14 +959,14 @@ Definition eval_offset (ofs: offset) : ptrofs :=
   end.
 
 Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
-                     (d: preg) (a: ireg) (ofs: offset) :=
+                     (d: ireg) (a: ireg) (ofs: offset) :=
   match Mem.loadv chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) with
   | None => Stuck
   | Some v => Next (rs#d <- v) m
   end.
 
 Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
-                      (s: preg) (a: ireg) (ofs: offset) :=
+                      (s: ireg) (a: ireg) (ofs: offset) :=
   match Mem.storev chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) (rs s) with
   | None => Stuck
   | Some m' => Next rs m'
@@ -1148,6 +1149,8 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       Next (rs#PC <- (rs#RA)) m
   | Pcall s =>
       Next (rs#RA <- (rs#PC) #PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
+  | Picall r =>
+      Next (rs#RA <- (rs#PC) #PC <- (rs#r)) m
   | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
   | Pj_l l =>
