@@ -9,7 +9,7 @@ micro-bunzip.host: micro-bunzip.c ../clock.c
 	$(CC) $+ -o $@
 
 micro-bunzip.ccomp.k1c: micro-bunzip.c ../clock.gcc.k1c.o
-	../../../ccomp -Wall -O3 $+ -U __SIZEOF_INT128__ -o $@
+	../../../ccomp -Wall -O3 $+ -o $@
 
 # TODO: -O3 buggy??
 micro-bunzip.gcc.k1c: micro-bunzip.c ../clock.gcc.k1c.o

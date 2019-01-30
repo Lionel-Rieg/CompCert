@@ -522,6 +522,6 @@ int main(int argc, char *argv[])
   char *c=uncompressStream(0,1);
   extern FILE *fdopen(int fd, const char *mode);
   FILE *err = fdopen(2, "w");
-  fprintf(err, "%s\ncycles=%llu\n", c ? c : "Completed OK", get_total_clock());
+  fprintf(err, "%s\ncycles=%lu\n", c ? c : "Completed OK", get_total_clock());
   return 0;
 }

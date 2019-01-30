@@ -4,7 +4,7 @@ obj = $(src:.c=.o)
 LDFLAGS = -Wl,--gc-sections
 CFLAGS = -O3 -DUNROLL_TRANSPOSE -D_DEFAULT_SOURCE
 # CC=ccomp
-CC=../../../ccomp -U __SIZEOF_INT128__
+CC=../../../ccomp
 name = bitslice
 
 $(name):  _testbench $(obj)
