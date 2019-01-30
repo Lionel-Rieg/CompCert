@@ -16,6 +16,8 @@ rot-13.all : rot-13_test.ccomp.k1c.out rot-13_test.gcc.k1c.out
 sha1.all : sha1_test.ccomp.k1c.out sha1_test.gcc.k1c.out
 sha256.all : sha256_test.ccomp.k1c.out sha256_test.gcc.k1c.out
 des.all: des_test.ccomp.k1c.out des_test.gcc.k1c.out
+base64.all: base64_test.ccomp.k1c.out base64_test.gcc.k1c.out
+aes.all : aes_test.ccomp.k1c.out aes_test.gcc.k1c.out
 
 %.gcc.k1c.s: %.c
 	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
@@ -46,4 +48,4 @@ des.all: des_test.ccomp.k1c.out des_test.gcc.k1c.out
 clean:
 	$(RM) -f *.s *.o *.out *.k1c *.host
 
-.PHONY: clean all md2.all md5.all rot-13.all sha1.all sha256.all md5.all blowfish.all arcfour.all des.all
+.PHONY: clean all md2.all md5.all rot-13.all sha1.all sha256.all md5.all blowfish.all arcfour.all des.all base64.all aes.all
