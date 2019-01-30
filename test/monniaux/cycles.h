@@ -1,4 +1,4 @@
-typedef unsigned long long cycle_t;
+typedef unsigned long cycle_t;
 
 #ifdef __K1C__
 #include <mppa_bare_runtime/k1c/registers.h>

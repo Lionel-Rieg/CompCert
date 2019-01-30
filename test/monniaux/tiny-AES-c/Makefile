@@ -5,8 +5,8 @@ CC           = ../../../ccomp
 LD           = ../../../ccomp
 AR           = ar
 ARFLAGS      = rcs
-CFLAGS       = -Wall -O3 -c -D__thread= -D__int128=int
-LDFLAGS      = -Wall -O3 -Wl,-Map,test.map
+CFLAGS       = -Wall -O3 -c
+LDFLAGS      = -Wall -O3 # -Wl,-Map,test.map
 ifdef AES192
 CFLAGS += -DAES192=1
 endif

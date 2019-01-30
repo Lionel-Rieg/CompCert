@@ -2,7 +2,7 @@ CFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
 K1C_CFLAGS=-Wall -O3 -std=c99
 K1C_CCOMP=../../../ccomp
-K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int
+K1C_CCOMPFLAGS=-Wall -O3
 
 PRODUCTS=bstea.host bstea.gcc.k1c.out bstea.ccomp.k1c.out bstea.ccomp.k1c.s bstea.gcc.k1c.s bstea.gcc.k1c bstea.ccomp.k1c
 
