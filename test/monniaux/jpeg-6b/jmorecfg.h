@@ -24,11 +24,7 @@
 #define KILL_TAIL_CALL
 #endif
 
-#ifdef MEMCPY_MISSING
-#define ASSIGN_FUNPTR(x, y)
-#else
 #define ASSIGN_FUNPTR(x, y) x = y
-#endif
 
 /*
  * Define BITS_IN_JSAMPLE as either
