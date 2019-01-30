@@ -2,7 +2,7 @@ CFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
 K1C_CFLAGS=-Wall -O3
 K1C_CCOMP=../../../ccomp
-K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int -U __SIZE_TYPE__ -D __SIZE_TYPE__='unsigned long long'
+K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int
 
 
 all:	md2.all md5.all sha1.all sha256.all blowfish.all des.all

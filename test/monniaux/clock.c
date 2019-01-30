@@ -1,4 +1,5 @@
 #include "cycles.h"
+#include <stdio.h>
 
 static cycle_t total_clock, last_start;
 
@@ -12,4 +13,8 @@ void clock_stop(void) {
 
 cycle_t get_total_clock(void) {
   return total_clock;
+}
+
+void print_total_clock(void) {
+  printf("cycles: %llu\n", total_clock);
 }
