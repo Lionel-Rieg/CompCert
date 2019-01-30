@@ -4,7 +4,7 @@
 
 #include "bstea.h"
 
-
+#include "../clock.h"
 
 /* pack and unpack a single value all over the data path */
 static void pack(uint32_t *v, size_t len, vector_width_t *bv) {
@@ -71,6 +71,8 @@ static void test_vectors() {
                              0x41ea3a0a, 0x4e8e7829} } };
 
   for (i = 0; i < sizeof(testv)/sizeof(tvector_t); ++i) {
+     clock_start();
+
      for (j = 0;j < TEA_BLOCK_SIZE;++j) v[j] = 0;
      for (j = 0;j < TEA_KEY_SIZE;++j) k[j] = 0;
 
@@ -108,17 +110,14 @@ static void test_vectors() {
         &&  testv[i].key[2] == key[2] \
         &&  testv[i].key[3] == key[3] );
 
+     clock_stop();
+     
      printf("test vector, %i,\t[PASSED]\n", i);
   }
 }
 
-
-#ifdef __BSTEA_MAIN_
-
 int main(int argc, char *argv[]) {
   test_vectors();
-
+  print_total_clock();
   return 0;
 }
-
-#endif /* __BSTEA_MAIN_ */
