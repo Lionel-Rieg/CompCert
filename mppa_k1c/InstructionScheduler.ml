@@ -11,7 +11,22 @@ type problem = {
   resource_bounds : int array;
   instruction_usages : int array array;
   latency_constraints : latency_constraint list;
-  }
+  };;
+
+let print_problem channel problem =
+  (if problem.max_latency >= 0
+   then Printf.fprintf channel "max makespan: %d\n" problem.max_latency);
+  output_string channel "resource bounds:";
+  (Array.iter (fun b -> Printf.fprintf channel " %d" b) problem.resource_bounds);
+  output_string channel ";\n";
+  (Array.iteri (fun i v ->
+       Printf.fprintf channel "instr%d:" i;
+       (Array.iter (fun b -> Printf.fprintf channel " %d" b) v);
+       output_string channel ";\n") problem.instruction_usages);
+  List.iter (fun instr ->
+      Printf.printf "t%d - t%d >= %d;\n"
+        instr.instr_to instr.instr_from instr.latency)
+    problem.latency_constraints;;
 
 let get_nr_instructions problem = Array.length problem.instruction_usages;;
 let get_nr_resources problem = Array.length problem.resource_bounds;;
@@ -88,7 +103,7 @@ let vector_subtract a b =
 
 (* The version with critical path ordering is much better! *)
 type list_scheduler_order =
-  (* | INSTRUCTION_ORDER *)
+  | INSTRUCTION_ORDER
   | CRITICAL_PATH_ORDER;;
 
 let int_max (x : int) (y : int) =
@@ -134,10 +149,9 @@ let critical_paths successors =
      done;
      path_lengths;;
 
-(* let maximum_critical_path problem =
+let maximum_critical_path problem =
   let paths = critical_paths (get_successors problem) in
   Array.fold_left int_max 0 paths;;
-*)
 
 let get_earliest_dates predecessors =
   let nr_instructions = (Array.length predecessors)-1 in
@@ -186,7 +200,7 @@ let priority_list_scheduler (order : list_scheduler_order)
   and times = Array.make (nr_instructions+1) (-1) in
 
   let priorities = match order with
-    (* | INSTRUCTION_ORDER -> None *)
+    | INSTRUCTION_ORDER -> None
     | CRITICAL_PATH_ORDER -> Some (critical_paths successors) in
   
   let module InstrSet =
@@ -292,6 +306,10 @@ let priority_list_scheduler (order : list_scheduler_order)
   with Exit -> None;;
 
 let list_scheduler = priority_list_scheduler CRITICAL_PATH_ORDER;;
+
+(* FIXME DUMMY CODE to placate warnings
+ *)
+let _ = priority_list_scheduler INSTRUCTION_ORDER;;
 
 (* alternate implementation
 let swap_array_elements a i j =
@@ -412,13 +430,15 @@ type pseudo_boolean_mapper = {
 (* Latency constraints are:
   presence of instr-to at each t <= sum of presences of instr-from at compatible times
   
-  if dual_encoding
+  if reverse_encoding
   presence of instr-from at each t <= sum of presences of instr-to at compatible times *)
 
-(* Experiments show dual_encoding=true multiplies time by 2
+(* Experiments show reverse_encoding=true multiplies time by 2 in sat4j
    without making hard instances easier *)
-let dual_encoding = false
-                  
+let direct_encoding = false
+and reverse_encoding = false
+and delta_encoding = true
+                   
 let pseudo_boolean_print_problem channel problem pb_type =
   let deadline = problem.max_latency in
   assert (deadline > 0);
@@ -470,7 +490,7 @@ let pseudo_boolean_print_problem channel problem pb_type =
           if ctr.instr_to < nr_instructions
           then count := !count + 1 + latest_dates.(ctr.instr_to)
                                    - earliest_dates.(ctr.instr_to)
-                    + (if dual_encoding
+                    + (if reverse_encoding
                        then 1 + latest_dates.(ctr.instr_from)
                 -      earliest_dates.(ctr.instr_from)
                        else 0)
@@ -580,7 +600,7 @@ let pseudo_boolean_print_problem channel problem pb_type =
           do
 	    gen_latency_constraint ctr.instr_to ctr.instr_from ctr.latency t_to
           done;
-          if dual_encoding
+          if reverse_encoding
           then
             for t_from=earliest_dates.(ctr.instr_from) to latest_dates.(ctr.instr_from)
             do
@@ -630,21 +650,21 @@ let line_to_pb_solution sol line nr_pb_variables =
   List.iter
     begin
       function "" -> ()
-       | item ->
-    (match String.get item 0 with
-     | '+' ->
-        assert ((String.length item) >= 3);
-        assert ((String.get item 1) = 'x');
-        assign (String.sub item 2 ((String.length item)-2)) Positive
-     | '-' ->
-        assert ((String.length item) >= 3);
-        assert ((String.get item 1) = 'x');
-        assign (String.sub item 2 ((String.length item)-2)) Negative
-     | 'x' ->
-        assert ((String.length item) >= 2);
-        assign (String.sub item 1 ((String.length item)-1)) Positive
-     |  c -> failwith @@ Printf.sprintf "line_to_pb_solution: unrecognized character: %c" c
-    )
+	     | item ->
+		(match String.get item 0 with
+		 | '+' ->
+		    assert ((String.length item) >= 3);
+		    assert ((String.get item 1) = 'x');
+		    assign (String.sub item 2 ((String.length item)-2)) Positive
+		 | '-' ->
+		    assert ((String.length item) >= 3);
+		    assert ((String.get item 1) = 'x');
+		    assign (String.sub item 2 ((String.length item)-2)) Negative
+		 | 'x' ->
+		    assert ((String.length item) >= 2);
+		    assign (String.sub item 1 ((String.length item)-1)) Positive
+                 | _ -> failwith "syntax error in pseudo Boolean solution: epected + - or x" 
+		)
     end
     (String.split_on_char ' ' (String.sub line 2 ((String.length line)-2)));;
 
@@ -734,12 +754,13 @@ let adjust_check_solution mapper solution =
 (* let pseudo_boolean_solver = ref "/home/monniaux/progs/CP/open-wbo/open-wbo_static -formula=1" *)
 (* let pseudo_boolean_solver = ref "/home/monniaux/progs/CP/naps/naps" *)
 (* let pseudo_boolean_solver = ref "/home/monniaux/progs/CP/minisatp/build/release/bin/minisatp" *)
-
-let pseudo_boolean_solver = ref "java -jar /opt/sat4j/sat4j-pb.jar CuttingPlanesStar"
+(* let pseudo_boolean_solver = ref "java -jar sat4j-pb.jar CuttingPlanesStar" *)
+let pseudo_boolean_solver = ref "pb_solver"
 
 let pseudo_boolean_scheduler pb_type problem =
   try
-    let filename_in = "problem.opb" (* and filename_out = "problem.sol" *) in
+    let filename_in = "problem.opb"
+    (* needed only if not using stdout and filename_out = "problem.sol" *) in
     let opb_problem = open_out filename_in in
     let mapper = pseudo_boolean_print_problem opb_problem problem pb_type in
     close_out opb_problem;
@@ -752,7 +773,7 @@ let pseudo_boolean_scheduler pb_type problem =
   | Unschedulable -> None;;
 				 
 let rec reoptimizing_scheduler (scheduler : scheduler) (previous_solution : solution) (problem : problem) =
-  if (get_max_latency previous_solution) > 1 then
+  if (get_max_latency previous_solution)>1 then
     begin
       Printf.printf "reoptimizing < %d\n" (get_max_latency previous_solution);
       flush stdout;
@@ -763,7 +784,7 @@ let rec reoptimizing_scheduler (scheduler : scheduler) (previous_solution : solu
       | Some solution -> reoptimizing_scheduler scheduler solution problem
     end
   else previous_solution;;
-  
+     
 let cascaded_scheduler (problem : problem) =
   match validated_scheduler list_scheduler problem with
   | None -> None
@@ -773,7 +794,7 @@ let cascaded_scheduler (problem : problem) =
        let latency2 = get_max_latency solution
        and latency1 = get_max_latency initial_solution in
        if latency2 < latency1
-       then Printf.printf "%d < %d\n" latency2 latency1
+       then Printf.printf "REOPTIMIZING SUCCEEDED %d < %d for %d instructions\n" latency2 latency1 (Array.length problem.instruction_usages)
        else if latency2 = latency1
        then Printf.printf "%d unchanged\n" latency1
        else failwith "optimizing not optimizing"
@@ -874,3 +895,183 @@ let smt_print_problem channel problem =
   done;
   output_string channel "(check-sat)(get-model)\n";;
       
+                  
+let ilp_print_problem channel problem pb_type =
+  let deadline = problem.max_latency in
+  assert (deadline > 0);
+  let nr_instructions = get_nr_instructions problem
+  and nr_resources = get_nr_resources problem
+  and successors = get_successors problem
+  and predecessors = get_predecessors problem in
+  let earliest_dates = get_earliest_dates predecessors
+  and latest_dates = get_latest_dates deadline successors in
+
+  let pb_var i t =
+    Printf.sprintf "x%d_%d" i t in
+
+  let gen_latency_constraint i_to i_from latency t_to =
+    Printf.fprintf channel "\\ t[%d] - t[%d] >= %d when t[%d]=%d\n"
+		   i_to i_from latency i_to t_to;
+    Printf.fprintf channel "c_%d_%d_%d_%d: "
+		   i_to i_from latency t_to;
+        for t_from=earliest_dates.(i_from) to
+              int_min latest_dates.(i_from) (t_to - latency)
+        do
+          Printf.fprintf channel "+1 %s " (pb_var i_from t_from)
+        done;
+        Printf.fprintf channel "-1 %s " (pb_var i_to t_to);
+        output_string channel ">= 0\n"
+
+  and gen_dual_latency_constraint i_to i_from latency t_from =
+    Printf.fprintf channel "\\ t[%d] - t[%d] >= %d when t[%d]=%d\n"
+      i_to i_from latency i_to t_from;
+    Printf.fprintf channel "d_%d_%d_%d_%d: "
+      i_to i_from latency t_from;
+        for t_to=int_max earliest_dates.(i_to) (t_from + latency)
+            to latest_dates.(i_to)
+        do
+          Printf.fprintf channel "+1 %s " (pb_var i_to t_to)
+        done;
+        Printf.fprintf channel "-1 %s " (pb_var i_from t_from);
+        Printf.fprintf channel ">= 0\n"
+
+  and gen_delta_constraint i_from i_to latency =
+    if delta_encoding
+    then  Printf.fprintf channel "l_%d_%d_%d: +1 t%d -1 t%d >= %d\n"
+            i_from i_to latency i_to i_from latency
+
+  in
+  
+  Printf.fprintf channel "\\ nr_instructions=%d deadline=%d\n" nr_instructions deadline;
+  begin
+    match pb_type with
+    | SATISFIABILITY -> output_string channel "Minimize dummy: 0\n"
+    | OPTIMIZATION ->
+       Printf.fprintf channel "Minimize\nmakespan: t%d\n" nr_instructions
+  end;
+  output_string channel "Subject To\n";
+  for i=0 to (match pb_type with
+              | OPTIMIZATION -> nr_instructions
+              | SATISFIABILITY -> nr_instructions-1)
+  do
+    let early = earliest_dates.(i) and late= latest_dates.(i) in
+    Printf.fprintf channel "\\ t[%d] in %d..%d\ntimes%d: " i early late i;
+    for t=early to late
+    do
+      Printf.fprintf channel "+1 %s " (pb_var i t)
+    done;
+    Printf.fprintf channel "= 1\n"
+  done;
+
+  for t=0 to deadline-1
+  do
+    for j=0 to nr_resources-1
+    do
+      let bound = problem.resource_bounds.(j)
+      and coeffs = ref [] in
+      for i=0 to nr_instructions-1
+      do
+        let usage = problem.instruction_usages.(i).(j) in
+        if t >= earliest_dates.(i) && t <= latest_dates.(i)
+           && usage > 0
+        then coeffs := (i, usage) :: !coeffs 
+      done;
+      if !coeffs <> [] then
+        begin
+          Printf.fprintf channel "\\ resource #%d at t=%d <= %d\nr%d_%d: " j t bound j t;
+          List.iter (fun (i, usage) ->
+              Printf.fprintf channel "%+d %s " (-usage) (pb_var i t)) !coeffs;
+          Printf.fprintf channel ">= %d\n" (-bound)
+        end
+    done
+  done;
+  
+  List.iter
+    (fun ctr ->
+      if ctr.instr_to < nr_instructions then
+        begin
+          gen_delta_constraint ctr.instr_from ctr.instr_to ctr.latency;
+          begin
+            if direct_encoding
+            then
+              for t_to=earliest_dates.(ctr.instr_to) to latest_dates.(ctr.instr_to)
+              do
+	        gen_latency_constraint ctr.instr_to ctr.instr_from ctr.latency t_to
+              done
+          end;
+          begin
+            if reverse_encoding
+            then
+              for t_from=earliest_dates.(ctr.instr_from) to latest_dates.(ctr.instr_from)
+              do
+	        gen_dual_latency_constraint ctr.instr_to ctr.instr_from ctr.latency t_from
+              done
+          end
+        end
+    ) problem.latency_constraints;
+  
+  begin
+    match pb_type with
+    | SATISFIABILITY -> ()
+    | OPTIMIZATION ->
+       let final_latencies = Array.make nr_instructions 1 in
+       List.iter (fun (i, latency) ->
+	   final_latencies.(i) <- int_max final_latencies.(i) latency)
+	 predecessors.(nr_instructions);
+       for i_from = 0 to nr_instructions -1
+       do
+	 gen_delta_constraint i_from nr_instructions final_latencies.(i_from)
+       done;
+       for t_to=earliest_dates.(nr_instructions) to deadline
+       do
+         for i_from = 0 to nr_instructions -1
+         do
+	   gen_latency_constraint nr_instructions i_from final_latencies.(i_from) t_to
+         done
+       done
+  end;
+  for i=0 to (match pb_type with
+              | OPTIMIZATION -> nr_instructions
+              | SATISFIABILITY -> nr_instructions-1)
+  do
+    Printf.fprintf channel "ct%d : -1 t%d" i i;
+    let early = earliest_dates.(i) and late= latest_dates.(i) in
+    for t=early to late do
+      Printf.fprintf channel " +%d %s" t (pb_var i t)
+    done;
+    output_string channel " = 0\n"
+  done;
+  output_string channel "Bounds\n";
+  for i=0 to (match pb_type with
+              | OPTIMIZATION -> nr_instructions
+              | SATISFIABILITY -> nr_instructions-1)
+  do
+    let early = earliest_dates.(i) and late= latest_dates.(i) in
+    begin
+      Printf.fprintf channel "%d <= t%d <= %d\n" early i late;
+      if true then
+        for t=early to late do
+          Printf.fprintf channel "0 <= %s <= 1\n" (pb_var i t)
+        done
+    end
+  done;
+  output_string channel "Integer\n";
+  for i=0 to (match pb_type with
+              | OPTIMIZATION -> nr_instructions
+              | SATISFIABILITY -> nr_instructions-1)
+  do
+    Printf.fprintf channel "t%d " i
+  done;
+  output_string channel "\nBinary\n";
+  for i=0 to (match pb_type with
+              | OPTIMIZATION -> nr_instructions
+              | SATISFIABILITY -> nr_instructions-1)
+  do
+    let early = earliest_dates.(i) and late= latest_dates.(i) in
+    for t=early to late do
+      output_string channel (pb_var i t);
+      output_string channel " "
+    done;
+    output_string channel "\n"
+  done;
+  output_string channel "End\n";;

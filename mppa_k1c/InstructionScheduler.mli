@@ -10,23 +10,28 @@ type latency_constraint = {
   instr_from : int;
   instr_to : int;
   latency : int;
-}
-
+  }
+                        
 (** A scheduling problem.
 
 In addition to the latency constraints, the resource constraints should be satisfied: at every clock tick, the sum of vectors of resources used by the instructions scheduled at that tick does not exceed the resource bounds.
 *)
 type problem = {
-    (* An optional maximal total latency of the problem, after which the problem is deemed not schedulable. -1 means there should be no maximum. *)
     max_latency : int;
+    (** An optional maximal total latency of the problem, after which the problem is deemed not schedulable. -1 means there should be no maximum. *)
 
-    (* An array of number of units available indexed by the kind of resources to be allocated. It can be empty, in which case the problem is scheduling without resource constraints. *)
     resource_bounds : int array;
+    (** An array of number of units available indexed by the kind of resources to be allocated. It can be empty, in which case the problem is scheduling without resource constraints. *)
 
-    (* At index {i i} the vector of resources used by instruction number {i i}. It must be the same length as [resource_bounds] *)
     instruction_usages: int array array;
+    (** At index {i i} the vector of resources used by instruction number {i i}. It must be the same length as [resource_bounds] *)
+
     latency_constraints : latency_constraint list
+    (** The latency constraints that must be satisfied *)
   };;
+
+(** Print problem for human readability. *)
+val print_problem : out_channel -> problem -> unit;;
 
 (** Scheduling solution. For {i n} instructions to schedule, and 0≤{i i}<{i n}, position {i i} contains the time to which instruction {i i} should be scheduled. Position {i n} contains the final output latency. *)
 type solution = int array
@@ -76,6 +81,10 @@ val validated_scheduler : scheduler -> problem -> solution option;;
 @return Max latency *)
 val get_max_latency : solution -> int;;
 
+(** Get the length of a maximal critical path
+@return Max length *)
+val maximum_critical_path : problem -> int;;
+
 (** Apply line scheduler then advanced solver
 @return A solution if found *)
 val cascaded_scheduler : problem -> solution option;;
@@ -92,3 +101,5 @@ val pseudo_boolean_read_solution : pseudo_boolean_mapper -> in_channel -> soluti
 val pseudo_boolean_scheduler : pseudo_boolean_problem_type -> problem -> solution option;;
 
 val smt_print_problem : out_channel -> problem -> unit;;
+
+val ilp_print_problem : out_channel -> problem -> pseudo_boolean_problem_type -> unit;;
