@@ -5,7 +5,8 @@ K1C_CCOMP=../../../ccomp
 K1C_CCOMPFLAGS=-Wall -O3 -D__thread= -D__int128=int -U __SIZE_TYPE__ -D __SIZE_TYPE__='unsigned long long'
 
 
-all:	md2.all md5.all sha1.all sha256.all blowfish.all arcfour.all des.all
+all:	md2.all md5.all sha1.all sha256.all blowfish.all des.all
+k1c:	md2_test.ccomp.k1c md5_test.ccomp.k1c sha1_test.ccomp.k1c sha256_test.ccomp.k1c blowfish_test.ccomp.k1c des_test.ccomp.k1c
 
 md2.all : md2_test.ccomp.k1c.out md2_test.gcc.k1c.out
 md5.all : md5_test.ccomp.k1c.out md5_test.gcc.k1c.out

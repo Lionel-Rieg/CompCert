@@ -39,3 +39,7 @@ testfile.txt.2gcc testfile.txt.gcc.out: testfile.txt micro-bunzip.gcc.k1c
 testfile.txt.2host: testfile.txt micro-bunzip.host
 	bzip2 <testfile.txt | valgrind ./micro-bunzip.host > testfile.txt.2host
 
+clean:
+	rm -f *.k1c *.out test*txt*
+
+.PHONY: clean
