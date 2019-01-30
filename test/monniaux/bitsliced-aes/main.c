@@ -4,6 +4,7 @@
 #include "bs.h"
 #include "aes.h"
 #include "utils.h"
+#include "../clock.h"
 
 #include "testbench/app.h"
 #ifdef RUN_TESTS
@@ -19,7 +20,8 @@
 
 int main(int argc, char * argv[])
 {
-
+    clock_start();
+  
 #ifdef RUN_TESTS
 #ifndef TEST_FOOTPRINT
     aes_ecb_test();
@@ -32,8 +34,9 @@ int main(int argc, char * argv[])
 
 #endif
 
-
-
+    clock_stop();
+    print_total_clock();
+    
     return 0;
 }
 

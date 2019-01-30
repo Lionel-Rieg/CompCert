@@ -2,17 +2,19 @@ src = $(wildcard *.c)
 obj = $(src:.c=.o)
 
 LDFLAGS = -Wl,--gc-sections
-CFLAGS = -O3 -DUNROLL_TRANSPOSE -D_DEFAULT_SOURCE
+CFLAGS = -O3 -D_DEFAULT_SOURCE # -DUNROLL_TRANSPOSE
 # CC=ccomp
 CC=../../../ccomp
 name = bitslice
 
-$(name):  _testbench $(obj)
-	$(CC) $(LDFLAGS) -o $@ $(obj) $(LDFLAGS)
-
+%.s : %.c
+	$(CC) $(CFLAGS) -S -o $@ $<
 
 test: _test $(obj)
-	$(CC) $(LDFLAGS) -o $(name) $(obj) $(LDFLAGS)
+	$(CC) $(LDFLAGS) -o $(name) $(obj) ../clock.o $(LDFLAGS)
+
+$(name):  _testbench $(obj)
+	$(CC) $(LDFLAGS) -o $@ $(obj) $(LDFLAGS)
 
 footprint: _footprint $(obj)
 	$(CC) $(LDFLAGS) -o $(name) $(obj) $(LDFLAGS)
