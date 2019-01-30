@@ -37,7 +37,7 @@ des.all: des_test.ccomp.k1c.out des_test.gcc.k1c.out
 %_test.gcc.k1c: %.gcc.k1c.o %_test.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
 
-%_test.ccomp.k1c: %.ccomp.k1c.o %_test.gcc.k1c.o modulo_division.gcc.k1c.o 
+%_test.ccomp.k1c: %.ccomp.k1c.o %_test.gcc.k1c.o 
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
 
 %.k1c.out: %.k1c
