@@ -6,7 +6,7 @@
 #include "../cycles.h"
 
 int main() {
-  const unsigned m = 40, n = 21, p = 30;
+  const unsigned m = 60, n = 31, p = 50;
   cycle_count_config();
   xor_and *a = malloc(sizeof(xor_and) * m * n);
   xor_and_mat_random(m, n, a, n);
