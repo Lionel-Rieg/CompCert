@@ -1,6 +1,6 @@
 CFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
-K1C_CFLAGS=-Wall -O3 -std=c99
+K1C_CFLAGS=-Wall -std=c99 -O2
 K1C_CCOMP=../../../ccomp
 K1C_CCOMPFLAGS=-Wall -O3
 
