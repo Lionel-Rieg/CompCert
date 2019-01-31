@@ -50,7 +50,14 @@ Proof.
   - intros. rewrite <- app_comm_cons. discriminate.
 Qed.
 
+Definition check_size bb :=
+  if zlt Ptrofs.max_unsigned (size bb)
+    then Error (msg "PostpassSchedulingproof.check_size")
+  else OK tt.
+
 Program Definition concat2 (bb bb': bblock) : res bblock :=
+  do ch <- check_size bb;
+  do ch' <- check_size bb';
   match (exit bb) with
   | None => 
       match (header bb') with
@@ -76,6 +83,18 @@ Next Obligation.
   - unfold builtin_alone. intros. rewrite H0 in H.
     assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
     apply (H ef args res). contradict H1. auto.
+Qed.
+
+Lemma concat2_zlt_size:
+  forall a b bb,
+  concat2 a b = OK bb ->
+     size a <= Ptrofs.max_unsigned
+  /\ size b <= Ptrofs.max_unsigned.
+Proof.
+  intros. monadInv H.
+  split.
+  - unfold check_size in EQ. destruct (zlt Ptrofs.max_unsigned (size a)); monadInv EQ. omega.
+  - unfold check_size in EQ1. destruct (zlt Ptrofs.max_unsigned (size b)); monadInv EQ1. omega.
 Qed.
 
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
@@ -123,7 +142,7 @@ Lemma concat2_noexit:
 Proof.
   intros. destruct a as [hd bdy ex WF]; simpl in *.
   destruct ex as [e|]; simpl in *; auto.
-  unfold concat2 in H. simpl in H. discriminate.
+  unfold concat2 in H. simpl in H. monadInv H.
 Qed.
 
 Lemma concat2_decomp:
@@ -139,10 +158,10 @@ Proof.
   destruct hdb.
   - destruct exb.
     + destruct c.
-      * destruct i. discriminate.
+      * destruct i. monadInv H.
       * monadInv H. split; auto.
     + monadInv H. split; auto.
-  - discriminate.
+  - monadInv H.
 Qed.
 
 Lemma exec_body_app:
@@ -287,7 +306,6 @@ Qed.
 
 Lemma concat2_straight:
   forall a b bb rs m rs'' m'' f ge,
-  size a <= Ptrofs.max_unsigned -> size b <= Ptrofs.max_unsigned ->
   concat2 a b = OK bb ->
   exec_bblock ge f bb rs m = Next rs'' m'' ->
   exists rs' m',
@@ -295,7 +313,8 @@ Lemma concat2_straight:
     /\ rs' PC = Val.offset_ptr (rs PC) (Ptrofs.repr (size a))
     /\ exec_bblock ge f b rs' m' = Next rs'' m''.
 Proof.
-  intros until ge. intros LTA LTB CONC2 EXEB.
+  intros until ge. intros CONC2 EXEB.
+  exploit concat2_zlt_size; eauto. intros (LTA & LTB).
   exploit concat2_noexit; eauto. intros EXA.
   exploit concat2_decomp; eauto. intros. inv H.
   unfold exec_bblock in EXEB. destruct (exec_body ge (body bb) rs m) eqn:EXEB'; try discriminate.
@@ -315,8 +334,6 @@ Proof.
     exploit AB.size_positive. instantiate (1 := b). intro. omega.
 Qed.
 
-Axiom TODO: False.
-
 Lemma concat_all_exec_bblock (ge: Genv.t fundef unit) (f: function) :
   forall a bb rs m lbb rs'' m'', 
   lbb <> nil ->
@@ -331,20 +348,20 @@ Proof.
   intros until m''. intros Hnonil CONC EXEB.
   simpl in CONC.
   destruct lbb as [|b lbb]; try contradiction. clear Hnonil.
-  monadInv CONC. exploit concat2_straight; eauto. 1-2: destruct TODO. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
+  monadInv CONC. exploit concat2_straight; eauto. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
   exists x. repeat econstructor. all: eauto.
-Admitted.
+Qed.
 
 Lemma concat2_size:
   forall a b bb, concat2 a b = OK bb -> size bb = size a + size b.
 Proof.
   intros. unfold concat2 in H.
   destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bdy ex WF]; simpl in *.
-  destruct exa; try discriminate. destruct hdb; try discriminate. destruct exb; try discriminate.
+  destruct exa; monadInv H. destruct hdb; try (monadInv EQ2). destruct exb; try (monadInv EQ2).
   - destruct c.
-    + destruct i; try discriminate.
-    + inv H. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
-  - inv H. unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
+    + destruct i; try (monadInv EQ2).
+    + monadInv EQ2. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
+  - unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
 Qed.
 
 Lemma concat_all_size :
