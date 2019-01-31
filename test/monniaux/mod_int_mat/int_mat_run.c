@@ -6,7 +6,7 @@
 #include "../cycles.h"
 
 int main() {
-  const unsigned m = 40, n = 21, p = 30;
+  const unsigned m = 60, n = 31, p = 50;
   cycle_count_config();
   modint *a = malloc(sizeof(modint) * m * n);
   modint_mat_random(m, n, a, n);
