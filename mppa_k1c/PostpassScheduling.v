@@ -21,6 +21,36 @@ Axiom schedule: bblock -> list bblock.
 
 Extract Constant schedule => "PostpassSchedulingOracle.schedule".
 
+(* TODO: refactorisation.
+
+... concat2 ...
+
+Fixpoint concat_all (lbb: list bblock) : res bblock :=
+  match lbb with
+  | nil => Error (msg "PostpassSchedulingproof.concatenate: empty list")
+  | bb::nil => OK bb
+  | bb::lbb =>
+      do bb' <- concat_all lbb;
+      concat2 bb bb'
+  end.
+
+Axiom test_equiv_bblock: bblock -> bblock -> bool.
+
+Axiom test_equiv_bblock_correct:
+  forall ge f bb tbb,
+  test_equiv bb tbb = true ->
+  bblock_equiv ge f bb tbb.
+
+Definition verified_schedule (bb : bblock) : res (list bblock) := 
+  DO lbb <- (schedule bb) ;
+  DO tbb <- (concat lbb) ;
+  DO res <- test_equiv_bblock bb tbb ;
+  if res 
+  then OK lbb
+  else Error (msg "blah").
+
+*)
+
 (* TODO - implement the verificator *)
 Definition verified_schedule (bb : bblock) : res (list bblock) := OK (schedule bb).
 
