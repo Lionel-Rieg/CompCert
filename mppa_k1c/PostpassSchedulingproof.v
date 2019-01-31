@@ -467,6 +467,23 @@ Proof.
   intros. inv H0. inv H. econstructor; eauto.
 Qed.
 
+Lemma tail_find_bblock:
+  forall f ofs bb,
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bb ->
+  exists c, code_tail (Ptrofs.unsigned ofs) (fn_blocks f) (bb::c).
+Proof.
+Admitted.
+
+Lemma transf_blocks_verified:
+  forall c tc ofs bb c',
+  transf_blocks c = OK tc ->
+  code_tail (Ptrofs.unsigned ofs) c (bb::c') ->
+  exists lbb,
+     verified_schedule bb = OK lbb
+  /\ exists tc', code_tail (Ptrofs.unsigned ofs) tc (lbb ++ tc').
+Proof.
+Admitted.
+
 Lemma transf_find_bblock:
   forall ofs f bb tf,
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bb ->
@@ -475,7 +492,11 @@ Lemma transf_find_bblock:
      verified_schedule bb = OK lbb
   /\ exists c, code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) (lbb ++ c).
 Proof.
-Admitted.
+  intros.
+  monadInv H0. destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks x))); try (inv EQ0; fail). inv EQ0.
+  monadInv EQ. apply tail_find_bblock in H. destruct H as (c & TAIL).
+  eapply transf_blocks_verified; eauto.
+Qed.
 
 Lemma transf_exec_bblock:
   forall f tf bb rs m,
