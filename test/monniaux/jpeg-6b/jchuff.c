@@ -95,6 +95,7 @@ METHODDEF(boolean) encode_mcu_gather JPP((j_compress_ptr cinfo,
 METHODDEF(void) finish_pass_gather JPP((j_compress_ptr cinfo));
 #endif
 
+
 /*
  * Initialize for a Huffman-compressed scan.
  * If gather_statistics is TRUE, we do not output anything during the scan,
@@ -261,6 +262,7 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
     dtbl->ehufsi[i] = huffsize[p];
   }
 }
+
 
 /* Outputting bytes to the file */
 
@@ -440,6 +442,7 @@ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
   return TRUE;
 }
 
+
 /*
  * Emit a restart marker & resynchronize predictions.
  */
@@ -548,6 +551,7 @@ finish_pass_huff (j_compress_ptr cinfo)
   ASSIGN_STATE(entropy->saved, state.cur);
 }
 
+
 /*
  * Huffman coding optimization.
  *
@@ -560,6 +564,7 @@ finish_pass_huff (j_compress_ptr cinfo)
  */
 
 #ifdef ENTROPY_OPT_SUPPORTED
+
 
 /* Process a single block's worth of coefficients */
 
@@ -630,11 +635,11 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
     ac_counts[0]++;
 }
 
+
 /*
  * Trial-encode one MCU's worth of Huffman-compressed coefficients.
  * No data is actually output, so no suspension return is possible.
  */
-
 
 METHODDEF(boolean)
 encode_mcu_gather (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
@@ -892,7 +897,8 @@ jinit_huff_encoder (j_compress_ptr cinfo)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				SIZEOF(huff_entropy_encoder));
   cinfo->entropy = (struct jpeg_entropy_encoder *) entropy;
-  ASSIGN_FUNPTR(entropy->pub.start_pass, start_pass_huff);
+  entropy->pub.start_pass = start_pass_huff;
+
   /* Mark tables unallocated */
   for (i = 0; i < NUM_HUFF_TBLS; i++) {
     entropy->dc_derived_tbls[i] = entropy->ac_derived_tbls[i] = NULL;

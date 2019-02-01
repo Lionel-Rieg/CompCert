@@ -46,7 +46,7 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
     *qtblptr = jpeg_alloc_quant_table((j_common_ptr) cinfo);
 
   for (i = 0; i < DCTSIZE2; i++) {
-    temp = ((long) basic_table[i] * scale_factor + 50L) / 100L;
+    temp = LONG_SDIV((long) basic_table[i] * scale_factor + 50L, 100L);
     /* limit the values to the valid range */
     if (temp <= 0L) temp = 1L;
     if (temp > 32767L) temp = 32767L; /* max quantizer needed for 12 bits */
@@ -120,7 +120,7 @@ jpeg_quality_scaling (int quality)
    * Qualities 1..50 are converted to scaling percentage 5000/Q.
    */
   if (quality < 50)
-    quality = DIVISION(5000, quality);
+    quality = LONG_SDIV(5000, quality);
   else
     quality = 200 - quality*2;
 
@@ -380,9 +380,7 @@ jpeg_default_colorspace (j_compress_ptr cinfo)
   default:
     ERREXIT(cinfo, JERR_BAD_IN_COLORSPACE);
   }
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 
@@ -469,9 +467,7 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
   default:
     ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
   }
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 

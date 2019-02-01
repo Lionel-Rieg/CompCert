@@ -143,9 +143,7 @@ emit_message (j_common_ptr cinfo, int msg_level)
     if (err->trace_level >= msg_level)
       (*err->output_message) (cinfo);
   }
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 

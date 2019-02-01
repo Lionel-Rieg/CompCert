@@ -10,21 +10,6 @@
  * optimizations.  Most users will not need to touch this file.
  */
 
-#ifdef NO_32BIT_DIVISION
-#define MODULO(x, y) ((long long) (x) % (y))
-#define DIVISION(x, y) ((long long) (x) / (y))
-#else
-#define MODULO(x, y) ((x) % (y))
-#define DIVISION(x, y) ((x) / (y))
-#endif
-
-#ifdef TAIL_CALL_MISSING
-#define KILL_TAIL_CALL { int val = 1; }
-#else
-#define KILL_TAIL_CALL
-#endif
-
-#define ASSIGN_FUNPTR(x, y) x = y
 
 /*
  * Define BITS_IN_JSAMPLE as either
@@ -277,9 +262,9 @@ typedef int boolean;
 
 #define DCT_ISLOW_SUPPORTED	/* slow but accurate integer algorithm */
 #define DCT_IFAST_SUPPORTED	/* faster, less accurate integer method */
-#ifndef NO_FLOAT
-#define DCT_FLOAT_SUPPORTED	/* floating-point: accurate, fast on fast HW */
-#endif
+
+/* DM */
+#undef DCT_FLOAT_SUPPORTED	/* floating-point: accurate, fast on fast HW */
 
 /* Encoder capability options: */
 

@@ -648,7 +648,7 @@ jinit_phuff_decoder (j_decompress_ptr cinfo)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				SIZEOF(phuff_entropy_decoder));
   cinfo->entropy = (struct jpeg_entropy_decoder *) entropy;
-  ASSIGN_FUNPTR(entropy->pub.start_pass, start_pass_phuff_decoder);
+  entropy->pub.start_pass = start_pass_phuff_decoder;
 
   /* Mark derived tables unallocated */
   for (i = 0; i < NUM_HUFF_TBLS; i++) {

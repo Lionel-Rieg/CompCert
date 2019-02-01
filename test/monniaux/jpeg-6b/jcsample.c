@@ -146,8 +146,8 @@ int_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   JSAMPROW inptr, outptr;
   INT32 outvalue;
 
-  h_expand = DIVISION(cinfo->max_h_samp_factor, compptr->h_samp_factor);
-  v_expand = DIVISION(cinfo->max_v_samp_factor, compptr->v_samp_factor);
+  h_expand = cinfo->max_h_samp_factor / compptr->h_samp_factor;
+  v_expand = cinfo->max_v_samp_factor / compptr->v_samp_factor;
   numpix = h_expand * v_expand;
   numpix2 = numpix/2;
 
@@ -170,7 +170,7 @@ int_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 	  outvalue += (INT32) GETJSAMPLE(*inptr++);
 	}
       }
-      *outptr++ = (JSAMPLE) DIVISION((outvalue + numpix2), numpix);
+      *outptr++ = (JSAMPLE) ((outvalue + numpix2) / numpix);
     }
     inrow += v_expand;
   }
@@ -504,8 +504,8 @@ jinit_downsampler (j_compress_ptr cinfo)
       } else
 #endif
 	downsample->methods[ci] = h2v2_downsample;
-    } else if (DIVISION(cinfo->max_h_samp_factor, compptr->h_samp_factor) == 0 &&
-	       DIVISION(cinfo->max_v_samp_factor, compptr->v_samp_factor) == 0) {
+    } else if ((cinfo->max_h_samp_factor % compptr->h_samp_factor) == 0 &&
+	       (cinfo->max_v_samp_factor % compptr->v_samp_factor) == 0) {
       smoothok = FALSE;
       downsample->methods[ci] = int_downsample;
     } else
@@ -515,8 +515,5 @@ jinit_downsampler (j_compress_ptr cinfo)
 #ifdef INPUT_SMOOTHING_SUPPORTED
   if (cinfo->smoothing_factor && !smoothok)
     TRACEMS(cinfo, 0, JTRC_SMOOTH_NOTIMPL);
-#endif
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
 #endif
 }

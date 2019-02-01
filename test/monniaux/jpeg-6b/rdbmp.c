@@ -229,8 +229,8 @@ preload_image (j_compress_ptr cinfo, cjpeg_source_ptr sinfo)
   source->source_row = cinfo->image_height;
 
   /* And read the first row */
-  JDIMENSION ret = (*source->pub.get_pixel_rows) (cinfo, sinfo);
-  KILL_TAIL_CALL
+  int ret= (*source->pub.get_pixel_rows) (cinfo, sinfo);
+  KILL_TAIL_CALL();
   return ret;
 }
 

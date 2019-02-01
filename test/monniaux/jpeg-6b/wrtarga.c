@@ -200,7 +200,7 @@ start_output_tga (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   } else {
     ERREXIT(cinfo, JERR_TGA_COLORSPACE);
   }
-  KILL_TAIL_CALL
+  KILL_TAIL_CALL();
 }
 
 
@@ -215,7 +215,7 @@ finish_output_tga (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   fflush(dinfo->output_file);
   if (ferror(dinfo->output_file))
     ERREXIT(cinfo, JERR_FILE_WRITE);
-  KILL_TAIL_CALL
+  KILL_TAIL_CALL();
 }
 
 

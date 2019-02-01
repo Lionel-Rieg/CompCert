@@ -248,7 +248,7 @@ read_color_map (j_decompress_ptr cinfo, FILE * infile)
     ERREXIT(cinfo, JERR_BAD_CMAP_FILE);
     break;
   }
-  KILL_TAIL_CALL
+  KILL_TAIL_CALL();
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */

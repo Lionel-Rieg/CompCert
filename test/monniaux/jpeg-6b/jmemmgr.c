@@ -222,7 +222,7 @@ out_of_memory (j_common_ptr cinfo, int which)
   cinfo->err->trace_level = 2;	/* force self_destruct to report stats */
 #endif
   ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, which);
-  KILL_TAIL_CALL
+  KILL_TAIL_CALL();
 }
 
 
@@ -627,7 +627,7 @@ realize_virt_arrays (j_common_ptr cinfo)
   if (avail_mem >= maximum_space)
     max_minheights = 1000000000L;
   else {
-    max_minheights = DIVISION(avail_mem, space_per_minheight);
+    max_minheights = avail_mem / space_per_minheight;
     /* If there doesn't seem to be enough space, try to get the minimum
      * anyway.  This allows a "stub" implementation of jpeg_mem_available().
      */
@@ -639,7 +639,7 @@ realize_virt_arrays (j_common_ptr cinfo)
 
   for (sptr = mem->virt_sarray_list; sptr != NULL; sptr = sptr->next) {
     if (sptr->mem_buffer == NULL) { /* if not realized yet */
-      minheights = DIVISION(((long) sptr->rows_in_array - 1L), sptr->maxaccess) + 1L;
+      minheights = ((long) sptr->rows_in_array - 1L) / sptr->maxaccess + 1L;
       if (minheights <= max_minheights) {
 	/* This buffer fits in memory */
 	sptr->rows_in_mem = sptr->rows_in_array;
@@ -663,7 +663,7 @@ realize_virt_arrays (j_common_ptr cinfo)
 
   for (bptr = mem->virt_barray_list; bptr != NULL; bptr = bptr->next) {
     if (bptr->mem_buffer == NULL) { /* if not realized yet */
-      minheights = DIVISION(((long) bptr->rows_in_array - 1L), bptr->maxaccess) + 1L;
+      minheights = ((long) bptr->rows_in_array - 1L) / bptr->maxaccess + 1L;
       if (minheights <= max_minheights) {
 	/* This buffer fits in memory */
 	bptr->rows_in_mem = bptr->rows_in_array;
@@ -684,7 +684,6 @@ realize_virt_arrays (j_common_ptr cinfo)
       bptr->dirty = FALSE;
     }
   }
-  KILL_TAIL_CALL
 }
 
 

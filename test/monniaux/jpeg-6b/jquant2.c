@@ -529,9 +529,9 @@ compute_color (j_decompress_ptr cinfo, boxptr boxp, int icolor)
       }
     }
   
-  cinfo->colormap[0][icolor] = (JSAMPLE) DIVISION((c0total + (total>>1)), total);
-  cinfo->colormap[1][icolor] = (JSAMPLE) DIVISION((c1total + (total>>1)), total);
-  cinfo->colormap[2][icolor] = (JSAMPLE) DIVISION((c2total + (total>>1)), total);
+  cinfo->colormap[0][icolor] = (JSAMPLE) ((c0total + (total>>1)) / total);
+  cinfo->colormap[1][icolor] = (JSAMPLE) ((c1total + (total>>1)) / total);
+  cinfo->colormap[2][icolor] = (JSAMPLE) ((c2total + (total>>1)) / total);
 }
 
 

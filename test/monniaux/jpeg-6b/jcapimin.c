@@ -73,7 +73,7 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
 
   cinfo->script_space = NULL;
 
-#ifndef NO_DOUBLE
+#ifdef HAVE_FLOAT
   cinfo->input_gamma = 1.0;	/* in case application forgets */
 #endif
   
@@ -222,20 +222,14 @@ jpeg_write_m_header (j_compress_ptr cinfo, int marker, unsigned int datalen)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
 
   (*cinfo->marker->write_marker_header) (cinfo, marker, datalen);
-#ifdef TAIL_CALL_MISSING
-  datalen += 1;
-  datalen -= 1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 GLOBAL(void)
 jpeg_write_m_byte (j_compress_ptr cinfo, int val)
 {
   (*cinfo->marker->write_marker_byte) (cinfo, val);
-#ifdef TAIL_CALL_MISSING
-  val += 1;
-  val -= 1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 
@@ -287,7 +281,5 @@ jpeg_write_tables (j_compress_ptr cinfo)
    * An app that prefers the old behavior can call jpeg_abort for itself after
    * each call to jpeg_write_tables().
    */
-#ifdef TAIL_CALL_MISSING
-  int dummy = 1;
-#endif
+  KILL_TAIL_CALL();
 }

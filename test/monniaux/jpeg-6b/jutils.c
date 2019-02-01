@@ -73,7 +73,7 @@ jdiv_round_up (long a, long b)
 /* Compute a/b rounded up to next integer, ie, ceil(a/b) */
 /* Assumes a >= 0, b > 0 */
 {
-  return DIVISION((a + b - 1L), b);
+  return (a + b - 1L) / b;
 }
 
 
@@ -83,7 +83,7 @@ jround_up (long a, long b)
 /* Assumes a >= 0, b > 0 */
 {
   a += b - 1L;
-  return a - DIVISION(a, b);
+  return a - (a % b);
 }
 
 

@@ -330,7 +330,7 @@ per_scan_setup (j_compress_ptr cinfo)
     /* For noninterleaved scans, it is convenient to define last_row_height
      * as the number of block rows present in the last iMCU row.
      */
-    tmp = (int) (MODULO(compptr->height_in_blocks,compptr->v_samp_factor));
+    tmp = (int) INT_UMOD(compptr->height_in_blocks, compptr->v_samp_factor);
     if (tmp == 0) tmp = compptr->v_samp_factor;
     compptr->last_row_height = tmp;
     
@@ -363,10 +363,10 @@ per_scan_setup (j_compress_ptr cinfo)
       compptr->MCU_blocks = compptr->MCU_width * compptr->MCU_height;
       compptr->MCU_sample_width = compptr->MCU_width * DCTSIZE;
       /* Figure number of non-dummy blocks in last MCU column & row */
-		 tmp = (int) (MODULO(compptr->width_in_blocks, compptr->MCU_width));
+      tmp = (int) INT_UMOD(compptr->width_in_blocks, compptr->MCU_width);
       if (tmp == 0) tmp = compptr->MCU_width;
       compptr->last_col_width = tmp;
-      tmp = (int) MODULO(compptr->height_in_blocks, compptr->MCU_height);
+      tmp = (int) INT_UMOD(compptr->height_in_blocks, compptr->MCU_height);
       if (tmp == 0) tmp = compptr->MCU_height;
       compptr->last_row_height = tmp;
       /* Prepare array describing MCU composition */
@@ -492,9 +492,7 @@ pass_startup (j_compress_ptr cinfo)
 
   (*cinfo->marker->write_frame_header) (cinfo);
   (*cinfo->marker->write_scan_header) (cinfo);
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 

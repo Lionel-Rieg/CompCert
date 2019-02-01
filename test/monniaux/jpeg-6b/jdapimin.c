@@ -116,68 +116,6 @@ default_decompress_parms (j_decompress_ptr cinfo)
   /* Guess the input colorspace, and set output colorspace accordingly. */
   /* (Wish JPEG committee had provided a real way to specify this...) */
   /* Note application may override our guesses. */
-#ifdef NO_SWITCH
-  int numc = cinfo->num_components;
-  if (numc == 1) {
-    cinfo->jpeg_color_space = JCS_GRAYSCALE;
-    cinfo->out_color_space = JCS_GRAYSCALE;
-  } else if (numc == 3) {
-    if (cinfo->saw_JFIF_marker) {
-      cinfo->jpeg_color_space = JCS_YCbCr; /* JFIF implies YCbCr */
-    } else if (cinfo->saw_Adobe_marker) {
-      switch (cinfo->Adobe_transform) {
-      case 0:
-	cinfo->jpeg_color_space = JCS_RGB;
-	break;
-      case 1:
-	cinfo->jpeg_color_space = JCS_YCbCr;
-	break;
-      default:
-	WARNMS1(cinfo, JWRN_ADOBE_XFORM, cinfo->Adobe_transform);
-	cinfo->jpeg_color_space = JCS_YCbCr; /* assume it's YCbCr */
-	break;
-      }
-    } else {
-      /* Saw no special markers, try to guess from the component IDs */
-      int cid0 = cinfo->comp_info[0].component_id;
-      int cid1 = cinfo->comp_info[1].component_id;
-      int cid2 = cinfo->comp_info[2].component_id;
-
-      if (cid0 == 1 && cid1 == 2 && cid2 == 3)
-	cinfo->jpeg_color_space = JCS_YCbCr; /* assume JFIF w/out marker */
-      else if (cid0 == 82 && cid1 == 71 && cid2 == 66)
-	cinfo->jpeg_color_space = JCS_RGB; /* ASCII 'R', 'G', 'B' */
-      else {
-	TRACEMS3(cinfo, 1, JTRC_UNKNOWN_IDS, cid0, cid1, cid2);
-	cinfo->jpeg_color_space = JCS_YCbCr; /* assume it's YCbCr */
-      }
-    }
-    /* Always guess RGB is proper output colorspace. */
-    cinfo->out_color_space = JCS_RGB;
-  } else if (numc == 4) {
-    if (cinfo->saw_Adobe_marker) {
-      switch (cinfo->Adobe_transform) {
-      case 0:
-	cinfo->jpeg_color_space = JCS_CMYK;
-	break;
-      case 2:
-	cinfo->jpeg_color_space = JCS_YCCK;
-	break;
-      default:
-	WARNMS1(cinfo, JWRN_ADOBE_XFORM, cinfo->Adobe_transform);
-	cinfo->jpeg_color_space = JCS_YCCK; /* assume it's YCCK */
-	break;
-      }
-    } else {
-      /* No special markers, assume straight CMYK. */
-      cinfo->jpeg_color_space = JCS_CMYK;
-    }
-    cinfo->out_color_space = JCS_CMYK;
-  } else {    
-    cinfo->jpeg_color_space = JCS_UNKNOWN;
-    cinfo->out_color_space = JCS_UNKNOWN;
-  }
-#else
   switch (cinfo->num_components) {
   case 1:
     cinfo->jpeg_color_space = JCS_GRAYSCALE;
@@ -245,14 +183,11 @@ default_decompress_parms (j_decompress_ptr cinfo)
     cinfo->out_color_space = JCS_UNKNOWN;
     break;
   }
-#endif
-  
+
   /* Set defaults for other decompression parameters. */
   cinfo->scale_num = 1;		/* 1:1 scaling */
   cinfo->scale_denom = 1;
-#ifndef NO_FLOAT
   cinfo->output_gamma = 1.0;
-#endif
   cinfo->buffered_image = FALSE;
   cinfo->raw_data_out = FALSE;
   cinfo->dct_method = JDCT_DEFAULT;
@@ -354,47 +289,6 @@ jpeg_consume_input (j_decompress_ptr cinfo)
   int retcode = JPEG_SUSPENDED;
 
   /* NB: every possible DSTATE value should be listed in this switch */
-#ifdef NO_SWITCH
-  int gstate = cinfo->global_state;
-  if (gstate == DSTATE_START) {
-    /* Start-of-datastream actions: reset appropriate modules */
-    (*cinfo->inputctl->reset_input_controller) (cinfo);
-    /* Initialize application's data source module */
-    (*cinfo->src->init_source) (cinfo);
-    cinfo->global_state = DSTATE_INHEADER;
-    retcode = (*cinfo->inputctl->consume_input) (cinfo);
-    if (retcode == JPEG_REACHED_SOS) { /* Found SOS, prepare to decompress */
-      /* Set up default parameters based on header data */
-      default_decompress_parms(cinfo);
-      /* Set global state: ready for start_decompress */
-      cinfo->global_state = DSTATE_READY;
-    }
-  } else if (gstate == DSTATE_INHEADER) {
-    retcode = (*cinfo->inputctl->consume_input) (cinfo);
-    if (retcode == JPEG_REACHED_SOS) { /* Found SOS, prepare to decompress */
-      /* Set up default parameters based on header data */
-      default_decompress_parms(cinfo);
-      /* Set global state: ready for start_decompress */
-      cinfo->global_state = DSTATE_READY;
-    }
-  } else if (gstate == DSTATE_READY) {
-    retcode = JPEG_REACHED_SOS;
-  } else if (gstate == DSTATE_PRELOAD ||
-	     gstate == DSTATE_PRESCAN ||
-             gstate == DSTATE_SCANNING ||
-             gstate == DSTATE_RAW_OK ||
-             gstate == DSTATE_BUFIMAGE ||
-             gstate == DSTATE_BUFPOST ||
-             gstate == DSTATE_STOPPING) {
-    retcode = (*cinfo->inputctl->consume_input) (cinfo);
-#ifdef TAIL_CALL_MISSING
-    retcode += 1;
-    retcode -= 1;
-#endif
-  } else {
-    ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
-  }
-#else  
   switch (cinfo->global_state) {
   case DSTATE_START:
     /* Start-of-datastream actions: reset appropriate modules */
@@ -428,7 +322,6 @@ jpeg_consume_input (j_decompress_ptr cinfo)
   default:
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
   }
-#endif
   return retcode;
 }
 

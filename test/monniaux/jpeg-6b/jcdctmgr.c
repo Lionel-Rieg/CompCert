@@ -243,14 +243,10 @@ forward_DCT (j_compress_ptr cinfo, jpeg_component_info * compptr,
 	 * for a < b to discover whether a/b is 0.
 	 * If your machine's division is fast enough, define FAST_DIVIDE.
 	 */
-#ifdef NO_32BIT_DIVISION
-#define DIVIDE_BY(a,b)	a = (long long) a / b	
-#else
 #ifdef FAST_DIVIDE
 #define DIVIDE_BY(a,b)	a /= b
 #else
 #define DIVIDE_BY(a,b)	if (a >= b) a /= b; else a = 0
-#endif
 #endif
 	if (temp < 0) {
 	  temp = -temp;

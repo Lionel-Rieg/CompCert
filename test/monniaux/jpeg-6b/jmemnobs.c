@@ -25,6 +25,7 @@ extern void * malloc JPP((size_t size));
 extern void free JPP((void *ptr));
 #endif
 
+
 /*
  * Memory allocation and freeing are controlled by the regular library
  * routines malloc() and free().
@@ -33,20 +34,15 @@ extern void free JPP((void *ptr));
 GLOBAL(void *)
 jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
 {
-  void *p= (void *) malloc(sizeofobject);
-  if (p==NULL) { /* DM */
-    printf("malloc (%zu) failed\n", sizeofobject);
-  }
-  return p;
+  return (void *) malloc(sizeofobject);
 }
 
 GLOBAL(void)
 jpeg_free_small (j_common_ptr cinfo, void * object, size_t sizeofobject)
 {
-#ifdef DMONNIAUX_FREE
   free(object);
-#endif
 }
+
 
 /*
  * "Large" objects are treated the same as "small" ones.
@@ -64,10 +60,9 @@ jpeg_get_large (j_common_ptr cinfo, size_t sizeofobject)
 GLOBAL(void)
 jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
 {
-#ifdef DMONNIAUX_FREE
-  free((void*)object);
-#endif
+  free(object);
 }
+
 
 /*
  * This routine computes the total memory space available for allocation.
@@ -93,7 +88,7 @@ jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 			 long total_bytes_needed)
 {
   ERREXIT(cinfo, JERR_NO_BACKING_STORE);
-  KILL_TAIL_CALL
+  KILL_TAIL_CALL();
 }
 
 

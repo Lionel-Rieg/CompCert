@@ -126,9 +126,7 @@ start_pass_coef (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
     break;
   }
-#ifdef TAIL_CALL_MISSING
-  int dummy=1;
-#endif
+  KILL_TAIL_CALL();
 }
 
 
@@ -268,13 +266,13 @@ compress_first_pass (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
       block_rows = compptr->v_samp_factor;
     else {
       /* NB: can't use last_row_height here, since may not be set! */
-      block_rows = (int) DIVISION(compptr->height_in_blocks, compptr->v_samp_factor);
+      block_rows = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
       if (block_rows == 0) block_rows = compptr->v_samp_factor;
     }
     blocks_across = compptr->width_in_blocks;
     h_samp_factor = compptr->h_samp_factor;
     /* Count number of dummy blocks to be added at the right margin. */
-    ndummy = (int) DIVISION(blocks_across, h_samp_factor);
+    ndummy = (int) (blocks_across % h_samp_factor);
     if (ndummy > 0)
       ndummy = h_samp_factor - ndummy;
     /* Perform DCT for all non-dummy blocks in this iMCU row.  Each call
@@ -303,7 +301,7 @@ compress_first_pass (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
      */
     if (coef->iMCU_row_num == last_iMCU_row) {
       blocks_across += ndummy;	/* include lower right corner */
-      MCUs_across = DIVISION(blocks_across, h_samp_factor);
+      MCUs_across = blocks_across / h_samp_factor;
       for (block_row = block_rows; block_row < compptr->v_samp_factor;
 	   block_row++) {
 	thisblockrow = buffer[block_row];
