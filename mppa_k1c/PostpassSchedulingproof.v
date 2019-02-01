@@ -120,6 +120,11 @@ Axiom verified_schedule_size:
 
 Axiom verified_schedule_single_inst: forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 
+Axiom verified_schedule_header:
+  forall bb tbb lbb,
+  verified_schedule bb = OK (tbb :: lbb) ->
+  header bb = header tbb.
+
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
 Proof.
@@ -535,12 +540,97 @@ Proof.
   eapply transf_blocks_verified; eauto.
 Qed.
 
+Lemma transf_exec_body:
+  forall bdy rs m, exec_body ge bdy rs m = exec_body tge bdy rs m.
+Proof.
+Admitted.
+
+Lemma symbol_address_preserved:
+  forall l, Genv.symbol_address ge l Ptrofs.zero = Genv.symbol_address tge l Ptrofs.zero.
+Proof.
+  intros. unfold Genv.symbol_address. repeat (rewrite symbols_preserved). reflexivity.
+Qed.
+
+Lemma head_tail {A: Type}:
+  forall (l: list A) hd, hd::l = hd :: (tail (hd::l)).
+Proof.
+  intros. simpl. auto.
+Qed.
+
+Lemma verified_schedule_not_empty:
+  forall bb lbb,
+  verified_schedule bb = OK lbb -> lbb <> nil.
+Proof.
+  intros. apply verified_schedule_size in H.
+  pose (size_positive bb). assert (size_blocks lbb > 0) by omega. clear H g.
+  destruct lbb; simpl in *; discriminate.
+Qed.
+
+Lemma verified_schedule_label:
+  forall bb tbb lbb l,
+  verified_schedule bb = OK (tbb :: lbb) ->
+  is_label l bb = is_label l tbb.
+Proof.
+Admitted.
+
+Lemma label_pos_head_app:
+  forall c bb lbb l tc,
+  verified_schedule bb = OK lbb ->
+  label_pos l 0 c = label_pos l 0 tc ->
+  label_pos l 0 (bb :: c) = label_pos l 0 (lbb ++ tc).
+Proof.
+  induction c.
+  - intros. simpl in H0. destruct lbb.
+    + apply verified_schedule_not_empty in H. contradiction.
+    + rewrite (head_tail lbb). simpl tl.
+      simpl. erewrite verified_schedule_label; eauto.
+      destruct (is_label l b) eqn:ISLBL; simpl; auto.
+      (* TODO - finish *)
+Admitted.
+
+
+Lemma label_pos_preserved:
+  forall c tc l,
+  transf_blocks c = OK tc -> label_pos l 0 c = label_pos l 0 tc.
+Proof.
+  induction c.
+  - intros. simpl in *. inv H. reflexivity.
+  - intros. unfold transf_blocks in H; fold transf_blocks in H. monadInv H. eapply IHc in EQ.
+    eapply label_pos_head_app; eauto.
+Qed.
+
+Lemma label_pos_preserved_blocks:
+  forall l f tf,
+  transf_function f = OK tf ->
+  label_pos l 0 (fn_blocks f) = label_pos l 0 (fn_blocks tf).
+Proof.
+  intros. monadInv H. monadInv EQ.
+  destruct (zlt Ptrofs.max_unsigned _); try discriminate.
+  monadInv EQ0. simpl. eapply label_pos_preserved; eauto.
+Qed.
+
+Lemma transf_exec_control:
+  forall f tf ex rs m,
+  transf_function f = OK tf ->
+  exec_control ge f ex rs m = exec_control tge tf ex rs m.
+Proof.
+  intros. destruct ex; simpl; auto.
+  assert (ge = Genv.globalenv prog). auto.
+  assert (tge = Genv.globalenv tprog). auto.
+  pose symbol_address_preserved.
+  exploreInst; simpl; auto; try congruence.
+  - unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+Admitted.
+
+
 Lemma transf_exec_bblock:
   forall f tf bb rs m,
   transf_function f = OK tf ->
   exec_bblock ge f bb rs m = exec_bblock tge tf bb rs m.
 Proof.
-Admitted.
+  intros. unfold exec_bblock. rewrite transf_exec_body. destruct (exec_body _ _ _ _); auto.
+  eapply transf_exec_control; eauto.
+Qed.
 
 Lemma transf_step_simu:
   forall tf b lbb ofs c tbb rs m rs' m',
