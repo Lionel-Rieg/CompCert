@@ -65,6 +65,7 @@ Inductive instruction : Type :=
   | Pj_l    (l: label)                              (**r jump to label *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
   | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
+  | Ploopdo (count: ireg) (loopend: label)
 
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
@@ -147,7 +148,7 @@ Inductive instruction : Type :=
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Poril               (rd rs: ireg) (imm: int64)  (**r or immediate long *) 
-  | Pxoril              (rd rs: ireg) (imm: int64)  (**r xor immediate long *) 
+  | Pxoril              (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
   .
 
 (** Correspondance between Asmblock and Asm *)

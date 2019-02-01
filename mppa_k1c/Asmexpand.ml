@@ -120,101 +120,57 @@ let expand_annot_val kind txt targ args res = assert false
 
 (* Handling of memcpy *)
 
-(* Unaligned accesses are slow on RISC-V, so don't use them *)
-
+let stack_pointer = Asmblock.GPR12
+                  
 let offset_in_range ofs =
   let ofs = Z.to_int64 ofs in -2048L <= ofs && ofs < 2048L
+
+let emit_move dst r =
+  if dst <> r
+  then emit (Paddil(dst, r, Z.zero));;
+
+(* FIXME DMonniaux this is probably not complete *)
+let get_builtin_arg dst arg =
+  match arg with
+  | BA (Asmblock.IR reg) -> emit_move dst reg
+  | BA (ireg) ->  failwith "get_builtin_arg: BA_int(not ireg)"
+  | BA_int _ -> failwith "get_builtin_arg: BA_int"
+  | BA_long _ -> failwith "get_builtin_arg: BA_long"
+  | BA_float _ -> failwith "get_builtin_arg: BA_float"
+  | BA_single _ -> failwith "get_builtin_arg: BA_single"
+  | BA_loadstack _ -> failwith "get_builtin_arg: BA_loadstack"
+  | BA_addrstack ofs -> emit (Paddil(dst, stack_pointer, ofs))
+  | BA_loadglobal _ -> failwith "get_builtin_arg: BA_loadglobal"
+  | BA_addrglobal _ -> failwith "get_builtin_arg: BA_addrglobal"
+  | BA_splitlong _ -> failwith "get_builtin_arg: BA_splitlong"
+  | BA_addptr _ -> failwith "get_builtin_arg: BA_addptr";;
+
+(* FIXME DMonniaux this is really suboptimal (byte per byte) *)
+let expand_builtin_memcpy_big sz al src dst =
+  assert (sz > Z.zero);
+  let dstptr = Asmblock.GPR62
+  and srcptr = Asmblock.GPR63
+  and tmpbuf = Asmblock.GPR61 in
+  get_builtin_arg dstptr dst;
+  get_builtin_arg srcptr src;
+  emit (Pmake (tmpbuf, sz));
+  emit Psemi; 
+  let lbl = new_label() in
+  emit (Ploopdo (tmpbuf, lbl));
+  emit Psemi;
+  emit (Plb (tmpbuf, srcptr, Asmblock.Ofsimm Z.zero));
+  emit (Paddil (srcptr, srcptr, Z.one));
+  emit Psemi;
+  emit (Psb (tmpbuf, dstptr, Asmblock.Ofsimm Z.zero));
+  emit (Paddil (dstptr, dstptr, Z.one));
+  emit Psemi;
+  emit (Plabel lbl);;
   
-let memcpy_small_arg sz arg tmp = assert false
-(*match arg with
-  | BA (IR r) ->
-      (r, _0)
-  | BA_addrstack ofs ->
-      if offset_in_range ofs
-      && offset_in_range (Ptrofs.add ofs (Ptrofs.repr (Z.of_uint sz)))
-      then (GPR12, ofs)
-      else begin expand_addptrofs tmp GPR12 ofs; (tmp, _0) end
-  | _ ->
-      assert false
-*)
-
-let expand_builtin_memcpy_small sz al src dst = assert false
-(*let (tsrc, tdst) =
-    if dst <> BA (IR X5) then (X5, X6) else (X6, X5) in
-  let (rsrc, osrc) = memcpy_small_arg sz src tsrc in
-  let (rdst, odst) = memcpy_small_arg sz dst tdst in
-  let rec copy osrc odst sz =
-    if sz >= 8 && al >= 8 then
-      begin
-        emit (Pfld (F0, rsrc, Ofsimm osrc));
-        emit (Pfsd (F0, rdst, Ofsimm odst));
-        copy (Ptrofs.add osrc _8) (Ptrofs.add odst _8) (sz - 8)
-      end
-    else if sz >= 4 && al >= 4 then
-      begin
-        emit (Plw (X31, rsrc, Ofsimm osrc));
-        emit (Psw (X31, rdst, Ofsimm odst));
-        copy (Ptrofs.add osrc _4) (Ptrofs.add odst _4) (sz - 4)
-      end
-    else if sz >= 2 && al >= 2 then
-      begin
-        emit (Plh (X31, rsrc, Ofsimm osrc));
-        emit (Psh (X31, rdst, Ofsimm odst));
-        copy (Ptrofs.add osrc _2) (Ptrofs.add odst _2) (sz - 2)
-      end
-    else if sz >= 1 then
-      begin
-        emit (Plb (X31, rsrc, Ofsimm osrc));
-        emit (Psb (X31, rdst, Ofsimm odst));
-        copy (Ptrofs.add osrc _1) (Ptrofs.add odst _1) (sz - 1)
-      end
-  in copy osrc odst sz
-*)
-
-let memcpy_big_arg sz arg tmp = assert false
-(*match arg with
-  | BA (IR r) -> if r <> tmp then emit (Pmv(tmp, r))
-  | BA_addrstack ofs ->
-      expand_addptrofs tmp X2 ofs
-  | _ ->
-      assert false
-*)
-
-let expand_builtin_memcpy_big sz al src dst = assert false
-(*assert (sz >= al);
-  assert (sz mod al = 0);
-  let (s, d) =
-    if dst <> BA (IR X5) then (X5, X6) else (X6, X5) in
-  memcpy_big_arg sz src s;
-  memcpy_big_arg sz dst d;
-  (* Use X7 as loop count, X1 and F0 as ld/st temporaries. *)
-  let (load, store, chunksize) =
-    if al >= 8 then
-      (Pfld (F0, s, Ofsimm _0), Pfsd (F0, d, Ofsimm _0), 8)
-    else if al >= 4 then
-      (Plw (X31, s, Ofsimm _0), Psw (X31, d, Ofsimm _0), 4)
-    else if al = 2 then
-      (Plh (X31, s, Ofsimm _0), Psh (X31, d, Ofsimm _0), 2)
-    else
-      (Plb (X31, s, Ofsimm _0), Psb (X31, d, Ofsimm _0), 1) in
-  expand_loadimm32 X7 (Z.of_uint (sz / chunksize));
-  let delta = Z.of_uint chunksize in
-  let lbl = new_label () in
-  emit (Plabel lbl);
-  emit load;
-  expand_addptrofs s s delta;
-  emit (Paddiw(X7, X X7, _m1));
-  emit store;
-  expand_addptrofs d d delta;
-  emit (Pbnew (X X7, X0, lbl))
-*)
-
 let expand_builtin_memcpy  sz al args =
-  let (dst, src) =
-    match args with [d; s] -> (d, s) | _ -> assert false in
-  if sz <= 32
-  then expand_builtin_memcpy_small sz al src dst
-  else expand_builtin_memcpy_big sz al src dst
+  match args with
+  | [dst; src] ->
+    expand_builtin_memcpy_big sz al src dst
+  | _ -> assert false;;
 
 (* Handling of volatile reads and writes *)
 
@@ -524,13 +480,12 @@ let expand_instruction instr =
      | EF_vstore chunk ->
         expand_builtin_vstore chunk args
      | EF_annot_val (kind,txt,targ) ->
-        expand_annot_val kind txt targ args res
+        expand_annot_val kind txt targ args res *)
      | EF_memcpy(sz, al) ->
-        expand_builtin_memcpy (Z.to_int sz) (Z.to_int al) args
-     | EF_annot _ | EF_debug _ | EF_inline_asm _ ->
+        expand_builtin_memcpy sz al args
+ (*  | EF_annot _ | EF_debug _ | EF_inline_asm _ ->
         emit instr
     *)
-     | EF_memcpy _ -> failwith "asmexpand: memcpy"
      | EF_malloc -> failwith "asmexpand: malloc"
      | EF_free -> failwith "asmexpand: free"
      | EF_vload _ -> failwith "asmexpand: vload"

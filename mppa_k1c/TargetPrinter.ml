@@ -244,7 +244,9 @@ module Target (*: TARGET*) =
       | Pj_l(s) ->
          fprintf oc "	goto	%a\n" print_label s
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
-         fprintf oc "	cb.%a	%a?%a\n" bcond bt ireg r print_label lbl
+         fprintf oc "	cb.%a	%a? %a\n" bcond bt ireg r print_label lbl
+      | Ploopdo (r, lbl) ->
+         fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl        
 
       (* Load/Store instructions *)
       | Plb(rd, ra, ofs) ->
