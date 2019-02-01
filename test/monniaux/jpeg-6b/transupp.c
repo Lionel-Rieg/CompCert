@@ -310,7 +310,7 @@ do_rot_270 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
    * at the (output) bottom edge properly.  They just get transposed and
    * not mirrored.
    */
-  MCU_rows = dstinfo->image_height / (dstinfo->max_v_samp_factor * DCTSIZE);
+  MCU_rows = INT_DIV(dstinfo->image_height, (dstinfo->max_v_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -582,6 +582,52 @@ jtransform_request_workspace (j_decompress_ptr srcinfo,
     info->num_components = srcinfo->num_components;
   }
 
+#ifdef NO_SWITCH
+  int choice = info->transform;
+  if (choice == JXFORM_NONE ||
+      choice == JXFORM_FLIP_H) {
+  } else if (choice == JXFORM_FLIP_V ||
+	     choice == JXFORM_ROT_180) {
+    /* Need workspace arrays having same dimensions as source image.
+     * Note that we allocate arrays padded out to the next iMCU boundary,
+     * so that transform routines need not worry about missing edge blocks.
+     */
+    coef_arrays = (jvirt_barray_ptr *)
+      (*srcinfo->mem->alloc_small) ((j_common_ptr) srcinfo, JPOOL_IMAGE,
+	SIZEOF(jvirt_barray_ptr) * info->num_components);
+    for (ci = 0; ci < info->num_components; ci++) {
+      compptr = srcinfo->comp_info + ci;
+      coef_arrays[ci] = (*srcinfo->mem->request_virt_barray)
+	((j_common_ptr) srcinfo, JPOOL_IMAGE, FALSE,
+	 (JDIMENSION) jround_up((long) compptr->width_in_blocks,
+				(long) compptr->h_samp_factor),
+	 (JDIMENSION) jround_up((long) compptr->height_in_blocks,
+				(long) compptr->v_samp_factor),
+	 (JDIMENSION) compptr->v_samp_factor);
+    }
+  } else if (choice == JXFORM_TRANSPOSE ||
+	     choice == JXFORM_TRANSVERSE ||
+	     choice == JXFORM_ROT_90 ||
+	     choice == JXFORM_ROT_270) {
+    /* Need workspace arrays having transposed dimensions.
+     * Note that we allocate arrays padded out to the next iMCU boundary,
+     * so that transform routines need not worry about missing edge blocks.
+     */
+    coef_arrays = (jvirt_barray_ptr *)
+      (*srcinfo->mem->alloc_small) ((j_common_ptr) srcinfo, JPOOL_IMAGE,
+	SIZEOF(jvirt_barray_ptr) * info->num_components);
+    for (ci = 0; ci < info->num_components; ci++) {
+      compptr = srcinfo->comp_info + ci;
+      coef_arrays[ci] = (*srcinfo->mem->request_virt_barray)
+	((j_common_ptr) srcinfo, JPOOL_IMAGE, FALSE,
+	 (JDIMENSION) jround_up((long) compptr->height_in_blocks,
+				(long) compptr->v_samp_factor),
+	 (JDIMENSION) jround_up((long) compptr->width_in_blocks,
+				(long) compptr->h_samp_factor),
+	 (JDIMENSION) compptr->h_samp_factor);
+    }
+  }
+#else
   switch (info->transform) {
   case JXFORM_NONE:
   case JXFORM_FLIP_H:
@@ -630,6 +676,7 @@ jtransform_request_workspace (j_decompress_ptr srcinfo,
     }
     break;
   }
+#endif
   info->workspace_coef_arrays = coef_arrays;
 }
 
@@ -758,6 +805,39 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
   }
 
   /* Correct the destination's image dimensions etc if necessary */
+#ifdef NO_SWITCH
+  int choice = info->transform;
+  if (choice == JXFORM_NONE) {
+  } else if (choice == JXFORM_FLIP_H) {
+    if (info->trim)
+      trim_right_edge(dstinfo);
+  } else if (choice == JXFORM_FLIP_V) {
+    if (info->trim)
+      trim_bottom_edge(dstinfo);
+  } else if (choice == JXFORM_TRANSPOSE) {
+    transpose_critical_parameters(dstinfo);
+    /* transpose does NOT have to trim anything */
+  } else if (choice == JXFORM_TRANSVERSE) {
+    transpose_critical_parameters(dstinfo);
+    if (info->trim) {
+      trim_right_edge(dstinfo);
+      trim_bottom_edge(dstinfo);
+    }
+  } else if (choice == JXFORM_ROT_90) {
+    transpose_critical_parameters(dstinfo);
+    if (info->trim)
+      trim_right_edge(dstinfo);
+  } else if (choice == JXFORM_ROT_180) {
+    if (info->trim) {
+      trim_right_edge(dstinfo);
+      trim_bottom_edge(dstinfo);
+    }
+  } else if (choice == JXFORM_ROT_270) {
+    transpose_critical_parameters(dstinfo);
+    if (info->trim)
+      trim_bottom_edge(dstinfo);
+  }
+#else
   switch (info->transform) {
   case JXFORM_NONE:
     /* Nothing to do */
@@ -798,7 +878,7 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
       trim_bottom_edge(dstinfo);
     break;
   }
-
+#endif
   /* Return the appropriate output data set */
   if (info->workspace_coef_arrays != NULL)
     return info->workspace_coef_arrays;
@@ -823,6 +903,25 @@ jtransform_execute_transformation (j_decompress_ptr srcinfo,
 {
   jvirt_barray_ptr *dst_coef_arrays = info->workspace_coef_arrays;
 
+#ifdef NO_SWITCH
+  int choice = info->transform;
+  if (choice == JXFORM_NONE) {
+  } else if (choice == JXFORM_FLIP_H) {
+    do_flip_h(srcinfo, dstinfo, src_coef_arrays);
+  } else if (choice == JXFORM_FLIP_V) {
+    do_flip_v(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  } else if (choice == JXFORM_TRANSPOSE) {
+    do_transpose(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  } else if (choice == JXFORM_TRANSVERSE) {
+    do_transverse(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  } else if (choice == JXFORM_ROT_90) {
+    do_rot_90(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  } else if (choice == JXFORM_ROT_180) {
+    do_rot_180(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  } else if (choice == JXFORM_ROT_270) {
+    do_rot_270(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
+  }
+#else
   switch (info->transform) {
   case JXFORM_NONE:
     break;
@@ -848,6 +947,7 @@ jtransform_execute_transformation (j_decompress_ptr srcinfo,
     do_rot_270(srcinfo, dstinfo, src_coef_arrays, dst_coef_arrays);
     break;
   }
+#endif
 }
 
 #endif /* TRANSFORMS_SUPPORTED */

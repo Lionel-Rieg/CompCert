@@ -6,9 +6,10 @@
 # Read installation instructions before saying "make" !!
 
 # The name of your C compiler:
-# CC= ../../../ccomp
-# GCC=k1-mbr-gcc
-GCC=$(CC)
+CC= ../../../ccomp
+GCC=k1-mbr-gcc
+# GCC=$(CC)
+EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 
 # You may need to adjust these cc options:
 CFLAGS= -O3 -Wall
@@ -144,6 +145,30 @@ cdjpeg.o : cdjpeg.c
 djpeg.o : djpeg.c
 	$(GCC) $(CFLAGS) -c $< -o $@
 
+rdppm.o : rdppm.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdbmp.o : rdbmp.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdtarga.o : rdtarga.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+wrgif.o : wrgif.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+wrbmp.o : wrbmp.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+wrtarga.o : wrtarga.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdcolmap.o : rdcolmap.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+jpegtran.o : jpegtran.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
 ansi2knr: ansi2knr.c
 	$(CC) $(CFLAGS) $(ANSI2KNRFLAGS) -o ansi2knr ansi2knr.c
 
@@ -178,12 +203,12 @@ clean:
 
 test: cjpeg djpeg jpegtran
 	$(RM) testout*
-	./djpeg -dct int -ppm -outfile testout.ppm  testorig.jpg
-	./djpeg -dct int -bmp -colors 256 -outfile testout.bmp  testorig.jpg
-	./cjpeg -dct int -outfile testout.jpg  testimg.ppm
-	./djpeg -dct int -ppm -outfile testoutp.ppm testprog.jpg
-	./cjpeg -dct int -progressive -opt -outfile testoutp.jpg testimg.ppm
-	./jpegtran -outfile testoutt.jpg testprog.jpg
+	$(EXECUTE) ./djpeg -dct int -ppm -outfile testout.ppm  testorig.jpg
+	$(EXECUTE) ./djpeg -dct int -bmp -colors 256 -outfile testout.bmp  testorig.jpg
+	$(EXECUTE) ./cjpeg -dct int -outfile testout.jpg  testimg.ppm
+	$(EXECUTE) ./djpeg -dct int -ppm -outfile testoutp.ppm testprog.jpg
+	$(EXECUTE) ./cjpeg -dct int -progressive -opt -outfile testoutp.jpg testimg.ppm
+	$(EXECUTE) ./jpegtran -outfile testoutt.jpg testprog.jpg
 	cmp testimg.ppm testout.ppm
 	cmp testimg.bmp testout.bmp
 	cmp testimg.jpg testout.jpg
