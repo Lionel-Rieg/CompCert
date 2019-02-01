@@ -784,41 +784,6 @@ let rec reoptimizing_scheduler (scheduler : scheduler) (previous_solution : solu
       | Some solution -> reoptimizing_scheduler scheduler solution problem
     end
   else previous_solution;;
-     
-let cascaded_scheduler (problem : problem) =
-  match validated_scheduler list_scheduler problem with
-  | None -> None
-  | Some initial_solution ->
-     let solution = reoptimizing_scheduler (validated_scheduler (pseudo_boolean_scheduler SATISFIABILITY)) initial_solution problem in
-     begin
-       let latency2 = get_max_latency solution
-       and latency1 = get_max_latency initial_solution in
-       if latency2 < latency1
-       then Printf.printf "REOPTIMIZING SUCCEEDED %d < %d for %d instructions\n" latency2 latency1 (Array.length problem.instruction_usages)
-       else if latency2 = latency1
-       then Printf.printf "%d unchanged\n" latency1
-       else failwith "optimizing not optimizing"
-     end;
-     Some solution;;
-
-
-(* old
-  match validated_scheduler list_scheduler problem with
-  | None -> None
-  | (Some solution1) as some1 ->
-     let latency1 = get_max_latency solution1 in
-     begin
-       match validated_scheduler pseudo_boolean_scheduler
-               { problem with max_latency = latency1-1 } with
-       | None ->
-          Printf.printf "%d unchanged\n" latency1; 
-          some1
-       | (Some solution2) as some2 ->
-          let latency2 = get_max_latency solution2 in
-          Printf.printf "%d < %d\n" latency2 latency1;
-          some2
-     end;;
- *)
 
 let smt_var i = Printf.sprintf "t%d" i
 
@@ -1074,4 +1039,96 @@ let ilp_print_problem channel problem pb_type =
     done;
     output_string channel "\n"
   done;
-  output_string channel "End\n";;
+  output_string channel "End\n";
+  {
+    mapper_pb_type = pb_type;
+    mapper_nr_instructions = nr_instructions;
+    mapper_nr_pb_variables = 0;
+    mapper_earliest_dates = earliest_dates;
+    mapper_latest_dates = latest_dates;
+    mapper_var_offsets = [| |];
+    mapper_final_predecessors = predecessors.(nr_instructions)
+  };;
+
+let ilp_read_solution mapper channel =
+  let times = Array.make
+                (match mapper.mapper_pb_type with
+                 | OPTIMIZATION -> 1+mapper.mapper_nr_instructions
+                 | SATISFIABILITY -> mapper.mapper_nr_instructions) (-1) in
+  try
+    while true do
+      let line = input_line channel in
+      ( if (String.length line) < 3
+        then failwith (Printf.sprintf "bad ilp output: length(line) < 3: %s" line));
+      match String.get line 0 with
+      | 'x' -> ()
+      | 't' -> let space =
+                 try String.index line ' '
+                 with Not_found ->
+                   failwith "bad ilp output: no t variable number"
+               in
+               let tnumber =
+                 try int_of_string (String.sub line 1 (space-1))
+                 with Failure _ ->
+                   failwith "bad ilp output: not a variable number"
+               in
+               (if tnumber < 0 || tnumber >= (Array.length times)
+                then failwith (Printf.sprintf "bad ilp output: not a correct variable number: %d (%d)" tnumber (Array.length times)));
+               let value =
+                 try int_of_string (String.sub line (space+1) ((String.length line)-space-1))
+                 with Failure _ ->
+                   failwith "bad ilp output: not a time number"
+               in
+               (if value < 0
+                then failwith "bad ilp output: negative time");
+               times.(tnumber) <- value
+      | '#' -> ()
+      | '0' -> ()
+      | _ -> failwith (Printf.sprintf "bad ilp output: bad variable initial, line = %s" line)
+    done;
+    assert false
+  with End_of_file ->
+    Array.iteri (fun i x ->
+        if i<(Array.length times)-1
+           && x<0 then raise Unschedulable) times;
+    times;;
+
+let ilp_solver = ref "ilp_solver"
+               
+let ilp_scheduler pb_type problem =
+  try
+    let filename_in = "problem.lp"
+    and filename_out = "problem.sol" in
+    let opb_problem = open_out filename_in in
+    let mapper = ilp_print_problem opb_problem problem pb_type in
+    close_out opb_problem;
+
+    begin
+      match Unix.system (!ilp_solver ^ " " ^ filename_in ^ " " ^ filename_out) with
+      | Unix.WEXITED 0 ->
+         let opb_solution = open_in filename_out in
+         let ret = adjust_check_solution mapper (ilp_read_solution mapper opb_solution) in
+         close_in opb_solution;
+         Some ret
+      | Unix.WEXITED _ -> failwith "failed to start ilp solver"
+      | _ -> None
+    end
+  with
+  | Unschedulable -> None;;
+     
+let cascaded_scheduler (problem : problem) =
+  match validated_scheduler list_scheduler problem with
+  | None -> None
+  | Some initial_solution ->
+     let solution = reoptimizing_scheduler (validated_scheduler (ilp_scheduler SATISFIABILITY)) initial_solution problem in
+     begin
+       let latency2 = get_max_latency solution
+       and latency1 = get_max_latency initial_solution in
+       if latency2 < latency1
+       then Printf.printf "REOPTIMIZING SUCCEEDED %d < %d for %d instructions\n" latency2 latency1 (Array.length problem.instruction_usages)
+       else if latency2 = latency1
+       then Printf.printf "%d unchanged\n" latency1
+       else failwith "optimizing not optimizing"
+     end;
+     Some solution;;
+

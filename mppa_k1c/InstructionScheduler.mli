@@ -102,4 +102,6 @@ val pseudo_boolean_scheduler : pseudo_boolean_problem_type -> problem -> solutio
 
 val smt_print_problem : out_channel -> problem -> unit;;
 
-val ilp_print_problem : out_channel -> problem -> pseudo_boolean_problem_type -> unit;;
+val ilp_print_problem : out_channel -> problem -> pseudo_boolean_problem_type -> pseudo_boolean_mapper;;
+
+val ilp_scheduler : pseudo_boolean_problem_type -> problem -> solution option;;
