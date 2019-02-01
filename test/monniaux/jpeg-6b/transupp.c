@@ -79,7 +79,7 @@ do_flip_h (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
    * mirroring by changing the signs of odd-numbered columns.
    * Partial iMCUs at the right edge are left untouched.
    */
-  MCU_cols = dstinfo->image_width / (dstinfo->max_h_samp_factor * DCTSIZE);
+  MCU_cols = INT_DIV(dstinfo->image_width, (dstinfo->max_h_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -131,7 +131,7 @@ do_flip_v (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
    * of odd-numbered rows.
    * Partial iMCUs at the bottom edge are copied verbatim.
    */
-  MCU_rows = dstinfo->image_height / (dstinfo->max_v_samp_factor * DCTSIZE);
+  MCU_rows = INT_DIV(dstinfo->image_height, (dstinfo->max_v_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -246,7 +246,7 @@ do_rot_90 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
    * at the (output) right edge properly.  They just get transposed and
    * not mirrored.
    */
-  MCU_cols = dstinfo->image_width / (dstinfo->max_h_samp_factor * DCTSIZE);
+  MCU_cols = INT_DIV(dstinfo->image_width, (dstinfo->max_h_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -371,8 +371,8 @@ do_rot_180 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
   JCOEFPTR src_ptr, dst_ptr;
   jpeg_component_info *compptr;
 
-  MCU_cols = dstinfo->image_width / (dstinfo->max_h_samp_factor * DCTSIZE);
-  MCU_rows = dstinfo->image_height / (dstinfo->max_v_samp_factor * DCTSIZE);
+  MCU_cols = INT_DIV(dstinfo->image_width, (dstinfo->max_h_samp_factor * DCTSIZE));
+  MCU_rows = INT_DIV(dstinfo->image_height, (dstinfo->max_v_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -475,8 +475,8 @@ do_transverse (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
   JCOEFPTR src_ptr, dst_ptr;
   jpeg_component_info *compptr;
 
-  MCU_cols = dstinfo->image_width / (dstinfo->max_h_samp_factor * DCTSIZE);
-  MCU_rows = dstinfo->image_height / (dstinfo->max_v_samp_factor * DCTSIZE);
+  MCU_cols = INT_DIV(dstinfo->image_width, (dstinfo->max_h_samp_factor * DCTSIZE));
+  MCU_rows = INT_DIV(dstinfo->image_height, (dstinfo->max_v_samp_factor * DCTSIZE));
 
   for (ci = 0; ci < dstinfo->num_components; ci++) {
     compptr = dstinfo->comp_info + ci;
@@ -691,7 +691,7 @@ trim_right_edge (j_compress_ptr dstinfo)
     int h_samp_factor = dstinfo->comp_info[ci].h_samp_factor;
     max_h_samp_factor = MAX(max_h_samp_factor, h_samp_factor);
   }
-  MCU_cols = dstinfo->image_width / (max_h_samp_factor * DCTSIZE);
+  MCU_cols = INT_DIV(dstinfo->image_width, (max_h_samp_factor * DCTSIZE));
   if (MCU_cols > 0)		/* can't trim to 0 pixels */
     dstinfo->image_width = MCU_cols * (max_h_samp_factor * DCTSIZE);
 }
@@ -711,7 +711,7 @@ trim_bottom_edge (j_compress_ptr dstinfo)
     int v_samp_factor = dstinfo->comp_info[ci].v_samp_factor;
     max_v_samp_factor = MAX(max_v_samp_factor, v_samp_factor);
   }
-  MCU_rows = dstinfo->image_height / (max_v_samp_factor * DCTSIZE);
+  MCU_rows = INT_DIV(dstinfo->image_height, (max_v_samp_factor * DCTSIZE));
   if (MCU_rows > 0)		/* can't trim to 0 pixels */
     dstinfo->image_height = MCU_rows * (max_v_samp_factor * DCTSIZE);
 }

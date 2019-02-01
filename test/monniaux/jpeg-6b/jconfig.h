@@ -28,12 +28,24 @@
  */
 #define HAVE_PROTOTYPES
 
+#ifdef __COMPCERT__
 extern long long __compcert_i64_sdiv(long long a, long long b);
-extern unsigned __compcert_i32_umod(unsigned a, unsigned b);
+extern long long __compcert_i64_smod(long long a, long long b);
 
-#define LONG_SDIV(x, y) __compcert_i64_sdiv(x, y)
-#define INT_UMOD(x, y) __compcert_i32_umod(x, y)
+#define INT_UMOD(a, b) __compcert_i64_smod(a, b)
+#define INT_UDIV(a, b) __compcert_i64_sdiv(a, b)
+#define INT_DIV(a, b) __compcert_i64_sdiv(a, b)
+#define LONG_DIV(a, b) __compcert_i64_sdiv(a, b)
+
 #define KILL_TAIL_CALL() { int x=1; }
+#else
+#define INT_UMOD(a, b) ((a) % (b))
+#define INT_UDIV(a, b) ((a) / (b))
+#define INT_DIV(a, b) ((a) / (b))
+#define LONG_DIV(a, b) ((a) / (b))
+
+#define KILL_TAIL_CALL() {  }
+#endif
 
 /* Does your compiler support the declaration "unsigned char" ?
  * How about "unsigned short" ?

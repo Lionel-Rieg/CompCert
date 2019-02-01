@@ -6,10 +6,10 @@
 # Read installation instructions before saying "make" !!
 
 # The name of your C compiler:
-CC= ../../../ccomp
+# CC= ../../../ccomp
 
 # You may need to adjust these cc options:
-CFLAGS= -O3
+CFLAGS= -O3 -Wall
 # Generally, we recommend defining any configuration symbols in jconfig.h,
 # NOT via -D switches here.
 # However, any special defines for ansi2knr.c may be included here:
