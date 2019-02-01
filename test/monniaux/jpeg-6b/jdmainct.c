@@ -283,7 +283,7 @@ set_bottom_pointers (j_decompress_ptr cinfo)
     iMCUheight = compptr->v_samp_factor * compptr->DCT_scaled_size;
     rgroup = INT_DIV(iMCUheight, cinfo->min_DCT_scaled_size);
     /* Count nondummy sample rows remaining for this component */
-    rows_left = (int) (compptr->downsampled_height % (JDIMENSION) iMCUheight);
+    rows_left = (int) INT_MOD(compptr->downsampled_height, (JDIMENSION) iMCUheight);
     if (rows_left == 0) rows_left = iMCUheight;
     /* Count nondummy row groups.  Should get same answer for each component,
      * so we need only do it once.
@@ -467,6 +467,7 @@ process_data_crank_post (j_decompress_ptr cinfo,
   (*cinfo->post->post_process_data) (cinfo, (JSAMPIMAGE) NULL,
 				     (JDIMENSION *) NULL, (JDIMENSION) 0,
 				     output_buf, out_row_ctr, out_rows_avail);
+  KILL_TAIL_CALL();
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */

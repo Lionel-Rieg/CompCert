@@ -301,7 +301,7 @@ compress_first_pass (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
      */
     if (coef->iMCU_row_num == last_iMCU_row) {
       blocks_across += ndummy;	/* include lower right corner */
-      MCUs_across = blocks_across / h_samp_factor;
+      MCUs_across = INT_DIV(blocks_across, h_samp_factor);
       for (block_row = block_rows; block_row < compptr->v_samp_factor;
 	   block_row++) {
 	thisblockrow = buffer[block_row];

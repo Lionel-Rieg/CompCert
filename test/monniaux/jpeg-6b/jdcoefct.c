@@ -349,7 +349,7 @@ decompress_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
       block_rows = compptr->v_samp_factor;
     else {
       /* NB: can't use last_row_height here; it is input-side-dependent! */
-      block_rows = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
+      block_rows = (int) INT_MOD(compptr->height_in_blocks, compptr->v_samp_factor);
       if (block_rows == 0) block_rows = compptr->v_samp_factor;
     }
     inverse_DCT = cinfo->idct->inverse_DCT[ci];
@@ -508,7 +508,7 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
       last_row = FALSE;
     } else {
       /* NB: can't use last_row_height here; it is input-side-dependent! */
-      block_rows = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
+      block_rows = (int) INT_MOD(compptr->height_in_blocks, compptr->v_samp_factor);
       if (block_rows == 0) block_rows = compptr->v_samp_factor;
       access_rows = block_rows; /* this iMCU row only */
       last_row = TRUE;

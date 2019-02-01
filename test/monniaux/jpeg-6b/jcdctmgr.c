@@ -244,9 +244,9 @@ forward_DCT (j_compress_ptr cinfo, jpeg_component_info * compptr,
 	 * If your machine's division is fast enough, define FAST_DIVIDE.
 	 */
 #ifdef FAST_DIVIDE
-#define DIVIDE_BY(a,b)	a /= b
+#define DIVIDE_BY(a,b)	a = INT_DIV(a, b)
 #else
-#define DIVIDE_BY(a,b)	if (a >= b) a /= b; else a = 0
+#define DIVIDE_BY(a,b)	if (a >= b) a = INT_DIV(a, b); else a = 0
 #endif
 	if (temp < 0) {
 	  temp = -temp;

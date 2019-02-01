@@ -7,6 +7,8 @@
 
 # The name of your C compiler:
 # CC= ../../../ccomp
+# GCC=k1-mbr-gcc
+GCC=$(CC)
 
 # You may need to adjust these cc options:
 CFLAGS= -O3 -Wall
@@ -108,6 +110,39 @@ all: libjpeg.a cjpeg djpeg jpegtran rdjpgcom wrjpgcom
 # 	$(CC) $(CFLAGS) -c T$*.c
 # 	$(RM) T$*.c $*.o
 # 	$(MV) T$*.o $*.o
+
+%.i : %.c
+	$(CC) $(CFLAGS) -E $< -o $@
+
+wrjpgcom.o : wrjpgcom.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdjpgcom.o : rdjpgcom.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdswitch.o : rdswitch.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+rdgif.o : rdgif.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+jmemmgr.o : jmemmgr.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+jerror.o : jerror.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+example.o : example.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+cjpeg.o : cjpeg.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+cdjpeg.o : cdjpeg.c
+	$(GCC) $(CFLAGS) -c $< -o $@
+
+djpeg.o : djpeg.c
+	$(GCC) $(CFLAGS) -c $< -o $@
 
 ansi2knr: ansi2knr.c
 	$(CC) $(CFLAGS) $(ANSI2KNRFLAGS) -o ansi2knr ansi2knr.c

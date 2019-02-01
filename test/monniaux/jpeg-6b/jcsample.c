@@ -516,4 +516,5 @@ jinit_downsampler (j_compress_ptr cinfo)
   if (cinfo->smoothing_factor && !smoothok)
     TRACEMS(cinfo, 0, JTRC_SMOOTH_NOTIMPL);
 #endif
+  KILL_TAIL_CALL();
 }
