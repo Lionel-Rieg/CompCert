@@ -113,6 +113,11 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
+Axiom verified_schedule_size:
+  forall bb lbb,
+  verified_schedule bb = OK lbb ->
+  size bb = size_blocks lbb.
+
 Axiom verified_schedule_single_inst: forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 
 Remark builtin_body_nil:
@@ -468,21 +473,53 @@ Proof.
 Qed.
 
 Lemma tail_find_bblock:
-  forall f ofs bb,
-  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bb ->
-  exists c, code_tail (Ptrofs.unsigned ofs) (fn_blocks f) (bb::c).
+  forall lbb pos bb,
+  find_bblock pos lbb = Some bb ->
+  exists c, code_tail pos lbb (bb::c).
 Proof.
-Admitted.
+  induction lbb.
+  - intros. simpl in H. inv H.
+  - intros. simpl in H.
+    destruct (zlt pos 0); try (inv H; fail).
+    destruct (zeq pos 0).
+    + inv H. exists lbb. constructor; auto.
+    + apply IHlbb in H. destruct H as (c & TAIL). exists c.
+      cutrewrite (pos = pos - size a + size a). apply code_tail_S; auto.
+      omega.
+Qed.
+
+Lemma code_tail_head_app:
+  forall l pos c1 c2,
+  code_tail pos c1 c2 ->
+  code_tail (pos + size_blocks l) (l++c1) c2.
+Proof.
+  induction l.
+  - intros. simpl. rewrite Z.add_0_r. auto.
+  - intros. apply IHl in H. simpl. rewrite (Z.add_comm (size a)). rewrite Z.add_assoc. apply code_tail_S. assumption.
+Qed.
 
 Lemma transf_blocks_verified:
-  forall c tc ofs bb c',
+  forall c tc pos bb c',
   transf_blocks c = OK tc ->
-  code_tail (Ptrofs.unsigned ofs) c (bb::c') ->
+  code_tail pos c (bb::c') ->
   exists lbb,
      verified_schedule bb = OK lbb
-  /\ exists tc', code_tail (Ptrofs.unsigned ofs) tc (lbb ++ tc').
+  /\ exists tc', code_tail pos tc (lbb ++ tc').
 Proof.
-Admitted.
+  induction c; intros.
+  - simpl in H. inv H. inv H0.
+  - inv H0.
+    + monadInv H. exists (schedule bb).
+      split; simpl; auto. eexists; eauto. econstructor; eauto.
+    + unfold transf_blocks in H. fold transf_blocks in H. monadInv H.
+      exploit IHc; eauto.
+      intros (lbb & TRANS & tc' & TAIL).
+      monadInv TRANS.
+      repeat eexists; eauto.
+      erewrite verified_schedule_size; eauto.
+      apply code_tail_head_app.
+      eauto.
+Qed.
 
 Lemma transf_find_bblock:
   forall ofs f bb tf,
