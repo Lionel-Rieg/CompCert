@@ -10,7 +10,6 @@
 #else
 #include <stdio.h>
 #endif
-extern FILE *fdopen(int fd, const char *mode);
 
 void aes_ecb_test()
 {
@@ -33,16 +32,14 @@ void aes_ecb_test()
     printf("plain text: \n");
     dump_hex((uint8_t * )input,16);
 
-    FILE *err = fdopen(2, "w");
-    
     if (memcmp(pt_vector, input, 16) != 0)
     {
-        fprintf(err,"error: decrypted ciphertext is not the same as the input plaintext\n");
+        fprintf(stderr,"error: decrypted ciphertext is not the same as the input plaintext\n");
         exit(1);
     }
     else if (memcmp(ct_vector, output, 16) != 0)
     {
-        fprintf(err,"error: ciphertext is not the same as the test vector\n");
+        fprintf(stderr,"error: ciphertext is not the same as the test vector\n");
         exit(1);
     }
     else

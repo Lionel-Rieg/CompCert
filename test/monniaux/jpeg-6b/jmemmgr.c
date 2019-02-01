@@ -222,6 +222,7 @@ out_of_memory (j_common_ptr cinfo, int which)
   cinfo->err->trace_level = 2;	/* force self_destruct to report stats */
 #endif
   ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, which);
+  KILL_TAIL_CALL();
 }
 
 
