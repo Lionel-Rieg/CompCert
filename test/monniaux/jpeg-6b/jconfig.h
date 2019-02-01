@@ -28,6 +28,8 @@
  */
 #define HAVE_PROTOTYPES
 
+#define NO_SWITCH
+
 #ifdef __COMPCERT__
 extern long long __compcert_i64_sdiv(long long a, long long b);
 extern long long __compcert_i64_smod(long long a, long long b);
