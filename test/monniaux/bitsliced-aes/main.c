@@ -20,6 +20,8 @@
 
 int main(int argc, char * argv[])
 {
+  clock_prepare();
+  
     clock_start();
   
 #ifdef RUN_TESTS

@@ -88,16 +88,14 @@ void aes_ctr_test()
     printf("plain text: \n");
     dump_hex(input,AES_CTR_TESTS_BYTES);
 					  
-    FILE *err = fdopen(2, "w");
-    
     if (memcmp(pt_vector, input, AES_CTR_TESTS_BYTES) != 0)
     {
-        fprintf(err,"error: decrypted ciphertext is not the same as the input plaintext\n");
+        fprintf(stderr,"error: decrypted ciphertext is not the same as the input plaintext\n");
         exit(1);
     }
     else if (memcmp(ct_vector, output, AES_CTR_TESTS_BYTES) != 0)
     {
-        fprintf(err,"error: ciphertext is not the same as the test vector\n");
+        fprintf(stderr,"error: ciphertext is not the same as the test vector\n");
         exit(1);
     }
     else

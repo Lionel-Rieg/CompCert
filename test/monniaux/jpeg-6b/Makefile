@@ -7,8 +7,6 @@
 
 # The name of your C compiler:
 CC= ../../../ccomp
-GCC=k1-mbr-gcc
-# GCC=$(CC)
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 
 # You may need to adjust these cc options:
@@ -283,3 +281,10 @@ rdbmp.o: rdbmp.c cdjpeg.h jinclude.h jconfig.h jpeglib.h jmorecfg.h jerror.h cde
 wrbmp.o: wrbmp.c cdjpeg.h jinclude.h jconfig.h jpeglib.h jmorecfg.h jerror.h cderror.h
 rdrle.o: rdrle.c cdjpeg.h jinclude.h jconfig.h jpeglib.h jmorecfg.h jerror.h cderror.h
 wrrle.o: wrrle.c cdjpeg.h jinclude.h jconfig.h jpeglib.h jmorecfg.h jerror.h cderror.h
+
+.PHONY: assembly
+
+assembly: $(LIBOBJECTS:.o=.s)
+
+%s : %c
+	$(CC) -S $< -o $@
