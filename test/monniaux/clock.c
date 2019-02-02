@@ -22,3 +22,7 @@ cycle_t get_total_clock(void) {
 void print_total_clock(void) {
   printf("cycles: %lu\n", total_clock);
 }
+
+void printerr_total_clock(void) {
+  fprintf(stderr, "cycles: %lu\n", total_clock);
+}

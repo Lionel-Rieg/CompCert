@@ -133,6 +133,7 @@
 
 /* FIXME DMonniaux */
 #define INT_MOD(x, y) ((long) (x) % (y))
+#include "../clock.h"
 
 #ifdef _MSC_VER
 #	define	WINDOWS
@@ -712,6 +713,8 @@ main(argc, argv)
 	REG1	int 	 argc;
 	REG2	char	*argv[];
 	{
+	  clock_prepare();
+	  clock_start();
     	REG3	char		**filelist;
 		REG4	char		**fileptr;
 		int		seen_double_dash = 0;
@@ -887,6 +890,8 @@ nextarg:	continue;
 			else
 				decompress(0, 1);
 		}
+		clock_stop();
+		printerr_total_clock();
 
 		exit((exit_code== -1) ? 1:exit_code);
 	}
