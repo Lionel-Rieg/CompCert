@@ -183,6 +183,7 @@ Definition destroyed_at_indirect_call: list mreg := nil.
 
 Definition mregs_for_operation (op: operation): list (option mreg) * option mreg := (nil, None).
 
+(* FIXME DMonniaux this seems to be the place for preferred registers for arguments *)
 Definition mregs_for_builtin (ef: external_function): list (option mreg) * list(option mreg) := (nil, nil).
   (* match ef with
   | EF_builtin name sg =>
