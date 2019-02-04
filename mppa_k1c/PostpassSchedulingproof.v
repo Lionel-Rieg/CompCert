@@ -709,8 +709,11 @@ Proof.
   pose symbol_address_preserved.
   exploreInst; simpl; auto; try congruence.
   - unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-Admitted.
-
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+Qed.
 
 Lemma transf_exec_bblock:
   forall f tf bb rs m,
