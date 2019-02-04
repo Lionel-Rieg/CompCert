@@ -106,6 +106,7 @@ Fixpoint concat_all (lbb: list bblock) : res bblock :=
       concat2 bb bb'
   end.
 
+(* Axioms that verified_schedule must verify *)
 Axiom verified_schedule_correct:
   forall ge f bb lbb,
   verified_schedule bb = OK lbb ->
@@ -125,6 +126,10 @@ Axiom verified_schedule_header:
   verified_schedule bb = OK (tbb :: lbb) ->
      header bb = header tbb
   /\ Forall (fun b => header b = nil) lbb.
+
+(* This needs to be axiomatized since we have no information on low_half (axiomatized parameter, see Asmblock.v) *)
+Axiom low_half_preservation:
+  forall id ofs ge tge, Genv.symbol_address ge id ofs = Genv.symbol_address tge id ofs -> low_half ge id ofs = low_half tge id ofs.
 
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
@@ -541,13 +546,8 @@ Proof.
   eapply transf_blocks_verified; eauto.
 Qed.
 
-Lemma transf_exec_body:
-  forall bdy rs m, exec_body ge bdy rs m = exec_body tge bdy rs m.
-Proof.
-Admitted.
-
 Lemma symbol_address_preserved:
-  forall l, Genv.symbol_address ge l Ptrofs.zero = Genv.symbol_address tge l Ptrofs.zero.
+  forall l ofs, Genv.symbol_address ge l ofs = Genv.symbol_address tge l ofs.
 Proof.
   intros. unfold Genv.symbol_address. repeat (rewrite symbols_preserved). reflexivity.
 Qed.
@@ -713,6 +713,44 @@ Proof.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+Qed.
+
+Lemma eval_offset_preserved:
+  forall ofs, eval_offset ge ofs = eval_offset tge ofs.
+Proof.
+  intros. unfold eval_offset. destruct ofs; auto. erewrite low_half_preservation; eauto.
+  apply symbol_address_preserved.
+Qed.
+
+Lemma transf_exec_load:
+  forall t rs m rd ra ofs, exec_load ge t rs m rd ra ofs = exec_load tge t rs m rd ra ofs.
+Proof.
+  intros. unfold exec_load. rewrite eval_offset_preserved. reflexivity.
+Qed.
+
+Lemma transf_exec_store:
+  forall t rs m rs0 ra ofs, exec_store ge t rs m rs0 ra ofs = exec_store tge t rs m rs0 ra ofs.
+Proof.
+  intros. unfold exec_store. rewrite eval_offset_preserved. reflexivity.
+Qed.
+
+Lemma transf_exec_basic_instr:
+  forall i rs m, exec_basic_instr ge i rs m = exec_basic_instr tge i rs m.
+Proof.
+  intros. pose symbol_address_preserved.
+  unfold exec_basic_instr. exploreInst; simpl; auto; try congruence.
+  1: unfold exec_arith_instr; exploreInst; simpl; auto; try congruence.
+  1-10: apply transf_exec_load.
+  all: apply transf_exec_store.
+Qed.
+
+Lemma transf_exec_body:
+  forall bdy rs m, exec_body ge bdy rs m = exec_body tge bdy rs m.
+Proof.
+  induction bdy; intros.
+  - simpl. reflexivity.
+  - simpl. rewrite transf_exec_basic_instr.
+    destruct (exec_basic_instr _ _ _); auto.
 Qed.
 
 Lemma transf_exec_bblock:
