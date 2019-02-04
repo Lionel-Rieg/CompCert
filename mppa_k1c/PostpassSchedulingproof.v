@@ -106,6 +106,7 @@ Fixpoint concat_all (lbb: list bblock) : res bblock :=
       concat2 bb bb'
   end.
 
+(* Axioms that verified_schedule must verify *)
 Axiom verified_schedule_correct:
   forall ge f bb lbb,
   verified_schedule bb = OK lbb ->
@@ -123,7 +124,12 @@ Axiom verified_schedule_single_inst: forall bb, size bb = 1 -> verified_schedule
 Axiom verified_schedule_header:
   forall bb tbb lbb,
   verified_schedule bb = OK (tbb :: lbb) ->
-  header bb = header tbb.
+     header bb = header tbb
+  /\ Forall (fun b => header b = nil) lbb.
+
+(* This needs to be axiomatized since we have no information on low_half (axiomatized parameter, see Asmblock.v) *)
+Axiom low_half_preservation:
+  forall id ofs ge tge, Genv.symbol_address ge id ofs = Genv.symbol_address tge id ofs -> low_half ge id ofs = low_half tge id ofs.
 
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
@@ -540,13 +546,8 @@ Proof.
   eapply transf_blocks_verified; eauto.
 Qed.
 
-Lemma transf_exec_body:
-  forall bdy rs m, exec_body ge bdy rs m = exec_body tge bdy rs m.
-Proof.
-Admitted.
-
 Lemma symbol_address_preserved:
-  forall l, Genv.symbol_address ge l Ptrofs.zero = Genv.symbol_address tge l Ptrofs.zero.
+  forall l ofs, Genv.symbol_address ge l ofs = Genv.symbol_address tge l ofs.
 Proof.
   intros. unfold Genv.symbol_address. repeat (rewrite symbols_preserved). reflexivity.
 Qed.
@@ -566,28 +567,116 @@ Proof.
   destruct lbb; simpl in *; discriminate.
 Qed.
 
+Lemma header_nil_label_pos_none:
+  forall lbb l p,
+  Forall (fun b => header b = nil) lbb -> label_pos l p lbb = None.
+Proof.
+  induction lbb.
+  - intros. simpl. auto.
+  - intros. inv H. simpl. unfold is_label. rewrite H2. destruct (in_dec l nil). { inv i. }
+    auto.
+Qed.
+
 Lemma verified_schedule_label:
   forall bb tbb lbb l,
   verified_schedule bb = OK (tbb :: lbb) ->
-  is_label l bb = is_label l tbb.
+     is_label l bb = is_label l tbb
+  /\ label_pos l 0 lbb = None.
 Proof.
-Admitted.
+  intros. exploit verified_schedule_header; eauto.
+  intros (HdrEq & HdrNil).
+  split.
+  - unfold is_label. rewrite HdrEq. reflexivity.
+  - apply header_nil_label_pos_none. assumption.
+Qed.
 
-Lemma label_pos_head_app:
-  forall c bb lbb l tc,
-  verified_schedule bb = OK lbb ->
-  label_pos l 0 c = label_pos l 0 tc ->
-  label_pos l 0 (bb :: c) = label_pos l 0 (lbb ++ tc).
+Lemma label_pos_app_none:
+  forall c c' l p p',
+  label_pos l p c = None ->
+  label_pos l (p' + size_blocks c) c' = label_pos l p' (c ++ c').
 Proof.
   induction c.
-  - intros. simpl in H0. destruct lbb.
-    + apply verified_schedule_not_empty in H. contradiction.
-    + rewrite (head_tail lbb). simpl tl.
-      simpl. erewrite verified_schedule_label; eauto.
-      destruct (is_label l b) eqn:ISLBL; simpl; auto.
-      (* TODO - finish *)
-Admitted.
+  - intros. simpl in *. rewrite Z.add_0_r. reflexivity.
+  - intros. simpl in *. destruct (is_label _ _) eqn:ISLABEL.
+    + discriminate.
+    + eapply IHc in H. rewrite Z.add_assoc. eauto.
+Qed.
 
+Remark label_pos_pvar_none_add:
+  forall tc l p p' k,
+  label_pos l (p+k) tc = None -> label_pos l (p'+k) tc = None.
+Proof.
+  induction tc.
+  - intros. simpl. auto.
+  - intros. simpl in *. destruct (is_label _ _) eqn:ISLBL.
+    + discriminate.
+    + pose (IHtc l p p' (k + size a)). repeat (rewrite Z.add_assoc in e). auto.
+Qed.
+
+Lemma label_pos_pvar_none:
+  forall tc l p p',
+  label_pos l p tc = None -> label_pos l p' tc = None.
+Proof.
+  intros. rewrite (Zplus_0_r_reverse p') at 1. rewrite (Zplus_0_r_reverse p) in H at 1.
+  eapply label_pos_pvar_none_add; eauto.
+Qed.
+
+Remark label_pos_pvar_some_add_add:
+  forall tc l p p' k k',
+  label_pos l (p+k') tc = Some (p+k) -> label_pos l (p'+k') tc = Some (p'+k).
+Proof.
+  induction tc.
+  - intros. simpl in H. discriminate.
+  - intros. simpl in *. destruct (is_label _ _) eqn:ISLBL.
+    + inv H. assert (k = k') by omega. subst. reflexivity.
+    + pose (IHtc l p p' k (k' + size a)). repeat (rewrite Z.add_assoc in e). auto.
+Qed.
+
+Lemma label_pos_pvar_some_add:
+  forall tc l p p' k,
+  label_pos l p tc = Some (p+k) -> label_pos l p' tc = Some (p'+k).
+Proof.
+  intros. rewrite (Zplus_0_r_reverse p') at 1. rewrite (Zplus_0_r_reverse p) in H at 1.
+  eapply label_pos_pvar_some_add_add; eauto.
+Qed.
+
+Remark label_pos_pvar_add:
+  forall c tc l p p' k,
+  label_pos l (p+k) c = label_pos l p tc ->
+  label_pos l (p'+k) c = label_pos l p' tc.
+Proof.
+  induction c.
+  - intros. simpl in *.
+    exploit label_pos_pvar_none; eauto.
+  - intros. simpl in *. destruct (is_label _ _) eqn:ISLBL.
+    + exploit label_pos_pvar_some_add; eauto.
+    + pose (IHc tc l p p' (k+size a)). repeat (rewrite Z.add_assoc in e). auto.
+Qed.
+
+Lemma label_pos_pvar:
+  forall c tc l p p',
+  label_pos l p c = label_pos l p tc ->
+  label_pos l p' c = label_pos l p' tc.
+Proof.
+  intros. rewrite (Zplus_0_r_reverse p') at 1. rewrite (Zplus_0_r_reverse p) in H at 1.
+  eapply label_pos_pvar_add; eauto.
+Qed.
+
+Lemma label_pos_head_app:
+  forall c bb lbb l tc p,
+  verified_schedule bb = OK lbb ->
+  label_pos l p c = label_pos l p tc ->
+  label_pos l p (bb :: c) = label_pos l p (lbb ++ tc).
+Proof.
+  intros. simpl. destruct lbb as [|tbb lbb].
+  - apply verified_schedule_not_empty in H. contradiction.
+  - simpl. exploit verified_schedule_label; eauto. intros (ISLBL & LBLPOS).
+    rewrite ISLBL.
+    destruct (is_label l tbb) eqn:ISLBL'; simpl; auto.
+    eapply label_pos_pvar in H0. erewrite H0.
+    erewrite verified_schedule_size; eauto. simpl size_blocks. rewrite Z.add_assoc.
+    erewrite label_pos_app_none; eauto.
+Qed.
 
 Lemma label_pos_preserved:
   forall c tc l,
@@ -620,8 +709,49 @@ Proof.
   pose symbol_address_preserved.
   exploreInst; simpl; auto; try congruence.
   - unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-Admitted.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+Qed.
 
+Lemma eval_offset_preserved:
+  forall ofs, eval_offset ge ofs = eval_offset tge ofs.
+Proof.
+  intros. unfold eval_offset. destruct ofs; auto. erewrite low_half_preservation; eauto.
+  apply symbol_address_preserved.
+Qed.
+
+Lemma transf_exec_load:
+  forall t rs m rd ra ofs, exec_load ge t rs m rd ra ofs = exec_load tge t rs m rd ra ofs.
+Proof.
+  intros. unfold exec_load. rewrite eval_offset_preserved. reflexivity.
+Qed.
+
+Lemma transf_exec_store:
+  forall t rs m rs0 ra ofs, exec_store ge t rs m rs0 ra ofs = exec_store tge t rs m rs0 ra ofs.
+Proof.
+  intros. unfold exec_store. rewrite eval_offset_preserved. reflexivity.
+Qed.
+
+Lemma transf_exec_basic_instr:
+  forall i rs m, exec_basic_instr ge i rs m = exec_basic_instr tge i rs m.
+Proof.
+  intros. pose symbol_address_preserved.
+  unfold exec_basic_instr. exploreInst; simpl; auto; try congruence.
+  1: unfold exec_arith_instr; exploreInst; simpl; auto; try congruence.
+  1-10: apply transf_exec_load.
+  all: apply transf_exec_store.
+Qed.
+
+Lemma transf_exec_body:
+  forall bdy rs m, exec_body ge bdy rs m = exec_body tge bdy rs m.
+Proof.
+  induction bdy; intros.
+  - simpl. reflexivity.
+  - simpl. rewrite transf_exec_basic_instr.
+    destruct (exec_basic_instr _ _ _); auto.
+Qed.
 
 Lemma transf_exec_bblock:
   forall f tf bb rs m,
