@@ -1,27 +1,14 @@
-CFLAGS=-Wall -O3
-K1C_CC=k1-mbr-gcc
-K1C_CFLAGS=-Wall -O3 -std=c99
-K1C_CCOMP=../../../ccomp
-K1C_CCOMPFLAGS=-Wall -O3
+include ../rules.mk
 
-PRODUCTS=heapsort.host heapsort.gcc.k1c.out heapsort.ccomp.k1c.out heapsort.ccomp.k1c.s heapsort.gcc.k1c.s heapsort.gcc.k1c heapsort.ccomp.k1c
+PRODUCTS=heapsort.gcc.host.out heapsort.ccomp.host.out heapsort.gcc.k1c.out heapsort.ccomp.k1c.out heapsort.ccomp.k1c.s heapsort.gcc.k1c.s heapsort.gcc.k1c heapsort.ccomp.k1c
 
 all:	$(PRODUCTS)
 
-%.gcc.k1c.s: %.c
-	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
+heapsort.gcc.host: heapsort.c heapsort_run.gcc.host.o heapsort.h
+	$(CC) $(CFLAGS) heapsort.c heapsort_run.gcc.host.o -o $@
 
-%.gcc.k1c.o: %.gcc.k1c.s
-	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
-
-%.ccomp.k1c.s: %.c
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -S $< -o $@
-
-%.ccomp.k1c.o: %.ccomp.k1c.s
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
-
-heapsort.host: heapsort.c heapsort_run.c heapsort.h
-	$(CC) $(CFLAGS) heapsort.c heapsort_run.c -o $@
+heapsort.ccomp.host: heapsort.c heapsort_run.gcc.host.o heapsort.h
+	$(CCOMP) $(CCOMPFLAGS) heapsort.c heapsort_run.gcc.host.o -o $@
 
 heapsort.gcc.k1c.s heapsort.ccomp.k1c.s heapsort_run.gcc.k1c.s: heapsort.h
 
