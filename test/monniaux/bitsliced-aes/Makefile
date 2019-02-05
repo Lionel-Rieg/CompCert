@@ -3,6 +3,7 @@ src = $(wildcard *.c) tests/tests.c
 
 CCOMP=ccomp
 CCOMPFLAGS=-O3 -Wall
+CFLAGS= -std=c99 -O3 -Wall -Wextra -Werror=implicit
 K1C_CC=k1-mbr-gcc
 K1C_CFLAGS = -std=c99 -O3 -Wall -Wextra -Werror=implicit
 K1C_CCOMP = ../../../ccomp
