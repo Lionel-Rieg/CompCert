@@ -934,42 +934,38 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
 
 (** * load/store *)
 
-(** The two functions below axiomatize how the linker processes
-  symbolic references [symbol + offset)] and splits their
-  actual values into a 20-bit high part [%hi(symbol + offset)] and 
-  a 12-bit low part [%lo(symbol + offset)]. *)
-
-Parameter low_half: genv -> ident -> ptrofs -> ptrofs.
-Parameter high_half: genv -> ident -> ptrofs -> val.
-
-(** The fundamental property of these operations is that, when applied
-  to the address of a symbol, their results can be recombined by
-  addition, rebuilding the original address. *)
-
-Axiom low_high_half:
-  forall id ofs,
-  Val.offset_ptr (high_half ge id ofs) (low_half ge id ofs) = Genv.symbol_address ge id ofs.
-
 (** Auxiliaries for memory accesses *)
 
-Definition eval_offset (ofs: offset) : ptrofs :=
+Definition eval_offset (ofs: offset) : res ptrofs :=
   match ofs with
-  | Ofsimm n => n
-  | Ofslow id delta => low_half ge id delta
+  | Ofsimm n => OK n
+  | Ofslow id delta => 
+      match (Genv.symbol_address ge id delta) with
+      | Vptr b ofs => OK ofs
+      | _ => Error (msg "Asmblock.eval_offset")
+      end
   end.
 
 Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
                      (d: ireg) (a: ireg) (ofs: offset) :=
-  match Mem.loadv chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) with
-  | None => Stuck
-  | Some v => Next (rs#d <- v) m
+  match (eval_offset ofs) with
+  | OK ptr =>
+    match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
+    | None => Stuck
+    | Some v => Next (rs#d <- v) m
+    end
+  | _ => Stuck
   end.
 
 Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
                       (s: ireg) (a: ireg) (ofs: offset) :=
-  match Mem.storev chunk m (Val.offset_ptr (rs a) (eval_offset ofs)) (rs s) with
-  | None => Stuck
-  | Some m' => Next rs m'
+  match (eval_offset ofs) with
+  | OK ptr => 
+    match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
+    | None => Stuck
+    | Some m' => Next rs m'
+    end
+  | _ => Stuck
   end.
 
 (** * basic instructions *)
