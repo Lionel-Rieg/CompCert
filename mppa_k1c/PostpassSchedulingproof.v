@@ -127,10 +127,6 @@ Axiom verified_schedule_header:
      header bb = header tbb
   /\ Forall (fun b => header b = nil) lbb.
 
-(* This needs to be axiomatized since we have no information on low_half (axiomatized parameter, see Asmblock.v) *)
-Axiom low_half_preservation:
-  forall id ofs ge tge, Genv.symbol_address ge id ofs = Genv.symbol_address tge id ofs -> low_half ge id ofs = low_half tge id ofs.
-
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
 Proof.
@@ -242,7 +238,7 @@ Lemma exec_load_pc_var:
   exec_load ge t rs m rd ra ofs = Next rs' m' ->
   exec_load ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_load in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -253,7 +249,7 @@ Lemma exec_store_pc_var:
   exec_store ge t rs m rd ra ofs = Next rs' m' ->
   exec_store ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_store in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
   - discriminate.
@@ -718,8 +714,7 @@ Qed.
 Lemma eval_offset_preserved:
   forall ofs, eval_offset ge ofs = eval_offset tge ofs.
 Proof.
-  intros. unfold eval_offset. destruct ofs; auto. erewrite low_half_preservation; eauto.
-  apply symbol_address_preserved.
+  intros. unfold eval_offset. destruct ofs; auto. erewrite symbol_address_preserved; eauto.
 Qed.
 
 Lemma transf_exec_load:

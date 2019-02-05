@@ -937,11 +937,11 @@ Lemma exec_basic_instr_pc:
 Proof.
   intros. destruct b; try destruct i; try destruct i.
   all: try (inv H; Simpl).
-  all: try (unfold exec_load in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  all: try (unfold exec_store in H1; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
+  all: try (unfold exec_load in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
+  all: try (unfold exec_store in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
   destruct (Mem.alloc _ _ _). destruct (Mem.store _ _ _ _ _). inv H1. Simpl. discriminate.
-  destruct (rs1 _); try discriminate.
-  destruct (Mem.free _ _ _ _). inv H0. Simpl. discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate. destruct (rs1 _); try discriminate.
+  destruct (Mem.free _ _ _ _). inv H1. Simpl. discriminate.
   destruct rs; try discriminate. inv H1. Simpl.
   destruct rd; try discriminate. inv H1; Simpl.
   auto.

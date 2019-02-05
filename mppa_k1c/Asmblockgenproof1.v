@@ -1268,10 +1268,11 @@ Qed.
 Lemma indexed_memory_access_correct:
   forall mk_instr base ofs k rs m,
   base <> RTMP ->
-  exists base' ofs' rs',
+  exists base' ofs' rs' ptr',
      exec_straight_opt (indexed_memory_access mk_instr base ofs ::g k) rs m
                        (mk_instr base' ofs' ::g k) rs' m
-  /\ Val.offset_ptr rs'#base' (eval_offset ge ofs') = Val.offset_ptr rs#base ofs
+  /\ eval_offset ge ofs' = OK ptr'
+  /\ Val.offset_ptr rs'#base' ptr' = Val.offset_ptr rs#base ofs
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   unfold indexed_memory_access; intros.
@@ -1279,7 +1280,7 @@ Proof.
   assert (Archi.ptr64 = true) as SF; auto.
 - generalize (make_immed64_sound (Ptrofs.to_int64 ofs)); intros EQ.
   destruct (make_immed64 (Ptrofs.to_int64 ofs)).
-+ econstructor; econstructor; econstructor; split.
++ econstructor; econstructor; econstructor; econstructor; split.
   apply exec_straight_opt_refl. 
   split; auto. simpl. subst imm. rewrite Ptrofs.of_int64_to_int64 by auto. auto.
 (*
@@ -1326,10 +1327,10 @@ Lemma indexed_load_access_correct:
 Proof.
   intros until m; intros EXEC; intros until v; intros LOAD NOT31.
   exploit indexed_memory_access_correct; eauto.
-  intros (base' & ofs' & rs' & A & B & C).
+  intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_load. rewrite B, LOAD. eauto. Simpl. 
+  unfold exec_load. rewrite PtrEq. rewrite B, LOAD. eauto. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -1346,10 +1347,10 @@ Lemma indexed_store_access_correct:
 Proof.
   intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31'.
   exploit indexed_memory_access_correct. instantiate (1 := base). eauto.
-  intros (base' & ofs' & rs' & A & B & C).
+  intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_store. rewrite B, C, STORE.
+  unfold exec_store. rewrite PtrEq. rewrite B, C, STORE.
     eauto.
     discriminate.
     { intro. inv H. contradiction. }
@@ -1463,9 +1464,10 @@ Lemma transl_memory_access_correct:
   forall mk_instr addr args k c (rs: regset) m v,
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
-  exists base ofs rs',
+  exists base ofs rs' ptr,
      exec_straight_opt (basics_to_code c) rs m (mk_instr base ofs ::g (basics_to_code k)) rs' m
-  /\ Val.offset_ptr rs'#base (eval_offset ge ofs) = v
+  /\ eval_offset ge ofs = OK ptr
+  /\ Val.offset_ptr rs'#base ptr = v
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   intros until v; intros TR EV. 
@@ -1473,14 +1475,14 @@ Proof.
 - (* indexed *)
   inv EV. apply indexed_memory_access_correct; eauto with asmgen.
 - (* global *)
-  simpl in EV. inv EV. inv TR.  econstructor; econstructor; econstructor; split.
+  simpl in EV. inv EV. inv TR.  econstructor; econstructor; econstructor; econstructor; split.
   constructor. apply exec_straight_one. simpl; eauto. auto. 
-  split; intros; Simpl. unfold eval_offset.
+  split; split; intros; Simpl.
   assert (Val.lessdef (Val.offset_ptr (Genv.symbol_address ge i i0) Ptrofs.zero) (Genv.symbol_address ge i i0)).
   { apply Val.offset_ptr_zero. }
   remember (Genv.symbol_address ge i i0) as symbol.
   destruct symbol; auto.
-  + contradict Heqsymbol; unfold Genv.symbol_address;
+  + contradict Heqsymbol; unfold Genv.symbol_address.
     destruct (Genv.find_symbol ge i); discriminate.
   + contradict Heqsymbol; unfold Genv.symbol_address;
     destruct (Genv.find_symbol ge i); discriminate.
@@ -1507,10 +1509,10 @@ Lemma transl_load_access_correct:
 Proof.
   intros until v'; intros INSTR TR EV LOAD. 
   exploit transl_memory_access_correct; eauto.
-  intros (base & ofs & rs' & A & B & C).
+  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_load. rewrite B, LOAD. reflexivity. Simpl. 
+  rewrite INSTR. unfold exec_load. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -1528,10 +1530,10 @@ Lemma transl_store_access_correct:
 Proof.
   intros until m'; intros INSTR TR EV STORE NOT31. 
   exploit transl_memory_access_correct; eauto.
-  intros (base & ofs & rs' & A & B & C).
+  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_store. rewrite B. rewrite C; try discriminate. rewrite STORE. auto.
+  rewrite INSTR. unfold exec_store. rewrite PtrEq, B. rewrite C; try discriminate. rewrite STORE. auto.
   intro. inv H. contradiction.
   auto.
 Qed.
