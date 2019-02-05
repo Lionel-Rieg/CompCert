@@ -1,10 +1,12 @@
 CFLAGS=-Wall -O3
+CCOMP=ccomp
+CCOMPFLAGS=-Wall -O3
 K1C_CC=k1-mbr-gcc
 K1C_CFLAGS=-Wall -O3 -std=c99
 K1C_CCOMP=../../../ccomp
 K1C_CCOMPFLAGS=-Wall -O3
 
-PRODUCTS=bstea.host bstea.gcc.k1c.out bstea.ccomp.k1c.out bstea.ccomp.k1c.s bstea.gcc.k1c.s bstea.gcc.k1c bstea.ccomp.k1c
+PRODUCTS=bstea.gcc.host.out bstea.ccomp.host.out bstea.gcc.k1c.out bstea.ccomp.k1c.out bstea.ccomp.k1c.s bstea.gcc.k1c.s bstea.gcc.k1c bstea.ccomp.k1c bstea.gcc.host bstea.ccomp.host
 
 all:	$(PRODUCTS)
 
@@ -20,8 +22,17 @@ all:	$(PRODUCTS)
 %.ccomp.k1c.o: %.ccomp.k1c.s
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
 
-bstea.host: bstea.c bstea_run.c bstea.h ../clock.c
-	$(CC) $(CFLAGS) bstea.c bstea_run.c ../clock.c -o $@
+%.gcc.gcc.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.ccomp.k1c.o: %.c
+	$(CCOMP) $(CCOMPFLAGS) -c $< -o $@
+
+bstea.gcc.host: bstea.c bstea_run.c bstea.h ../clock.o
+	$(CC) $(CFLAGS) bstea.c bstea_run.c ../clock.o -o $@
+
+bstea.ccomp.host: bstea.c bstea_run.c bstea.h ../clock.o
+	$(CCOMP) $(CCOMPFLAGS) bstea.c bstea_run.c ../clock.o -o $@
 
 bstea.gcc.k1c.s bstea.ccomp.k1c.s bstea_run.gcc.k1c.s: bstea.h
 
@@ -34,7 +45,10 @@ bstea.ccomp.k1c: bstea.ccomp.k1c.o bstea_run.gcc.k1c.o ../clock.gcc.k1c.o
 %.k1c.out: %.k1c
 	k1-cluster --cycle-based -- $< | tee $@
 
+%.host.out: %.host
+	./$< | tee $@
+
 clean:
-	$(RM) -f $(PRODUCTS) bstea.gcc.k1c.o bstea.ccomp.k1c.o bstea_run.gcc.k1c.o bstea_run.gcc.k1c.s
+	$(RM) -f *.k1c *.host *.out *.o *.s
 
 .PHONY: clean
