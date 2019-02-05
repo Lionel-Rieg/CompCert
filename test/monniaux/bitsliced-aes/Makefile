@@ -1,40 +1,56 @@
-src = $(wildcard *.c)
-obj = $(src:.c=.o)
-
-CC=k1-mbr-gcc
-LDFLAGS = -Wl,--gc-sections
-CFLAGS = -O3 -fdata-sections -ffunction-sections # -DUNROLL_TRANSPOSE
-
-name = bitslice
-
-%.s : %.c
-	$(CC) $(CFLAGS) -S -o $@ $<
-
-test: _test $(obj)
-	$(CC) $(LDFLAGS) -o $(name) $(obj) ../clock.o $(LDFLAGS)
-
-$(name):  _testbench $(obj)
-	$(CC) $(LDFLAGS) -o $@ $(obj) $(LDFLAGS)
-
-footprint: _footprint $(obj)
-	$(CC) $(LDFLAGS) -o $(name) $(obj) $(LDFLAGS)
+src = $(wildcard *.c) tests/tests.c
 
 
-_test: tests/tests.c
-	$(eval obj+=$@.o)
-	$(eval CFLAGS+= -DRUN_TESTS=1)
-	$(CC) -c $(CFLAGS) -o $@.o $^
+CCOMP=ccomp
+CCOMPFLAGS=-O3 -Wall
+K1C_CC=k1-mbr-gcc
+K1C_CFLAGS = -std=c99 -O3 -Wall -Wextra -Werror=implicit
+K1C_CCOMP = ../../../ccomp
+K1C_CCOMPFLAGS=-O3 -Wall
 
-_footprint: tests/tests.c
-	$(eval obj+=$@.o)
-	$(eval CFLAGS+= -DRUN_TESTS=1 -DTEST_FOOTPRINT=1)
-	$(CC) -c $(CFLAGS) -o $@.o $^
+%.host.gcc.o : %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-_testbench: testbench/app.c
-	$(eval obj+=_testbench.o)
-	$(eval LDFLAGS+= -lcrypto)
-	$(CC) -c $(CFLAGS) -o $@.o $^
+%.host.ccomp.o : %.c
+	$(CCOMP) $(CCOMPFLAGS) -c -o $@ $<
 
+%.gcc.k1c.s: %.c
+	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
+
+%.gcc.k1c.o: %.gcc.k1c.s
+	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
+
+%.ccomp.k1c.s: %.c
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -S $< -o $@
+
+%.ccomp.k1c.o: %.ccomp.k1c.s
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
+
+%.gcc.host.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.ccomp.host.o: %.c
+	$(CCOMP) $(CCOMPFLAGS) -c $< -o $@
+
+%.k1c.out : %.k1c
+	k1-cluster --cycle-based -- $< |tee $@
+
+%.host.out : %.host
+	./$< |tee $@
+
+all: test.gcc.k1c.out test.ccomp.k1c.out test.gcc.host.out test.ccomp.host.out
+
+test.gcc.k1c: $(src:.c=.gcc.k1c.o) ../clock.gcc.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+
+
+test.ccomp.k1c: $(src:.c=.ccomp.k1c.o) ../clock.gcc.k1c.o
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+
+
+test.gcc.host: $(src:.c=.gcc.host.o) ../clock.gcc.host.o
+	$(CC) $(CFLAGS) -o $@ $+
+
+test.ccomp.host: $(src:.c=.ccomp.host.o) ../clock.gcc.host.o
+	$(CCOMP) $(CCOMPFLAGS) -o $@ $+
 
 clean:
-	rm -f $(obj) _test.o _footprint.o _testbench.o $(name)
+	rm -f *.o *.k1c *.host */*.o *.s */*.s *.out

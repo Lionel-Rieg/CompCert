@@ -6,6 +6,8 @@
 #include "utils.h"
 #include "../clock.h"
 
+#define RUN_TESTS
+
 #include "testbench/app.h"
 #ifdef RUN_TESTS
 #include "tests/tests.h"
