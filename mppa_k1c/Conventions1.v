@@ -47,13 +47,13 @@ Definition int_caller_save_regs :=
   :: R52 :: R53 :: R54 :: R55 :: R56 :: R57 :: R58 :: R59 :: R60 :: R61
   :: R62 :: R63 :: nil.
 
-Definition float_caller_save_regs := R62 :: nil. (* FIXME - for the dummy_float_reg *)
+Definition float_caller_save_regs := int_caller_save_regs.
 
 Definition int_callee_save_regs :=
      (* R15 :: R16 :: R17 ::  *)R18 :: R19 :: R20 :: R21 :: R22
   :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29 :: R30 :: R31 :: nil.
 
-Definition float_callee_save_regs := @nil mreg.
+Definition float_callee_save_regs := int_callee_save_regs.
 
 Definition destroyed_at_call :=
   List.filter (fun r => negb (is_callee_save r)) all_mregs.
