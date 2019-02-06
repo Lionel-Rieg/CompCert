@@ -135,6 +135,11 @@
 #define INT_MOD(x, y) ((long) (x) % (y))
 #include "../clock.h"
 
+/* DMonniaux for utime and strdup */
+#define UTIME_H
+#define _BSD_SOURCE 1
+#undef __STRICT_ANSI__
+
 #ifdef _MSC_VER
 #	define	WINDOWS
 #endif

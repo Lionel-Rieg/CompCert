@@ -1,29 +1,7 @@
-CFLAGS=-Wall -O3
-CCOMPFLAGS=-Wall -O3 -D_DEFAULT_SOURCE
-CCOMP=ccomp
-EXECUTE=k1-cluster --syscall=libstd_scalls.so --
-
-K1C_CC=k1-mbr-gcc
-K1C_CFLAGS=-Wall -O3 -std=c99
-K1C_CCOMP=../../../ccomp
-K1C_CCOMPFLAGS=-Wall -O3
+include ../rules.mk
 
 all: check
 
-%.gcc.k1c.s: %.c
-	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
-
-%.gcc.k1c.o: %.gcc.k1c.s
-	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
-
-%.ccomp.k1c.s: %.c
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -S $< -o $@
-
-%.ccomp.k1c.o: %.ccomp.k1c.s
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
-
-%.gcc.host.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
 
 all: compress.gcc.host compress.ccomp.host compress.gcc.k1c compress.ccomp.k1c
 

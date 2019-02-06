@@ -3366,6 +3366,7 @@ report (PS * ps, int replevel, char type)
     {
       if (ps->reports >= 0)
 	 fprintf (ps->out, "%s%c ", ps->prefix, type);
+#ifdef DMONNIAUX_DISABLE
 
       relem (ps, "seconds", 1, ps->seconds);
       relem (ps, "level", 1, avglevel (ps));
@@ -3390,6 +3391,7 @@ report (PS * ps, int replevel, char type)
       // relem (ps, "llused", 0, ps->llused);
 
       relem (ps, 0, 0, 0);
+#endif
 
       ps->reports++;
     }
@@ -5455,7 +5457,6 @@ simplify (PS * ps, int forced)
   ps->lsimplify = ps->propagations + delta;
   ps->fsimplify = ps->fixed;
   ps->simps++;
-
   report (ps, 1, 's');
 }
 
