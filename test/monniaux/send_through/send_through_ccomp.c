@@ -9,6 +9,6 @@ double send_through(op_int_double f, int x, int y, double z) {
 }
 
 void print_from_ccomp(double x) {
-  printf("x=%e x=%f x=%g x=%.03e x=%.03f x=%.03g x[rounded]=%d\n",
-	 x, x, x, x, x, x, rint(x));
+  printf("x=%e x=%f x=%g x=%.03e x=%.03f x=%.03g x[rounded]=%ld\n",
+	 x, x, x, x, x, x, lrint(x));
 }
