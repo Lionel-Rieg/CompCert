@@ -1,10 +1,13 @@
 CCOMP=ccomp
-CCOMPFLAGS=-O3 -Wall -fno-unprototyped
-CFLAGS= -std=c99 -O3 -Wall -Wextra -Werror=implicit
+CCOMPFLAGS=-g -O3 -Wall -fno-unprototyped
+
+CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit
+
 K1C_CC=k1-mbr-gcc
-K1C_CFLAGS = -std=c99 -O3 -Wall -Wextra -Werror=implicit
+K1C_CFLAGS =-g -std=c99 -O3 -Wall -Wextra -Werror=implicit
+
 K1C_CCOMP = ../../../ccomp
-K1C_CCOMPFLAGS=-O3 -Wall -fno-unprototyped
+K1C_CCOMPFLAGS=-g -O3 -Wall -fno-unprototyped
 
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 
