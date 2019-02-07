@@ -21,9 +21,55 @@ Axiom schedule: bblock -> list bblock.
 
 Extract Constant schedule => "PostpassSchedulingOracle.schedule".
 
-(* TODO: refactorisation.
+(* Lemmas necessary for defining concat_all *)
+Lemma app_nonil {A: Type} (l l': list A) : l <> nil -> l ++ l' <> nil.
+Proof.
+  intros. destruct l; simpl.
+  - contradiction.
+  - discriminate.
+Qed.
 
-... concat2 ...
+Lemma app_nonil2 {A: Type} : forall (l l': list A), l' <> nil -> l ++ l' <> nil.
+Proof.
+  destruct l.
+  - intros. simpl; auto.
+  - intros. rewrite <- app_comm_cons. discriminate.
+Qed.
+
+Definition check_size bb :=
+  if zlt Ptrofs.max_unsigned (size bb)
+    then Error (msg "PostpassSchedulingproof.check_size")
+  else OK tt.
+
+Program Definition concat2 (bb bb': bblock) : res bblock :=
+  do ch <- check_size bb;
+  do ch' <- check_size bb';
+  match (exit bb) with
+  | None => 
+      match (header bb') with
+      | nil => 
+          match (exit bb') with 
+          | Some (PExpand (Pbuiltin _ _ _)) => Error (msg "PostpassSchedulingproof.concat2: builtin not alone")
+          | _ => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
+          end
+      | _ => Error (msg "PostpassSchedulingproof.concat2")
+      end
+  | _ => Error (msg "PostpassSchedulingproof.concat2")
+  end.
+Next Obligation.
+  apply wf_bblock_refl. constructor.
+  - destruct bb' as [hd' bdy' ex' WF']. destruct bb as [hd bdy ex WF]. simpl in *.
+    apply wf_bblock_refl in WF'. apply wf_bblock_refl in WF.
+    inversion_clear WF'. inversion_clear WF. clear H1 H3.
+    inversion H2; inversion H0.
+    + left. apply app_nonil. auto.
+    + right. auto.
+    + left. apply app_nonil2. auto.
+    + right. auto.
+  - unfold builtin_alone. intros. rewrite H0 in H.
+    assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
+    apply (H ef args res). contradict H1. auto.
+Qed.
 
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
   match lbb with
@@ -34,25 +80,22 @@ Fixpoint concat_all (lbb: list bblock) : res bblock :=
       concat2 bb bb'
   end.
 
-Axiom test_equiv_bblock: bblock -> bblock -> bool.
+Definition verify_schedule (bb bb' : bblock) : res unit := OK tt.
 
-Axiom test_equiv_bblock_correct:
-  forall ge f bb tbb,
-  test_equiv bb tbb = true ->
-  bblock_equiv ge f bb tbb.
-
-Definition verified_schedule (bb : bblock) : res (list bblock) := 
-  DO lbb <- (schedule bb) ;
-  DO tbb <- (concat lbb) ;
-  DO res <- test_equiv_bblock bb tbb ;
-  if res 
-  then OK lbb
-  else Error (msg "blah").
-
-*)
-
-(* TODO - implement the verificator *)
-Definition verified_schedule (bb : bblock) : res (list bblock) := OK (schedule bb).
+Program Definition verified_schedule (bb : bblock) : res (list bblock) :=
+  let bb' := {| header := nil; body := body bb; exit := exit bb |} in
+  let lbb := schedule bb' in
+  do tbb <- concat_all lbb;
+  do check <- verify_schedule bb' tbb;
+  match (head lbb) with
+  | None => Error (msg "PostpassScheduling.verified_schedule: empty schedule")
+  | Some fst => OK ({| header := header bb; body := body fst; exit := exit fst |} :: tail lbb)
+  end.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Qed. Next Obligation.
+  destruct fst; simpl. assumption.
+Qed.
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=
   match lbb with

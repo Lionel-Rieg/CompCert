@@ -36,55 +36,6 @@ Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :
       exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
       bblock_equiv ge f bb bb'.
 
-Lemma app_nonil {A: Type} (l l': list A) : l <> nil -> l ++ l' <> nil.
-Proof.
-  intros. destruct l; simpl.
-  - contradiction.
-  - discriminate.
-Qed.
-
-Lemma app_nonil2 {A: Type} : forall (l l': list A), l' <> nil -> l ++ l' <> nil.
-Proof.
-  destruct l.
-  - intros. simpl; auto.
-  - intros. rewrite <- app_comm_cons. discriminate.
-Qed.
-
-Definition check_size bb :=
-  if zlt Ptrofs.max_unsigned (size bb)
-    then Error (msg "PostpassSchedulingproof.check_size")
-  else OK tt.
-
-Program Definition concat2 (bb bb': bblock) : res bblock :=
-  do ch <- check_size bb;
-  do ch' <- check_size bb';
-  match (exit bb) with
-  | None => 
-      match (header bb') with
-      | nil => 
-          match (exit bb') with 
-          | Some (PExpand (Pbuiltin _ _ _)) => Error (msg "PostpassSchedulingproof.concat2: builtin not alone")
-          | _ => OK {| header := header bb; body := body bb ++ body bb'; exit := exit bb' |}
-          end
-      | _ => Error (msg "PostpassSchedulingproof.concat2")
-      end
-  | _ => Error (msg "PostpassSchedulingproof.concat2")
-  end.
-Next Obligation.
-  apply wf_bblock_refl. constructor.
-  - destruct bb' as [hd' bdy' ex' WF']. destruct bb as [hd bdy ex WF]. simpl in *.
-    apply wf_bblock_refl in WF'. apply wf_bblock_refl in WF.
-    inversion_clear WF'. inversion_clear WF. clear H1 H3.
-    inversion H2; inversion H0.
-    + left. apply app_nonil. auto.
-    + right. auto.
-    + left. apply app_nonil2. auto.
-    + right. auto.
-  - unfold builtin_alone. intros. rewrite H0 in H.
-    assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
-    apply (H ef args res). contradict H1. auto.
-Qed.
-
 Lemma concat2_zlt_size:
   forall a b bb,
   concat2 a b = OK bb ->
@@ -96,15 +47,6 @@ Proof.
   - unfold check_size in EQ. destruct (zlt Ptrofs.max_unsigned (size a)); monadInv EQ. omega.
   - unfold check_size in EQ1. destruct (zlt Ptrofs.max_unsigned (size b)); monadInv EQ1. omega.
 Qed.
-
-Fixpoint concat_all (lbb: list bblock) : res bblock :=
-  match lbb with
-  | nil => Error (msg "PostpassSchedulingproof.concatenate: empty list")
-  | bb::nil => OK bb
-  | bb::lbb =>
-      do bb' <- concat_all lbb;
-      concat2 bb bb'
-  end.
 
 (* Axioms that verified_schedule must verify *)
 Axiom verified_schedule_correct:
@@ -516,12 +458,12 @@ Proof.
   induction c; intros.
   - simpl in H. inv H. inv H0.
   - inv H0.
-    + monadInv H. exists (schedule bb).
+    + monadInv H. exists x0.
       split; simpl; auto. eexists; eauto. econstructor; eauto.
     + unfold transf_blocks in H. fold transf_blocks in H. monadInv H.
       exploit IHc; eauto.
       intros (lbb & TRANS & tc' & TAIL).
-      monadInv TRANS.
+(*       monadInv TRANS. *)
       repeat eexists; eauto.
       erewrite verified_schedule_size; eauto.
       apply code_tail_head_app.
