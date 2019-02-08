@@ -1164,10 +1164,10 @@ Opaque Int.eq.
   split; intros; Simpl. 
 + change (Int.repr 32) with Int.iwordsize. set (n' := Int.sub Int.iwordsize n).
   econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  apply exec_straight_one. simpl; reflexivity. auto. 
+  eapply exec_straight_step. simpl; reflexivity.
+  eapply exec_straight_step. simpl; reflexivity.
+  eapply exec_straight_step. simpl; reflexivity.
+  apply exec_straight_one. simpl; reflexivity.
   split; intros; Simpl.
 (* - (* Ocast32signed *)
   exploit cast32signed_correct; eauto. intros (rs' & A & B & C).
@@ -1183,6 +1183,19 @@ Opaque Int.eq.
     rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
     rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
   + contradict n. auto. *)
+- (* Oshrxlimm *)
+  clear H. exploit Val.shrxl_shrl_2; eauto. intros E; subst v; clear EV.
+  destruct (Int.eq n Int.zero).
++ econstructor; split. apply exec_straight_one. simpl; eauto.
+  split; intros; Simpl. 
++ change (Int.repr 64) with Int64.iwordsize'. set (n' := Int.sub Int64.iwordsize' n).
+  econstructor; split.
+  eapply exec_straight_step. simpl; reflexivity.
+  eapply exec_straight_step. simpl; reflexivity.
+  eapply exec_straight_step. simpl; reflexivity.
+  apply exec_straight_one. simpl; reflexivity.
+
+  split; intros; Simpl.
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
@@ -1248,18 +1261,6 @@ Opaque Int.eq.
   exploit (opimm64_correct Pxorl Pxoril Val.xorl); auto. instantiate (1 := x0); eauto with asmgen.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* shrxlimm *)
-  clear H. exploit Val.shrxl_shrl_2; eauto. intros E; subst v; clear EV.
-  destruct (Int.eq n Int.zero).
-+ econstructor; split. apply exec_straight_one. simpl; eauto. auto.
-  split; intros; Simpl. 
-+ change (Int.repr 64) with Int64.iwordsize'. set (n' := Int.sub Int64.iwordsize' n).
-  econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  apply exec_straight_one. simpl; reflexivity. auto. 
-  split; intros; Simpl.
 *)
 Qed.
 
