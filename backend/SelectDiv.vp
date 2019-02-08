@@ -118,8 +118,8 @@ Definition divuimm (e1: expr) (n2: int) :=
         divu_base e1 (Eop (Ointconst n2) Enil)
       else
         match divu_mul_params (Int.unsigned n2) with
-        | _ => divu_base e1 (Eop (Ointconst n2) Enil)
-        (* | Some(p, m) => Elet e1 (divu_mul p m) *) (* FIXME - hack K1 *)
+        | None => divu_base e1 (Eop (Ointconst n2) Enil)
+        | Some(p, m) => Elet e1 (divu_mul p m)
         end
   end.
 
@@ -144,8 +144,8 @@ Definition moduimm (e1: expr) (n2: int) :=
         modu_base e1 (Eop (Ointconst n2) Enil)
       else
         match divu_mul_params (Int.unsigned n2) with
-        | _ => modu_base e1 (Eop (Ointconst n2) Enil)
-        (* | Some(p, m) => Elet e1 (mod_from_div (divu_mul p m) n2) *) (* FIXME - hack K1 *)
+        | None => modu_base e1 (Eop (Ointconst n2) Enil)
+        | Some(p, m) => Elet e1 (mod_from_div (divu_mul p m) n2)
         end
   end.
 
@@ -178,8 +178,8 @@ Definition divsimm (e1: expr) (n2: int) :=
         divs_base e1 (Eop (Ointconst n2) Enil)
       else
         match divs_mul_params (Int.signed n2) with
-        | _ => divs_base e1 (Eop (Ointconst n2) Enil)
-        (* | Some(p, m) => Elet e1 (divs_mul p m) *) (* FIXME - hack K1 *)
+        | None => divs_base e1 (Eop (Ointconst n2) Enil)
+        | Some(p, m) => Elet e1 (divs_mul p m)
         end
   end.
 
@@ -204,8 +204,8 @@ Definition modsimm (e1: expr) (n2: int) :=
         mods_base e1 (Eop (Ointconst n2) Enil)
       else
         match divs_mul_params (Int.signed n2) with
-        | _ => mods_base e1 (Eop (Ointconst n2) Enil)
-        (* | Some(p, m) => Elet e1 (mod_from_div (divs_mul p m) n2) *) (* FIXME - hack K1 *)
+        | None => mods_base e1 (Eop (Ointconst n2) Enil)
+        | Some(p, m) => Elet e1 (mod_from_div (divs_mul p m) n2)
         end
   end.
 
