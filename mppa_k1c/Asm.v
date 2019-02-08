@@ -62,6 +62,7 @@ Inductive instruction : Type :=
   | Picall  (rs: ireg)                              (**r function call on register *)
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
+  | Pigoto  (rs: ireg)                              (**r goto from register *)
   | Pj_l    (l: label)                              (**r jump to label *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
   | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
@@ -160,6 +161,7 @@ Definition control_to_instruction (c: control) :=
   | PCtlFlow (Asmblock.Pcall l)             => Pcall l
   | PCtlFlow (Asmblock.Picall r)            => Picall r
   | PCtlFlow (Asmblock.Pgoto l)             => Pgoto l
+  | PCtlFlow (Asmblock.Pigoto l)             => Pigoto l
   | PCtlFlow (Asmblock.Pj_l l)              => Pj_l l
   | PCtlFlow (Asmblock.Pcb bt r l)          => Pcb bt r l
   | PCtlFlow (Asmblock.Pcbu bt r l)         => Pcbu bt r l

@@ -845,6 +845,8 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
         OK ((Pcall symb) ::g nil)
     | MBtailcall sig (inr symb) =>
         OK (make_epilogue f ((Pgoto symb) ::g nil))
+    | MBtailcall sig (inl r) =>
+        do r1 <- ireg_of r; OK (make_epilogue f ((Pigoto r1) ::g nil))
     | MBbuiltin ef args res =>
         OK (Pbuiltin ef (List.map (map_builtin_arg preg_of) args) (map_builtin_res preg_of res) ::g nil)
     | MBgoto lbl =>
@@ -854,8 +856,6 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
     | MBreturn =>
         OK (make_epilogue f (Pret ::g nil))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*) 
-    | MBtailcall _ (inl _) =>
-        Error (msg "Asmblockgen.transl_instr_control MBtailcall inl")
     | MBjumptable _ _ =>
         Error (msg "Asmblockgen.transl_instr_control MBjumptable")
     end
