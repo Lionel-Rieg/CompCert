@@ -69,5 +69,4 @@ jinit_compress_master (j_compress_ptr cinfo)
    * This lets application insert special markers after the SOI.
    */
   (*cinfo->marker->write_file_header) (cinfo);
-  KILL_TAIL_CALL();
 }

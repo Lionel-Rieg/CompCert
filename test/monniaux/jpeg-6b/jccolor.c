@@ -456,5 +456,4 @@ jinit_color_converter (j_compress_ptr cinfo)
     cconvert->pub.color_convert = null_convert;
     break;
   }
-  KILL_TAIL_CALL();
 }

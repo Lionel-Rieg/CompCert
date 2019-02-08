@@ -349,7 +349,6 @@ finish_output_gif (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   fflush(dest->pub.output_file);
   if (ferror(dest->pub.output_file))
     ERREXIT(cinfo, JERR_FILE_WRITE);
-  KILL_TAIL_CALL();
 }
 
 

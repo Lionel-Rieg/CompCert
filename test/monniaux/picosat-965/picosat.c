@@ -3156,11 +3156,13 @@ assumptions_satisfied (PS * ps)
 static void
 sflush (PS * ps)
 {
+#ifdef HAS_FLOAT
   double now = picosat_time_stamp ();
   double delta = now - ps->entered;
   delta = (delta < 0) ? 0 : delta;
   ps->seconds += delta;
   ps->entered = now;
+#endif
 }
 
 static double

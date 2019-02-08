@@ -194,7 +194,6 @@ start_output_ppm (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   default:
     ERREXIT(cinfo, JERR_PPM_COLORSPACE);
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -209,7 +208,6 @@ finish_output_ppm (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   fflush(dinfo->output_file);
   if (ferror(dinfo->output_file))
     ERREXIT(cinfo, JERR_FILE_WRITE);
-  KILL_TAIL_CALL();
 }
 
 

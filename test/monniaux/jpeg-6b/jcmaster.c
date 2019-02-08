@@ -492,7 +492,6 @@ pass_startup (j_compress_ptr cinfo)
 
   (*cinfo->marker->write_frame_header) (cinfo);
   (*cinfo->marker->write_scan_header) (cinfo);
-  KILL_TAIL_CALL();
 }
 
 

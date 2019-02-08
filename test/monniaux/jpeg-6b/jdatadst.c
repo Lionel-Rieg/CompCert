@@ -117,7 +117,6 @@ term_destination (j_compress_ptr cinfo)
   /* Make sure we wrote the output file OK */
   if (ferror(dest->outfile))
     ERREXIT(cinfo, JERR_FILE_WRITE);
-  KILL_TAIL_CALL();
 }
 
 

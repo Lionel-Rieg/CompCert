@@ -100,7 +100,6 @@ start_pass_main (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
     break;
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -291,5 +290,4 @@ jinit_c_main_controller (j_compress_ptr cinfo, boolean need_full_buffer)
 	 (JDIMENSION) (compptr->v_samp_factor * DCTSIZE));
     }
   }
-  KILL_TAIL_CALL();
 }

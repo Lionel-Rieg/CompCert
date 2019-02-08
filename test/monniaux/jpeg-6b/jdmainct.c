@@ -336,7 +336,6 @@ start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
     break;
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -467,7 +466,6 @@ process_data_crank_post (j_decompress_ptr cinfo,
   (*cinfo->post->post_process_data) (cinfo, (JSAMPIMAGE) NULL,
 				     (JDIMENSION *) NULL, (JDIMENSION) 0,
 				     output_buf, out_row_ctr, out_rows_avail);
-  KILL_TAIL_CALL();
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */

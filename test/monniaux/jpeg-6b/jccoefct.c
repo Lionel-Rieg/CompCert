@@ -126,7 +126,6 @@ start_pass_coef (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
     break;
   }
-  KILL_TAIL_CALL();
 }
 
 

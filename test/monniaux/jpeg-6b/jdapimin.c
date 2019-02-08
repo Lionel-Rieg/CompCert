@@ -422,7 +422,6 @@ jpeg_consume_input (j_decompress_ptr cinfo)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
   }
 #endif
-  KILL_TAIL_CALL();
   return retcode;
 }
 

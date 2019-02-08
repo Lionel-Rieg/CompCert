@@ -380,7 +380,6 @@ jpeg_default_colorspace (j_compress_ptr cinfo)
   default:
     ERREXIT(cinfo, JERR_BAD_IN_COLORSPACE);
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -467,7 +466,6 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
   default:
     ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
   }
-  KILL_TAIL_CALL();
 }
 
 

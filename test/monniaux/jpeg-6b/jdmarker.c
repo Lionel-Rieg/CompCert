@@ -653,7 +653,6 @@ examine_app0 (j_decompress_ptr cinfo, JOCTET FAR * data,
     /* Start of APP0 does not match "JFIF" or "JFXX", or too short */
     TRACEMS1(cinfo, 1, JTRC_APP0, (int) totallen);
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -685,7 +684,6 @@ examine_app14 (j_decompress_ptr cinfo, JOCTET FAR * data,
     /* Start of APP14 does not match "Adobe", or too short */
     TRACEMS1(cinfo, 1, JTRC_APP14, (int) (datalen + remaining));
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -1338,7 +1336,6 @@ jpeg_save_markers (j_decompress_ptr cinfo, int marker_code,
     marker->length_limit_APPn[marker_code - (int) M_APP0] = length_limit;
   } else
     ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, marker_code);
-  KILL_TAIL_CALL();
 }
 
 #endif /* SAVE_MARKERS_SUPPORTED */
@@ -1360,5 +1357,4 @@ jpeg_set_marker_processor (j_decompress_ptr cinfo, int marker_code,
     marker->process_APPn[marker_code - (int) M_APP0] = routine;
   else
     ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, marker_code);
-  KILL_TAIL_CALL();
 }

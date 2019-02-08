@@ -40,16 +40,12 @@ extern long long __compcert_i64_smod(long long a, long long b);
 #define INT_DIV(a, b) __compcert_i64_sdiv(a, b)
 #define LONG_DIV(a, b) __compcert_i64_sdiv(a, b)
 
-#define KILL_TAIL_CALL() { int x=1; }
-
 #else
 #define INT_UMOD(a, b) ((a) % (b))
 #define INT_MOD(a, b) ((a) % (b))
 #define INT_UDIV(a, b) ((a) / (b))
 #define INT_DIV(a, b) ((a) / (b))
 #define LONG_DIV(a, b) ((a) / (b))
-
-#define KILL_TAIL_CALL() {  }
 #endif
 
 /* Does your compiler support the declaration "unsigned char" ?

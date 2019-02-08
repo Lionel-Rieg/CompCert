@@ -115,7 +115,6 @@ emit_byte (j_compress_ptr cinfo, int val)
     if (! (*dest->empty_output_buffer) (cinfo))
       ERREXIT(cinfo, JERR_CANT_SUSPEND);
   }
-  KILL_TAIL_CALL();
 }
 
 

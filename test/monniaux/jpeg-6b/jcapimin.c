@@ -222,14 +222,12 @@ jpeg_write_m_header (j_compress_ptr cinfo, int marker, unsigned int datalen)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
 
   (*cinfo->marker->write_marker_header) (cinfo, marker, datalen);
-  KILL_TAIL_CALL();
 }
 
 GLOBAL(void)
 jpeg_write_m_byte (j_compress_ptr cinfo, int val)
 {
   (*cinfo->marker->write_marker_byte) (cinfo, val);
-  KILL_TAIL_CALL();
 }
 
 
@@ -281,5 +279,4 @@ jpeg_write_tables (j_compress_ptr cinfo)
    * An app that prefers the old behavior can call jpeg_abort for itself after
    * each call to jpeg_write_tables().
    */
-  KILL_TAIL_CALL();
 }

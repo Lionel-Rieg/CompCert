@@ -379,7 +379,6 @@ finish_output_bmp (j_decompress_ptr cinfo, djpeg_dest_ptr dinfo)
   fflush(outfile);
   if (ferror(outfile))
     ERREXIT(cinfo, JERR_FILE_WRITE);
-  KILL_TAIL_CALL();
 }
 
 

@@ -529,7 +529,6 @@ jpeg_new_colormap (j_decompress_ptr cinfo)
     master->pub.is_dummy_pass = FALSE; /* just in case */
   } else
     ERREXIT(cinfo, JERR_MODE_CHANGE);
-  KILL_TAIL_CALL();
 }
 
 #endif /* D_MULTISCAN_FILES_SUPPORTED */

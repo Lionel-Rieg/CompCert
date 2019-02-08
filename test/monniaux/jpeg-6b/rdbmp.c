@@ -230,7 +230,6 @@ preload_image (j_compress_ptr cinfo, cjpeg_source_ptr sinfo)
 
   /* And read the first row */
   int ret= (*source->pub.get_pixel_rows) (cinfo, sinfo);
-  KILL_TAIL_CALL();
   return ret;
 }
 

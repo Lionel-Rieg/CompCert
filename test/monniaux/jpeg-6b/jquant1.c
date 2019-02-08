@@ -787,7 +787,6 @@ start_pass_1_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
     ERREXIT(cinfo, JERR_NOT_COMPILED);
     break;
   }
-  KILL_TAIL_CALL();
 }
 
 
@@ -811,7 +810,6 @@ METHODDEF(void)
 new_color_map_1_quant (j_decompress_ptr cinfo)
 {
   ERREXIT(cinfo, JERR_MODE_CHANGE);
-  KILL_TAIL_CALL();
 }
 
 
