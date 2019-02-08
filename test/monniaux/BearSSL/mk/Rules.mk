@@ -433,13 +433,13 @@ $(OBJDIR)$Ppemdec$O: src$Pcodec$Ppemdec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemdec$O src$Pcodec$Ppemdec.c
 
 $(OBJDIR)$Ppemenc$O: src$Pcodec$Ppemenc.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
 
 $(OBJDIR)$Pec_all_m15$O: src$Pec$Pec_all_m15.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m15$O src$Pec$Pec_all_m15.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m15$O src$Pec$Pec_all_m15.c
 
 $(OBJDIR)$Pec_all_m31$O: src$Pec$Pec_all_m31.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m31$O src$Pec$Pec_all_m31.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m31$O src$Pec$Pec_all_m31.c
 
 $(OBJDIR)$Pec_c25519_i15$O: src$Pec$Pec_c25519_i15.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_c25519_i15$O src$Pec$Pec_c25519_i15.c
@@ -1248,12 +1248,14 @@ $(OBJDIR)$Pencode_rsa_rawder$O: src$Px509$Pencode_rsa_rawder.c $(HEADERSPRIV)
 $(OBJDIR)$Pskey_decoder$O: src$Px509$Pskey_decoder.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pskey_decoder$O src$Px509$Pskey_decoder.c
 
+# Omod: 32-bits modulo not supported yet. Please use 64-bits.
 $(OBJDIR)$Px509_decoder$O: src$Px509$Px509_decoder.c $(HEADERSPRIV)
 	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_decoder$O src$Px509$Px509_decoder.c
 
 $(OBJDIR)$Px509_knownkey$O: src$Px509$Px509_knownkey.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_knownkey$O src$Px509$Px509_knownkey.c
 
+# nsl_op: Omod: 32-bits modulo not supported yet. Please use 64-bits.
 $(OBJDIR)$Px509_minimal$O: src$Px509$Px509_minimal.c $(HEADERSPRIV)
 	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_minimal$O src$Px509$Px509_minimal.c
 
@@ -1264,10 +1266,10 @@ $(OBJDIR)$Pbrssl$O: tools$Pbrssl.c $(HEADERSTOOLS)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pbrssl$O tools$Pbrssl.c
 
 $(OBJDIR)$Pcerts$O: tools$Pcerts.c $(HEADERSTOOLS)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcerts$O tools$Pcerts.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcerts$O tools$Pcerts.c
 
 $(OBJDIR)$Pchain$O: tools$Pchain.c $(HEADERSTOOLS)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pchain$O tools$Pchain.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pchain$O tools$Pchain.c
 
 $(OBJDIR)$Pclient$O: tools$Pclient.c $(HEADERSTOOLS)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pclient$O tools$Pclient.c
@@ -1312,10 +1314,10 @@ $(OBJDIR)$Pxmem$O: tools$Pxmem.c $(HEADERSTOOLS)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pxmem$O tools$Pxmem.c
 
 $(OBJDIR)$Ptest_crypto$O: test$Ptest_crypto.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptest_crypto$O test$Ptest_crypto.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptest_crypto$O test$Ptest_crypto.c
 
 $(OBJDIR)$Ptest_speed$O: test$Ptest_speed.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptest_speed$O test$Ptest_speed.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptest_speed$O test$Ptest_speed.c
 
 $(OBJDIR)$Ptest_x509$O: test$Ptest_x509.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) -DSRCDIRNAME=".." $(CCOUT)$(OBJDIR)$Ptest_x509$O test$Ptest_x509.c
