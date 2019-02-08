@@ -530,9 +530,9 @@ Proof.
   simpl. erewrite Int.is_power2_range; eauto.
 - destruct (Compopts.optim_for_size tt).
   + eapply eval_divu_base; eauto. EvalOp.
-  + destruct (divu_mul_params (Int.unsigned n2)) as [[p M] | ] eqn:PARAMS.
+  + (* destruct (divu_mul_params (Int.unsigned n2)) as [[p M] | ] eqn:PARAMS.
     * exists (Vint (Int.divu i n2)); split; auto.
-      econstructor; eauto. eapply eval_divu_mul; eauto.
+      econstructor; eauto. eapply eval_divu_mul; eauto. *) (* FIXME - K1 hack *)
     * eapply eval_divu_base; eauto. EvalOp.
 Qed.
 
@@ -582,13 +582,13 @@ Proof.
   apply eval_andimm. auto.
 - destruct (Compopts.optim_for_size tt).
   + eapply eval_modu_base; eauto. EvalOp.
-  + destruct (divu_mul_params (Int.unsigned n2)) as [[p M] | ] eqn:PARAMS.
-    * econstructor; split.
+  + (* destruct (divu_mul_params (Int.unsigned n2)) as [[p M] | ] eqn:PARAMS.
+     * econstructor; split.
       econstructor; eauto. eapply eval_mod_from_div.
       eapply eval_divu_mul; eauto. simpl; eauto. simpl; eauto.
       rewrite Int.modu_divu. auto.
-      red; intros; subst n2; discriminate.
-    * eapply eval_modu_base; eauto. EvalOp.
+      red; intros; subst n2; discriminate. *) (* FIXME - K1 hack *)
+     * eapply eval_modu_base; eauto. EvalOp.
 Qed.
 
 Theorem eval_modu:
@@ -784,10 +784,10 @@ Proof.
 + destruct (Int64.is_power2' n2) as [l|] eqn:POW.
 * exploit Val.divlu_pow2; eauto. intros EQ; subst z. apply eval_shrluimm; auto.
 * destruct (Compopts.optim_for_size tt). eapply eval_divlu_base; eauto.
-  destruct (divlu_mul_params (Int64.unsigned n2)) as [[p M]|] eqn:PARAMS.
+  (* destruct (divlu_mul_params (Int64.unsigned n2)) as [[p M]|] eqn:PARAMS.
 ** destruct x; simpl in H1; try discriminate.
    destruct (Int64.eq n2 Int64.zero); inv H1.
-   econstructor; split; eauto. econstructor. eauto. eapply eval_divlu_mull; eauto.
+   econstructor; split; eauto. econstructor. eauto. eapply eval_divlu_mull; eauto. *) (* FIXME - K1 hack *)
 ** eapply eval_divlu_base; eauto.
 - eapply eval_divlu_base; eauto.
 Qed.
@@ -809,14 +809,14 @@ Proof.
 + destruct (Int64.is_power2 n2) as [l|] eqn:POW.
 * exploit Val.modlu_pow2; eauto. intros EQ; subst z. eapply eval_andl; eauto. apply eval_longconst.
 * destruct (Compopts.optim_for_size tt). eapply eval_modlu_base; eauto.
-  destruct (divlu_mul_params (Int64.unsigned n2)) as [[p M]|] eqn:PARAMS.
+  (* destruct (divlu_mul_params (Int64.unsigned n2)) as [[p M]|] eqn:PARAMS.
 ** destruct x; simpl in H1; try discriminate.
    destruct (Int64.eq n2 Int64.zero) eqn:Z; inv H1.
    rewrite Int64.modu_divu.
     econstructor; split; eauto. econstructor. eauto.
     eapply eval_modl_from_divl; eauto.
     eapply eval_divlu_mull; eauto.
-    red; intros; subst n2; discriminate Z.
+    red; intros; subst n2; discriminate Z. *)
 ** eapply eval_modlu_base; eauto.
 - eapply eval_modlu_base; eauto.
 Qed.
@@ -879,12 +879,12 @@ Proof.
 ** exploit Val.divls_pow2; eauto. intros EQ. eapply eval_shrxlimm; eauto.
 ** eapply eval_divls_base; eauto.
 * destruct (Compopts.optim_for_size tt). eapply eval_divls_base; eauto.
-  destruct (divls_mul_params (Int64.signed n2)) as [[p M]|] eqn:PARAMS.
+  (* destruct (divls_mul_params (Int64.signed n2)) as [[p M]|] eqn:PARAMS.
 ** destruct x; simpl in H1; try discriminate.
    destruct (Int64.eq n2 Int64.zero
              || Int64.eq i (Int64.repr Int64.min_signed) && Int64.eq n2 Int64.mone); inv H1.
    econstructor; split; eauto. econstructor. eauto.
-   eapply eval_divls_mull; eauto.
+   eapply eval_divls_mull; eauto. *)
 ** eapply eval_divls_base; eauto.
 - eapply eval_divls_base; eauto.
 Qed.
@@ -921,14 +921,14 @@ Proof.
   rewrite Int64.mods_divs. auto.
 **eapply eval_modls_base; eauto.
 * destruct (Compopts.optim_for_size tt). eapply eval_modls_base; eauto.
-  destruct (divls_mul_params (Int64.signed n2)) as [[p M]|] eqn:PARAMS.
+  (* destruct (divls_mul_params (Int64.signed n2)) as [[p M]|] eqn:PARAMS.
 ** destruct x; simpl in H1; try discriminate.
    destruct (Int64.eq n2 Int64.zero
              || Int64.eq i (Int64.repr Int64.min_signed) && Int64.eq n2 Int64.mone); inv H1.
    econstructor; split; eauto. econstructor. eauto.
    rewrite Int64.mods_divs.
    eapply eval_modl_from_divl; auto.
-   eapply eval_divls_mull; eauto.
+   eapply eval_divls_mull; eauto. *)
 ** eapply eval_modls_base; eauto.
 - eapply eval_modls_base; eauto.
 Qed.
