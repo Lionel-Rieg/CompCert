@@ -660,9 +660,9 @@ Proof.
   + eapply eval_divs_base; eauto. EvalOp.
 - destruct (Compopts.optim_for_size tt).
   + eapply eval_divs_base; eauto. EvalOp.
-  + destruct (divs_mul_params (Int.signed n2)) as [[p M] | ] eqn:PARAMS.
+  + (* destruct (divs_mul_params (Int.signed n2)) as [[p M] | ] eqn:PARAMS.
     * exists (Vint (Int.divs i n2)); split; auto.
-      econstructor; eauto. eapply eval_divs_mul; eauto.
+      econstructor; eauto. eapply eval_divs_mul; eauto. *) (* FIXME - hack K1 *)
     * eapply eval_divs_base; eauto. EvalOp.
 Qed.
 
@@ -709,11 +709,11 @@ Proof.
   + eapply eval_mods_base; eauto. EvalOp.
 - destruct (Compopts.optim_for_size tt).
   + eapply eval_mods_base; eauto. EvalOp.
-  + destruct (divs_mul_params (Int.signed n2)) as [[p M] | ] eqn:PARAMS.
+  + (* destruct (divs_mul_params (Int.signed n2)) as [[p M] | ] eqn:PARAMS.
     * econstructor; split.
       econstructor. eauto. apply eval_mod_from_div with (x := i); auto.
       eapply eval_divs_mul with (x := i); eauto.
-      simpl. auto.
+      simpl. auto. *) (* FIXME - hack K1 *)
     * eapply eval_mods_base; eauto. EvalOp.
 Qed.
 

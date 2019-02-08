@@ -178,8 +178,8 @@ Definition divsimm (e1: expr) (n2: int) :=
         divs_base e1 (Eop (Ointconst n2) Enil)
       else
         match divs_mul_params (Int.signed n2) with
-        | None => divs_base e1 (Eop (Ointconst n2) Enil)
-        | Some(p, m) => Elet e1 (divs_mul p m)
+        | _ => divs_base e1 (Eop (Ointconst n2) Enil)
+        (* | Some(p, m) => Elet e1 (divs_mul p m) *) (* FIXME - hack K1 *)
         end
   end.
 
@@ -204,8 +204,8 @@ Definition modsimm (e1: expr) (n2: int) :=
         mods_base e1 (Eop (Ointconst n2) Enil)
       else
         match divs_mul_params (Int.signed n2) with
-        | None => mods_base e1 (Eop (Ointconst n2) Enil)
-        | Some(p, m) => Elet e1 (mod_from_div (divs_mul p m) n2)
+        | _ => mods_base e1 (Eop (Ointconst n2) Enil)
+        (* | Some(p, m) => Elet e1 (mod_from_div (divs_mul p m) n2) *) (* FIXME - hack K1 *)
         end
   end.
 
