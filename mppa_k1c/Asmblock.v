@@ -224,6 +224,7 @@ Inductive cf_instruction : Type :=
 
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
+  | Pigoto  (r: ireg)                               (**r goto from register *)
   | Pj_l    (l: label)                              (**r jump to label *)
 
   (* Conditional branches *)
@@ -1149,6 +1150,8 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       Next (rs#RA <- (rs#PC) #PC <- (rs#r)) m
   | Pgoto s =>
       Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
+  | Pigoto r =>
+      Next (rs#PC <- (rs#r)) m
   | Pj_l l =>
       goto_label f l rs m
   | Pcb bt r l =>

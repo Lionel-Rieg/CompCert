@@ -1207,7 +1207,30 @@ Proof.
         eapply transf_function_no_overflow; eauto.
       exploit Mem.loadv_extends. eauto. eexact H15. auto. simpl. intros [parent' [A B]].
       destruct s1 as [rf|fid]; simpl in H13. 
-      * inv H1.
+      * monadInv H1.
+        assert (ms' rf = Vptr f' Ptrofs.zero).
+          { destruct (ms' rf); try discriminate. revert H13. predSpec Ptrofs.eq Ptrofs.eq_spec i Ptrofs.zero; intros; congruence. }
+        assert (rs2 x = Vptr f' Ptrofs.zero).
+          { exploit ireg_val; eauto. rewrite H; intros LD; inv LD; auto. }
+
+        assert (f = f1) by congruence. subst f1. clear FIND1. clear H14.
+        exploit make_epilogue_correct; eauto. intros (rs1 & m1 & U & V & W & X & Y & Z).
+        exploit exec_straight_body; eauto.
+          { simpl. eauto. }
+        intros EXEB.
+        repeat eexists.
+          rewrite H6. simpl extract_basic. eauto.
+          rewrite H7. simpl extract_ctl. simpl. reflexivity.
+        econstructor; eauto.
+          { apply agree_set_other.
+            - econstructor; auto with asmgen.
+              + apply V.
+              + intro r. destruct r; apply V; auto.
+            - eauto with asmgen. }
+        assert (IR x <> IR GPR12 /\ IR x <> IR GPR32 /\ IR x <> IR GPR16).
+          { clear - EQ. destruct x; repeat split; try discriminate.
+            all: unfold ireg_of in EQ; destruct rf; try discriminate. }
+        Simpl. inv H1. inv H3. rewrite Z; auto; try discriminate.
       * monadInv H1. assert (f = f1) by congruence. subst f1. clear FIND1. clear H14.
         exploit make_epilogue_correct; eauto. intros (rs1 & m1 & U & V & W & X & Y & Z).
         exploit exec_straight_body; eauto.

@@ -246,6 +246,8 @@ module Target (*: TARGET*) =
          fprintf oc "	icall	%a\n" ireg rs
       | Pgoto(s) ->
          fprintf oc "	goto	%a\n" symbol s
+      | Pigoto(rs) ->
+         fprintf oc "	igoto	%a\n" ireg rs
       | Pj_l(s) ->
          fprintf oc "	goto	%a\n" print_label s
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->

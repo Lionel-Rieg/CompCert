@@ -241,8 +241,8 @@ Definition divlu (e1 e2: expr) :=
                     divlu_base e1 e2
                   else
                     match divlu_mul_params (Int64.unsigned n2) with
-                    | None => divlu_base e1 e2
-                    | Some(p, m) => Elet e1 (divlu_mull p m)
+                    | _ => divlu_base e1 e2
+                    (* | Some(p, m) => Elet e1 (divlu_mull p m) *) (* FIXME - hack K1 *)
                     end
       end
   | _, _ => divlu_base e1 e2
@@ -258,8 +258,8 @@ Definition modlu (e1 e2: expr) :=
                     modlu_base e1 e2
                   else
                     match divlu_mul_params (Int64.unsigned n2) with
-                    | None => modlu_base e1 e2
-                    | Some(p, m) => Elet e1 (modl_from_divl (divlu_mull p m) n2)
+                    | _ => modlu_base e1 e2
+                    (* | Some(p, m) => Elet e1 (modl_from_divl (divlu_mull p m) n2) *) (* FIXME - hack K1 *)
                     end
       end
   | _, _ => modlu_base e1 e2
@@ -285,8 +285,8 @@ Definition divls (e1 e2: expr) :=
                     divls_base e1 e2
                   else
                     match divls_mul_params (Int64.signed n2) with
-                    | None => divls_base e1 e2
-                    | Some(p, m) => Elet e1 (divls_mull p m)
+                    | _ => divls_base e1 e2
+                    (* | Some(p, m) => Elet e1 (divls_mull p m) *) (* FIXME - hack K1 *)
                     end
       end
   | _, _ => divls_base e1 e2
@@ -304,8 +304,8 @@ Definition modls (e1 e2: expr) :=
                     modls_base e1 e2
                   else
                     match divls_mul_params (Int64.signed n2) with
-                    | None => modls_base e1 e2
-                    | Some(p, m) => Elet e1 (modl_from_divl (divls_mull p m) n2)
+                    | _ => modls_base e1 e2
+                    (* | Some(p, m) => Elet e1 (modl_from_divl (divls_mull p m) n2) *) (* FIXME - hack K1 *)
                     end
       end
   | _, _ => modls_base e1 e2
