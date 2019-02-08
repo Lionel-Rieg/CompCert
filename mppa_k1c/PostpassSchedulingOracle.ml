@@ -198,35 +198,34 @@ type inst_info = {
 type imm_encoding = U6 | S10 | U27L5 | U27L10 | E27U27L10
 
 let rec pow a = function
-  | 0 -> 1
-  | 1 -> a
+  | 0 -> Int64.one
+  | 1 -> Int64.of_int a
   | n -> let b = pow a (n/2) in
-         b * b * (if n mod 2 = 0 then 1 else a)
+         Int64.mul b (Int64.mul b (if n mod 2 = 0 then Int64.one else Int64.of_int a))
 
-let signed_interval n = begin 
+let signed_interval n : (int64 * int64) = begin 
   assert (n > 0);
-  let min = - pow 2 (n-1)
-  and max = pow 2 (n-1) - 1
+  let min = Int64.neg @@ pow 2 (n-1)
+  and max = Int64.sub (pow 2 (n-1)) Int64.one
   in (min, max)
 end
 
 let within i interv = match interv with (min, max) -> (i >= min && i <= max)
 
-let signed_length i =
-  let rec f i n = 
+let signed_length (i:int64) =
+  let rec f (i:int64) n = 
     let interv = signed_interval n
     in if (within i interv) then n else f i (n+1)
   in f i 1
 
-let encode_imm imm =
-  let i = Int64.to_int imm
-  in let length = signed_length i
+let encode_imm (imm:int64) =
+  let length = signed_length imm
   in if length <= 7 then U6 (* Unsigned -> 1 bit less needed *)
   else if length <= 10 then S10
   else if length <= 32 then U27L5 (* Upper 27 Lower 5 is signed *)
   else if length <= 37 then U27L10
   else if length <= 64 then E27U27L10
-  else failwith @@ sprintf "encode_imm: integer too big! (%d)" i
+  else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
 
 (** Resources *)
 let resource_names = ["ISSUE"; "TINY"; "LITE"; "ALU"; "LSU"; "MAU"; "BCU"; "ACC"; "DATA"; "TCA"; "BRE"; "BRO"; "NOP"]
