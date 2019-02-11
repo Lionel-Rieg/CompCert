@@ -56,11 +56,6 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
-Axiom verified_schedule_size:
-  forall bb lbb,
-  verified_schedule bb = OK lbb ->
-  size bb = size_blocks lbb.
-
 Axiom verified_schedule_single_inst: forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 
 Axiom verified_schedule_header:

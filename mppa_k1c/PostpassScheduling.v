@@ -82,19 +82,66 @@ Fixpoint concat_all (lbb: list bblock) : res bblock :=
 
 Definition verify_schedule (bb bb' : bblock) : res unit := OK tt.
 
-Program Definition verified_schedule (bb : bblock) : res (list bblock) :=
-  let bb' := {| header := nil; body := body bb; exit := exit bb |} in
-  let lbb := schedule bb' in
-  do tbb <- concat_all lbb;
-  do check <- verify_schedule bb' tbb;
-  match (head lbb) with
-  | None => Error (msg "PostpassScheduling.verified_schedule: empty schedule")
-  | Some fst => OK ({| header := header bb; body := body fst; exit := exit fst |} :: tail lbb)
-  end.
+Definition verify_size bb lbb := if (Z.eqb (size bb) (size_blocks lbb)) then OK tt else Error (msg "PostpassScheduling:verify_size: wrong size").
+
+Lemma verify_size_size:
+  forall bb lbb, verify_size bb lbb = OK tt -> size bb = size_blocks lbb.
+Proof.
+  intros. unfold verify_size in H. destruct (size bb =? size_blocks lbb) eqn:SIZE; try discriminate.
+  apply Z.eqb_eq. assumption.
+Qed.
+
+Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
 Next Obligation.
   destruct bb; simpl. assumption.
-Qed. Next Obligation.
-  destruct fst; simpl. assumption.
+Qed.
+
+Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Qed.
+
+Lemma stick_header_size:
+  forall h bb, size (stick_header h bb) = size bb.
+Proof.
+  intros. destruct bb. unfold stick_header. simpl. reflexivity.
+Qed.
+
+Definition stick_header_code (h : list label) (lbb : list bblock) :=
+  match (head lbb) with
+  | None => Error (msg "PostpassScheduling.stick_header: empty schedule")
+  | Some fst => OK ((stick_header h fst) :: tail lbb)
+  end.
+
+Lemma hd_tl_size:
+  forall lbb bb, hd_error lbb = Some bb -> size_blocks lbb = size bb + size_blocks (tl lbb).
+Proof.
+  destruct lbb.
+  - intros. simpl in H. discriminate.
+  - intros. simpl in H. inv H. simpl. reflexivity.
+Qed.
+
+Lemma stick_header_code_size:
+  forall h lbb lbb', stick_header_code h lbb = OK lbb' -> size_blocks lbb = size_blocks lbb'.
+Proof.
+  intros. unfold stick_header_code in H. destruct (hd_error lbb) eqn:HD; try discriminate.
+  inv H. simpl. rewrite stick_header_size. erewrite hd_tl_size; eauto.
+Qed.
+
+Definition verified_schedule (bb : bblock) : res (list bblock) :=
+  let bb' := no_header bb in
+  let lbb := schedule bb' in
+  do tbb <- concat_all lbb;
+  do sizecheck <- verify_size bb lbb;
+  do schedcheck <- verify_schedule bb' tbb;
+  stick_header_code (header bb) lbb.
+
+Lemma verified_schedule_size:
+  forall bb lbb, verified_schedule bb = OK lbb -> size bb = size_blocks lbb.
+Proof.
+  intros. monadInv H. erewrite <- stick_header_code_size; eauto.
+  apply verify_size_size.
+  destruct x0; try discriminate. assumption.
 Qed.
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=
