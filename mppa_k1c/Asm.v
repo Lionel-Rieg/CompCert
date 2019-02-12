@@ -99,6 +99,7 @@ Inductive instruction : Type :=
   | Psxwd   (rd rs: ireg)                           (**r Sign Extend Word to Double Word *)
   | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
   | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer *)
+  | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
 
   (** Arith RI32 *)
   | Pmake   (rd: ireg) (imm: int)                   (**r load immediate *)
@@ -196,6 +197,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmblock.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
   | PArithRR Asmblock.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
+  | PArithRR Asmblock.Pfixedwrzz rd rs => Pfixedwrzz rd rs
 
   (* RI32 *)
   | PArithRI32 Asmblock.Pmake rd imm  => Pmake rd imm

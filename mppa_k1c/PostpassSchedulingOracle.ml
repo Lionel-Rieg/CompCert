@@ -35,6 +35,7 @@ let arith_rr_str = function
   | Psxwd -> "Psxwd"
   | Pzxwd -> "Pzxwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
+  | Pfixedwrzz -> "Pfixedwrzz"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw"
@@ -344,7 +345,7 @@ type real_instruction =
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
   (* FPU *)
-  | Fnegd | Floatwz
+  | Fnegd | Floatwz | Fixedwz
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
@@ -372,6 +373,7 @@ let ab_inst_to_real = function
   | "Psxwd" -> Sxwd
   | "Pzxwd" -> Zxwd
   | "Pfloatwrnsz" -> Floatwz
+  | "Pfixedwrzz" -> Fixedwz
 
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
@@ -433,7 +435,7 @@ let rec_to_usage r =
   | Nop -> alu_nop
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
-  | Floatwz -> mau
+  | Fixedwz | Floatwz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
@@ -452,7 +454,7 @@ let real_inst_to_latency = function
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd
         -> 1
-  | Floatwz -> 4
+  | Floatwz | Fixedwz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
