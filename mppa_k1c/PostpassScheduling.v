@@ -11,7 +11,7 @@
 (* *********************************************************************)
 
 Require Import Coqlib Errors AST Integers.
-Require Import Asmblock.
+Require Import Asmblock Axioms.
 
 Local Open Scope error_monad_scope.
 
@@ -94,12 +94,18 @@ Qed.
 Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
 Next Obligation.
   destruct bb; simpl. assumption.
+Defined.
+
+Lemma no_header_size:
+  forall bb, size (no_header bb) = size bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
 Qed.
 
 Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
 Next Obligation.
   destruct bb; simpl. assumption.
-Qed.
+Defined.
 
 Lemma stick_header_size:
   forall h bb, size (stick_header h bb) = size bb.
@@ -107,11 +113,24 @@ Proof.
   intros. destruct bb. unfold stick_header. simpl. reflexivity.
 Qed.
 
+Lemma stick_header_no_header:
+  forall bb, stick_header (header bb) (no_header bb) = bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
+Qed.
+
 Definition stick_header_code (h : list label) (lbb : list bblock) :=
   match (head lbb) with
   | None => Error (msg "PostpassScheduling.stick_header: empty schedule")
   | Some fst => OK ((stick_header h fst) :: tail lbb)
   end.
+
+Lemma stick_header_code_no_header:
+  forall bb c,
+  stick_header_code (header bb) (no_header bb :: c) = OK (bb :: c).
+Proof.
+  intros. unfold stick_header_code. simpl. rewrite stick_header_no_header. reflexivity.
+Qed.
 
 Lemma hd_tl_size:
   forall lbb bb, hd_error lbb = Some bb -> size_blocks lbb = size bb + size_blocks (tl lbb).
@@ -128,9 +147,12 @@ Proof.
   inv H. simpl. rewrite stick_header_size. erewrite hd_tl_size; eauto.
 Qed.
 
+Definition do_schedule (bb: bblock) : list bblock :=
+  if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
+
 Definition verified_schedule (bb : bblock) : res (list bblock) :=
   let bb' := no_header bb in
-  let lbb := schedule bb' in
+  let lbb := do_schedule bb' in
   do tbb <- concat_all lbb;
   do sizecheck <- verify_size bb lbb;
   do schedcheck <- verify_schedule bb' tbb;
@@ -142,6 +164,16 @@ Proof.
   intros. monadInv H. erewrite <- stick_header_code_size; eauto.
   apply verify_size_size.
   destruct x0; try discriminate. assumption.
+Qed.
+
+Lemma verified_schedule_single_inst:
+  forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
+Proof.
+  intros. unfold verified_schedule.
+  unfold do_schedule. rewrite no_header_size. rewrite H. simpl.
+  unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). simpl.
+  apply stick_header_code_no_header.
+  rewrite H. reflexivity.
 Qed.
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=
