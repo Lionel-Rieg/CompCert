@@ -296,8 +296,12 @@ module Target (*: TARGET*) =
          fprintf oc "	zxwd	%a = %a\n" ireg rd ireg rs
       | Pfloatwrnsz(rd, rs) ->
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
+      | Pfloatdrnsz(rd, rs) ->
+         fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixeddrzz(rd, rs) ->
+         fprintf oc "	fixedd.rz	%a = %a, 0\n" ireg rd ireg rs
 
       (* Arith RI32 instructions *)
       | Pmake (rd, imm) ->

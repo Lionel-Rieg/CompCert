@@ -550,9 +550,15 @@ Definition transl_op
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatwrnsz rd rs ::i k)
+  | Ofloatoflong, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatdrnsz rd rs ::i k)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)
+  | Olongoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixeddrzz rd rs ::i k)
   | Oabsf , _ => Error (msg "Asmblockgen.transl_op: Oabsf")
   | Oaddf , _ => Error (msg "Asmblockgen.transl_op: Oaddf")
   | Osubf , _ => Error (msg "Asmblockgen.transl_op: Osubf")

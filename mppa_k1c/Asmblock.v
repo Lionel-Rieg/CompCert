@@ -284,7 +284,9 @@ Inductive arith_name_rr : Type :=
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
   | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (single -> int) *)
+  | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (float -> long) *)
   | Pfixedwrzz                                      (**r Integer conversion from floating point (int -> single) *)
+  | Pfixeddrzz                                      (**r Integer conversion from floating point (long -> float) *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -887,7 +889,9 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Psxwd => rs#d <- (Val.longofint rs#s)
       | Pzxwd => rs#d <- (Val.longofintu rs#s)
       | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
+      | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
       | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
+      | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
       end
 
   | PArithRI32 n d i =>
