@@ -105,6 +105,12 @@ Inductive instruction : Type :=
   (** Arith RI64 *)
   | Pmakel  (rd: ireg) (imm: int64)                 (**r load immediate long *)
 
+  (** Arith RF32 *)
+  | Pmakefs (rd: ireg) (imm: float32)
+
+  (** Arith RF64 *)
+  | Pmakef  (rd: ireg) (imm: float)
+
   (** Arith RRR *)
   | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r comparison word *)
   | Pcompl  (it: itest) (rd rs1 rs2: ireg)          (**r comparison long *)
@@ -194,6 +200,12 @@ Definition basic_to_instruction (b: basic) :=
 
   (* RI64 *)
   | PArithRI64 Asmblock.Pmakel rd imm => Pmakel rd imm
+
+  (* RF32 *)
+  | PArithRF32 Asmblock.Pmakefs rd imm => Pmakefs rd imm
+
+  (* RF64 *)
+  | PArithRF64 Asmblock.Pmakef rd imm => Pmakef rd imm
 
   (* RRR *)
   | PArithRRR (Asmblock.Pcompw it) rd rs1 rs2 => Pcompw it rd rs1 rs2

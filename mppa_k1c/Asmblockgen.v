@@ -350,19 +350,13 @@ Definition transl_op
   | Olongconst n, nil =>
       do rd <- ireg_of res;
       OK (loadimm64 rd n ::i k)
-  | Ofloatconst _, _ => Error(msg "Asmblockgen.transl_op: Ofloatconst")
-  | Osingleconst _, _ => Error(msg "Asmblockgen.transl_op: Osingleconst")
-(*| Ofloatconst f, nil =>
+  | Ofloatconst f, nil =>
       do rd <- freg_of res;
-      OK (if Float.eq_dec f Float.zero
-          then Pfcvtdw rd GPR0 :: k
-          else Ploadfi rd f :: k)
+      OK (Pmakef rd f ::i k)
   | Osingleconst f, nil =>
       do rd <- freg_of res;
-      OK (if Float32.eq_dec f Float32.zero
-          then Pfcvtsw rd GPR0 :: k
-          else Ploadsi rd f :: k)
-*)| Oaddrsymbol s ofs, nil =>
+      OK (Pmakefs rd f ::i k)
+  | Oaddrsymbol s ofs, nil =>
       do rd <- ireg_of res;
       OK (if Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)
           then Ploadsymbol s Ptrofs.zero rd ::i addptrofs rd rd ofs ::i k

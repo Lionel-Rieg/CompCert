@@ -293,6 +293,14 @@ Inductive arith_name_ri64 : Type :=
   | Pmakel                                          (**r load immediate long *)
 .
 
+Inductive arith_name_rf32 : Type :=
+  | Pmakefs                                         (**r load immediate single *)
+.
+
+Inductive arith_name_rf64 : Type :=
+  | Pmakef                                          (**r load immediate float *)
+.
+
 Inductive arith_name_rrr : Type :=
   | Pcompw  (it: itest)                             (**r comparison word *)
   | Pcompl  (it: itest)                             (**r comparison long *)
@@ -347,6 +355,8 @@ Inductive ar_instruction : Type :=
   | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
   | PArithRI32  (i: arith_name_ri32)  (rd: ireg) (imm: int)
   | PArithRI64  (i: arith_name_ri64)  (rd: ireg) (imm: int64)
+  | PArithRF32  (i: arith_name_rf32)  (rd: ireg) (imm: float32)
+  | PArithRF64  (i: arith_name_rf64)  (rd: ireg) (imm: float)
   | PArithRRR   (i: arith_name_rrr)   (rd rs1 rs2: ireg)
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
@@ -356,6 +366,8 @@ Coercion PArithR:       arith_name_r        >-> Funclass.
 Coercion PArithRR:      arith_name_rr       >-> Funclass.
 Coercion PArithRI32:    arith_name_ri32     >-> Funclass.
 Coercion PArithRI64:    arith_name_ri64     >-> Funclass.
+Coercion PArithRF32:    arith_name_rf32     >-> Funclass.
+Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
@@ -844,6 +856,7 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   | None => Vundef
   end
   .
+
 (** Execution of arith instructions 
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
@@ -881,6 +894,16 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
   | PArithRI64 n d i =>
       match n with
       | Pmakel => rs#d <- (Vlong i)
+      end
+
+  | PArithRF32 n d i =>
+      match n with
+      | Pmakefs => rs#d <- (Vsingle i)
+      end
+
+  | PArithRF64 n d i =>
+      match n with
+      | Pmakef => rs#d <- (Vfloat i)
       end
 
   | PArithRRR n d s1 s2 =>

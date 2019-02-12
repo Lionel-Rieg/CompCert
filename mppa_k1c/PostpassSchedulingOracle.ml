@@ -127,6 +127,8 @@ let arith_rec i =
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
+  | PArithRF32 (rd, f) -> raise OpaqueInstruction (* FIXME - complete later *)
+  | PArithRF64 (rd, f) -> raise OpaqueInstruction
   | PArithRR (i, rd, rs) -> arith_rr_rec i (IR rd) (IR rs)
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 

@@ -303,6 +303,18 @@ module Target (*: TARGET*) =
       | Pmakel (rd, imm) ->
          fprintf oc "	make	%a, %a\n" ireg rd coqint64 imm
 
+      (* Arith RF32 instructions *)
+      | Pmakefs (rd, f) ->
+         let d   = Floats.Float32.to_bits f in
+         fprintf oc "	make	%a, %a %s %.18g\n"
+                    ireg rd coqint d comment (camlfloat_of_coqfloat32 f)
+
+      (* Arith RF64 instructions *)
+      | Pmakef (rd, f) ->
+         let d   = Floats.Float.to_bits f in
+         fprintf oc "	make	%a, %a %s %.18g\n"
+                    ireg rd coqint64 d comment (camlfloat_of_coqfloat f)
+
       (* Arith RRR instructions *)
       | Pcompw (it, rd, rs1, rs2) ->
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs1 ireg rs2
