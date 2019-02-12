@@ -544,17 +544,12 @@ Definition transl_op
           Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
           Paddl RTMP rs RTMP ::i
           Psrail rd RTMP n ::i k)
-(*| Oshrxlimm n, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs :: k else
-          Psrail GPR31 rs (Int.repr 63) ::
-          Psrlil GPR31 GPR31 (Int.sub Int64.iwordsize' n) ::
-          Paddl GPR31 rs GPR31 ::
-          Psrail rd GPR31 n :: k)
-
-*)| Onegf, a1 :: nil =>
+  | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs ::i k)
+  | Osingleofint, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfloatwrnsz rd rs ::i k)
   | Oabsf , _ => Error (msg "Asmblockgen.transl_op: Oabsf")
   | Oaddf , _ => Error (msg "Asmblockgen.transl_op: Oaddf")
   | Osubf , _ => Error (msg "Asmblockgen.transl_op: Osubf")
@@ -566,6 +561,10 @@ Definition transl_op
   | Osubfs , _ => Error (msg "Asmblockgen.transl_op: Osubfs")
   | Omulfs , _ => Error (msg "Asmblockgen.transl_op: Omulfs")
   | Odivfs , _ => Error (msg "Asmblockgen.transl_op: Odivfs")
+  | Ofloatoflong , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflong")
+  | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
+  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
+  | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
   | Osingleoffloat , _ => Error (msg "Asmblockgen.transl_op: Osingleoffloat")
   | Ofloatofsingle , _ => Error (msg "Asmblockgen.transl_op: Ofloatofsingle")
   | Ointoffloat , _ => Error (msg "Asmblockgen.transl_op: Ointoffloat")
@@ -578,12 +577,12 @@ Definition transl_op
   | Osingleofintu , _ => Error (msg "Asmblockgen.transl_op: Osingleofintu")
   | Olongoffloat , _ => Error (msg "Asmblockgen.transl_op: Olongoffloat")
   | Olonguoffloat , _ => Error (msg "Asmblockgen.transl_op: Olonguoffloat")
-  | Ofloatoflong , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflong")
-  | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
+
+
   | Olongofsingle , _ => Error (msg "Asmblockgen.transl_op: Olongofsingle")
   | Olonguofsingle , _ => Error (msg "Asmblockgen.transl_op: Olonguofsingle")
-  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
-  | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
+
+
 (*| Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs :: k)

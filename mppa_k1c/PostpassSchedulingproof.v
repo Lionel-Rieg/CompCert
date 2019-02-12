@@ -149,9 +149,12 @@ Lemma exec_basic_instr_pc_var:
   exec_basic_instr ge i (rs # PC <- v) m = Next (rs' # PC <- v) m'.
 Proof.
   intros. unfold exec_basic_instr in *. destruct i.
-  - unfold exec_arith_instr in *. exploreInst.
-      all: try (inv H; apply next_eq; auto;
+  - unfold exec_arith_instr in *. destruct i; destruct i.
+      all: try (exploreInst; inv H; apply next_eq; auto;
       apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
+
+      (* Some cases treated seperately because exploreInst destructs too much *)
+      inv H. apply next_eq; auto. apply functional_extensionality; intros. rewrite regset_double_set; auto. discriminate.
   - exploreInst; apply exec_load_pc_var; auto.
   - exploreInst; apply exec_store_pc_var; auto.
   - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
