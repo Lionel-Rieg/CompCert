@@ -71,6 +71,18 @@ Next Obligation.
     apply (H ef args res). contradict H1. auto.
 Qed.
 
+Lemma concat2_zlt_size:
+  forall a b bb,
+  concat2 a b = OK bb ->
+     size a <= Ptrofs.max_unsigned
+  /\ size b <= Ptrofs.max_unsigned.
+Proof.
+  intros. monadInv H.
+  split.
+  - unfold check_size in EQ. destruct (zlt Ptrofs.max_unsigned (size a)); monadInv EQ. omega.
+  - unfold check_size in EQ1. destruct (zlt Ptrofs.max_unsigned (size b)); monadInv EQ1. omega.
+Qed.
+
 Lemma concat2_noexit:
   forall a b bb,
   concat2 a b = OK bb ->

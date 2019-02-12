@@ -36,18 +36,6 @@ Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :
       exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
       bblock_equiv ge f bb bb'.
 
-Lemma concat2_zlt_size:
-  forall a b bb,
-  concat2 a b = OK bb ->
-     size a <= Ptrofs.max_unsigned
-  /\ size b <= Ptrofs.max_unsigned.
-Proof.
-  intros. monadInv H.
-  split.
-  - unfold check_size in EQ. destruct (zlt Ptrofs.max_unsigned (size a)); monadInv EQ. omega.
-  - unfold check_size in EQ1. destruct (zlt Ptrofs.max_unsigned (size b)); monadInv EQ1. omega.
-Qed.
-
 (* Axioms that verified_schedule must verify *)
 Axiom verified_schedule_correct:
   forall ge f bb lbb,
