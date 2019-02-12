@@ -71,6 +71,70 @@ Next Obligation.
     apply (H ef args res). contradict H1. auto.
 Qed.
 
+Lemma concat2_noexit:
+  forall a b bb,
+  concat2 a b = OK bb ->
+  exit a = None.
+Proof.
+  intros. destruct a as [hd bdy ex WF]; simpl in *.
+  destruct ex as [e|]; simpl in *; auto.
+  unfold concat2 in H. simpl in H. monadInv H.
+Qed.
+
+Lemma concat2_decomp:
+  forall a b bb,
+  concat2 a b = OK bb ->
+     body bb = body a ++ body b
+  /\ exit bb = exit b.
+Proof.
+  intros. exploit concat2_noexit; eauto. intros.
+  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bd ex WF]; simpl in *.
+  subst exa.
+  unfold concat2 in H; simpl in H.
+  destruct hdb.
+  - destruct exb.
+    + destruct c.
+      * destruct i. monadInv H.
+      * monadInv H. split; auto.
+    + monadInv H. split; auto.
+  - monadInv H.
+Qed.
+
+Lemma concat2_size:
+  forall a b bb, concat2 a b = OK bb -> size bb = size a + size b.
+Proof.
+  intros. unfold concat2 in H.
+  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bdy ex WF]; simpl in *.
+  destruct exa; monadInv H. destruct hdb; try (monadInv EQ2). destruct exb; try (monadInv EQ2).
+  - destruct c.
+    + destruct i; try (monadInv EQ2).
+    + monadInv EQ2. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
+  - unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
+Qed.
+
+Lemma concat2_header:
+  forall bb bb' tbb,
+  concat2 bb bb' = OK tbb -> header bb = header tbb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]; destruct bb' as [hd' bdy' ex' COR']; destruct tbb as [thd tbdy tex tCOR]; simpl in *.
+  unfold concat2 in H. simpl in H. monadInv H.
+  destruct ex; try discriminate. destruct hd'; try discriminate. destruct ex'.
+  - destruct c.
+    + destruct i; discriminate.
+    + congruence.
+  - congruence.
+Qed.
+
+Lemma concat2_no_header_in_middle:
+  forall bb bb' tbb,
+  concat2 bb bb' = OK tbb ->
+  header bb' = nil.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]; destruct bb' as [hd' bdy' ex' COR']; destruct tbb as [thd tbdy tex tCOR]; simpl in *.
+  unfold concat2 in H. simpl in H. monadInv H.
+  destruct ex; try discriminate. destruct hd'; try discriminate. reflexivity.
+Qed.
+
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
   match lbb with
   | nil => Error (msg "PostpassSchedulingproof.concatenate: empty list")
@@ -79,6 +143,42 @@ Fixpoint concat_all (lbb: list bblock) : res bblock :=
       do bb' <- concat_all lbb;
       concat2 bb bb'
   end.
+
+Lemma concat_all_size :
+  forall lbb a bb bb',
+  concat_all (a :: lbb) = OK bb ->
+  concat_all lbb = OK bb' ->
+  size bb = size a + size bb'.
+Proof.
+  intros. unfold concat_all in H. fold concat_all in H.
+  destruct lbb; try discriminate.
+  monadInv H. rewrite H0 in EQ. inv EQ.
+  apply concat2_size. assumption.
+Qed.
+
+Lemma concat_all_header:
+  forall lbb bb tbb,
+  concat_all (bb::lbb) = OK tbb -> header bb = header tbb.
+Proof.
+  destruct lbb.
+  - intros. simpl in H. congruence.
+  - intros. simpl in H. destruct lbb.
+    + inv H. eapply concat2_header; eassumption.
+    + monadInv H. eapply concat2_header; eassumption.
+Qed.
+
+Lemma concat_all_no_header_in_middle:
+  forall lbb tbb,
+  concat_all lbb = OK tbb ->
+  Forall (fun b => header b = nil) (tail lbb).
+Proof.
+  induction lbb; intros; try constructor.
+  simpl. simpl in H. destruct lbb.
+  - constructor.
+  - monadInv H. simpl tl in IHlbb. constructor.
+    + apply concat2_no_header_in_middle in EQ0. apply concat_all_header in EQ. congruence.
+    + apply IHlbb in EQ. assumption.
+Qed.
 
 Definition verify_schedule (bb bb' : bblock) : res unit := OK tt.
 
@@ -147,6 +247,18 @@ Proof.
   inv H. simpl. rewrite stick_header_size. erewrite hd_tl_size; eauto.
 Qed.
 
+Lemma stick_header_code_no_header_in_middle:
+  forall c h lbb,
+  stick_header_code h c = OK lbb ->
+  Forall (fun b => header b = nil) (tl c) ->
+  Forall (fun b => header b = nil) (tl lbb).
+Proof.
+  destruct c; intros.
+  - unfold stick_header_code in H. simpl in H. discriminate.
+  - unfold stick_header_code in H. simpl in H. inv H. simpl in H0.
+    simpl. assumption.
+Qed.
+
 Definition do_schedule (bb: bblock) : list bblock :=
   if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
 
@@ -174,6 +286,27 @@ Proof.
   unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). simpl.
   apply stick_header_code_no_header.
   rewrite H. reflexivity.
+Qed.
+
+Lemma verified_schedule_no_header_in_middle:
+  forall lbb bb,
+  verified_schedule bb = OK lbb ->
+     Forall (fun b => header b = nil) (tail lbb).
+Proof.
+  intros. monadInv H. eapply stick_header_code_no_header_in_middle; eauto.
+  eapply concat_all_no_header_in_middle. eassumption.
+Qed.
+
+Lemma verified_schedule_header:
+  forall bb tbb lbb,
+  verified_schedule bb = OK (tbb :: lbb) ->
+     header bb = header tbb
+  /\ Forall (fun b => header b = nil) lbb.
+Proof.
+  intros. split.
+  - monadInv H. unfold stick_header_code in EQ3. destruct (hd_error _); try discriminate. inv EQ3.
+    simpl. reflexivity.
+  - apply verified_schedule_no_header_in_middle in H. assumption.
 Qed.
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=

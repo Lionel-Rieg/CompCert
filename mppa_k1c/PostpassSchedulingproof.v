@@ -56,12 +56,6 @@ Axiom verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 
-Axiom verified_schedule_header:
-  forall bb tbb lbb,
-  verified_schedule bb = OK (tbb :: lbb) ->
-     header bb = header tbb
-  /\ Forall (fun b => header b = nil) lbb.
-
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
 Proof.
@@ -80,35 +74,6 @@ Proof.
   rewrite verified_schedule_single_inst in H0.
   - inv H0. auto.
   - unfold size. rewrite H. rewrite H1. simpl. auto.
-Qed.
-
-Lemma concat2_noexit:
-  forall a b bb,
-  concat2 a b = OK bb ->
-  exit a = None.
-Proof.
-  intros. destruct a as [hd bdy ex WF]; simpl in *.
-  destruct ex as [e|]; simpl in *; auto.
-  unfold concat2 in H. simpl in H. monadInv H.
-Qed.
-
-Lemma concat2_decomp:
-  forall a b bb,
-  concat2 a b = OK bb ->
-     body bb = body a ++ body b
-  /\ exit bb = exit b.
-Proof.
-  intros. exploit concat2_noexit; eauto. intros.
-  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bd ex WF]; simpl in *.
-  subst exa.
-  unfold concat2 in H; simpl in H.
-  destruct hdb.
-  - destruct exb.
-    + destruct c.
-      * destruct i. monadInv H.
-      * monadInv H. split; auto.
-    + monadInv H. split; auto.
-  - monadInv H.
 Qed.
 
 Lemma exec_body_app:
@@ -297,30 +262,6 @@ Proof.
   destruct lbb as [|b lbb]; try contradiction. clear Hnonil.
   monadInv CONC. exploit concat2_straight; eauto. intros (rs' & m' & EXEB1 & PCeq & EXEB2).
   exists x. repeat econstructor. all: eauto.
-Qed.
-
-Lemma concat2_size:
-  forall a b bb, concat2 a b = OK bb -> size bb = size a + size b.
-Proof.
-  intros. unfold concat2 in H.
-  destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bdy ex WF]; simpl in *.
-  destruct exa; monadInv H. destruct hdb; try (monadInv EQ2). destruct exb; try (monadInv EQ2).
-  - destruct c.
-    + destruct i; try (monadInv EQ2).
-    + monadInv EQ2. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
-  - unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
-Qed.
-
-Lemma concat_all_size :
-  forall lbb a bb bb',
-  concat_all (a :: lbb) = OK bb ->
-  concat_all lbb = OK bb' ->
-  size bb = size a + size bb'.
-Proof.
-  intros. unfold concat_all in H. fold concat_all in H.
-  destruct lbb; try discriminate.
-  monadInv H. rewrite H0 in EQ. inv EQ.
-  apply concat2_size. assumption.
 Qed.
 
 Lemma ptrofs_add_repr :
