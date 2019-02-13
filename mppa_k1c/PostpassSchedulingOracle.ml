@@ -506,7 +506,7 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
  *)
 
 let build_problem bb = 
-  { max_latency = 5000; resource_bounds = resource_bounds;
+  { max_latency = -1; resource_bounds = resource_bounds;
     instruction_usages = instruction_usages bb; latency_constraints = latency_constraints bb }
 
 let rec find_min_opt (l: int option list) =
