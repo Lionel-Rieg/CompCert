@@ -29,6 +29,7 @@
 #define HAVE_PROTOTYPES
 
 #undef NO_SWITCH
+#define HAS_FLOAT 1
 
 #ifdef __COMPCERT__
 extern long long __compcert_i64_sdiv(long long a, long long b);
