@@ -350,19 +350,13 @@ Definition transl_op
   | Olongconst n, nil =>
       do rd <- ireg_of res;
       OK (loadimm64 rd n ::i k)
-  | Ofloatconst _, _ => Error(msg "Asmblockgen.transl_op: Ofloatconst")
-  | Osingleconst _, _ => Error(msg "Asmblockgen.transl_op: Osingleconst")
-(*| Ofloatconst f, nil =>
+  | Ofloatconst f, nil =>
       do rd <- freg_of res;
-      OK (if Float.eq_dec f Float.zero
-          then Pfcvtdw rd GPR0 :: k
-          else Ploadfi rd f :: k)
+      OK (Pmakef rd f ::i k)
   | Osingleconst f, nil =>
       do rd <- freg_of res;
-      OK (if Float32.eq_dec f Float32.zero
-          then Pfcvtsw rd GPR0 :: k
-          else Ploadsi rd f :: k)
-*)| Oaddrsymbol s ofs, nil =>
+      OK (Pmakefs rd f ::i k)
+  | Oaddrsymbol s ofs, nil =>
       do rd <- ireg_of res;
       OK (if Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)
           then Ploadsymbol s Ptrofs.zero rd ::i addptrofs rd rd ofs ::i k
@@ -550,17 +544,21 @@ Definition transl_op
           Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
           Paddl RTMP rs RTMP ::i
           Psrail rd RTMP n ::i k)
-(*| Oshrxlimm n, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs :: k else
-          Psrail GPR31 rs (Int.repr 63) ::
-          Psrlil GPR31 GPR31 (Int.sub Int64.iwordsize' n) ::
-          Paddl GPR31 rs GPR31 ::
-          Psrail rd GPR31 n :: k)
-
-*)| Onegf, a1 :: nil =>
+  | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs ::i k)
+  | Osingleofint, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatwrnsz rd rs ::i k)
+  | Ofloatoflong, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatdrnsz rd rs ::i k)
+  | Ointofsingle, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixedwrzz rd rs ::i k)
+  | Olongoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixeddrzz rd rs ::i k)
   | Oabsf , _ => Error (msg "Asmblockgen.transl_op: Oabsf")
   | Oaddf , _ => Error (msg "Asmblockgen.transl_op: Oaddf")
   | Osubf , _ => Error (msg "Asmblockgen.transl_op: Osubf")
@@ -572,6 +570,10 @@ Definition transl_op
   | Osubfs , _ => Error (msg "Asmblockgen.transl_op: Osubfs")
   | Omulfs , _ => Error (msg "Asmblockgen.transl_op: Omulfs")
   | Odivfs , _ => Error (msg "Asmblockgen.transl_op: Odivfs")
+  | Ofloatoflong , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflong")
+  | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
+  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
+  | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
   | Osingleoffloat , _ => Error (msg "Asmblockgen.transl_op: Osingleoffloat")
   | Ofloatofsingle , _ => Error (msg "Asmblockgen.transl_op: Ofloatofsingle")
   | Ointoffloat , _ => Error (msg "Asmblockgen.transl_op: Ointoffloat")
@@ -584,12 +586,12 @@ Definition transl_op
   | Osingleofintu , _ => Error (msg "Asmblockgen.transl_op: Osingleofintu")
   | Olongoffloat , _ => Error (msg "Asmblockgen.transl_op: Olongoffloat")
   | Olonguoffloat , _ => Error (msg "Asmblockgen.transl_op: Olonguoffloat")
-  | Ofloatoflong , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflong")
-  | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
+
+
   | Olongofsingle , _ => Error (msg "Asmblockgen.transl_op: Olongofsingle")
   | Olonguofsingle , _ => Error (msg "Asmblockgen.transl_op: Olonguofsingle")
-  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
-  | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
+
+
 (*| Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs :: k)

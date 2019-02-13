@@ -98,12 +98,22 @@ Inductive instruction : Type :=
   | Pcvtl2w (rd rs: ireg)                           (**r Convert Long to Word *)
   | Psxwd   (rd rs: ireg)                           (**r Sign Extend Word to Double Word *)
   | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
+  | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer *)
+  | Pfloatdrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (64 bits) *)
+  | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
+  | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (64 bits) *)
 
   (** Arith RI32 *)
   | Pmake   (rd: ireg) (imm: int)                   (**r load immediate *)
 
   (** Arith RI64 *)
   | Pmakel  (rd: ireg) (imm: int64)                 (**r load immediate long *)
+
+  (** Arith RF32 *)
+  | Pmakefs (rd: ireg) (imm: float32)
+
+  (** Arith RF64 *)
+  | Pmakef  (rd: ireg) (imm: float)
 
   (** Arith RRR *)
   | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r comparison word *)
@@ -188,12 +198,22 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmblock.Psxwd rd rs  => Psxwd rd rs
   | PArithRR Asmblock.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
+  | PArithRR Asmblock.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
+  | PArithRR Asmblock.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
+  | PArithRR Asmblock.Pfixedwrzz rd rs => Pfixedwrzz rd rs
+  | PArithRR Asmblock.Pfixeddrzz rd rs => Pfixeddrzz rd rs
 
   (* RI32 *)
   | PArithRI32 Asmblock.Pmake rd imm  => Pmake rd imm
 
   (* RI64 *)
   | PArithRI64 Asmblock.Pmakel rd imm => Pmakel rd imm
+
+  (* RF32 *)
+  | PArithRF32 Asmblock.Pmakefs rd imm => Pmakefs rd imm
+
+  (* RF64 *)
+  | PArithRF64 Asmblock.Pmakef rd imm => Pmakef rd imm
 
   (* RRR *)
   | PArithRRR (Asmblock.Pcompw it) rd rs1 rs2 => Pcompw it rd rs1 rs2

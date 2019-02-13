@@ -294,6 +294,14 @@ module Target (*: TARGET*) =
          fprintf oc "	sxwd	%a = %a\n" ireg rd ireg rs
       | Pzxwd(rd, rs) ->
          fprintf oc "	zxwd	%a = %a\n" ireg rd ireg rs
+      | Pfloatwrnsz(rd, rs) ->
+         fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
+      | Pfloatdrnsz(rd, rs) ->
+         fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixedwrzz(rd, rs) ->
+         fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixeddrzz(rd, rs) ->
+         fprintf oc "	fixedd.rz	%a = %a, 0\n" ireg rd ireg rs
 
       (* Arith RI32 instructions *)
       | Pmake (rd, imm) ->
@@ -302,6 +310,18 @@ module Target (*: TARGET*) =
       (* Arith RI64 instructions *)
       | Pmakel (rd, imm) ->
          fprintf oc "	make	%a, %a\n" ireg rd coqint64 imm
+
+      (* Arith RF32 instructions *)
+      | Pmakefs (rd, f) ->
+         let d   = Floats.Float32.to_bits f in
+         fprintf oc "	make	%a, %a %s %.18g\n"
+                    ireg rd coqint d comment (camlfloat_of_coqfloat32 f)
+
+      (* Arith RF64 instructions *)
+      | Pmakef (rd, f) ->
+         let d   = Floats.Float.to_bits f in
+         fprintf oc "	make	%a, %a %s %.18g\n"
+                    ireg rd coqint64 d comment (camlfloat_of_coqfloat f)
 
       (* Arith RRR instructions *)
       | Pcompw (it, rd, rs1, rs2) ->

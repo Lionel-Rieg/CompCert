@@ -283,6 +283,10 @@ Inductive arith_name_rr : Type :=
   | Pcvtl2w                                         (**r Convert Long to Word *)
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
+  | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (single -> int) *)
+  | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (float -> long) *)
+  | Pfixedwrzz                                      (**r Integer conversion from floating point (int -> single) *)
+  | Pfixeddrzz                                      (**r Integer conversion from floating point (long -> float) *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -291,6 +295,14 @@ Inductive arith_name_ri32 : Type :=
 
 Inductive arith_name_ri64 : Type :=
   | Pmakel                                          (**r load immediate long *)
+.
+
+Inductive arith_name_rf32 : Type :=
+  | Pmakefs                                         (**r load immediate single *)
+.
+
+Inductive arith_name_rf64 : Type :=
+  | Pmakef                                          (**r load immediate float *)
 .
 
 Inductive arith_name_rrr : Type :=
@@ -347,6 +359,8 @@ Inductive ar_instruction : Type :=
   | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
   | PArithRI32  (i: arith_name_ri32)  (rd: ireg) (imm: int)
   | PArithRI64  (i: arith_name_ri64)  (rd: ireg) (imm: int64)
+  | PArithRF32  (i: arith_name_rf32)  (rd: ireg) (imm: float32)
+  | PArithRF64  (i: arith_name_rf64)  (rd: ireg) (imm: float)
   | PArithRRR   (i: arith_name_rrr)   (rd rs1 rs2: ireg)
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
@@ -356,6 +370,8 @@ Coercion PArithR:       arith_name_r        >-> Funclass.
 Coercion PArithRR:      arith_name_rr       >-> Funclass.
 Coercion PArithRI32:    arith_name_ri32     >-> Funclass.
 Coercion PArithRI64:    arith_name_ri64     >-> Funclass.
+Coercion PArithRF32:    arith_name_rf32     >-> Funclass.
+Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
@@ -844,6 +860,7 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   | None => Vundef
   end
   .
+
 (** Execution of arith instructions 
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
@@ -871,6 +888,10 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pcvtl2w => rs#d <- (Val.loword rs#s)
       | Psxwd => rs#d <- (Val.longofint rs#s)
       | Pzxwd => rs#d <- (Val.longofintu rs#s)
+      | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
+      | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
+      | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
+      | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
       end
 
   | PArithRI32 n d i =>
@@ -881,6 +902,16 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
   | PArithRI64 n d i =>
       match n with
       | Pmakel => rs#d <- (Vlong i)
+      end
+
+  | PArithRF32 n d i =>
+      match n with
+      | Pmakefs => rs#d <- (Vsingle i)
+      end
+
+  | PArithRF64 n d i =>
+      match n with
+      | Pmakef => rs#d <- (Vfloat i)
       end
 
   | PArithRRR n d s1 s2 =>
