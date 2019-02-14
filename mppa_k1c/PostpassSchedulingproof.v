@@ -30,20 +30,6 @@ Proof.
   intros. eapply match_transform_partial_program; eauto.
 Qed.
 
-Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
-  | bblock_equiv_intro:
-      (forall rs m,
-      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
-      bblock_equiv ge f bb bb'.
-
-(* Axioms that verified_schedule must verify *)
-Axiom verified_schedule_correct:
-  forall ge f bb lbb,
-  verified_schedule bb = OK lbb ->
-  exists tbb, 
-     concat_all lbb = OK tbb
-  /\ bblock_equiv ge f bb tbb.
-
 Remark builtin_body_nil:
   forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
 Proof.
