@@ -28,13 +28,11 @@ Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :
       exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
       bblock_equiv ge f bb bb'.
 
-Axiom regset': Type.
-Axiom mem': Type.
-Inductive state' := State': regset' -> mem' -> state'.
-Inductive outcome' := Next' : regset' -> mem' -> outcome' | Stuck' : outcome'.
+Axiom state': Type.
+Inductive outcome' := Next' : state' -> outcome' | Stuck' : outcome'.
 
 Axiom bblock': Type.
-Axiom exec': genv -> function -> bblock' -> regset' -> mem' -> outcome'.
+Axiom exec': genv -> function -> bblock' -> state' -> outcome'.
 Axiom match_states: state -> state' -> Prop. 
 Axiom trans_block: bblock -> bblock'.
 Axiom trans_state: state -> state'.
@@ -43,30 +41,30 @@ Axiom trans_state_match: forall S, match_states S (trans_state S).
 
 Inductive bblock_equiv' (ge: Genv.t fundef unit) (f: function) (bb bb': bblock') :=
   | bblock_equiv_intro':
-      (forall rs m,
-      exec' ge f bb rs m = exec' ge f bb' rs m) ->
+      (forall s,
+      exec' ge f bb s = exec' ge f bb' s) ->
       bblock_equiv' ge f bb bb'.
 
 Definition exec := exec_bblock.
 
 Axiom forward_simu:
-  forall rs1 m1 rs2 m2 rs1' m1' b ge fn,
+  forall rs1 m1 rs2 m2 s1' b ge fn,
     exec ge fn b rs1 m1 = Next rs2 m2 ->
-    match_states (State rs1 m1) (State' rs1' m1') ->
-    exists rs2' m2',
-       exec' ge fn (trans_block b) rs1' m1' = Next' rs2' m2'
-    /\ match_states (State rs2 m2) (State' rs2' m2').
+    match_states (State rs1 m1) s1' ->
+    exists s2',
+       exec' ge fn (trans_block b) s1' = Next' s2'
+    /\ match_states (State rs2 m2) s2'.
 
 Axiom forward_simu_stuck:
-  forall rs1 m1 rs1' m1' b ge fn,
+  forall rs1 m1 s1' b ge fn,
     exec ge fn b rs1 m1 = Stuck ->
-    match_states (State rs1 m1) (State' rs1' m1') ->
-    exec' ge fn (trans_block b) rs1' m1' = Stuck'.
+    match_states (State rs1 m1) s1' ->
+    exec' ge fn (trans_block b) s1' = Stuck'.
 
 Axiom trans_block_reverse_stuck:
-  forall ge fn b rs m rs' m',
-  exec' ge fn (trans_block b) rs' m' = Stuck' ->
-  match_states (State rs m) (State' rs' m') ->
+  forall ge fn b rs m s',
+  exec' ge fn (trans_block b) s' = Stuck' ->
+  match_states (State rs m) s' ->
   exec ge fn b rs m = Stuck.
 
 Axiom state_equiv:
@@ -80,20 +78,13 @@ Axiom bblock_equiv'_eq:
   forall ge fn b1 b2,
   bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
 
-Lemma trans_state_State:
-  forall rs m,
-  exists rs' m', trans_state (State rs m) = State' rs' m'.
-Proof.
-  intros. destruct (trans_state _). eauto.
-Qed.
-
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
   bblock_equiv' ge fn (trans_block b1) (trans_block b2) ->
   (exec ge fn b1 rs m = Stuck <-> exec ge fn b2 rs m = Stuck).
 Proof.
   intros. inv H.
-  pose (trans_state_match (State rs m)). pose (trans_state_State rs m). destruct e as (rs' & m' & TST). rewrite TST in m0. clear TST.
+  pose (trans_state_match (State rs m)).
   split.
   - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck; eassumption.
   - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck; eassumption.
@@ -113,17 +104,17 @@ Theorem trans_exec:
 Proof.
   repeat constructor. intros rs1 m1.
   destruct (exec_bblock _ _ b1 _ _) as [rs2 m2|] eqn:EXEB; destruct (exec_bblock _ _ b2 _ _) as [rs3 m3|] eqn:EXEB2; auto.
-  - pose (trans_state_State rs1 m1). destruct e as (rs1' & m1' & TEQ).
+  - pose (trans_state_match (State rs1 m1)).
     exploit forward_simu.
       eapply EXEB.
-      erewrite <- TEQ. eapply trans_state_match.
-    intros (rs2' & m2' & EXEB' & MS).
+      eapply m.
+    intros (s2' & EXEB' & MS).
     exploit forward_simu.
       eapply EXEB2.
-      erewrite <- TEQ. eapply trans_state_match.
-    intros (rs3' & m3' & EXEB'2 & MS2). inv H.
+      eapply m.
+    intros (s3' & EXEB'2 & MS2). inv H.
     rewrite H0 in EXEB'. rewrite EXEB'2 in EXEB'. inv EXEB'.
-    exploit (state_equiv (State rs2 m2) (State rs3 m3) (State' rs2' m2')). eauto.
+    exploit (state_equiv (State rs2 m2) (State rs3 m3) s2'). eauto.
     congruence.
   - rewrite trans_equiv_stuck in EXEB2. 2: eapply bblock_equiv'_comm; eauto. unfold exec in EXEB2. rewrite EXEB2 in EXEB. discriminate.
   - rewrite trans_equiv_stuck in EXEB; eauto. unfold exec in EXEB. rewrite EXEB in EXEB2. discriminate.
