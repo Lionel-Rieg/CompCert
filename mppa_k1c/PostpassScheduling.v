@@ -60,6 +60,14 @@ Axiom forward_simu:
 Axiom state_equiv:
   forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
 
+
+(* TODO - replace it by the actual bblock_equivb' *)
+Definition bblock_equivb' (b1 b2: bblock') := true.
+
+Axiom bblock_equiv'_eq:
+  forall ge fn b1 b2,
+  bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
+
 Lemma trans_state_State:
   forall rs m,
   exists rs' m', trans_state (State rs m) = State' rs' m'.
@@ -77,7 +85,8 @@ Lemma bblock_equiv'_comm:
   forall ge fn b1 b2,
   bblock_equiv' ge fn b1 b2 <-> bblock_equiv' ge fn b2 b1.
 Proof.
-Admitted.
+  intros. repeat constructor. all: inv H; congruence.
+Qed.
 
 Theorem trans_exec:
   forall b1 b2 ge f, bblock_equiv' ge f (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
@@ -100,12 +109,7 @@ Proof.
   - rewrite trans_equiv_stuck in EXEB; eauto. rewrite EXEB in EXEB2. discriminate.
 Qed.
 
-(* TODO - replace it by the actual bblock_equivb' *)
-Definition bblock_equivb' (b1 b2: bblock') := true.
 
-Axiom bblock_equiv'_eq:
-  forall ge fn b1 b2,
-  bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
 
 (* Lemmas necessary for defining concat_all *)
 Lemma app_nonil {A: Type} (l l': list A) : l <> nil -> l ++ l' <> nil.
@@ -121,6 +125,8 @@ Proof.
   - intros. simpl; auto.
   - intros. rewrite <- app_comm_cons. discriminate.
 Qed.
+
+
 
 Definition check_size bb :=
   if zlt Ptrofs.max_unsigned (size bb)
@@ -155,7 +161,7 @@ Next Obligation.
   - unfold builtin_alone. intros. rewrite H0 in H.
     assert (Some (PExpand (Pbuiltin ef args res)) <> Some (PExpand (Pbuiltin ef args res))).
     apply (H ef args res). contradict H1. auto.
-Qed.
+Defined.
 
 Lemma concat2_zlt_size:
   forall a b bb,
@@ -233,6 +239,8 @@ Proof.
   destruct ex; try discriminate. destruct hd'; try discriminate. reflexivity.
 Qed.
 
+
+
 Fixpoint concat_all (lbb: list bblock) : res bblock :=
   match lbb with
   | nil => Error (msg "PostpassSchedulingproof.concatenate: empty list")
@@ -278,6 +286,8 @@ Proof.
     + apply IHlbb in EQ. assumption.
 Qed.
 
+
+
 Definition verify_schedule (bb bb' : bblock) : res unit :=
   match (bblock_equivb' (trans_block bb) (trans_block bb')) with
   | true => OK tt
@@ -293,6 +303,8 @@ Proof.
   apply Z.eqb_eq. assumption.
 Qed.
 
+
+
 Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
 Next Obligation.
   destruct bb; simpl. assumption.
@@ -304,16 +316,23 @@ Proof.
   intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
 Qed.
 
+Axiom trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
+
 Lemma verify_schedule_no_header:
   forall bb bb',
   verify_schedule (no_header bb) bb' = verify_schedule bb bb'.
 Proof.
-Admitted.
+  intros. unfold verify_schedule. rewrite trans_block_noheader_inv. reflexivity.
+Qed.
+
+
 
 Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
 Next Obligation.
   destruct bb; simpl. assumption.
 Defined.
+
+Axiom trans_block_header_inv: forall bb hd, trans_block (stick_header hd bb) = trans_block bb.
 
 Lemma stick_header_size:
   forall h bb, size (stick_header h bb) = size bb.
@@ -332,7 +351,42 @@ Lemma stick_header_verify_schedule:
   stick_header hd bb' = hbb' ->
   verify_schedule bb bb' = verify_schedule bb hbb'.
 Proof.
-Admitted.
+  intros. unfold verify_schedule. rewrite <- H. rewrite trans_block_header_inv. reflexivity.
+Qed.
+
+Lemma check_size_stick_header:
+  forall bb hd,
+  check_size bb = check_size (stick_header hd bb).
+Proof.
+  intros. unfold check_size. rewrite stick_header_size. reflexivity.
+Qed.
+
+Lemma stick_header_concat2:
+  forall bb bb' hd tbb,
+  concat2 bb bb' = OK tbb ->
+  concat2 (stick_header hd bb) bb' = OK (stick_header hd tbb).
+Proof.
+  intros. monadInv H. erewrite check_size_stick_header in EQ.
+  unfold concat2. rewrite EQ. rewrite EQ1. simpl.
+  destruct bb as [hdr bdy ex COR]; destruct bb' as [hdr' bdy' ex' COR']; simpl in *.
+  destruct ex; try discriminate. destruct hdr'; try discriminate. destruct ex'.
+  - destruct c.
+    + destruct i. discriminate.
+    + inv EQ2. unfold stick_header; simpl. reflexivity.
+  - inv EQ2. unfold stick_header; simpl. reflexivity.
+Qed.
+
+Lemma stick_header_concat_all:
+  forall bb c tbb hd,
+  concat_all (bb :: c) = OK tbb ->
+  concat_all (stick_header hd bb :: c) = OK (stick_header hd tbb).
+Proof.
+  intros. simpl in *. destruct c; try congruence.
+  monadInv H. rewrite EQ. simpl.
+  apply stick_header_concat2. assumption.
+Qed.
+
+
 
 Definition stick_header_code (h : list label) (lbb : list bblock) :=
   match (head lbb) with
@@ -382,7 +436,14 @@ Lemma stick_header_code_concat_all:
      concat_all hlbb = OK htbb
   /\ stick_header hd tbb = htbb.
 Proof.
-Admitted.
+  intros. exists (stick_header hd tbb). split; auto.
+  destruct lbb.
+  - unfold stick_header_code in H. simpl in H. discriminate.
+  - unfold stick_header_code in H. simpl in H. inv H.
+    apply stick_header_concat_all. assumption.
+Qed.
+
+
 
 Definition do_schedule (bb: bblock) : list bblock :=
   if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
@@ -449,6 +510,8 @@ Proof.
   apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0.
   destruct (bblock_equivb' _ _); auto; try discriminate.
 Qed.
+
+
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=
   match lbb with
