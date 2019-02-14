@@ -57,6 +57,18 @@ Axiom forward_simu:
        exec' ge fn (trans_block b) rs1' m1' = Next' rs2' m2'
     /\ match_states (State rs2 m2) (State' rs2' m2').
 
+Axiom forward_simu_stuck:
+  forall rs1 m1 rs1' m1' b ge fn,
+    exec ge fn b rs1 m1 = Stuck ->
+    match_states (State rs1 m1) (State' rs1' m1') ->
+    exec' ge fn (trans_block b) rs1' m1' = Stuck'.
+
+Axiom trans_block_reverse_stuck:
+  forall ge fn b rs m rs' m',
+  exec' ge fn (trans_block b) rs' m' = Stuck' ->
+  match_states (State rs m) (State' rs' m') ->
+  exec ge fn b rs m = Stuck.
+
 Axiom state_equiv:
   forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
 
@@ -72,14 +84,22 @@ Lemma trans_state_State:
   forall rs m,
   exists rs' m', trans_state (State rs m) = State' rs' m'.
 Proof.
-Admitted.
+  intros. destruct (trans_state _). eauto.
+Qed.
 
 Lemma trans_equiv_stuck:
-  forall b1 b2 ge fn rs1 m1 rs2 m2,
+  forall b1 b2 ge fn rs m,
   bblock_equiv' ge fn (trans_block b1) (trans_block b2) ->
-  (exec ge fn b1 rs1 m1 = Stuck <-> exec ge fn b2 rs2 m2 = Stuck).
+  (exec ge fn b1 rs m = Stuck <-> exec ge fn b2 rs m = Stuck).
 Proof.
-Admitted.
+  intros. inv H.
+  pose (trans_state_match (State rs m)). pose (trans_state_State rs m). destruct e as (rs' & m' & TST). rewrite TST in m0. clear TST.
+  split.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck; eassumption.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck; eassumption.
+Qed.
+
+
 
 Lemma bblock_equiv'_comm:
   forall ge fn b1 b2,
@@ -105,8 +125,8 @@ Proof.
     rewrite H0 in EXEB'. rewrite EXEB'2 in EXEB'. inv EXEB'.
     exploit (state_equiv (State rs2 m2) (State rs3 m3) (State' rs2' m2')). eauto.
     congruence.
-  - rewrite trans_equiv_stuck in EXEB2. 2: eapply bblock_equiv'_comm; eauto. rewrite EXEB2 in EXEB. discriminate.
-  - rewrite trans_equiv_stuck in EXEB; eauto. rewrite EXEB in EXEB2. discriminate.
+  - rewrite trans_equiv_stuck in EXEB2. 2: eapply bblock_equiv'_comm; eauto. unfold exec in EXEB2. rewrite EXEB2 in EXEB. discriminate.
+  - rewrite trans_equiv_stuck in EXEB; eauto. unfold exec in EXEB. rewrite EXEB in EXEB2. discriminate.
 Qed.
 
 
