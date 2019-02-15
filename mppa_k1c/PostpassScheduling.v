@@ -32,9 +32,11 @@ Axiom state': Type.
 Inductive outcome' := Next' : state' -> outcome' | Stuck' : outcome'.
 
 Axiom bblock': Type.
+Extract Constant bblock' => "PostpassSchedulingOracle.bblock'". (* FIXME *)
 Axiom exec': genv -> function -> bblock' -> state' -> outcome'.
 Axiom match_states: state -> state' -> Prop. 
 Axiom trans_block: bblock -> bblock'.
+Extract Constant trans_block => "PostpassSchedulingOracle.trans_block". (* FIXME *)
 Axiom trans_state: state -> state'.
 
 Axiom trans_state_match: forall S, match_states S (trans_state S).
@@ -44,6 +46,13 @@ Inductive bblock_equiv' (ge: Genv.t fundef unit) (f: function) (bb bb': bblock')
       (forall s,
       exec' ge f bb s = exec' ge f bb' s) ->
       bblock_equiv' ge f bb bb'.
+
+Lemma bblock_equiv'_refl: forall ge fn tbb, bblock_equiv' ge fn tbb tbb.
+Proof.
+  repeat constructor.
+Qed.
+
+
 
 Definition exec := exec_bblock.
 
@@ -72,11 +81,19 @@ Axiom state_equiv:
 
 
 (* TODO - replace it by the actual bblock_equivb' *)
-Definition bblock_equivb' (b1 b2: bblock') := true.
+Axiom bblock_equivb': bblock' -> bblock' -> bool.
+Extract Constant bblock_equivb' => "PostpassSchedulingOracle.bblock_equivb'". (* FIXME *)
 
 Axiom bblock_equiv'_eq:
   forall ge fn b1 b2,
   bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
+
+Lemma bblock_equivb'_refl: forall tbb, bblock_equivb' tbb tbb = true.
+Proof.
+  intros. rewrite bblock_equiv'_eq. apply bblock_equiv'_refl.
+  Unshelve. (* FIXME - problem of Genv and function *)
+Admitted.
+
 
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
@@ -305,6 +322,14 @@ Definition verify_schedule (bb bb' : bblock) : res unit :=
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
 
+Lemma verify_schedule_refl:
+  forall bb, verify_schedule bb bb = OK tt.
+Proof.
+  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity.
+Qed.
+
+
+
 Definition verify_size bb lbb := if (Z.eqb (size bb) (size_blocks lbb)) then OK tt else Error (msg "PostpassScheduling:verify_size: wrong size").
 
 Lemma verify_size_size:
@@ -480,7 +505,7 @@ Lemma verified_schedule_single_inst:
 Proof.
   intros. unfold verified_schedule.
   unfold do_schedule. rewrite no_header_size. rewrite H. simpl.
-  unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). simpl.
+  unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). rewrite verify_schedule_refl. simpl.
   apply stick_header_code_no_header.
   rewrite H. reflexivity.
 Qed.
