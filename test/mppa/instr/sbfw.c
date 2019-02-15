@@ -4,4 +4,4 @@ BEGIN_TEST(int)
 {
     c = a-b;
 }
-END_TEST()
+END_TEST32()

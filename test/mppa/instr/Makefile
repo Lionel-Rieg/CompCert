@@ -2,7 +2,7 @@ K1CC ?= k1-mbr-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 OPTIM ?= -O2
-CFLAGS ?= $(OPTIM) -Wl,--wrap=printf
+CFLAGS ?= $(OPTIM)
 SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 120s
 

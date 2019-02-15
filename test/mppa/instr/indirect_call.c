@@ -30,4 +30,4 @@ BEGIN_TEST(long long)
 
   c += op(make(a), make(b));
 }
-END_TEST()
+END_TEST64()

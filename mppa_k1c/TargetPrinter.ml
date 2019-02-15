@@ -288,14 +288,26 @@ module Target (*: TARGET*) =
          fprintf oc "	negd	%a = %a\n" ireg rd ireg rs
       | Pnegw(rd, rs) ->
          fprintf oc "	negw	%a = %a\n" ireg rd ireg rs
-      | Pfnegd(rd, rs) ->
-         fprintf oc "	fnegd	%a = %a\n" ireg rs ireg rd
       | Psxwd(rd, rs) ->
          fprintf oc "	sxwd	%a = %a\n" ireg rd ireg rs
       | Pzxwd(rd, rs) ->
          fprintf oc "	zxwd	%a = %a\n" ireg rd ireg rs
+      | Pfabsd(rd, rs) ->
+         fprintf oc "	fabsd	%a = %a\n" ireg rd ireg rs
+      | Pfabsw(rd, rs) ->
+         fprintf oc "	fabsw	%a = %a\n" ireg rd ireg rs
+      | Pfnegd(rd, rs) ->
+         fprintf oc "	fnegd	%a = %a\n" ireg rs ireg rd
+      | Pfnegw(rd, rs) ->
+         fprintf oc "	fnegw	%a = %a\n" ireg rs ireg rd
+      | Pfnarrowdw(rd, rs) ->
+         fprintf oc "	fnarrowdw	%a = %a\n" ireg rs ireg rd
+      | Pfwidenlwd(rd, rs) ->
+         fprintf oc "	fwidenlwd	%a = %a\n" ireg rs ireg rd
       | Pfloatwrnsz(rd, rs) ->
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
+      | Pfloatudrnsz(rd, rs) ->
+         fprintf oc "	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatdrnsz(rd, rs) ->
          fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedwrzz(rd, rs) ->
@@ -366,6 +378,19 @@ module Target (*: TARGET*) =
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psral   (rd, rs1, rs2) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+
+      | Pfaddd (rd, rs1, rs2) ->
+         fprintf oc "	faddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfaddw (rd, rs1, rs2) ->
+         fprintf oc "	faddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfsbfd (rd, rs1, rs2) ->
+         fprintf oc "	fsbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfsbfw (rd, rs1, rs2) ->
+         fprintf oc "	fsbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmuld (rd, rs1, rs2) ->
+         fprintf oc "	fmuld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmulw (rd, rs1, rs2) ->
+         fprintf oc "	fmulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       (* Arith RRI32 instructions *)
       | Pcompiw (it, rd, rs, imm) ->

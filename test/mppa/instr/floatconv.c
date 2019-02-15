@@ -6,4 +6,4 @@ float int2float(int v){
 
 BEGIN_TEST(int)
     c = (int) int2float(a) + (int) int2float(b) + (int) int2float(42.3);
-END_TEST()
+END_TEST32()

@@ -31,10 +31,16 @@ let arith_rr_str = function
   | Pmv -> "Pmv"
   | Pnegw -> "Pnegw"
   | Pnegl -> "Pnegl"
-  | Pfnegd -> "Pfnegd"
   | Psxwd -> "Psxwd"
   | Pzxwd -> "Pzxwd"
+  | Pfabsw -> "Pfabsw"
+  | Pfabsd -> "Pfabsd"
+  | Pfnegw -> "Pfnegw"
+  | Pfnegd -> "Pfnegd"
+  | Pfnarrowdw -> "Pfnarrowdw"
+  | Pfwidenlwd -> "Pfwidenlwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
+  | Pfloatudrnsz -> "Pfloatudrnsz"
   | Pfloatdrnsz -> "Pfloatdrnsz"
   | Pfixedwrzz -> "Pfixedwrzz"
   | Pfixeddrzz -> "Pfixeddrzz"
@@ -60,6 +66,12 @@ let arith_rrr_str = function
   | Pslll -> "Pslll"
   | Psrll -> "Psrll"
   | Psral -> "Psral"
+  | Pfaddd -> "Pfaddd"
+  | Pfaddw -> "Pfaddw"
+  | Pfsbfd -> "Pfsbfd"
+  | Pfsbfw -> "Pfsbfw"
+  | Pfmuld -> "Pfmuld"
+  | Pfmulw -> "Pfmulw"
 
 let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
@@ -286,6 +298,10 @@ let alu_lite : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let alu_full : int array = let resmap = fun r -> match r with
+  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
 let alu_nop : int array = let resmap = fun r -> match r with 
   | "ISSUE" -> 1 | "NOP" -> 1 | _ -> 0 
   in Array.of_list (List.map resmap resource_names)
@@ -347,7 +363,9 @@ type real_instruction =
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
   (* FPU *)
-  | Fnegd | Floatwz | Floatdz | Fixedwz | Fixeddz
+  | Fabsd | Fabsw | Fnegw | Fnegd
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
+  | Fnarrowdw | Fwidenlwd | Floatwz | Floatdz | Floatudz | Fixedwz | Fixeddz
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
@@ -374,8 +392,11 @@ let ab_inst_to_real = function
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Psxwd" -> Sxwd
   | "Pzxwd" -> Zxwd
+  | "Pfnarrowdw" -> Fnarrowdw
+  | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
   | "Pfloatdrnsz" -> Floatdz
+  | "Pfloatudrnsz" -> Floatudz
   | "Pfixedwrzz" -> Fixedwz
   | "Pfixeddrzz" -> Fixeddz
 
@@ -400,7 +421,16 @@ let ab_inst_to_real = function
   | "Pret" -> Ret
   | "Pset" -> Set
 
+  | "Pfabsd" -> Fabsd
+  | "Pfabsw" -> Fabsw
+  | "Pfnegw" -> Fnegw
   | "Pfnegd" -> Fnegd
+  | "Pfaddd" -> Faddd
+  | "Pfaddw" -> Faddw
+  | "Pfsbfd" -> Fsbfd
+  | "Pfsbfw" -> Fsbfw
+  | "Pfmuld" -> Fmuld
+  | "Pfmulw" -> Fmulw
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
 
 exception InvalidEncoding
@@ -439,7 +469,7 @@ let rec_to_usage r =
   | Nop -> alu_nop
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
-  | Fixedwz | Floatwz | Fixeddz | Floatdz -> mau
+  | Fixedwz | Floatwz | Fixeddz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
@@ -450,7 +480,9 @@ let rec_to_usage r =
                           | Some E27U27L10 -> lsu_acc_y)
   | Icall | Call | Cb | Igoto | Goto | Ret | Set -> bcu
   | Get -> bcu_tiny_tiny_mau_xnop
-  | Fnegd -> alu_lite
+  | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd -> alu_lite
+  | Fnarrowdw -> alu_full
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> mau
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
@@ -458,7 +490,7 @@ let real_inst_to_latency = function
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd
         -> 1
-  | Floatwz | Fixedwz | Floatdz | Fixeddz -> 4
+  | Floatwz | Fixedwz | Floatdz | Floatudz | Fixeddz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
@@ -466,7 +498,8 @@ let real_inst_to_latency = function
   | Get -> 1
   | Set -> 3
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
-  | Fnegd -> 1
+  | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd | Fnarrowdw -> 1
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> 4
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r

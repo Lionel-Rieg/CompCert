@@ -12,5 +12,5 @@ BEGIN_TEST(int)
 {
     c = sum(make(a), make(b));
 }
-END_TEST()
+END_TEST32()
 /* RETURN VALUE: 60 */

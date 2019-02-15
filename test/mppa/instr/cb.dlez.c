@@ -7,4 +7,4 @@ BEGIN_TEST(long long)
     else
         c = 0;
 }
-END_TEST()
+END_TEST64()

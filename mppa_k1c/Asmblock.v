@@ -279,14 +279,21 @@ Inductive arith_name_rr : Type :=
   | Pmv                                             (**r register move *)
   | Pnegw                                           (**r negate word *)
   | Pnegl                                           (**r negate long *)
-  | Pfnegd                                          (**r float negate double *)
   | Pcvtl2w                                         (**r Convert Long to Word *)
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
-  | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (single -> int) *)
-  | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (float -> long) *)
-  | Pfixedwrzz                                      (**r Integer conversion from floating point (int -> single) *)
-  | Pfixeddrzz                                      (**r Integer conversion from floating point (long -> float) *)
+
+  | Pfabsd                                          (**r float absolute double *)
+  | Pfabsw                                          (**r float absolute word *)
+  | Pfnegd                                          (**r float negate double *)
+  | Pfnegw                                          (**r float negate word *)
+  | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
+  | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
+  | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (int -> single) *)
+  | Pfloatudrnsz                                    (**r Floating Point Conversion from unsigned integer (ulong -> float) *)
+  | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (long -> float) *)
+  | Pfixedwrzz                                      (**r Integer conversion from floating point (single -> int) *)
+  | Pfixeddrzz                                      (**r Integer conversion from floating point (float -> long) *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -328,6 +335,13 @@ Inductive arith_name_rrr : Type :=
   | Pslll                                           (**r shift left logical long *)
   | Psrll                                           (**r shift right logical long *)
   | Psral                                           (**r shift right arithmetic long *)
+
+  | Pfaddd                                          (**r float add double *)
+  | Pfaddw                                          (**r float add word *)
+  | Pfsbfd                                          (**r float sub double *)
+  | Pfsbfw                                          (**r float sub word *)
+  | Pfmuld                                          (**r float multiply double *)
+  | Pfmulw                                          (**r float multiply word *)
 .
 
 Inductive arith_name_rri32 : Type :=
@@ -884,11 +898,17 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pmv => rs#d <- (rs#s)
       | Pnegw => rs#d <- (Val.neg rs#s)
       | Pnegl => rs#d <- (Val.negl rs#s)
-      | Pfnegd => rs#d <- (Val.negf rs#s)
       | Pcvtl2w => rs#d <- (Val.loword rs#s)
       | Psxwd => rs#d <- (Val.longofint rs#s)
       | Pzxwd => rs#d <- (Val.longofintu rs#s)
+      | Pfnegd => rs#d <- (Val.negf rs#s)
+      | Pfnegw => rs#d <- (Val.negfs rs#s)
+      | Pfabsd => rs#d <- (Val.absf rs#s)
+      | Pfabsw => rs#d <- (Val.absfs rs#s)
+      | Pfnarrowdw => rs#d <- (Val.singleoffloat rs#s)
+      | Pfwidenlwd => rs#d <- (Val.floatofsingle rs#s)
       | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
+      | Pfloatudrnsz => rs#d <- (match Val.floatoflongu rs#s with Some f => f | _ => Vundef end)
       | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
       | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
       | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
@@ -937,6 +957,13 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pslll => rs#d <- (Val.shll rs#s1 rs#s2)
       | Psrll => rs#d <- (Val.shrlu rs#s1 rs#s2)
       | Psral => rs#d <- (Val.shrl rs#s1 rs#s2)
+
+      | Pfaddd => rs#d <- (Val.addf rs#s1 rs#s2)
+      | Pfaddw => rs#d <- (Val.addfs rs#s1 rs#s2)
+      | Pfsbfd => rs#d <- (Val.subf rs#s1 rs#s2)
+      | Pfsbfw => rs#d <- (Val.subfs rs#s1 rs#s2)
+      | Pfmuld => rs#d <- (Val.mulf rs#s1 rs#s2)
+      | Pfmulw => rs#d <- (Val.mulfs rs#s1 rs#s2)
       end
 
   | PArithRRI32 n d s i =>

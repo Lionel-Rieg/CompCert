@@ -6,4 +6,4 @@ BEGIN_TEST(int)
     for (j = 0 ; j < 10 ; j++)
         c += a;
 }
-END_TEST()
+END_TEST32()

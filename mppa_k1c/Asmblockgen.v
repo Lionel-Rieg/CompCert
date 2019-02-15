@@ -544,21 +544,62 @@ Definition transl_op
           Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
           Paddl RTMP rs RTMP ::i
           Psrail rd RTMP n ::i k)
+
+  | Oabsf, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfabsd rd rs ::i k)
+  | Oabsfs, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfabsw rd rs ::i k)
+  | Oaddf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfaddd rd rs1 rs2 ::i k)
+  | Oaddfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfaddw rd rs1 rs2 ::i k)
+  | Osubf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfsbfd rd rs1 rs2 ::i k)
+  | Osubfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfsbfw rd rs1 rs2 ::i k)
+  | Omulf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmuld rd rs1 rs2 ::i k)
+  | Omulfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmulw rd rs1 rs2 ::i k)
   | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs ::i k)
+  | Onegfs, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfnegw rd rs ::i k)
+
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatwrnsz rd rs ::i k)
   | Ofloatoflong, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatdrnsz rd rs ::i k)
+  | Ofloatoflongu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatudrnsz rd rs ::i k)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)
   | Olongoffloat, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixeddrzz rd rs ::i k)
+
+  | Ofloatofsingle, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfwidenlwd rd rs ::i k)
+  | Osingleoffloat, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfnarrowdw rd rs ::i k)
+
+
   | Oabsf , _ => Error (msg "Asmblockgen.transl_op: Oabsf")
   | Oaddf , _ => Error (msg "Asmblockgen.transl_op: Oaddf")
   | Osubf , _ => Error (msg "Asmblockgen.transl_op: Osubf")
@@ -570,7 +611,6 @@ Definition transl_op
   | Osubfs , _ => Error (msg "Asmblockgen.transl_op: Osubfs")
   | Omulfs , _ => Error (msg "Asmblockgen.transl_op: Omulfs")
   | Odivfs , _ => Error (msg "Asmblockgen.transl_op: Odivfs")
-  | Ofloatoflong , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflong")
   | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
   | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
   | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
@@ -580,114 +620,18 @@ Definition transl_op
   | Ointuoffloat , _ => Error (msg "Asmblockgen.transl_op: Ointuoffloat")
   | Ofloatofint , _ => Error (msg "Asmblockgen.transl_op: Ofloatofint")
   | Ofloatofintu , _ => Error (msg "Asmblockgen.transl_op: Ofloatofintu")
-  | Ointofsingle , _ => Error (msg "Asmblockgen.transl_op: Ointofsingle")
   | Ointuofsingle , _ => Error (msg "Asmblockgen.transl_op: Ointuofsingle")
-  | Osingleofint , _ => Error (msg "Asmblockgen.transl_op: Osingleofint")
   | Osingleofintu , _ => Error (msg "Asmblockgen.transl_op: Osingleofintu")
-  | Olongoffloat , _ => Error (msg "Asmblockgen.transl_op: Olongoffloat")
   | Olonguoffloat , _ => Error (msg "Asmblockgen.transl_op: Olonguoffloat")
 
 
   | Olongofsingle , _ => Error (msg "Asmblockgen.transl_op: Olongofsingle")
   | Olonguofsingle , _ => Error (msg "Asmblockgen.transl_op: Olonguofsingle")
 
-
-(*| Oabsf, a1 :: nil =>
-      do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfabsd rd rs :: k)
-  | Oaddf, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfaddd rd rs1 rs2 :: k)
-  | Osubf, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfsubd rd rs1 rs2 :: k)
-  | Omulf, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfmuld rd rs1 rs2 :: k)
-  | Odivf, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfdivd rd rs1 rs2 :: k)
-
-  | Onegfs, a1 :: nil =>
-      do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfnegs rd rs :: k)
-  | Oabsfs, a1 :: nil =>
-      do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfabss rd rs :: k)
-  | Oaddfs, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfadds rd rs1 rs2 :: k)
-  | Osubfs, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfsubs rd rs1 rs2 :: k)
-  | Omulfs, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfmuls rd rs1 rs2 :: k)
-  | Odivfs, a1 :: a2 :: nil =>
-      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
-      OK (Pfdivs rd rs1 rs2 :: k)
-
-  | Osingleoffloat, a1 :: nil =>
-      do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfcvtsd rd rs :: k)
-  | Ofloatofsingle, a1 :: nil =>
-      do rd <- freg_of res; do rs <- freg_of a1;
-      OK (Pfcvtds rd rs :: k)
-
-  | Ointoffloat, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtwd rd rs :: k)
-  | Ointuoffloat, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtwud rd rs :: k)
-  | Ofloatofint, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtdw rd rs :: k)
-  | Ofloatofintu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtdwu rd rs :: k)
-  | Ointofsingle, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtws rd rs :: k)
-  | Ointuofsingle, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtwus rd rs :: k)
-  | Osingleofint, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtsw rd rs :: k)
-  | Osingleofintu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtswu rd rs :: k)
-
-  | Olongoffloat, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtld rd rs :: k)
-  | Olonguoffloat, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtlud rd rs :: k)
-  | Ofloatoflong, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtdl rd rs :: k)
-  | Ofloatoflongu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtdlu rd rs :: k)
-  | Olongofsingle, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtls rd rs :: k)
-  | Olonguofsingle, a1 :: nil =>
-      do rd <- ireg_of res; do rs <- freg_of a1;
-      OK (Pfcvtlus rd rs :: k)
-  | Osingleoflong, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtsl rd rs :: k)
-  | Osingleoflongu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfcvtslu rd rs :: k)
-
-*)| Ocmp cmp, _ =>
+  | Ocmp cmp, _ =>
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
-  
+
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.

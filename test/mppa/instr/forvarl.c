@@ -7,4 +7,4 @@ BEGIN_TEST(long long int)
     for (j = 0 ; j < (b & 0x8LL) ; j++)
         c += a;
 }
-END_TEST()
+END_TEST64()

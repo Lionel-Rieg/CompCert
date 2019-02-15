@@ -4,4 +4,4 @@ BEGIN_TEST(long long)
 {
     c = (a <= b);
 }
-END_TEST()
+END_TEST64()

@@ -7,4 +7,4 @@ BEGIN_TEST(int)
     else
         c = 1;
 }
-END_TEST()
+END_TEST32()

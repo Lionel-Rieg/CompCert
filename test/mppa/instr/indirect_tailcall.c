@@ -30,4 +30,4 @@ BEGIN_TEST(long long)
 {
   c += random_op(a, b);
 }
-END_TEST()
+END_TEST64()

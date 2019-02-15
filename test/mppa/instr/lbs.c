@@ -6,4 +6,4 @@ BEGIN_TEST(int)
 
     c = s[(a & (sizeof(s)-1))];
 }
-END_TEST()
+END_TEST32()

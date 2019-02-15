@@ -94,11 +94,17 @@ Inductive instruction : Type :=
   | Pmv     (rd rs: ireg)                           (**r register move *)
   | Pnegw   (rd rs: ireg)                           (**r negate word *)
   | Pnegl   (rd rs: ireg)                           (**r negate long *)
-  | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
   | Pcvtl2w (rd rs: ireg)                           (**r Convert Long to Word *)
   | Psxwd   (rd rs: ireg)                           (**r Sign Extend Word to Double Word *)
   | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
+  | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
+  | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
+  | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
+  | Pfnegw  (rd rs: ireg)                           (**r float negate word *)
+  | Pfnarrowdw (rd rs: ireg)                        (**r float narrow 64 -> 32 bits *)
+  | Pfwidenlwd (rd rs: ireg)                        (**r float widen 32 -> 64 bits *)
   | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer *)
+  | Pfloatudrnsz (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (64 bits) *)
   | Pfloatdrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (64 bits) *)
   | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
   | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (64 bits) *)
@@ -138,6 +144,13 @@ Inductive instruction : Type :=
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
+
+  | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
+  | Pfaddw              (rd rs1 rs2: ireg)          (**r Float addition word *)
+  | Pfsbfd              (rd rs1 rs2: ireg)          (**r Float sub double *)
+  | Pfsbfw              (rd rs1 rs2: ireg)          (**r Float sub word *)
+  | Pfmuld              (rd rs1 rs2: ireg)          (**r Float mul double *)
+  | Pfmulw              (rd rs1 rs2: ireg)          (**r Float mul word *)
 
   (** Arith RRI32 *)
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
@@ -197,8 +210,14 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmblock.Pcvtl2w rd rs => Pcvtl2w rd rs
   | PArithRR Asmblock.Psxwd rd rs  => Psxwd rd rs
   | PArithRR Asmblock.Pzxwd rd rs  => Pzxwd rd rs
+  | PArithRR Asmblock.Pfabsd rd rs => Pfabsd rd rs
+  | PArithRR Asmblock.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
+  | PArithRR Asmblock.Pfnegw rd rs => Pfnegw rd rs
+  | PArithRR Asmblock.Pfnarrowdw rd rs => Pfnarrowdw rd rs
+  | PArithRR Asmblock.Pfwidenlwd rd rs => Pfwidenlwd rd rs
   | PArithRR Asmblock.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
+  | PArithRR Asmblock.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
   | PArithRR Asmblock.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
   | PArithRR Asmblock.Pfixedwrzz rd rs => Pfixedwrzz rd rs
   | PArithRR Asmblock.Pfixeddrzz rd rs => Pfixeddrzz rd rs
@@ -237,6 +256,13 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
   | PArithRRR Asmblock.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
   | PArithRRR Asmblock.Psral rd rs1 rs2       => Psral rd rs1 rs2
+
+  | PArithRRR Asmblock.Pfaddd rd rs1 rs2      => Pfaddd rd rs1 rs2
+  | PArithRRR Asmblock.Pfaddw rd rs1 rs2      => Pfaddw rd rs1 rs2
+  | PArithRRR Asmblock.Pfsbfd rd rs1 rs2      => Pfsbfd rd rs1 rs2
+  | PArithRRR Asmblock.Pfsbfw rd rs1 rs2      => Pfsbfw rd rs1 rs2
+  | PArithRRR Asmblock.Pfmuld rd rs1 rs2      => Pfmuld rd rs1 rs2
+  | PArithRRR Asmblock.Pfmulw rd rs1 rs2      => Pfmulw rd rs1 rs2
 
   (* RRI32 *)
   | PArithRRI32 (Asmblock.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
