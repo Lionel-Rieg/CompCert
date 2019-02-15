@@ -3402,7 +3402,7 @@ report (PS * ps, int replevel, char type)
    */
   #define ROWS 25
 
-  if (ps->reports % (ROWS - 3) == (ROWS - 4))
+  if (INT_MOD(ps->reports, (ROWS - 3)) == (ROWS - 4))
     rheader (ps);
 
   fflush (ps->out);
@@ -4599,7 +4599,7 @@ backtrack (PS * ps)
       inc_lreduce (ps);
     }
 
-  if (ps->verbosity >= 4 && !(ps->conflicts % 1000))
+  if (ps->verbosity >= 4 && !(INT_MOD(ps->conflicts, 1000)))
     report (ps, 4, 'C');
 }
 
@@ -5752,7 +5752,7 @@ gcd (unsigned a, unsigned b)
     {
       assert (a >= b);
       tmp = b;
-      b = a % b;
+      b = INT_MOD(a, b);
       a = tmp;
     }
 
@@ -5969,7 +5969,7 @@ SATISFIED:
 	return PICOSAT_UNKNOWN;
 
       if (ps->interrupt.function &&		/* external interrupt */
-	  count > 0 && !(count % INTERRUPTLIM) &&
+	  count > 0 && !(INT_MOD(count, INTERRUPTLIM)) &&
 	  ps->interrupt.function (ps->interrupt.state))
 	return PICOSAT_UNKNOWN;
 
@@ -6971,7 +6971,7 @@ assume_contexts (PS * ps)
 
 #ifndef RCODE
 static const char * enumstr (int i) {
-  int last = i % 10;
+  int last = INT_MOD(i, 10);
   if (last == 1) return "st";
   if (last == 2) return "nd";
   if (last == 3) return "rd";
