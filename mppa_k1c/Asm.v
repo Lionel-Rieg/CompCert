@@ -304,7 +304,7 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRO Asmblock.Psd rd ra ofs => Psd rd ra ofs
   | PStoreRRO Asmblock.Psd_a rd ra ofs => Psd_a rd ra ofs
   | PStoreRRO Asmblock.Pfss rd ra ofs => Pfss rd ra ofs
-  | PStoreRRO Asmblock.Pfsd rd ra ofs => Pfss rd ra ofs
+  | PStoreRRO Asmblock.Pfsd rd ra ofs => Pfsd rd ra ofs
 
   end.
 
