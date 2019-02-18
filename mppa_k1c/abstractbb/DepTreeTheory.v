@@ -41,6 +41,9 @@ Export L.
 Export LP.
 Local Open Scope list.
 
+Section DEPTREE.
+
+Variable ge: genv.
 
 (** Dependency Trees of these "bblocks" 
 
@@ -63,7 +66,7 @@ Fixpoint tree_eval (t: tree) (m: mem): option value :=
   | Tname x => Some (m x)
   | Top o l =>
      match list_tree_eval l m with
-     | Some v => op_eval o v
+     | Some v => op_eval ge o v
      | _ => None
      end
   | Terase new old =>
@@ -127,7 +130,7 @@ Definition failsafe (t: tree): bool :=
   match t with
   | Tname x => true
   | Top o Tnil => 
-     match op_eval o nil with
+     match op_eval ge o nil with
      | Some _ => true
      | None => false
      end
@@ -138,7 +141,7 @@ Lemma failsafe_correct (t: tree) m: failsafe t = true -> tree_eval t m <> None.
 Proof.
   destruct t; simpl; try congruence.
   destruct l; simpl; try congruence.
-  destruct (op_eval o nil); try congruence.
+  destruct (op_eval ge o nil); try congruence.
 Qed.
 
 Fixpoint macro_deps (i: macro) (d old: deps): deps :=
@@ -168,10 +171,10 @@ Definition bblock_deps: bblock -> deps
 Lemma tree_eval_exp e od m0 old:
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall d m1, (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-   (tree_eval (exp_tree e d od) m0) = exp_eval e m1 old.
+   (tree_eval (exp_tree e d od) m0) = exp_eval ge e m1 old.
 Proof.
   intro H.
-  induction e using exp_mut with (P0:=fun l => forall d m1, (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) -> list_tree_eval (list_exp_tree l d od) m0 = list_exp_eval l m1 old); simpl; auto.
+  induction e using exp_mut with (P0:=fun l => forall d m1, (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) -> list_tree_eval (list_exp_tree l d od) m0 = list_exp_eval ge l m1 old); simpl; auto.
   - intros; erewrite IHe; eauto.
   - intros; erewrite IHe, IHe0; eauto. 
 Qed.
@@ -202,14 +205,14 @@ Qed.
 Lemma tree_eval_macro_Some_correct1 i m0 old od: 
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall (m1 m2: mem) d, 
-  macro_run i m1 old = Some m2 -> 
+  macro_run ge i m1 old = Some m2 -> 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
   (forall x, tree_eval (deps_get (macro_deps i d od) x) m0 = Some (m2 x)).
 Proof.
   intro X; induction i as [|[x e] i IHi]; simpl; intros m1 m2 d H.
   - inversion_clear H; eauto.
   - intros H0 x0.
-    remember (exp_eval e m1 old) as ov.
+    remember (exp_eval ge e m1 old) as ov.
     destruct ov.
     + refine (IHi _ _ _ _ _ _); eauto.
       clear x0; intros x0.
@@ -224,21 +227,21 @@ Qed.
 Local Hint Resolve tree_eval_macro_Some_correct1 tree_eval_abort.
 
 Lemma tree_eval_Some_correct1 p m0: forall (m1 m2: mem) d, 
- run p m1 = Some m2 -> 
+ run ge p m1 = Some m2 -> 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
     (forall x, tree_eval (deps_get (bblock_deps_rec p d) x) m0 = Some (m2 x)).
 Proof.
   induction p as [ | i p]; simpl; intros m1 m2 d H.
   - inversion_clear H; eauto.
   - intros H0 x0.
-    remember (macro_run i m1 m1) as om.
+    remember (macro_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _ _ _ _); eauto.
     + inversion H. 
 Qed.
 
 Lemma bblock_deps_Some_correct1 p m0 m1:
-  run p m0 = Some m1
+  run ge p m0 = Some m1
    -> forall x, tree_eval (deps_get (bblock_deps p) x) m0 = Some (m1 x).
 Proof.
   intros; eapply tree_eval_Some_correct1;
@@ -248,12 +251,12 @@ Qed.
 Lemma tree_eval_macro_None_correct i m0 old od: 
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall m1 d,  (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-  macro_run i m1 old = None <-> exists x, tree_eval (deps_get (macro_deps i d od) x) m0 = None.
+  macro_run ge i m1 old = None <-> exists x, tree_eval (deps_get (macro_deps i d od) x) m0 = None.
 Proof.
   intro X; induction i as [|[x e] i IHi]; simpl; intros m1 d.
   - constructor 1; [discriminate | intros [x H']; rewrite H in H'; discriminate].
   - intros H0.
-    remember (exp_eval e m1 old) as ov.
+    remember (exp_eval ge e m1 old) as ov.
     destruct ov.
     + refine (IHi _ _ _); eauto.
       intros x0; unfold assign; destruct (R.eq_dec x x0).
@@ -272,23 +275,23 @@ Qed.
 
 Lemma tree_eval_None_correct p m0: forall m1 d,
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-  run p m1 = None <-> exists x, tree_eval (deps_get (bblock_deps_rec p d) x) m0 = None.
+  run ge p m1 = None <-> exists x, tree_eval (deps_get (bblock_deps_rec p d) x) m0 = None.
 Proof.
   induction p as [|i p IHp]; simpl; intros m1 d.
   - constructor 1; [discriminate | intros [x H']; rewrite H in H'; discriminate].
   - intros H0.
-    remember (macro_run i m1 m1) as om.
+    remember (macro_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _); eauto.
     + intuition.
-      assert (X: macro_run i m1 m1 = None); auto.
+      assert (X: macro_run ge i m1 m1 = None); auto.
       rewrite tree_eval_macro_None_correct in X; auto.
       destruct X as [x H1].
       constructor 1 with (x:=x); simpl; auto.
 Qed.
 
 Lemma bblock_deps_None_correct p m:
-  run p m = None <-> exists x, tree_eval (deps_get (bblock_deps p) x) m = None.
+  run ge p m = None <-> exists x, tree_eval (deps_get (bblock_deps p) x) m = None.
 Proof.
   intros; eapply tree_eval_None_correct.
   intros; autorewrite with dict_rw; simpl; eauto.
@@ -299,7 +302,7 @@ Lemma tree_eval_macro_Some_correct2 i m0 old od:
   forall (m1 m2: mem) d, 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
     (forall x, tree_eval (deps_get (macro_deps i d od) x) m0 = Some (m2 x)) ->
-    res_eq (Some m2) (macro_run i m1 old).
+    res_eq (Some m2) (macro_run ge i m1 old).
 Proof.
   intro X.
   induction i as [|[x e] i IHi]; simpl; intros m1 m2 d H0.
@@ -307,7 +310,7 @@ Proof.
     generalize (H0 x); rewrite H.
     congruence.
   - intros H.
-    remember (exp_eval e m1 old) as ov.
+    remember (exp_eval ge e m1 old) as ov.
     destruct ov.
     + refine (IHi _ _ _ _ _); eauto.
       intros x0; unfold assign; destruct (R.eq_dec x x0).
@@ -325,17 +328,17 @@ Qed.
 Lemma tree_eval_Some_correct2 p m0: forall (m1 m2: mem) d, 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
     (forall x, tree_eval (deps_get (bblock_deps_rec p d) x) m0 = Some (m2 x)) ->
-    res_eq (Some m2) (run p m1).
+    res_eq (Some m2) (run ge p m1).
 Proof.
   induction p as [|i p]; simpl; intros m1 m2 d H0.
   - intros H; eapply ex_intro; intuition eauto.
     generalize (H0 x); rewrite H.
     congruence.
   - intros H.
-    remember (macro_run i m1 m1) as om.
+    remember (macro_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _ _ _); eauto.
-    + assert (X: macro_run i m1 m1 = None); auto.
+    + assert (X: macro_run ge i m1 m1 = None); auto.
       rewrite tree_eval_macro_None_correct in X; auto.
       destruct X as [x H1].
       generalize (H x).
@@ -344,7 +347,7 @@ Qed.
 
 Lemma bblock_deps_Some_correct2 p m0 m1:
   (forall x, tree_eval (deps_get (bblock_deps p) x) m0 = Some (m1 x))
-  -> res_eq (Some m1) (run p m0).
+  -> res_eq (Some m1) (run ge p m0).
 Proof.
   intros; eapply tree_eval_Some_correct2; eauto.
   intros; autorewrite with dict_rw; simpl; eauto.
@@ -353,21 +356,23 @@ Qed.
 
 Theorem bblock_deps_equiv p1 p2:
   (forall x, deps_get (bblock_deps p1) x = deps_get (bblock_deps p2) x)
-   -> bblock_equiv p1 p2.
+   -> bblock_equiv ge p1 p2.
 Proof.
   intros H m2.
-  remember (run p1 m2) as om1.
+  remember (run ge p1 m2) as om1.
   destruct om1; simpl.
   + apply bblock_deps_Some_correct2.
     intros; rewrite <- H.
     apply bblock_deps_Some_correct1; auto.
   + rewrite bblock_deps_None_correct.
-    assert (X: run p1 m2 = None); auto.
+    assert (X: run ge p1 m2 = None); auto.
     rewrite bblock_deps_None_correct in X.
     destruct X as [x Hx].
     rewrite H in Hx.
     eauto.
 Qed.
+
+End DEPTREE.
 
 End DepTree.
 

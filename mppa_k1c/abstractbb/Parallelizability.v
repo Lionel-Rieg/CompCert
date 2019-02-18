@@ -18,12 +18,15 @@ Module ParallelSemantics (L: SeqLanguage).
 Export L.
 Local Open Scope list.
 
+Section PARALLEL.
+Variable ge: genv.
+
 (* parallel run of a macro *)
 Fixpoint macro_prun (i: macro) (m tmp old: mem): option mem :=
   match i with
   | nil => Some m
   | (x, e)::i' =>
-     match exp_eval e tmp old with
+     match exp_eval ge e tmp old with
      | Some v' => macro_prun i' (assign m x v') (assign tmp x v') old
      | None => None
      end
@@ -31,10 +34,10 @@ Fixpoint macro_prun (i: macro) (m tmp old: mem): option mem :=
 
 (* [macro_prun] is generalization of [macro_run] *)   
 Lemma macro_run_prun i: forall m old,
-  macro_run i m old = macro_prun i m m old.
+  macro_run ge i m old = macro_prun i m m old.
 Proof.
   induction i as [|[y e] i']; simpl; auto.
-  intros m old; destruct (exp_eval e m old); simpl; auto.
+  intros m old; destruct (exp_eval ge e m old); simpl; auto.
 Qed.
 
 
@@ -60,7 +63,7 @@ Lemma macro_prun_equiv i old: forall m1 m2 tmp,
   res_eq (macro_prun i m1 tmp old) (macro_prun i m2 tmp old).
 Proof.
   induction i as [|[x e] i']; simpl; eauto.
-  intros m1 m2 tmp H; destruct (exp_eval e tmp old); simpl; auto.
+  intros m1 m2 tmp H; destruct (exp_eval ge e tmp old); simpl; auto.
   eapply IHi'; unfold assign. intros; destruct (R.eq_dec x x0); auto.
 Qed.
 
@@ -76,6 +79,7 @@ Proof.
     + intros H1; rewrite H1; simpl; auto.
 Qed.
 
+End PARALLEL.
 End ParallelSemantics.
 
 
@@ -168,6 +172,8 @@ Module ParallelizablityChecking (L: SeqLanguage).
 
 Include ParallelSemantics L.
 
+Section PARALLELI.
+Variable ge: genv.
 
 (** * Preliminary notions on frames *)
 
@@ -249,22 +255,22 @@ Fixpoint macro_wframe(i:macro): list R.t :=
   end.
 
 Lemma macro_wframe_correct i m' old: forall m tmp, 
-  macro_prun i m tmp old = Some m' -> 
+  macro_prun ge i m tmp old = Some m' -> 
   forall x, notIn x (macro_wframe i) -> m' x  = m x.
 Proof.
   induction i as [|[y e] i']; simpl.
   - intros m tmp H x H0; inversion_clear H; auto.
-  - intros m tmp H x (H1 & H2); destruct (exp_eval e tmp old); simpl; try congruence.
+  - intros m tmp H x (H1 & H2); destruct (exp_eval ge e tmp old); simpl; try congruence.
     cutrewrite (m x = assign m y v x); eauto.
     rewrite assign_diff; auto.
 Qed.
 
 Lemma macro_prun_fequiv i old: forall m1 m2 tmp, 
-  frame_eq (fun x => In x (macro_wframe i)) (macro_prun i m1 tmp old) (macro_prun i m2 tmp old).
+  frame_eq (fun x => In x (macro_wframe i)) (macro_prun ge i m1 tmp old) (macro_prun ge i m2 tmp old).
 Proof.
   induction i as [|[y e] i']; simpl.
   - intros m1 m2 tmp; eexists; intuition eauto.
-  - intros m1 m2 tmp. destruct (exp_eval e tmp old); simpl; auto.
+  - intros m1 m2 tmp. destruct (exp_eval ge e tmp old); simpl; auto.
     eapply frame_eq_list_split; eauto. clear IHi'.
     intros m1' m2' x H1 H2.
     lapply (macro_wframe_correct i' m1' old (assign m1 y v) (assign tmp y v)); eauto.
@@ -275,16 +281,16 @@ Proof.
 Qed.
 
 Lemma macro_prun_None i m1 m2 tmp old: 
-  macro_prun i m1 tmp old = None -> 
-  macro_prun i m2 tmp old = None.
+  macro_prun ge i m1 tmp old = None -> 
+  macro_prun ge i m2 tmp old = None.
 Proof.
   intros H; generalize (macro_prun_fequiv i old m1 m2 tmp).
   rewrite H; simpl; auto.
 Qed.
 
 Lemma macro_prun_Some i m1 m2 tmp old m1': 
-  macro_prun i m1 tmp old = Some m1' -> 
-  res_eq (Some (frame_assign m2 (macro_wframe i) m1')) (macro_prun i m2 tmp old).
+  macro_prun ge i m1 tmp old = Some m1' -> 
+  res_eq (Some (frame_assign m2 (macro_wframe i) m1')) (macro_prun ge i m2 tmp old).
 Proof.
   intros H; generalize (macro_prun_fequiv i old m1 m2 tmp).
   rewrite H; simpl.
@@ -385,17 +391,17 @@ Qed.
 Theorem is_det_correct p p':
   Permutation p p' -> 
   is_det p -> 
-  forall m old, res_eq (prun_iw p m old) (prun_iw p' m old).
+  forall m old, res_eq (prun_iw ge p m old) (prun_iw ge p' m old).
 Proof.
   induction 1 as [ | i p p' | i1 i2 p | p1 p2 p3 ]; simpl; eauto.
   - intros [H0 H1] m old.
-    remember (macro_prun i m old old) as om0.
+    remember (macro_prun ge i m old old) as om0.
     destruct om0 as [ m0 | ]; simpl; auto.
   - rewrite disjoint_app_r.
     intros ([Z1 Z2] & Z3 & Z4) m old.
-    remember (macro_prun i2 m old old) as om2.
+    remember (macro_prun ge i2 m old old) as om2.
     destruct om2 as [ m2 | ]; simpl; auto.
-    + remember (macro_prun i1 m old old) as om1.
+    + remember (macro_prun ge i1 m old old) as om1.
       destruct om1 as [ m1 | ]; simpl; auto.
       * lapply (macro_prun_Some i2 m m1 old old m2); simpl; auto.
         lapply (macro_prun_Some i1 m m2 old old m1); simpl; auto.
@@ -412,7 +418,7 @@ Proof.
         }
         rewrite frame_assign_notIn; auto.
      * erewrite macro_prun_None; eauto. simpl; auto.
-   + remember (macro_prun i1 m old old) as om1.
+   + remember (macro_prun ge i1 m old old) as om1.
      destruct om1 as [ m1 | ]; simpl; auto.
      erewrite macro_prun_None; eauto.
   - intros; eapply res_eq_trans.
@@ -439,10 +445,10 @@ with list_exp_frame (le: list_exp): list R.t :=
 Lemma exp_frame_correct e old1 old2: 
   (forall x, In x (exp_frame e) -> old1 x = old2 x) ->
   forall m1 m2, (forall x, In x (exp_frame e) -> m1 x = m2 x) ->
-   (exp_eval e m1 old1)=(exp_eval e m2 old2).
+   (exp_eval ge e m1 old1)=(exp_eval ge e m2 old2).
 Proof.
   induction e using exp_mut with (P0:=fun l => (forall x, In x (list_exp_frame l) -> old1 x = old2 x) -> forall m1 m2, (forall x, In x (list_exp_frame l) -> m1 x = m2 x) ->
-   (list_exp_eval l m1 old1)=(list_exp_eval l m2 old2)); simpl; auto.
+   (list_exp_eval ge l m1 old1)=(list_exp_eval ge l m2 old2)); simpl; auto.
   - intros H1 m1 m2 H2; rewrite H2; auto.
   - intros H1 m1 m2 H2; erewrite IHe; eauto.
   - intros H1 m1 m2 H2; erewrite IHe, IHe0; eauto; 
@@ -465,13 +471,13 @@ Lemma macro_frame_correct i wframe old1 old2: forall m tmp1 tmp2,
   (disjoint (macro_frame i) wframe) ->
   (forall x, notIn x wframe -> old1 x = old2 x) ->
   (forall x, notIn x wframe -> tmp1 x = tmp2 x) ->
-  macro_prun i m tmp1 old1 = macro_prun i m tmp2 old2.
+  macro_prun ge i m tmp1 old1 = macro_prun ge i m tmp2 old2.
 Proof.
   induction i as [|[x e] i']; simpl; auto.
   intros m tmp1 tmp2; rewrite disjoint_cons_l, disjoint_app_l.
   intros (H1 & H2 & H3) H6 H7.
-  cutrewrite (exp_eval e tmp1 old1 = exp_eval e tmp2 old2).
-  - destruct (exp_eval e tmp2 old2); auto.
+  cutrewrite (exp_eval ge e tmp1 old1 = exp_eval ge e tmp2 old2).
+  - destruct (exp_eval ge e tmp2 old2); auto.
     eapply IHi'; eauto. 
     simpl; intros x0 H0; unfold assign. destruct (R.eq_dec x x0); simpl; auto. 
   - unfold disjoint in H2; apply exp_frame_correct.
@@ -512,12 +518,12 @@ Qed.
 Lemma pararec_correct p old: forall wframe m,
   pararec p wframe -> 
   (forall x, notIn x wframe -> m x = old x) ->
-  run p m = prun_iw p m old.
+  run ge p m = prun_iw ge p m old.
 Proof.
   elim p; clear p; simpl; auto.
   intros i p' X wframe m [H H0] H1.
   erewrite macro_run_prun, macro_frame_correct; eauto.
-  remember (macro_prun i m old old) as om0.
+  remember (macro_prun ge i m old old) as om0.
   destruct om0 as [m0 | ]; try congruence.
   eapply X; eauto.
   intro x; rewrite notIn_app. intros [H3 H4].
@@ -528,7 +534,7 @@ Qed.
 Definition parallelizable (p: bblock) := pararec p nil.
 
 Theorem parallelizable_correct p m om':
-  parallelizable p -> (prun p m om' <-> res_eq om' (run p m)).
+  parallelizable p -> (prun ge p m om' <-> res_eq om' (run ge p m)).
 Proof.
   intros H. constructor 1.
   - intros (p' & H0 & H1). eapply res_eq_trans; eauto.
@@ -540,6 +546,8 @@ Proof.
     eexists. constructor 1. 2: apply Permutation_refl. 
     erewrite pararec_correct in H0; eauto.
 Qed.
+
+End PARALLELI.
 
 End ParallelizablityChecking.
 
@@ -584,6 +592,9 @@ Qed.
 Module ParallelChecks (L: SeqLanguage) (S:ResourceSet with Module R:=L.LP.R).
 
 Include ParallelizablityChecking L.
+
+Section PARALLEL2.
+Variable ge: genv.
 
 Local Hint Resolve S.empty_match_frame S.add_match_frame S.union_match_frame S.is_disjoint_match_frame.
 
@@ -656,12 +667,13 @@ Proof.
 Qed.
 
 Theorem is_parallelizable_correct p:
-  is_parallelizable p = true -> forall m om', (prun p m om' <-> res_eq om' (run p m)).
+  is_parallelizable p = true -> forall m om', (prun ge p m om' <-> res_eq om' (run ge p m)).
 Proof.
   intros; apply parallelizable_correct.
   apply is_para_correct_aux. auto.
 Qed.
 
+End PARALLEL2.
 End ParallelChecks.
 
 
