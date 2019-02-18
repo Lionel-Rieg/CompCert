@@ -12,7 +12,11 @@ bool REAL_mat_equal(unsigned m,
 		      const REAL *b, unsigned stride_b) {
   for(unsigned i=0; i<m; i++) {
     for(unsigned j=0; j<n; j++) {
-      if (a[i*stride_a + j] != b[i*stride_b + j]) return false;
+      if (a[i*stride_a + j] != b[i*stride_b + j]) {
+	printf("at %u,%u: %g vs %g\n", i, j,
+	       a[i*stride_a + j], b[i*stride_b + j]);
+	return false;
+      }
     }
   }
   return true;
@@ -114,5 +118,6 @@ int main() {
   free(c4);
   free(c5);
   free(c6);
+  free(c7);
   return 0;
 }

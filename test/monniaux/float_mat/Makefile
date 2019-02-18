@@ -16,6 +16,6 @@ float_mat.ccomp.k1c: float_mat.ccomp.k1c.o float_mat_run.gcc.k1c.o
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
 
 clean:
-	$(RM) -f $(PRODUCTS) float_mat.gcc.k1c.o float_mat.ccomp.k1c.o float_mat_run.gcc.k1c.o
+	$(RM) -f *.k1c *.host *.o *.s
 
 .PHONY: clean

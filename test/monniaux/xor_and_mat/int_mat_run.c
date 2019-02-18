@@ -85,5 +85,6 @@ int main() {
   free(c4);
   free(c5);
   free(c6);
+  free(c7);
   return 0;
 }
