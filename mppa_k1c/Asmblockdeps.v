@@ -1,9 +1,14 @@
+Require Import AST.
 Require Import Asmblock.
 Require Import Values.
 Require Import Globalenvs.
 Require Import Memory.
+Require Import Errors.
+Require Import Integers.
+Require Import Floats.
 Require Import ImpDep.
 
+Open Scope impure.
 
 Module R<: ResourceNames.
 
@@ -20,8 +25,12 @@ End R.
 
 
 Module P<: ImpParam.
-
 Module R := R.
+
+Section IMPPARAM.
+
+Definition genv := Genv.t fundef unit.
+Variable ge: genv.
 
 Inductive value_wrap :=
   | Val (v: val)
@@ -30,139 +39,294 @@ Inductive value_wrap :=
 
 Definition value := value_wrap.
 
+Inductive arith_op :=
+  | OArithR (n: arith_name_r)
+  | OArithRR (n: arith_name_rr)
+  | OArithRI32 (n: arith_name_ri32) (imm: int)
+  | OArithRI64 (n: arith_name_ri64) (imm: int64)
+  | OArithRF32 (n: arith_name_rf32) (imm: float32)
+  | OArithRF64 (n: arith_name_rf64) (imm: float)
+  | OArithRRR (n: arith_name_rrr)
+  | OArithRRI32 (n: arith_name_rri32) (imm: int)
+  | OArithRRI64 (n: arith_name_rri64) (imm: int64)
+.
+
+Inductive load_op :=
+  | OLoadRRO (n: load_name_rro) (ofs: offset)
+.
+
+Inductive store_op :=
+  | OStoreRRO (n: store_name_rro) (ofs: offset)
+.
+
 Inductive op_wrap :=
-  | Arith (ai: ar_instruction)
-  | Load (li: ld_instruction)
-  | Store (si: st_instruction)
+  | Arith (ao: arith_op)
+  | Load (lo: load_op)
+  | Store (so: store_op)
 .
 
 Definition op := op_wrap.
 
-Definition genv := Genv.t fundef unit.
-
-Definition arith_eval (ge: genv) (ai: ar_instruction) (l: list value) :=
-  match ai, l with
-  | PArithR n _, [] =>
+Definition arith_eval (ao: arith_op) (l: list value) :=
+  match ao, l with
+  | OArithR n, [] =>
       match n with
-      | Ploadsymbol s ofs => Some (Genv.symbol_address ge s ofs)
+      | Ploadsymbol s ofs => Some (Val (Genv.symbol_address ge s ofs))
       end
 
-  | PArithRR n _ _, [Val v] =>
+  | OArithRR n, [Val v] =>
       match n with
-      | Pmv => Some v
-      | Pnegw => Some (Val.neg v)
-      | Pnegl => Some (Val.negl v)
-      | Pcvtl2w => Some (Val.loword v)
-      | Psxwd => Some (Val.longofint v)
-      | Pzxwd => Some (Val.longofintu v)
-      | Pfnegd => Some (Val.negf v)
-      | Pfnegw => Some (Val.negfs v)
-      | Pfabsd => Some (Val.absf v)
-      | Pfabsw => Some (Val.absfs v)
-      | Pfnarrowdw => Some (Val.singleoffloat v)
-      | Pfwidenlwd => Some (Val.floatofsingle v)
-      | Pfloatwrnsz => Some (match Val.singleofint v with Some f => f | _ => Vundef end)
-      | Pfloatudrnsz => Some (match Val.floatoflongu v with Some f => f | _ => Vundef end)
-      | Pfloatdrnsz => Some (match Val.floatoflong v with Some f => f | _ => Vundef end)
-      | Pfixedwrzz => Some (match Val.intofsingle v with Some i => i | _ => Vundef end)
-      | Pfixeddrzz => Some (match Val.longoffloat v with Some i => i | _ => Vundef end)
+      | Pmv => Some (Val v)
+      | Pnegw => Some (Val (Val.neg v))
+      | Pnegl => Some (Val (Val.negl v))
+      | Pcvtl2w => Some (Val (Val.loword v))
+      | Psxwd => Some (Val (Val.longofint v))
+      | Pzxwd => Some (Val (Val.longofintu v))
+      | Pfnegd => Some (Val (Val.negf v))
+      | Pfnegw => Some (Val (Val.negfs v))
+      | Pfabsd => Some (Val (Val.absf v))
+      | Pfabsw => Some (Val (Val.absfs v))
+      | Pfnarrowdw => Some (Val (Val.singleoffloat v))
+      | Pfwidenlwd => Some (Val (Val.floatofsingle v))
+      | Pfloatwrnsz => Some (Val (match Val.singleofint v with Some f => f | _ => Vundef end))
+      | Pfloatudrnsz => Some (Val (match Val.floatoflongu v with Some f => f | _ => Vundef end))
+      | Pfloatdrnsz => Some (Val (match Val.floatoflong v with Some f => f | _ => Vundef end))
+      | Pfixedwrzz => Some (Val (match Val.intofsingle v with Some i => i | _ => Vundef end))
+      | Pfixeddrzz => Some (Val (match Val.longoffloat v with Some i => i | _ => Vundef end))
       end
 
-  | PArithRI32 n _ i, [] =>
+  | OArithRI32 n i, [] =>
       match n with
-      | Pmake => Some (Vint i)
+      | Pmake => Some (Val (Vint i))
       end
 
-  | PArithRI64 n _ i, [] =>
+  | OArithRI64 n i, [] =>
       match n with
-      | Pmakel => Some (Vlong i)
+      | Pmakel => Some (Val (Vlong i))
       end
 
-  | PArithRF32 n _ i, [] =>
+  | OArithRF32 n i, [] =>
       match n with
-      | Pmakefs => Some (Vsingle i)
+      | Pmakefs => Some (Val (Vsingle i))
       end
 
-  | PArithRF64 n _ i, [] =>
+  | OArithRF64 n i, [] =>
       match n with
-      | Pmakef => Some (Vfloat i)
+      | Pmakef => Some (Val (Vfloat i))
       end
 
-  | PArithRRR n _ _ _, [Val v1; Val v2; Memstate m] =>
+  | OArithRRR n, [Val v1; Val v2; Memstate m] =>
       match n with
-      | Pcompw c => Some (compare_int c v1 v2 m)
-      | Pcompl c => Some (compare_long c v1 v2 m)
+      | Pcompw c => Some (Val (compare_int c v1 v2 m))
+      | Pcompl c => Some (Val (compare_long c v1 v2 m))
       | _ => None
       end
 
-  | PArithRRR n _ _ _, [Val v1; Val v2] =>
+  | OArithRRR n, [Val v1; Val v2] =>
       match n with
-      | Paddw  => Some (Val.add  v1 v2)
-      | Psubw  => Some (Val.sub  v1 v2)
-      | Pmulw  => Some (Val.mul  v1 v2)
-      | Pandw  => Some (Val.and  v1 v2)
-      | Porw   => Some (Val.or   v1 v2)
-      | Pxorw  => Some (Val.xor  v1 v2)
-      | Psrlw  => Some (Val.shru v1 v2)
-      | Psraw  => Some (Val.shr  v1 v2)
-      | Psllw  => Some (Val.shl  v1 v2)
+      | Paddw  => Some (Val (Val.add  v1 v2))
+      | Psubw  => Some (Val (Val.sub  v1 v2))
+      | Pmulw  => Some (Val (Val.mul  v1 v2))
+      | Pandw  => Some (Val (Val.and  v1 v2))
+      | Porw   => Some (Val (Val.or   v1 v2))
+      | Pxorw  => Some (Val (Val.xor  v1 v2))
+      | Psrlw  => Some (Val (Val.shru v1 v2))
+      | Psraw  => Some (Val (Val.shr  v1 v2))
+      | Psllw  => Some (Val (Val.shl  v1 v2))
 
-      | Paddl => Some (Val.addl v1 v2)
-      | Psubl => Some (Val.subl v1 v2)
-      | Pandl => Some (Val.andl v1 v2)
-      | Porl  => Some (Val.orl  v1 v2)
-      | Pxorl  => Some (Val.xorl  v1 v2)
-      | Pmull => Some (Val.mull v1 v2)
-      | Pslll => Some (Val.shll v1 v2)
-      | Psrll => Some (Val.shrlu v1 v2)
-      | Psral => Some (Val.shrl v1 v2)
+      | Paddl => Some (Val (Val.addl v1 v2))
+      | Psubl => Some (Val (Val.subl v1 v2))
+      | Pandl => Some (Val (Val.andl v1 v2))
+      | Porl  => Some (Val (Val.orl  v1 v2))
+      | Pxorl  => Some (Val (Val.xorl  v1 v2))
+      | Pmull => Some (Val (Val.mull v1 v2))
+      | Pslll => Some (Val (Val.shll v1 v2))
+      | Psrll => Some (Val (Val.shrlu v1 v2))
+      | Psral => Some (Val (Val.shrl v1 v2))
 
-      | Pfaddd => Some (Val.addf v1 v2)
-      | Pfaddw => Some (Val.addfs v1 v2)
-      | Pfsbfd => Some (Val.subf v1 v2)
-      | Pfsbfw => Some (Val.subfs v1 v2)
-      | Pfmuld => Some (Val.mulf v1 v2)
-      | Pfmulw => Some (Val.mulfs v1 v2)
+      | Pfaddd => Some (Val (Val.addf v1 v2))
+      | Pfaddw => Some (Val (Val.addfs v1 v2))
+      | Pfsbfd => Some (Val (Val.subf v1 v2))
+      | Pfsbfw => Some (Val (Val.subfs v1 v2))
+      | Pfmuld => Some (Val (Val.mulf v1 v2))
+      | Pfmulw => Some (Val (Val.mulfs v1 v2))
 
       | _ => None
       end
 
-  | PArithRRI32 n _ _ i, [Val v; Memstate m] =>
+  | OArithRRI32 n i, [Val v; Memstate m] =>
       match n with
-      | Pcompiw c => Some (compare_int c v (Vint i) m)
+      | Pcompiw c => Some (Val (compare_int c v (Vint i) m))
       | _ => None
       end
 
-  | PArithRRI32 n _ _ i, [Val v] =>
+  | OArithRRI32 n i, [Val v] =>
       match n with
-      | Paddiw  => Some (Val.add   v (Vint i))
-      | Pandiw  => Some (Val.and   v (Vint i))
-      | Poriw   => Some (Val.or    v (Vint i))
-      | Pxoriw  => Some (Val.xor   v (Vint i))
-      | Psraiw  => Some (Val.shr   v (Vint i))
-      | Psrliw  => Some (Val.shru  v (Vint i))
-      | Pslliw  => Some (Val.shl   v (Vint i))
-      | Psllil  => Some (Val.shll  v (Vint i))
-      | Psrlil  => Some (Val.shrlu v (Vint i))
-      | Psrail  => Some (Val.shrl  v (Vint i))
+      | Paddiw  => Some (Val (Val.add   v (Vint i)))
+      | Pandiw  => Some (Val (Val.and   v (Vint i)))
+      | Poriw   => Some (Val (Val.or    v (Vint i)))
+      | Pxoriw  => Some (Val (Val.xor   v (Vint i)))
+      | Psraiw  => Some (Val (Val.shr   v (Vint i)))
+      | Psrliw  => Some (Val (Val.shru  v (Vint i)))
+      | Pslliw  => Some (Val (Val.shl   v (Vint i)))
+      | Psllil  => Some (Val (Val.shll  v (Vint i)))
+      | Psrlil  => Some (Val (Val.shrlu v (Vint i)))
+      | Psrail  => Some (Val (Val.shrl  v (Vint i)))
       | _ => None
       end
 
-  | PArithRRI64 n d s i =>
+  | OArithRRI64 n i, [Val v; Memstate m] =>
       match n with
-      | Pcompil c => rs#d <- (compare_long c rs#s (Vlong i) m)
-      | Paddil  => rs#d <- (Val.addl rs#s (Vlong i))
-      | Pandil  => rs#d <- (Val.andl rs#s (Vlong i))
-      | Poril   => rs#d <- (Val.orl  rs#s (Vlong i))
-      | Pxoril  => rs#d <- (Val.xorl  rs#s (Vlong i))
+      | Pcompil c => Some (Val (compare_long c v (Vlong i) m))
+      | _ => None
       end
-  end
 
-Definition op_eval (ge: genv) (o: op) (l: list value) :=
-  match o with
-  | Arith i => arith_eval ge i l
-  | Load i => load_eval ge i l
-  | Store i => store_eval ge i l
+  | OArithRRI64 n i, [Val v] =>
+      match n with
+      | Paddil  => Some (Val (Val.addl v (Vlong i)))
+      | Pandil  => Some (Val (Val.andl v (Vlong i)))
+      | Poril   => Some (Val (Val.orl  v (Vlong i)))
+      | Pxoril  => Some (Val (Val.xorl  v (Vlong i)))
+      | _ => None
+      end
+
+  | _, _ => None
   end.
 
+Definition exec_load_deps (chunk: memory_chunk) (m: mem)
+                     (v: val) (ofs: offset) :=
+  match (eval_offset ge ofs) with
+  | OK ptr =>
+    match Mem.loadv chunk m (Val.offset_ptr v ptr) with
+    | None => None
+    | Some vl => Some (Val vl)
+    end
+  | _ => None
+  end.
+
+Definition load_eval (lo: load_op) (l: list value) :=
+  match lo, l with
+  | OLoadRRO n ofs, [Val v; Memstate m] =>
+      match n with
+        | Plb => exec_load_deps Mint8signed m v ofs
+        | Plbu => exec_load_deps Mint8unsigned m v ofs
+        | Plh => exec_load_deps Mint16signed m v ofs
+        | Plhu => exec_load_deps Mint16unsigned m v ofs
+        | Plw => exec_load_deps Mint32 m v ofs
+        | Plw_a => exec_load_deps Many32 m v ofs
+        | Pld => exec_load_deps Mint64 m v ofs
+        | Pld_a => exec_load_deps Many64 m v ofs
+        | Pfls => exec_load_deps Mfloat32 m v ofs
+        | Pfld => exec_load_deps Mfloat64 m v ofs
+      end
+  | _, _ => None
+  end.
+
+Definition exec_store_deps (chunk: memory_chunk) (m: mem)
+                      (vs va: val) (ofs: offset) :=
+  match (eval_offset ge ofs) with
+  | OK ptr => 
+    match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
+    | None => None
+    | Some m' => Some (Memstate m')
+    end
+  | _ => None
+  end.
+
+Definition store_eval (so: store_op) (l: list value) :=
+  match so, l with
+  | OStoreRRO n ofs, [Val vs; Val va; Memstate m] =>
+      match n with
+        | Psb => exec_store_deps Mint8unsigned m vs va ofs
+        | Psh => exec_store_deps Mint16unsigned m vs va ofs
+        | Psw => exec_store_deps Mint32 m vs va ofs
+        | Psw_a => exec_store_deps Many32 m vs va ofs
+        | Psd => exec_store_deps Mint64 m vs va ofs
+        | Psd_a => exec_store_deps Many64 m vs va ofs
+        | Pfss => exec_store_deps Mfloat32 m vs va ofs
+        | Pfsd => exec_store_deps Mfloat64 m vs va ofs
+      end
+  | _, _ => None
+  end.
+
+Definition op_eval (o: op) (l: list value) :=
+  match o with
+  | Arith o => arith_eval o l
+  | Load o => load_eval o l
+  | Store o => store_eval o l
+  end.
+
+Definition iandb (ib1 ib2: ?? bool): ?? bool :=
+  DO b1 <~ ib1;;
+  DO b2 <~ ib2;;
+  RET (andb b1 b2).
+
+Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
+  match o1, o2 with
+  | OArithR n1, OArithR n2 => phys_eq n1 n2
+  | OArithRR n1, OArithRR n2 => phys_eq n1 n2
+  | OArithRI32 n1 i1, OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithRI64 n1 i1, OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithRF32 n1 i1, OArithRF32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithRF64 n1 i1, OArithRF64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithRRR n1, OArithRRR n2 => phys_eq n1 n2
+  | OArithRRI32 n1 i1, OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithRRI64 n1 i1, OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | _, _ => RET false
+  end.
+
+Lemma arith_op_eq_correct o1 o2:
+  WHEN arith_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  all: try congruence.
+  all: apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+Qed.
+
+
+Definition load_op_eq (o1 o2: load_op): ?? bool :=
+  match o1, o2 with
+  | OLoadRRO n1 ofs1, OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
+  end.
+
+Lemma load_op_eq_correct o1 o2:
+  WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify.
+  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+Qed.
+
+
+Definition store_op_eq (o1 o2: store_op): ?? bool :=
+  match o1, o2 with
+  | OStoreRRO n1 ofs1, OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
+  end.
+
+Lemma store_op_eq_correct o1 o2:
+  WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify.
+  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+Qed.
+
+
+Definition op_eq (o1 o2: op): ?? bool :=
+  match o1, o2 with
+  | Arith i1, Arith i2 => arith_op_eq i1 i2
+  | Load i1, Load i2 => load_op_eq i1 i2
+  | Store i1, Store i2 => store_op_eq i1 i2
+  | _, _ => RET false
+  end.
+
+Theorem op_eq_correct o1 o2: 
+ WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
+  - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
+  - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
+Qed.
+
+
+End IMPPARAM.
 End P.
