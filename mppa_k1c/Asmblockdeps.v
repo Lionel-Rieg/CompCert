@@ -327,6 +327,15 @@ Proof.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
 Qed.
 
-
 End IMPPARAM.
 End P.
+
+Module L <: ISeqLanguage with Module LP:=P.
+
+Module LP:=P.
+
+Include MkSeqLanguage P.
+
+End L.
+
+Module IDT := ImpDepTree L ImpPosDict.
