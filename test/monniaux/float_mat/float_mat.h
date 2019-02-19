@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef float REAL;
+typedef double REAL;
 
 void REAL_mat_mul1(unsigned m, unsigned n, unsigned p,
 		     REAL * restrict c, unsigned stride_c,
@@ -34,6 +34,11 @@ void REAL_mat_mul6(unsigned m, unsigned n, unsigned p,
 		     const REAL *b, unsigned stride_b);
 
 void REAL_mat_mul7(unsigned m, unsigned n, unsigned p,
+		     REAL * restrict c, unsigned stride_c,
+		     const REAL *a, unsigned stride_a,
+		     const REAL *b, unsigned stride_b);
+
+void REAL_mat_mul8(unsigned m, unsigned n, unsigned p,
 		     REAL * restrict c, unsigned stride_c,
 		     const REAL *a, unsigned stride_a,
 		     const REAL *b, unsigned stride_b);

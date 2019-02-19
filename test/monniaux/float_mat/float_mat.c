@@ -1,4 +1,5 @@
 #include "float_mat.h"
+#include <stddef.h>
 
 #define ADD +=
 #define MUL *
@@ -149,6 +150,51 @@ void REAL_mat_mul7(unsigned m, unsigned n, unsigned p,
 		     const REAL *b, unsigned stride_b) {
   const REAL *pa_i = a;
   REAL * pc_i = c;
+  for(unsigned i=0; i<m; i++) {
+    for(unsigned k=0; k<p; k++) {
+      const REAL *pb_j_k = b+k, *pa_i_j = pa_i;
+      REAL total = 0;
+      {
+	unsigned j4=0, n4=n/UNROLL;
+	if (n4 > 0) {
+	  do {
+            CHUNK
+	    CHUNK
+	    CHUNK
+	    CHUNK
+	    j4++;
+	  } while (j4 < n4);
+	}
+      }
+      {
+	unsigned j4=0, n4=n%UNROLL;
+	if (n4 > 0) {
+	  do {
+	    CHUNK
+	    j4++;
+	  } while (j4 < n4);
+	}
+      }
+      pc_i[k] = total;
+    }
+    pa_i += stride_a;
+    pc_i += stride_c;
+  }
+}
+
+#undef CHUNK
+#define CHUNK \
+	    total ADD (*pa_i_j MUL *pb_j_k); \
+	    pa_i_j ++; \
+	    pb_j_k = (REAL*) ((char*) pb_j_k + stride_b_scaled);
+
+void REAL_mat_mul8(unsigned m, unsigned n, unsigned p,
+		     REAL * c, unsigned stride_c,
+		     const REAL *a, unsigned stride_a,
+		     const REAL *b, unsigned stride_b) {
+  const REAL *pa_i = a;
+  REAL * pc_i = c;
+  size_t stride_b_scaled = sizeof(REAL) * stride_b;
   for(unsigned i=0; i<m; i++) {
     for(unsigned k=0; k<p; k++) {
       const REAL *pb_j_k = b+k, *pa_i_j = pa_i;
