@@ -6,11 +6,13 @@ Require Import Memory.
 Require Import Errors.
 Require Import Integers.
 Require Import Floats.
+Require Import ZArith.
 Require Import ImpDep.
 
 Open Scope impure.
 
-Module R<: ResourceNames.
+(* FIXME - incompatible with IDP (not without additional code) so commenting it out *)
+(* Module R<: ResourceNames. 
 
 Inductive t_wrap := Reg (r: preg) | Mem.
 
@@ -21,11 +23,10 @@ Proof.
   decide equality. decide equality; apply ireg_eq.
 Qed.
 
-End R.
-
+End R. *)
 
 Module P<: ImpParam.
-Module R := R.
+Module R := Pos.
 
 Section IMPPARAM.
 
@@ -339,3 +340,12 @@ Include MkSeqLanguage P.
 End L.
 
 Module IDT := ImpDepTree L ImpPosDict.
+
+Section SECT.
+Variable ge: P.genv.
+
+(** Compilation from Asmblock to L *)
+
+(* TODO - d'abord, raffiner le modèle dans PostpassScheduling.v pour extraire le exit (n'envoyer que le body à la vérif) *)
+
+End SECT.
