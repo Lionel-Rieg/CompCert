@@ -12,6 +12,10 @@ Module P<: ImpParam.
 
 Module R := Pos.
 
+Definition genv := unit.
+
+Section IMP.
+
 Inductive value_wrap :=
   | Std (v:value)  (* value = DepExample.value *)
   | Mem (m:mem)
@@ -26,7 +30,7 @@ Inductive op_wrap :=
   | STORE
   .
 
-Definition op_eval (op: op_wrap) (l:list value_wrap): option value_wrap :=
+Definition op_eval (ge: genv) (op: op_wrap) (l:list value_wrap): option value_wrap :=
   match op, l with
   | Imm i, [] => Some (Std i)
   | ARITH op, [Std v1; Std v2] => Some (Std (arith_op_eval op v1 v2))
@@ -47,7 +51,6 @@ Definition op_eval (op: op_wrap) (l:list value_wrap): option value_wrap :=
 Definition value:=value_wrap.
 Definition op:=op_wrap.
 
-
 Definition op_eq (o1 o2: op_wrap): ?? bool :=
   match o1, o2 with
   | Imm i1, Imm i2 => phys_eq i1 i2
@@ -63,6 +66,7 @@ Proof.
   destruct o1, o2; wlp_simplify; congruence.
 Qed.
 
+End IMP.
 End P.
 
 
@@ -76,6 +80,9 @@ End L.
 
 
 Module IDT := ImpDepTree L ImpPosDict.
+
+Section SECT.
+Variable ge: P.genv.
 
 (** Compilation from DepExample to L *)
 
@@ -149,13 +156,13 @@ Definition match_option_state (os: option state) (om:option L.mem): Prop :=
   | None => om = None
   end.
 
-Lemma comp_op_correct o s m old: match_state s m -> L.exp_eval (comp_op o) m old = Some (P.Std (operand_eval o (rm s))).
+Lemma comp_op_correct o s m old: match_state s m -> L.exp_eval ge (comp_op o) m old = Some (P.Std (operand_eval o (rm s))).
 Proof.
   destruct 1 as [H1 H2]; destruct o; simpl; auto.
   rewrite H2; auto.
 Qed.
 
-Lemma comp_bblock_correct_aux p: forall s m,  match_state s m -> match_option_state (sem_bblock p s) (L.run (comp_bblock p) m).
+Lemma comp_bblock_correct_aux p: forall s m,  match_state s m -> match_option_state (sem_bblock p s) (L.run ge (comp_bblock p) m).
 Proof.
   induction p as [| i p IHp]; simpl; eauto.
   intros s m H; destruct i; simpl; erewrite !comp_op_correct; eauto; simpl.
@@ -205,7 +212,7 @@ Proof.
     * rewrite L.assign_diff; auto.
 Qed.
 
-Lemma comp_bblock_correct p s: match_option_state (sem_bblock p s) (L.run (comp_bblock p) (trans_state s)).
+Lemma comp_bblock_correct p s: match_option_state (sem_bblock p s) (L.run ge (comp_bblock p) (trans_state s)).
 Proof.
   eapply comp_bblock_correct_aux. apply match_trans_state.
 Qed.
@@ -257,7 +264,7 @@ Proof.
   - intros; subst; simpl; auto.
 Qed.
 
-Lemma bblock_equiv_reduce p1 p2: L.bblock_equiv (comp_bblock p1) (comp_bblock p2) -> bblock_equiv p1 p2.
+Lemma bblock_equiv_reduce p1 p2: L.bblock_equiv ge (comp_bblock p1) (comp_bblock p2) -> bblock_equiv p1 p2.
 Proof.
   unfold L.bblock_equiv, bblock_equiv.
   intros; eapply res_equiv_from_match.
@@ -295,9 +302,9 @@ Definition string_of_op (op: P.op): ?? pstring :=
 
 Definition bblock_eq_test (verb: bool) (p1 p2: bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_eq_test string_of_name string_of_op (comp_bblock p1) (comp_bblock p2)
+    IDT.verb_bblock_eq_test string_of_name string_of_op ge (comp_bblock p1) (comp_bblock p2)
   else
-    IDT.bblock_eq_test (comp_bblock p1) (comp_bblock p2).
+    IDT.bblock_eq_test ge (comp_bblock p1) (comp_bblock p2).
 
 Local Hint Resolve IDT.bblock_eq_test_correct bblock_equiv_reduce IDT.verb_bblock_eq_test_correct: wlp.
 
@@ -310,6 +317,7 @@ Qed.
 Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
 
+End SECT.
 (* TEST: we can coerce this bblock_eq_test into a pure function (even if this is a little unsafe). *)
 (*
 Import UnsafeImpure.

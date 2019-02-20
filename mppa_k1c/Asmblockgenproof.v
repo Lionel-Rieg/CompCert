@@ -1076,8 +1076,8 @@ Lemma nextblock_preserves:
   rs r = rs' r.
 Proof.
   intros. destruct r; try discriminate.
-  - subst. Simpl.
-  - subst. Simpl.
+  subst. Simpl.
+(*   - subst. Simpl. *)
 Qed.
 
 Lemma cons3_app {A: Type}:
@@ -1274,7 +1274,7 @@ Proof.
         assert (forall r : preg, r <> PC -> rs' r = rs2 r).
         { intros. destruct r.
           - destruct g. all: rewrite INV; Simpl; auto.
-          - destruct g. all: rewrite INV; Simpl; auto.
+(*           - destruct g. all: rewrite INV; Simpl; auto. *)
           - rewrite INV; Simpl; auto.
           - contradiction. }
         eauto with asmgen.

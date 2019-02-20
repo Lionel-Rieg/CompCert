@@ -7,6 +7,10 @@ Open Scope Z_scope.
 
 Module EqTests.
 
+Section TESTS.
+
+Variable ge: P.genv.
+
 (**** TESTS DRIVER ! ****)
 
 Record test_input := {
@@ -19,7 +23,7 @@ Record test_input := {
 
 Definition run1 (t: test_input): ?? unit :=
   print ((name t) +; " =>");;
-  DO result <~ bblock_eq_test (verbose t) (p1 t) (p2 t);;
+  DO result <~ bblock_eq_test ge (verbose t) (p1 t) (p2 t);;
   assert_b (eqb result (expected t))  "UNEXPECTED RESULT";;
   if expected t 
   then println " SUCCESS" 

@@ -8,13 +8,16 @@ Definition bblock_is_para (p: bblock) : bool :=
 
 Local Hint Resolve the_mem_separation reg_map_separation.
 
+Section SEC.
+Variable ge: P.genv.
+
 (* Actually, almost the same proof script than [comp_bblock_correct_aux] !
    We could definitely factorize the proof through a lemma on compilation to macros.
 *)
 Lemma comp_bblock_correct_para_iw p: forall sin sout min mout,
   match_state sin min -> 
   match_state sout mout ->
-  match_option_state (sem_bblock_par_iw p sin sout) (PChk.prun_iw (comp_bblock p) mout min).
+  match_option_state (sem_bblock_par_iw p sin sout) (PChk.prun_iw ge (comp_bblock p) mout min).
 Proof.
   induction p as [|i p IHp]; simpl; eauto.
   intros sin sout min mout Hin Hout; destruct i; simpl; erewrite !comp_op_correct; eauto; simpl.
@@ -141,7 +144,7 @@ Qed.
 Local Hint Resolve comp_bblock_Permutation res_eq_from_match match_from_res_equiv comp_bblock_correct_para_iw.
 
 Lemma bblock_par_iff_prun p s os': 
- sem_bblock_par p s os' <-> PChk.prun (comp_bblock p) (trans_state s) (trans_option_state os').
+ sem_bblock_par p s os' <-> PChk.prun ge (comp_bblock p) (trans_state s) (trans_option_state os').
 Proof.
   unfold sem_bblock_par, PChk.prun. constructor 1.
   - intros (p' & H1 & H2).
@@ -154,8 +157,10 @@ Qed.
 Theorem bblock_is_para_correct p:
   bblock_is_para p = true -> forall s os', (sem_bblock_par p s os' <-> res_equiv os' (sem_bblock p s)).
 Proof.
-  intros H; generalize (PChk.is_parallelizable_correct _ H); clear H.
+  intros H; generalize (PChk.is_parallelizable_correct ge _ H); clear H.
   intros H s os'.
   rewrite bblock_par_iff_prun, H.
   constructor; eauto.
 Qed.
+
+End SEC.

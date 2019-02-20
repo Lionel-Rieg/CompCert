@@ -22,10 +22,12 @@ Parameter value: Type.
 
 Parameter op: Type. (* type of operations *)
 
+Parameter genv: Type. (* environment to be used for evaluating an op *)
+
 (* NB: possible generalization
  - relation after/before.
 *)
-Parameter op_eval: op -> list value -> option value.
+Parameter op_eval: genv -> op -> list value -> option value.
 
 End LangParam.
 
@@ -37,6 +39,10 @@ Module MkSeqLanguage(P: LangParam).
 Export P.
 
 Local Open Scope list.
+
+Section SEQLANG.
+
+Variable ge: genv.
 
 Definition mem := R.t -> value.
 
@@ -58,7 +64,7 @@ Fixpoint exp_eval (e: exp) (m old: mem): option value :=
   | Name x => Some (m x)
   | Op o le => 
      match list_exp_eval le m old with
-     | Some lv => op_eval o lv
+     | Some lv => op_eval ge o lv
      | _ => None
      end
   | Old e => exp_eval e old old
@@ -201,6 +207,8 @@ Proof.
   eauto.
 Qed.
  
+End SEQLANG.
+
 End MkSeqLanguage.
 
 

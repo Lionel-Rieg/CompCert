@@ -65,17 +65,15 @@ Proof. decide equality. Defined.
 
 (** basic register *)
 Inductive preg: Type :=
-  | IR: gpreg -> preg                   (**r integer registers *)
-  | FR: gpreg -> preg                   (**r float registers   *)
+  | IR: gpreg -> preg                   (**r integer general purpose registers *)
   | RA: preg
   | PC: preg
   .
 
 Coercion IR: gpreg >-> preg.
-Coercion FR: gpreg >-> preg.
 
 Lemma preg_eq: forall (x y: preg), {x=y} + {x<>y}.
-Proof. decide equality. apply ireg_eq. apply freg_eq. Defined.
+Proof. decide equality. apply ireg_eq. Defined.
 
 Module PregEq.
   Definition t  := preg.
@@ -1436,7 +1434,6 @@ Definition data_preg (r: preg) : bool :=
   | IR GPRA => false
   | IR RTMP => false
   | IR _   => true
-  | FR _   => true
   | PC     => false
   end.
 
