@@ -30,8 +30,12 @@ Module R := Pos.
 
 Section IMPPARAM.
 
-Definition genv := Genv.t fundef unit.
-Variable ge: genv.
+Definition env := Genv.t fundef unit.
+
+Inductive genv_wrap := Genv (ge: env) (fn: function).
+Definition genv := genv_wrap.
+
+Variable GE: genv.
 
 Inductive value_wrap :=
   | Val (v: val)
@@ -39,6 +43,12 @@ Inductive value_wrap :=
 .
 
 Definition value := value_wrap.
+
+Inductive control_op :=
+  | Oj_l (l: label)
+  | Ocb (bt: btest) (l: label)
+  | Ocbu (bt: btest) (l: label)
+.
 
 Inductive arith_op :=
   | OArithR (n: arith_name_r)
@@ -64,11 +74,13 @@ Inductive op_wrap :=
   | Arith (ao: arith_op)
   | Load (lo: load_op)
   | Store (so: store_op)
+  | Control (co: control_op)
 .
 
 Definition op := op_wrap.
 
 Definition arith_eval (ao: arith_op) (l: list value) :=
+  let (ge, fn) := GE in
   match ao, l with
   | OArithR n, [] =>
       match n with
@@ -196,6 +208,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
 Definition exec_load_deps (chunk: memory_chunk) (m: mem)
                      (v: val) (ofs: offset) :=
+  let (ge, fn) := GE in
   match (eval_offset ge ofs) with
   | OK ptr =>
     match Mem.loadv chunk m (Val.offset_ptr v ptr) with
@@ -225,6 +238,7 @@ Definition load_eval (lo: load_op) (l: list value) :=
 
 Definition exec_store_deps (chunk: memory_chunk) (m: mem)
                       (vs va: val) (ofs: offset) :=
+  let (ge, fn) := GE in
   match (eval_offset ge ofs) with
   | OK ptr => 
     match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
@@ -250,11 +264,48 @@ Definition store_eval (so: store_op) (l: list value) :=
   | _, _ => None
   end.
 
+Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
+  match label_pos lbl 0 (fn_blocks f) with
+  | None => None
+  | Some pos =>
+      match vpc with
+      | Vptr b ofs => Some (Val (Vptr b (Ptrofs.repr pos)))
+      | _          => None
+      end
+  end.
+
+Definition eval_branch_deps (f: function) (l: label) (vpc: val) (res: option bool) :=
+  match res with
+    | Some true  => goto_label_deps f l vpc
+    | Some false => Some (Val vpc)
+    | None => None
+  end.
+
+Definition control_eval (o: control_op) (l: list value) :=
+  let (ge, fn) := GE in
+  match o, l with
+  | Oj_l l, [Val vpc] => goto_label_deps fn l vpc
+  | Ocb bt l, [Val v; Val vpc] =>
+    match cmp_for_btest bt with
+    | (Some c, Int)  => eval_branch_deps fn l vpc (Val.cmp_bool c v (Vint (Int.repr 0)))
+    | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmpl_bool c v (Vlong (Int64.repr 0)))
+    | (None, _) => None
+    end
+  | Ocbu bt l, [Val v; Val vpc; Memstate m] =>
+    match cmpu_for_btest bt with
+    | (Some c, Int) => eval_branch_deps fn l vpc (Val.cmpu_bool (Mem.valid_pointer m) c v (Vint (Int.repr 0)))
+    | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmplu_bool (Mem.valid_pointer m) c v (Vlong (Int64.repr 0)))
+    | (None, _) => None
+    end
+  | _, _ => None
+  end.
+
 Definition op_eval (o: op) (l: list value) :=
   match o with
   | Arith o => arith_eval o l
   | Load o => load_eval o l
   | Store o => store_eval o l
+  | Control o => control_eval o l
   end.
 
 Definition iandb (ib1 ib2: ?? bool): ?? bool :=
@@ -311,11 +362,30 @@ Proof.
 Qed.
 
 
+Definition control_op_eq (c1 c2: control_op): ?? bool :=
+  match c1, c2 with
+  | Oj_l l1, Oj_l l2 => phys_eq l1 l2
+  | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | _, _ => RET false
+  end.
+
+Lemma control_op_eq_correct c1 c2:
+  WHEN control_op_eq c1 c2 ~> b THEN b = true -> c1 = c2.
+Proof.
+  destruct c1, c2; wlp_simplify; try discriminate.
+  - congruence.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+Qed.
+
+
 Definition op_eq (o1 o2: op): ?? bool :=
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
   | Load i1, Load i2 => load_op_eq i1 i2
   | Store i1, Store i2 => store_op_eq i1 i2
+  | Control i1, Control i2 => control_op_eq i1 i2
   | _, _ => RET false
   end.
 
@@ -326,6 +396,7 @@ Proof.
   - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
+  - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
 Qed.
 
 End IMPPARAM.
@@ -342,7 +413,7 @@ End L.
 Module IDT := ImpDepTree L ImpPosDict.
 
 Section SECT.
-Variable ge: P.genv.
+Variable GE: P.genv.
 
 (** Compilation from Asmblock to L *)
 
