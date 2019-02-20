@@ -62,13 +62,27 @@ Inductive arith_op :=
   | OArithRRI64 (n: arith_name_rri64) (imm: int64)
 .
 
+Coercion OArithR: arith_name_r >-> arith_op.
+Coercion OArithRR: arith_name_rr >-> arith_op.
+Coercion OArithRI32: arith_name_ri32 >-> Funclass.
+Coercion OArithRI64: arith_name_ri64 >-> Funclass.
+Coercion OArithRF32: arith_name_rf32 >-> Funclass.
+Coercion OArithRF64: arith_name_rf64 >-> Funclass.
+Coercion OArithRRR: arith_name_rrr >-> arith_op.
+Coercion OArithRRI32: arith_name_rri32 >-> Funclass.
+Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
+
 Inductive load_op :=
   | OLoadRRO (n: load_name_rro) (ofs: offset)
 .
 
+Coercion OLoadRRO: load_name_rro >-> Funclass.
+
 Inductive store_op :=
   | OStoreRRO (n: store_name_rro) (ofs: offset)
 .
+
+Coercion OStoreRRO: store_name_rro >-> Funclass.
 
 Inductive op_wrap :=
   | Arith (ao: arith_op)
@@ -76,6 +90,11 @@ Inductive op_wrap :=
   | Store (so: store_op)
   | Control (co: control_op)
 .
+
+Coercion Arith: arith_op >-> op_wrap.
+Coercion Load: load_op >-> op_wrap.
+Coercion Store: store_op >-> op_wrap.
+Coercion Control: control_op >-> op_wrap.
 
 Definition op := op_wrap.
 
@@ -412,11 +431,63 @@ End L.
 
 Module IDT := ImpDepTree L ImpPosDict.
 
-Section SECT.
-Variable GE: P.genv.
+Import L.
+Import P.
 
 (** Compilation from Asmblock to L *)
 
-(* TODO - d'abord, raffiner le modèle dans PostpassScheduling.v pour extraire le exit (n'envoyer que le body à la vérif) *)
+Section SECT.
+Variable GE: genv.
+
+Definition pmem : R.t := 1.
+
+Definition ireg_to_pos (ir: ireg) : R.t :=
+  match ir with
+  | GPR0 => 1 | GPR1 => 2 | GPR2 => 3 | GPR3 => 4 | GPR4 => 5 | GPR5 => 6 | GPR6 => 7 | GPR7 => 8 | GPR8 => 9 | GPR9 => 10
+  | GPR10 => 11 | GPR11 => 12 | GPR12 => 13 | GPR13 => 14 | GPR14 => 15 | GPR15 => 16 | GPR16 => 17 | GPR17 => 18 | GPR18 => 19 | GPR19 => 20
+  | GPR20 => 21 | GPR21 => 22 | GPR22 => 23 | GPR23 => 24 | GPR24 => 25 | GPR25 => 26 | GPR26 => 27 | GPR27 => 28 | GPR28 => 29 | GPR29 => 30
+  | GPR30 => 31 | GPR31 => 32 | GPR32 => 33 | GPR33 => 34 | GPR34 => 35 | GPR35 => 36 | GPR36 => 37 | GPR37 => 38 | GPR38 => 39 | GPR39 => 40
+  | GPR40 => 41 | GPR41 => 42 | GPR42 => 43 | GPR43 => 44 | GPR44 => 45 | GPR45 => 46 | GPR46 => 47 | GPR47 => 48 | GPR48 => 49 | GPR49 => 50
+  | GPR50 => 51 | GPR51 => 52 | GPR52 => 53 | GPR53 => 54 | GPR54 => 55 | GPR55 => 56 | GPR56 => 57 | GPR57 => 58 | GPR58 => 59 | GPR59 => 60
+  | GPR60 => 61 | GPR61 => 62 | GPR62 => 63 | GPR63 => 64
+  end
+.
+
+Definition ppos (r: preg) : R.t :=
+  match r with
+  | RA => 2
+  | PC => 3
+  | IR ir => 3 + ireg_to_pos ir
+  end
+.
+
+Notation "# r" := (ppos r) (at level 100, right associativity).
+
+Notation "a @ b" := (Econs a b) (at level 102, right associativity).
+
+Definition trans_control (ctl: control) : macro :=
+  match ctl with
+  | Pret => [(#PC, Name (#RA))]
+  | Pcall s => [(#RA, Name (#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
+  | Picall r => [(#RA, Name (#PC)); (#PC, Name (#r))]
+  | Pgoto s => [(#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
+  | Pigoto r => [(#PC, Name (#r))]
+  | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
+  | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
+  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Name pmem @ Enil))]
+  | _ => nil
+  end.
+
+Definition trans_exit (ex: option control) : list L.macro :=
+  match ex with
+  | None => nil
+  | Some ctl => trans_control ctl :: nil
+  end
+.
+
+(* Definition trans_block (b: bblock) : L.bblock :=
+  trans_body (body b) ++ trans_exit (exit b).
+.
+ *)
 
 End SECT.
