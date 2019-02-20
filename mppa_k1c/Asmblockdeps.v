@@ -90,6 +90,8 @@ Inductive op_wrap :=
   | Store (so: store_op)
   | Control (co: control_op)
   | Allocframe (sz: Z) (pos: ptrofs)
+  | Freeframe (sz: Z) (pos: ptrofs)
+  | Freeframe2 (sz: Z) (pos: ptrofs)
   | Constant (v: val)
 .
 
@@ -334,6 +336,32 @@ Definition op_eval (o: op) (l: list value) :=
       | None => None
       | Some m => Some (Memstate m)
       end
+  | Freeframe sz pos, [Val spv; Memstate m] =>
+      match Mem.loadv Mptr m (Val.offset_ptr spv pos) with
+      | None => None
+      | Some v =>
+          match spv with
+          | Vptr stk ofs =>
+              match Mem.free m stk 0 sz with
+              | None => None
+              | Some m' => Some (Memstate m')
+              end
+          | _ => None
+          end
+      end
+  | Freeframe2 sz pos, [Val spv; Memstate m] =>
+      match Mem.loadv Mptr m (Val.offset_ptr spv pos) with
+      | None => None
+      | Some v =>
+          match spv with
+          | Vptr stk ofs =>
+              match Mem.free m stk 0 sz with
+              | None => None
+              | Some m' => Some (Val v)
+              end
+          | _ => None
+          end
+      end
   | Constant v, [] => Some (Val v)
   | _, _ => None
   end.
@@ -417,6 +445,9 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | Store i1, Store i2 => store_op_eq i1 i2
   | Control i1, Control i2 => control_op_eq i1 i2
   | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
+  | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
+  | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
+  | Constant c1, Constant c2 => phys_eq c1 c2
   | _, _ => RET false
   end.
 
@@ -429,6 +460,9 @@ Proof.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
 Qed.
 
 End IMPPARAM.
@@ -519,35 +553,13 @@ Definition trans_basic (b: basic) : macro :=
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
   | Pallocframe sz pos => [(pmem, Op (Allocframe sz pos) (Name (#SP) @ Name pmem @ Enil));
                            (#FP, Name (#SP)); (#SP, Name (#RTMP)); (#RTMP, Op (Constant Vundef) Enil)]
-  | _ => []
+  | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
+                          (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Name pmem @ Enil));
+                          (#RTMP, Op (Constant Vundef) Enil)]
+  | Pget rd ra => [(#rd, Name (#ra))]
+  | Pset ra rd => [(#ra, Name (#rd))]
+  | Pnop => []
   end.
-
-(* 
-  | Pfreeframe sz pos =>
-      match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
-      | None => Stuck
-      | Some v =>
-          match rs SP with
-          | Vptr stk ofs =>
-              match Mem.free m stk 0 sz with
-              | None => Stuck
-              | Some m' => Next (rs#SP <- v #RTMP <- Vundef) m'
-              end
-          | _ => Stuck
-          end
-      end
-  | Pget rd ra =>
-    match ra with
-    | RA => Next (rs#rd <- (rs#ra)) m
-    | _  => Stuck
-    end
-  | Pset ra rd =>
-    match ra with
-    | RA => Next (rs#ra <- (rs#rd)) m
-    | _  => Stuck
-    end
-  | Pnop => Next rs m
-  end. *)
 
 Fixpoint trans_body (b: list basic) : list L.macro :=
   match b with
@@ -555,9 +567,7 @@ Fixpoint trans_body (b: list basic) : list L.macro :=
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-(* Definition trans_block (b: bblock) : L.bblock :=
+Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ trans_exit (exit b).
-.
- *)
 
 End SECT.
