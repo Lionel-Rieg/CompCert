@@ -519,7 +519,6 @@ let int_reg_to_dwarf = let open Asmblock in function
 
 let preg_to_dwarf = let open Asmblock in function
    | IR r -> int_reg_to_dwarf r
-   | FR r -> int_reg_to_dwarf r
    | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)
    | _ -> assert false
 

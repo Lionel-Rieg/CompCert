@@ -64,13 +64,11 @@ module Target (*: TARGET*) =
 
     let preg oc = let open Asmblock in function
       | IR r -> ireg oc r
-      | FR r -> ireg oc r
       | RA   -> output_string oc "$ra"
       | _ -> assert false
 
     let preg_annot = let open Asmblock in function
       | IR r -> int_reg_name r
-      | FR r -> int_reg_name r
       | RA   -> "$ra"
       | _ -> assert false
 
