@@ -89,6 +89,8 @@ Inductive op_wrap :=
   | Load (lo: load_op)
   | Store (so: store_op)
   | Control (co: control_op)
+  | Allocframe (sz: Z) (pos: ptrofs)
+  | Constant (v: val)
 .
 
 Coercion Arith: arith_op >-> op_wrap.
@@ -320,11 +322,20 @@ Definition control_eval (o: control_op) (l: list value) :=
   end.
 
 Definition op_eval (o: op) (l: list value) :=
-  match o with
-  | Arith o => arith_eval o l
-  | Load o => load_eval o l
-  | Store o => store_eval o l
-  | Control o => control_eval o l
+  match o, l with
+  | Arith o, l => arith_eval o l
+  | Load o, l => load_eval o l
+  | Store o, l => store_eval o l
+  | Control o, l => control_eval o l
+  | Allocframe sz pos, [Val spv; Memstate m] => 
+      let (m1, stk) := Mem.alloc m 0 sz in
+      let sp := (Vptr stk Ptrofs.zero) in
+      match Mem.storev Mptr m1 (Val.offset_ptr sp pos) spv with
+      | None => None
+      | Some m => Some (Memstate m)
+      end
+  | Constant v, [] => Some (Val v)
+  | _, _ => None
   end.
 
 Definition iandb (ib1 ib2: ?? bool): ?? bool :=
@@ -405,6 +416,7 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | Load i1, Load i2 => load_op_eq i1 i2
   | Store i1, Store i2 => store_op_eq i1 i2
   | Control i1, Control i2 => control_op_eq i1 i2
+  | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
   | _, _ => RET false
   end.
 
@@ -416,6 +428,7 @@ Proof.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
 Qed.
 
 End IMPPARAM.
@@ -443,7 +456,7 @@ Definition pmem : R.t := 1.
 
 Definition ireg_to_pos (ir: ireg) : R.t :=
   match ir with
-  | GPR0 => 1 | GPR1 => 2 | GPR2 => 3 | GPR3 => 4 | GPR4 => 5 | GPR5 => 6 | GPR6 => 7 | GPR7 => 8 | GPR8 => 9 | GPR9 => 10
+  | GPR0  =>  1 | GPR1  =>  2 | GPR2  =>  3 | GPR3  =>  4 | GPR4  =>  5 | GPR5  =>  6 | GPR6  =>  7 | GPR7  =>  8 | GPR8  =>  9 | GPR9  => 10
   | GPR10 => 11 | GPR11 => 12 | GPR12 => 13 | GPR13 => 14 | GPR14 => 15 | GPR15 => 16 | GPR16 => 17 | GPR17 => 18 | GPR18 => 19 | GPR19 => 20
   | GPR20 => 21 | GPR21 => 22 | GPR22 => 23 | GPR23 => 24 | GPR24 => 25 | GPR25 => 26 | GPR26 => 27 | GPR27 => 28 | GPR28 => 29 | GPR29 => 30
   | GPR30 => 31 | GPR31 => 32 | GPR32 => 33 | GPR33 => 34 | GPR34 => 35 | GPR35 => 36 | GPR36 => 37 | GPR37 => 38 | GPR38 => 39 | GPR39 => 40
@@ -484,6 +497,63 @@ Definition trans_exit (ex: option control) : list L.macro :=
   | Some ctl => trans_control ctl :: nil
   end
 .
+
+Definition trans_arith (ai: ar_instruction) : macro :=
+  match ai with
+  | PArithR n d => [(#d, Op (Arith (OArithR n)) Enil)]
+  | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (Name (#s) @ Enil))]
+  | PArithRI32 n d i => [(#d, Op (Arith (OArithRI32 n i)) Enil)]
+  | PArithRI64 n d i => [(#d, Op (Arith (OArithRI64 n i)) Enil)]
+  | PArithRF32 n d i => [(#d, Op (Arith (OArithRF32 n i)) Enil)]
+  | PArithRF64 n d i => [(#d, Op (Arith (OArithRF64 n i)) Enil)]
+  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
+  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
+  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
+  end.
+
+
+Definition trans_basic (b: basic) : macro :=
+  match b with
+  | PArith ai => trans_arith ai
+  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
+  | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
+  | Pallocframe sz pos => [(pmem, Op (Allocframe sz pos) (Name (#SP) @ Name pmem @ Enil));
+                           (#FP, Name (#SP)); (#SP, Name (#RTMP)); (#RTMP, Op (Constant Vundef) Enil)]
+  | _ => []
+  end.
+
+(* 
+  | Pfreeframe sz pos =>
+      match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
+      | None => Stuck
+      | Some v =>
+          match rs SP with
+          | Vptr stk ofs =>
+              match Mem.free m stk 0 sz with
+              | None => Stuck
+              | Some m' => Next (rs#SP <- v #RTMP <- Vundef) m'
+              end
+          | _ => Stuck
+          end
+      end
+  | Pget rd ra =>
+    match ra with
+    | RA => Next (rs#rd <- (rs#ra)) m
+    | _  => Stuck
+    end
+  | Pset ra rd =>
+    match ra with
+    | RA => Next (rs#ra <- (rs#rd)) m
+    | _  => Stuck
+    end
+  | Pnop => Next rs m
+  end. *)
+
+Fixpoint trans_body (b: list basic) : list L.macro :=
+  match b with
+  | nil => nil
+  | b :: lb => (trans_basic b) :: (trans_body lb)
+  end.
 
 (* Definition trans_block (b: bblock) : L.bblock :=
   trans_body (body b) ++ trans_exit (exit b).
