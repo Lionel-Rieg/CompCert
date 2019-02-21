@@ -29,7 +29,7 @@ Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :
       bblock_equiv ge f bb bb'.
 
 Axiom state': Type.
-Inductive outcome' := Next' : state' -> outcome' | Stuck' : outcome'.
+Definition outcome' := option state'.
 
 Axiom bblock': Type.
 Extract Constant bblock' => "PostpassSchedulingOracle.bblock'". (* FIXME *)
@@ -61,18 +61,18 @@ Axiom forward_simu:
     exec ge fn b rs1 m1 = Next rs2 m2 ->
     match_states (State rs1 m1) s1' ->
     exists s2',
-       exec' ge fn (trans_block b) s1' = Next' s2'
+       exec' ge fn (trans_block b) s1' = Some s2'
     /\ match_states (State rs2 m2) s2'.
 
 Axiom forward_simu_stuck:
   forall rs1 m1 s1' b ge fn,
     exec ge fn b rs1 m1 = Stuck ->
     match_states (State rs1 m1) s1' ->
-    exec' ge fn (trans_block b) s1' = Stuck'.
+    exec' ge fn (trans_block b) s1' = None.
 
 Axiom trans_block_reverse_stuck:
   forall ge fn b rs m s',
-  exec' ge fn (trans_block b) s' = Stuck' ->
+  exec' ge fn (trans_block b) s' = None ->
   match_states (State rs m) s' ->
   exec ge fn b rs m = Stuck.
 
