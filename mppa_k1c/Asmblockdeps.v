@@ -11,20 +11,6 @@ Require Import ImpDep.
 
 Open Scope impure.
 
-(* FIXME - incompatible with IDP (not without additional code) so commenting it out *)
-(* Module R<: ResourceNames. 
-
-Inductive t_wrap := Reg (r: preg) | Mem.
-
-Definition t := t_wrap.
-
-Lemma eq_dec : forall (x y: t), { x = y } + { x<>y }.
-Proof.
-  decide equality. decide equality; apply ireg_eq.
-Qed.
-
-End R. *)
-
 Module P<: ImpParam.
 Module R := Pos.
 
@@ -35,7 +21,7 @@ Definition env := Genv.t fundef unit.
 Inductive genv_wrap := Genv (ge: env) (fn: function).
 Definition genv := genv_wrap.
 
-Variable GE: genv.
+Variable Ge: genv.
 
 Inductive value_wrap :=
   | Val (v: val)
@@ -48,6 +34,7 @@ Inductive control_op :=
   | Oj_l (l: label)
   | Ocb (bt: btest) (l: label)
   | Ocbu (bt: btest) (l: label)
+  | OError
 .
 
 Inductive arith_op :=
@@ -103,7 +90,7 @@ Coercion Control: control_op >-> op_wrap.
 Definition op := op_wrap.
 
 Definition arith_eval (ao: arith_op) (l: list value) :=
-  let (ge, fn) := GE in
+  let (ge, fn) := Ge in
   match ao, l with
   | OArithR n, [] =>
       match n with
@@ -231,7 +218,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
 Definition exec_load_deps (chunk: memory_chunk) (m: mem)
                      (v: val) (ofs: offset) :=
-  let (ge, fn) := GE in
+  let (ge, fn) := Ge in
   match (eval_offset ge ofs) with
   | OK ptr =>
     match Mem.loadv chunk m (Val.offset_ptr v ptr) with
@@ -261,7 +248,7 @@ Definition load_eval (lo: load_op) (l: list value) :=
 
 Definition exec_store_deps (chunk: memory_chunk) (m: mem)
                       (vs va: val) (ofs: offset) :=
-  let (ge, fn) := GE in
+  let (ge, fn) := Ge in
   match (eval_offset ge ofs) with
   | OK ptr => 
     match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
@@ -305,7 +292,7 @@ Definition eval_branch_deps (f: function) (l: label) (vpc: val) (res: option boo
   end.
 
 Definition control_eval (o: control_op) (l: list value) :=
-  let (ge, fn) := GE in
+  let (ge, fn) := Ge in
   match o, l with
   | Oj_l l, [Val vpc] => goto_label_deps fn l vpc
   | Ocb bt l, [Val v; Val vpc] =>
@@ -320,6 +307,7 @@ Definition control_eval (o: control_op) (l: list value) :=
     | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmplu_bool (Mem.valid_pointer m) c v (Vlong (Int64.repr 0)))
     | (None, _) => None
     end
+  | OError, _ => None
   | _, _ => None
   end.
 
@@ -484,7 +472,7 @@ Import P.
 (** Compilation from Asmblock to L *)
 
 Section SECT.
-Variable GE: genv.
+Variable Ge: genv.
 
 Definition pmem : R.t := 1.
 
@@ -500,6 +488,20 @@ Definition ireg_to_pos (ir: ireg) : R.t :=
   end
 .
 
+Local Open Scope positive_scope.
+
+Definition pos_to_ireg (p: R.t) : option gpreg :=
+  match p with
+  | 1 => Some GPR0 | 2 => Some GPR1 | 3 => Some GPR2 | 4 => Some GPR3 | 5 => Some GPR4 | 6 => Some GPR5 | 7 => Some GPR6 | 8 => Some GPR7 | 9 => Some GPR8 | 10 => Some GPR9
+  | 11 => Some GPR10 | 12 => Some GPR11 | 13 => Some GPR12 | 14 => Some GPR13 | 15 => Some GPR14 | 16 => Some GPR15 | 17 => Some GPR16 | 18 => Some GPR17 | 19 => Some GPR18 | 20 => Some GPR19
+  | 21 => Some GPR20 | 22 => Some GPR21 | 23 => Some GPR22 | 24 => Some GPR23 | 25 => Some GPR24 | 26 => Some GPR25 | 27 => Some GPR26 | 28 => Some GPR27 | 29 => Some GPR28 | 30 => Some GPR29
+  | 31 => Some GPR30 | 32 => Some GPR31 | 33 => Some GPR32 | 34 => Some GPR33 | 35 => Some GPR34 | 36 => Some GPR35 | 37 => Some GPR36 | 38 => Some GPR37 | 39 => Some GPR38 | 40 => Some GPR39
+  | 41 => Some GPR40 | 42 => Some GPR41 | 43 => Some GPR42 | 44 => Some GPR43 | 45 => Some GPR44 | 46 => Some GPR45 | 47 => Some GPR46 | 48 => Some GPR47 | 49 => Some GPR48 | 50 => Some GPR49
+  | 51 => Some GPR50 | 52 => Some GPR51 | 53 => Some GPR52 | 54 => Some GPR53 | 55 => Some GPR54 | 56 => Some GPR55 | 57 => Some GPR56 | 58 => Some GPR57 | 59 => Some GPR58 | 60 => Some GPR59
+  | 61 => Some GPR60 | 62 => Some GPR61 | 63 => Some GPR62 | 64 => Some GPR63
+  | _ => None
+  end.
+
 Definition ppos (r: preg) : R.t :=
   match r with
   | RA => 2
@@ -507,6 +509,16 @@ Definition ppos (r: preg) : R.t :=
   | IR ir => 3 + ireg_to_pos ir
   end
 .
+
+Definition inv_ppos (p: R.t) : option preg :=
+  match p with
+  | 1 => None
+  | 2 => Some RA | 3 => Some PC
+  | n => match pos_to_ireg (n-3) with
+       | None => None
+       | Some gpr => Some (IR gpr)
+       end
+  end.
 
 Notation "# r" := (ppos r) (at level 100, right associativity).
 
@@ -522,7 +534,7 @@ Definition trans_control (ctl: control) : macro :=
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Name pmem @ Enil))]
-  | _ => nil
+  | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
 Definition trans_exit (ex: option control) : list L.macro :=
@@ -569,5 +581,68 @@ Fixpoint trans_body (b: list basic) : list L.macro :=
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ trans_exit (exit b).
+
+Definition state := L.mem.
+Definition exec := L.run.
+
+Definition match_states (s: Asmblock.state) (s': state) :=
+  let (rs, m) := s in
+     s' pmem = Memstate m
+  /\ forall r, s' (#r) = Val (rs r).
+
+Notation "a <[ b <- c ]>" := (assign a b c) (at level 102, right associativity).
+
+Definition empty_state : state := (fun _ => Val Vundef).
+
+Definition trans_state (s: Asmblock.state) : state :=
+  let (rs, m) := s in
+  fun x => if (Pos.eq_dec x pmem) then Memstate m
+           else match (inv_ppos x) with
+           | Some r => Val (rs r)
+           | None => Val Vundef
+           end.
+
+Theorem trans_state_match: forall S, match_states S (trans_state S).
+Proof.
+  intros. destruct S as (rs & m). simpl.
+  split. reflexivity.
+  intro. destruct r; try reflexivity.
+  destruct g; reflexivity.
+Qed.
+
+Lemma exec_match_app:
+  forall c c' s s' s'',
+  exec Ge c s = Some s' ->
+  exec Ge c' s' = Some s'' ->
+  exec Ge (c ++ c') s = Some s''.
+Proof.
+Admitted.
+
+Lemma forward_simu_body:
+  forall ge bdy rs m rs' m' fn s,
+  Ge = Genv ge fn ->
+  exec_body ge bdy rs m = Next rs' m' ->
+  match_states (State rs m) s ->
+  exists s',
+     exec Ge (trans_body bdy) s = Some s'
+  /\ match_states (State rs' m') s'.
+Proof.
+Admitted.
+
+Theorem forward_simu:
+  forall rs1 m1 rs2 m2 s1' b ge fn,
+    Ge = Genv ge fn ->
+    exec_bblock ge fn b rs1 m1 = Next rs2 m2 ->
+    match_states (State rs1 m1) s1' ->
+    exists s2',
+       exec Ge (trans_block b) s1' = Some s2'
+    /\ match_states (State rs2 m2) s2'.
+Proof.
+  intros until fn. intros GENV EXECB MS. unfold exec_bblock in EXECB. destruct (exec_body _ _ _) eqn:EXEB; try discriminate.
+  exploit forward_simu_body; eauto. intros (s' & EXETRANSB & MS').
+
+  eexists. split.
+  unfold trans_block. eapply exec_match_app. eassumption.
+Admitted.
 
 End SECT.
