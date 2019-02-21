@@ -35,6 +35,7 @@ Inductive control_op :=
   | Ocb (bt: btest) (l: label)
   | Ocbu (bt: btest) (l: label)
   | OError
+  | OIncremPC (sz: Z)
 .
 
 Inductive arith_op :=
@@ -307,6 +308,7 @@ Definition control_eval (o: control_op) (l: list value) :=
     | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmplu_bool (Mem.valid_pointer m) c v (Vlong (Int64.repr 0)))
     | (None, _) => None
     end
+  | OIncremPC sz, [Val vpc] => Some (Val (Val.offset_ptr vpc (Ptrofs.repr sz)))
   | OError, _ => None
   | _, _ => None
   end.
@@ -413,6 +415,8 @@ Definition control_op_eq (c1 c2: control_op): ?? bool :=
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
   | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
   | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | OIncremPC sz1, OIncremPC sz2 => phys_eq sz1 sz2
+  | OError, OError => RET true
   | _, _ => RET false
   end.
 
@@ -423,6 +427,7 @@ Proof.
   - congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
 Qed.
 
 
@@ -579,8 +584,10 @@ Fixpoint trans_body (b: list basic) : list L.macro :=
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
+Definition trans_pcincr (sz: Z) := [(#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil))] :: nil.
+
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
-  trans_body (body b) ++ trans_exit (exit b).
+  trans_body (body b) ++ trans_pcincr (size b) ++ trans_exit (exit b).
 
 Definition state := L.mem.
 Definition exec := L.run.
@@ -591,8 +598,6 @@ Definition match_states (s: Asmblock.state) (s': state) :=
   /\ forall r, s' (#r) = Val (rs r).
 
 Notation "a <[ b <- c ]>" := (assign a b c) (at level 102, right associativity).
-
-Definition empty_state : state := (fun _ => Val Vundef).
 
 Definition trans_state (s: Asmblock.state) : state :=
   let (rs, m) := s in
@@ -629,6 +634,17 @@ Lemma forward_simu_body:
 Proof.
 Admitted.
 
+Lemma forward_simu_control:
+  forall ge fn ex b rs m rs2 m2 s,
+  Ge = Genv ge fn ->
+  exec_control ge fn ex (nextblock b rs) m = Next rs2 m2 ->
+  match_states (State rs m) s ->
+  exists s',
+     exec Ge (trans_pcincr (size b) ++ trans_exit ex) s = Some s'
+  /\ match_states (State rs2 m2) s'.
+Proof.
+Admitted.
+
 Theorem forward_simu:
   forall rs1 m1 rs2 m2 s1' b ge fn,
     Ge = Genv ge fn ->
@@ -640,9 +656,11 @@ Theorem forward_simu:
 Proof.
   intros until fn. intros GENV EXECB MS. unfold exec_bblock in EXECB. destruct (exec_body _ _ _) eqn:EXEB; try discriminate.
   exploit forward_simu_body; eauto. intros (s' & EXETRANSB & MS').
+  exploit forward_simu_control; eauto. intros (s'' & EXETRANSEX & MS'').
 
   eexists. split.
-  unfold trans_block. eapply exec_match_app. eassumption.
-Admitted.
+  unfold trans_block. eapply exec_match_app. eassumption. eassumption.
+  eassumption.
+Qed.
 
 End SECT.
