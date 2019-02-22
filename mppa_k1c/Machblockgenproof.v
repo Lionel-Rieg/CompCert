@@ -39,7 +39,7 @@ Fixpoint trans_stack (mst: list Mach.stackframe) : list stackframe :=
   | msf :: mst0 => (trans_stackframe msf) :: (trans_stack mst0)
   end.
 
-Definition trans_state (ms: Mach.state) : state :=
+Definition trans_state (ms: Mach.state): state :=
   match ms with
   | Mach.State        s f sp c rs m => State        (trans_stack s) f sp (trans_code c) rs m
   | Mach.Callstate    s f rs m      => Callstate    (trans_stack s) f rs m
@@ -170,6 +170,8 @@ Definition concat (h: list label) (c: code): code :=
   | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
   end.
 
+(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
+
 Lemma to_bblock_start_label i c l b c0: 
   (b, c0) = to_bblock (i :: c)
   -> In l (header b)
@@ -264,13 +266,23 @@ Proof.
   - destruct i; try (
       simpl in H; inversion H; subst; clear H; auto; fail).
 Qed.
+*)
+
+Axiom TODO: False. (* A ELIMINER *)
 
 Lemma find_label_transcode_preserved:
   forall l c c',
   Mach.find_label l c = Some c' ->
   exists h, In l h /\ find_label l (trans_code c) = Some (concat h (trans_code c')).
 Proof.
-  intros l c; induction c, (trans_code c) using trans_code_ind.
+  intros l c. remember (trans_code _) as bl.
+  rewrite <- is_trans_code_inv in * |-.
+  induction Heqbl;
+  elim TODO. (* A FAIRE *)
+Qed.
+
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
+ induction c, (trans_code c) using trans_code_ind.
   - intros c' H; inversion H.
   - intros c' H. subst _x. destruct c as [| i c]; try tauto.
    unfold to_bblock in * |-.
@@ -290,7 +302,7 @@ Proof.
      erewrite (to_bblock_body_find_label c1 l c2); eauto.
      erewrite (to_bblock_exit_find_label c2 l c0); eauto.
 Qed.
-
+*)
 
 Lemma find_label_preserved:
   forall l f c,
@@ -311,7 +323,13 @@ Qed.
 Local Hint Resolve symbols_preserved senv_preserved init_mem_preserved prog_main_preserved functions_translated
                    parent_sp_preserved.
 
-Definition dist_end_block_code (c: Mach.code) := (size (fst (to_bblock c))-1)%nat.
+
+
+Definition dist_end_block_code (c: Mach.code) := 
+ match trans_code c with
+ | nil => 0
+ | bh::_ => (size bh-1)%nat
+ end.
 
 
 Definition dist_end_block (s: Mach.state): nat :=
@@ -322,6 +340,8 @@ Definition dist_end_block (s: Mach.state): nat :=
 
 Local Hint Resolve exec_nil_body exec_cons_body.
 Local Hint Resolve exec_MBgetstack exec_MBsetstack exec_MBgetparam exec_MBop exec_MBload exec_MBstore.
+
+(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
 
 Ltac ExploitDistEndBlockCode :=
   match goal with
@@ -377,11 +397,22 @@ Proof.
   - contradict H. destruct i; try discriminate.
     all: unfold dist_end_block_code; erewrite to_bblock_CFI; eauto; simpl; eauto.
 Qed.
+*)
+
+Lemma dist_end_block_code_simu_mid_block i c:
+  dist_end_block_code (i::c) <> 0 ->
+  (dist_end_block_code (i::c) = Datatypes.S (dist_end_block_code c)).
+Proof.
+  unfold dist_end_block_code.
+  remember (trans_code (i::c)) as bl.
+  rewrite <- is_trans_code_inv in * |-.
+  inversion Heqbl as [| | |]; subst.
+Admitted. (* A FAIRE *)
 
 Local Hint Resolve dist_end_block_code_simu_mid_block.
 
 Lemma step_simu_basic_step (i: Mach.instruction) (bi: basic_inst) (c: Mach.code) s f sp rs m (t:trace) (s':Mach.state):
-  to_basic_inst i = Some bi ->
+  trans_inst i = MB_basic bi ->
   Mach.step (inv_trans_rao rao) ge (Mach.State s f sp (i::c) rs m) t s' ->
   exists rs' m', s'=Mach.State s f sp c rs' m' /\ t=E0 /\ basic_step tge (trans_stack s) f sp rs m bi rs' m'.
 Proof.
@@ -400,6 +431,7 @@ Proof.
 Qed.
 
 
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Lemma star_step_simu_body_step s f sp c:
  forall (p:bblock_body) c' rs m t s',
   to_bblock_body c = (p, c') ->
@@ -426,6 +458,7 @@ Proof.
      inversion_clear H; simpl.
      intros X; inversion_clear X. intuition eauto.
 Qed.
+*)
 
 Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit.
 Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
@@ -433,6 +466,16 @@ Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved f
 Lemma match_states_concat_trans_code st f sp c rs m h: 
   match_states (Mach.State st f sp c rs m) (State (trans_stack st) f sp (concat h (trans_code c)) rs m).
 Proof.
+  intros; remember (trans_code _) as bl.
+  rewrite <- is_trans_code_inv in * |-.
+  constructor 1; simpl.
+  + intros (t0 & s1' & H0) t s'. 
+    inversion Heqbl as [| | |]; subst; simpl;  (* inversion vs induction ?? *)
+    elim TODO. (* A FAIRE *)
+  + intros H r; constructor 1; intro X; inversion X.
+Qed.
+
+(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
   constructor 1; simpl.
   + intros (t0 & s1' & H0) t s'. 
     rewrite! trans_code_equation.
@@ -486,7 +529,6 @@ Proof.
 Qed.
 
 
-
 Lemma step_simu_exit_step c e c' stk f sp rs m t s' b:
   to_bblock_exit c = (e, c') ->
   starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s' ->
@@ -516,6 +558,7 @@ Proof.
      inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
      exploit IHc; eauto.
 Qed. 
+*)
 
 Lemma simu_end_block:
   forall s1 t s1',
@@ -524,14 +567,23 @@ Lemma simu_end_block:
 Proof.
   destruct s1; simpl.
   + (* State *)
-    (* c cannot be nil *)
-    destruct c as [|i c]; simpl; try ( (* nil => absurd *)
+    unfold dist_end_block_code.
+    remember (trans_code _) as bl.
+    rewrite <- is_trans_code_inv in * |-.
+    intros t s1' H.
+    inversion Heqbl as [| | |]; subst; simpl in * |- *;  (* inversion vs induction ?? *)
+    elim TODO. (* A FAIRE *)
+ 
+  (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
+
+   destruct c as [|i c]; simpl; try ( (* nil => absurd *)
       unfold dist_end_block_code; simpl;
       intros t s1' H; inversion_clear H;
       inversion_clear H0; fail
     ).
 
     intros t s1' H.
+
     remember (_::_) as c0. remember (trans_code c0) as tc0.
 
     (* tc0 cannot be nil *)
@@ -576,6 +628,7 @@ Proof.
     intros (s2' & H3 & H4).
     eapply ex_intro; intuition eauto.
     eapply exec_bblock; eauto.
+*)
   + (* Callstate *)
     intros t s1' H; inversion_clear H.
     eapply ex_intro; constructor 1; eauto.
@@ -604,8 +657,10 @@ Theorem transf_program_correct:
 Proof.
   apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)
-  - intros s1 t s1' H1.
+  - intros s1 t s1' H1. elim TODO. (* A FAIRE *)
+    (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
     destruct H1; simpl; omega || (intuition auto).
+    *)
 (* public_preserved *)
   - apply senv_preserved.
 (* match_initial_states *)
@@ -618,10 +673,13 @@ Proof.
 (* match_final_states *)
   - intros. simpl. destruct H. split with (r := r); auto.
 (* final_states_end_block *)
-  - intros. simpl in H0. inversion H0.
-    inversion H; simpl; auto.
+  - intros. simpl in H0. elim TODO.
+  (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
+    inversion H0.
+    inversion H; simpl; auto. 
     (* the remaining instructions cannot lead to a Returnstate *)
     all: subst; discriminate.
+  *)
 (* simu_end_block *)
   - apply simu_end_block.
 Qed.
