@@ -581,7 +581,7 @@ Definition trans_basic (b: basic) : macro :=
   | Pallocframe sz pos => [(#FP, Name (#SP)); (#SP, Op (Allocframe2 sz pos) (Name (#SP) @ Name pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (Name (#SP)) @ Name pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
-                          (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Name pmem @ Enil));
+                          (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Old (Name pmem) @ Enil));
                           (#RTMP, Op (Constant Vundef) Enil)]
   | Pget rd ra => [(#rd, Name (#ra))]
   | Pset ra rd => [(#ra, Name (#rd))]
@@ -724,7 +724,33 @@ Proof.
          pose (not_eq_ireg_to_pos_ppos 3 GPR14 g). simpl ireg_to_pos in n2. auto.
          pose (not_eq_ireg_to_pos_ppos 3 GPR12 g). simpl ireg_to_pos in n2. auto.
          pose (not_eq_ireg_to_pos_ppos 3 GPR32 g). simpl ireg_to_pos in n2. auto.
-Admitted.
+(* Freeframe *)
+  - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rs GPR12) eqn:SPeq; try discriminate.
+    destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv H0.
+    eexists. split; try split.
+    * simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
+      Simpl. rewrite e. rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]].
+      ** subst. Simpl.
+      ** subst. Simpl.
+      ** subst. Simpl.
+      ** Simpl. repeat (rewrite assign_diff). auto.
+         unfold ppos. pose (not_3_plus_n (ireg_to_pos g)). destruct a as (A & _ & _). auto.
+         pose (not_eq_ireg_to_pos_ppos 3 GPR12 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos 3 GPR32 g). simpl ireg_to_pos in n2. auto.
+(* Pget *)
+  - simpl in H. destruct rs0 eqn:rs0eq; try discriminate. inv H. inv H0.
+    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
+    destruct (ireg_eq g rd).
+    * subst. Simpl.
+    * Simpl. rewrite assign_diff; auto. unfold ppos. apply not_eq_ireg_to_pos. auto.
+(* Pset *)
+  - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv H0.
+    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
+(* Pnop *)
+  - simpl in H. inv H. inv H0. eexists. split; try split. assumption. assumption.
+Qed.
 
 Lemma forward_simu_body:
   forall bdy ge rs m rs' m' fn s,
