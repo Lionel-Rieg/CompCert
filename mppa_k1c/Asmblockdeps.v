@@ -80,6 +80,7 @@ Inductive op_wrap :=
   | Store (so: store_op)
   | Control (co: control_op)
   | Allocframe (sz: Z) (pos: ptrofs)
+  | Allocframe2 (sz: Z) (pos: ptrofs)
   | Freeframe (sz: Z) (pos: ptrofs)
   | Freeframe2 (sz: Z) (pos: ptrofs)
   | Constant (v: val)
@@ -328,6 +329,13 @@ Definition op_eval (o: op) (l: list value) :=
       | None => None
       | Some m => Some (Memstate m)
       end
+  | Allocframe2 sz pos, [Val spv; Memstate m] => 
+      let (m1, stk) := Mem.alloc m 0 sz in
+      let sp := (Vptr stk Ptrofs.zero) in
+      match Mem.storev Mptr m1 (Val.offset_ptr sp pos) spv with
+      | None => None
+      | Some m => Some (Val sp)
+      end
   | Freeframe sz pos, [Val spv; Memstate m] =>
       match Mem.loadv Mptr m (Val.offset_ptr spv pos) with
       | None => None
@@ -570,8 +578,8 @@ Definition trans_basic (b: basic) : macro :=
   | PArith ai => trans_arith ai
   | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
-  | Pallocframe sz pos => [(pmem, Op (Allocframe sz pos) (Name (#SP) @ Name pmem @ Enil));
-                           (#FP, Name (#SP)); (#SP, Name (#RTMP)); (#RTMP, Op (Constant Vundef) Enil)]
+  | Pallocframe sz pos => [(#FP, Name (#SP)); (#SP, Op (Allocframe2 sz pos) (Name (#SP) @ Name pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
+                           (pmem, Op (Allocframe sz pos) (Old (Name (#SP)) @ Name pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
                           (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Name pmem @ Enil));
                           (#RTMP, Op (Constant Vundef) Enil)]
@@ -609,15 +617,28 @@ Definition trans_state (s: Asmblock.state) : state :=
            | None => Val Vundef
            end.
 
-Lemma pos_gpreg_not_3: forall g: gpreg, 3 <> # g.
+Lemma pos_gpreg_not: forall g: gpreg, pmem <> (#g) /\ 2 <> (#g) /\ 3 <> (#g).
 Proof.
-  destruct g; try discriminate.
+  intros. split; try split. all: destruct g; try discriminate.
 Qed.
 
-Lemma pos_gpreg_not_2: forall g: gpreg, 2 <> # g.
+Lemma not_3_plus_n:
+  forall n, 3 + n <> pmem /\ 3 + n <> (# RA) /\ 3 + n <> (# PC).
 Proof.
-  destruct g; try discriminate.
+  intros. split; try split.
+  all: destruct n; simpl; try (destruct n; discriminate); try discriminate.
 Qed.
+
+Lemma not_eq_ireg_to_pos:
+  forall n r r', r' <> r -> n + ireg_to_pos r <> n + ireg_to_pos r'.
+Proof.
+Admitted.
+
+Lemma not_eq_ireg_to_pos_ppos:
+  forall n r r', r' <> r -> n + ireg_to_pos r <> # r'.
+Proof.
+Admitted.
+
 
 Ltac Simplif :=
   ((rewrite nextblock_inv by eauto with asmgen)
@@ -625,7 +646,7 @@ Ltac Simplif :=
   || (rewrite Pregmap.gss)
   || (rewrite nextblock_pc)
   || (rewrite Pregmap.gso by eauto with asmgen)
-  || (rewrite assign_diff by (try discriminate; try (apply pos_gpreg_not_3); try (apply pos_gpreg_not_2)))
+  || (rewrite assign_diff by (try discriminate; try (apply pos_gpreg_not); try (apply not_3_plus_n)))
   || (rewrite assign_eq)
   ); auto with asmgen.
 
@@ -649,8 +670,64 @@ Lemma exec_match_app:
 Proof.
 Admitted.
 
+Lemma trans_arith_correct:
+  forall ge fn i rs m rs' s,
+  exec_arith_instr ge i rs m = rs' ->
+  match_states (State rs m) s ->
+  exists s',
+     macro_run (Genv ge fn) (trans_arith i) s s = Some s'
+  /\ match_states (State rs' m) s'.
+Proof.
+Admitted.
+
+Lemma forward_simu_basic:
+  forall ge fn b rs m rs' m' s,
+  exec_basic_instr ge b rs m = Next rs' m' ->
+  match_states (State rs m) s ->
+  exists s',
+     macro_run (Genv ge fn) (trans_basic b) s s = Some s'
+  /\ match_states (State rs' m') s'.
+Proof.
+  intros. destruct b.
+(* Arith *)
+  - simpl in H. inv H. simpl macro_run. eapply trans_arith_correct; eauto.
+(* Load *)
+  - simpl in H. destruct i; destruct i.
+    all: unfold exec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+    destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; rewrite EVALOFF; rewrite H; pose (H1 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
+     Simpl|
+     intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); [
+       subst; Simpl|
+       Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
+(* Store *)
+  - simpl in H. destruct i; destruct i.
+    all: unfold exec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+    destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; rewrite EVALOFF; rewrite H; pose (H1 ra); simpl in e; rewrite e; pose (H1 rs0); simpl in e0; rewrite e0; rewrite MEML; reflexivity
+    | Simpl
+    | intros rr; destruct rr; Simpl].
+(* Allocframe *)
+  - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
+    inv H. inv H0. eexists. split; try split.
+    * simpl. Simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite MEMAL. rewrite MEMS. Simpl.
+      rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]].
+      ** subst. Simpl.
+      ** subst. Simpl.
+      ** subst. Simpl.
+      ** Simpl. repeat (rewrite assign_diff). auto.
+         pose (not_eq_ireg_to_pos_ppos 3 GPR14 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos 3 GPR12 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos 3 GPR32 g). simpl ireg_to_pos in n2. auto.
+Admitted.
+
 Lemma forward_simu_body:
-  forall ge bdy rs m rs' m' fn s,
+  forall bdy ge rs m rs' m' fn s,
   Ge = Genv ge fn ->
   exec_body ge bdy rs m = Next rs' m' ->
   match_states (State rs m) s ->
@@ -658,7 +735,15 @@ Lemma forward_simu_body:
      exec Ge (trans_body bdy) s = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
-Admitted.
+  induction bdy.
+  - intros. inv H1. simpl in *. inv H0. eexists. repeat (split; auto).
+  - intros until s. intros GE EXEB MS. simpl in EXEB. destruct (exec_basic_instr _ _ _ _) eqn:EBI; try discriminate.
+    exploit forward_simu_basic; eauto. intros (s' & MRUN & MS'). subst Ge.
+    eapply IHbdy in MS'; eauto. destruct MS' as (s'' & EXECB & MS').
+    eexists. split.
+    * simpl. rewrite MRUN. eassumption.
+    * eassumption.
+Qed.
 
 Lemma forward_simu_control:
   forall ge fn ex b rs m rs2 m2 s,
