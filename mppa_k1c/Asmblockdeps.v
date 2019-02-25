@@ -567,9 +567,21 @@ Definition trans_arith (ai: ar_instruction) : macro :=
   | PArithRI64 n d i => [(#d, Op (Arith (OArithRI64 n i)) Enil)]
   | PArithRF32 n d i => [(#d, Op (Arith (OArithRF32 n i)) Enil)]
   | PArithRF64 n d i => [(#d, Op (Arith (OArithRF64 n i)) Enil)]
-  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
-  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
-  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
+  | PArithRRR n d s1 s2 => 
+      match n with
+      | Pcompw _ | Pcompl _ => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Name pmem @ Enil))]
+      | _ => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
+      end
+  | PArithRRI32 n d s i =>
+      match n with
+      | Pcompiw _ => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Name pmem @ Enil))]
+      | _ => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
+      end
+  | PArithRRI64 n d s i => 
+      match n with
+      | Pcompil _ => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Name pmem @ Enil))]
+      | _ => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
+      end
   end.
 
 
@@ -639,6 +651,15 @@ Lemma not_eq_ireg_to_pos_ppos:
 Proof.
 Admitted.
 
+Lemma not_eq_ireg_ppos: 
+  forall r r', r <> r' -> (# r') <> (# r).
+Proof.
+Admitted.
+
+Lemma not_eq_IR:
+  forall r r', r <> r' -> IR r <> IR r'.
+Proof.
+Admitted.
 
 Ltac Simplif :=
   ((rewrite nextblock_inv by eauto with asmgen)
@@ -646,7 +667,7 @@ Ltac Simplif :=
   || (rewrite Pregmap.gss)
   || (rewrite nextblock_pc)
   || (rewrite Pregmap.gso by eauto with asmgen)
-  || (rewrite assign_diff by (try discriminate; try (apply pos_gpreg_not); try (apply not_3_plus_n)))
+  || (rewrite assign_diff by (try discriminate; try (apply pos_gpreg_not); try (apply not_3_plus_n); try (apply not_eq_ireg_ppos; apply not_eq_IR; auto); try (apply not_eq_ireg_to_pos_ppos; auto)))
   || (rewrite assign_eq)
   ); auto with asmgen.
 
@@ -678,7 +699,70 @@ Lemma trans_arith_correct:
      macro_run (Genv ge fn) (trans_arith i) s s = Some s'
   /\ match_states (State rs' m) s'.
 Proof.
-Admitted.
+  intros. unfold exec_arith_instr in H. destruct i.
+(* Ploadsymbol *)
+  - destruct i. inv H. inv H0.
+    eexists; split; try split.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRR *)
+  - destruct i.
+    all: inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; pose (H1 rs0); simpl in e; rewrite e; reflexivity |
+      Simpl |
+      intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); subst; Simpl ].
+(* PArithRI32 *)
+  - destruct i. inv H. inv H0.
+    eexists; split; try split.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRI64 *)
+  - destruct i. inv H. inv H0.
+    eexists; split; try split.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRF32 *)
+  - destruct i. inv H. inv H0.
+    eexists; split; try split.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRF64 *)
+  - destruct i. inv H. inv H0.
+    eexists; split; try split.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRRR *)
+  - destruct i.
+    all: inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; pose (H1 rs1); simpl in e; rewrite e; pose (H1 rs2); simpl in e0; rewrite e0; try (rewrite H); reflexivity
+    | Simpl
+    | intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); subst; Simpl ].
+(* PArithRRI32 *)
+  - destruct i.
+    all: inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); reflexivity
+    | Simpl
+    | intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); subst; Simpl ].
+(* PArithRRI64 *)
+  - destruct i.
+    all: inv H; inv H0;
+    eexists; split; try split;
+    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); reflexivity
+    | Simpl
+    | intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); subst; Simpl ].
+Qed.
 
 Lemma forward_simu_basic:
   forall ge fn b rs m rs' m' s,
@@ -744,7 +828,7 @@ Proof.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
     destruct (ireg_eq g rd).
     * subst. Simpl.
-    * Simpl. rewrite assign_diff; auto. unfold ppos. apply not_eq_ireg_to_pos. auto.
+    * Simpl.
 (* Pset *)
   - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
