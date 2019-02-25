@@ -999,10 +999,15 @@ Lemma exec_trans_pcincr_exec:
   forall rs m s b,
   match_states (State rs m) s ->
   exists s',
-     match_states (State (nextblock b rs) m) s'
-  /\ exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s = exec Ge (trans_exit (exit b)) s'.
+     exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s = exec Ge (trans_exit (exit b)) s'
+  /\ match_states (State (nextblock b rs) m) s'.
 Proof.
-Admitted.
+  intros. inv H. eexists. split. simpl.
+  unfold control_eval. pose (H1 PC); simpl in e; rewrite e. destruct Ge. reflexivity.
+  simpl. split.
+  - Simpl.
+  - intros rr; destruct rr; Simpl.
+Qed.
 
 Lemma exec_exit_none:
   forall ge fn rs m s ex,
@@ -1011,7 +1016,43 @@ Lemma exec_exit_none:
   exec Ge (trans_exit ex) s = None ->
   exec_control ge fn ex rs m = Stuck.
 Proof.
-Admitted.
+  intros. inv H0. destruct ex as [ctl|]; try discriminate.
+  destruct ctl; destruct i; try reflexivity; try discriminate.
+(* Pj_l *)
+  - simpl in *. pose (H3 PC); simpl in e; rewrite e in H1. clear e.
+    unfold goto_label_deps in H1. unfold goto_label.
+    destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
+(* Pcb *)
+  - simpl in *. destruct (cmp_for_btest bt). destruct i.
+    + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
+      destruct o; auto. pose (H3 r); simpl in e; rewrite e in H1; clear e.
+      unfold eval_branch_deps in H1; unfold eval_branch.
+      destruct (Val.cmp_bool _ _ _); auto. destruct b; try discriminate.
+      unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
+      destruct (rs PC); auto. discriminate.
+    + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
+      destruct o; auto. pose (H3 r); simpl in e; rewrite e in H1; clear e.
+      unfold eval_branch_deps in H1; unfold eval_branch.
+      destruct (Val.cmpl_bool _ _ _); auto. destruct b; try discriminate.
+      unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
+      destruct (rs PC); auto. discriminate.
+(* Pcbu *)
+  - simpl in *. destruct (cmpu_for_btest bt). destruct i.
+    + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
+      destruct o; auto. rewrite H2 in H1.
+      pose (H3 r); simpl in e; rewrite e in H1; clear e.
+      unfold eval_branch_deps in H1; unfold eval_branch.
+      destruct (Val.cmpu_bool _ _ _ _); auto. destruct b; try discriminate.
+      unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
+      destruct (rs PC); auto. discriminate.
+    + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
+      destruct o; auto. rewrite H2 in H1.
+      pose (H3 r); simpl in e; rewrite e in H1; clear e.
+      unfold eval_branch_deps in H1; unfold eval_branch.
+      destruct (Val.cmplu_bool _ _ _); auto. destruct b; try discriminate.
+      unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
+      destruct (rs PC); auto. discriminate.
+Qed.
 
 Theorem trans_block_reverse_stuck:
   forall ge fn b rs m s,
@@ -1026,7 +1067,7 @@ Proof.
   - right. repeat eexists.
     exploit exec_body_next_exec; eauto.
     intros (s' & MS' & EXECBK'). rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
-    exploit exec_trans_pcincr_exec; eauto. intros (s'' & MS'' & EXECINCR'). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
+    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS''). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
     eapply exec_exit_none; eauto.
   - left. reflexivity.
 Qed.
