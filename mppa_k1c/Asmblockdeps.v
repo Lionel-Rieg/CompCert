@@ -973,21 +973,86 @@ Axiom forward_simu_stuck:
     match_states (State rs1 m1) s1' ->
     exec Ge (trans_block b) s1' = None.
 
-Axiom trans_block_reverse_stuck:
-  forall ge fn b rs m s',
-  Ge = Genv ge fn ->
-  exec Ge (trans_block b) s' = None ->
-  match_states (State rs m) s' ->
-  exec_bblock ge fn b rs m = Stuck.
+Lemma exec_bblock_stuck_nec:
+  forall ge fn b rs m,
+     exec_body ge (body b) rs m = Stuck
+  \/ (exists rs' m', exec_body ge (body b) rs m = Next rs' m' /\ exec_control ge fn (exit b) (nextblock b rs') m' = Stuck)
+  -> exec_bblock ge fn b rs m = Stuck.
+Proof.
+  intros. destruct H.
+  - unfold exec_bblock. rewrite H. reflexivity.
+  - destruct H as (rs' & m' & EXEB & EXEC). unfold exec_bblock. rewrite EXEB. assumption.
+Qed.
 
-Axiom state_equiv:
+Lemma exec_body_next_exec:
+  forall ge fn b rs m rs' m' s,
+  Ge = Genv ge fn ->
+  exec_body ge (body b) rs m = Next rs' m' ->
+  match_states (State rs m) s ->
+  exists s',
+     match_states (State rs' m') s'
+  /\ exec Ge (trans_block b) s = exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s'.
+Proof.
+Admitted.
+
+Lemma exec_trans_pcincr_exec:
+  forall rs m s b,
+  match_states (State rs m) s ->
+  exists s',
+     match_states (State (nextblock b rs) m) s'
+  /\ exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s = exec Ge (trans_exit (exit b)) s'.
+Proof.
+Admitted.
+
+Lemma exec_exit_none:
+  forall ge fn rs m s ex,
+  Ge = Genv ge fn ->
+  match_states (State rs m) s ->
+  exec Ge (trans_exit ex) s = None ->
+  exec_control ge fn ex rs m = Stuck.
+Proof.
+Admitted.
+
+Theorem trans_block_reverse_stuck:
+  forall ge fn b rs m s,
+  Ge = Genv ge fn ->
+  exec Ge (trans_block b) s = None ->
+  match_states (State rs m) s ->
+  exec_bblock ge fn b rs m = Stuck.
+Proof.
+  intros until s. intros Geq EXECBK MS.
+  apply exec_bblock_stuck_nec.
+  destruct (exec_body _ _ _ _) eqn:EXEB.
+  - right. repeat eexists.
+    exploit exec_body_next_exec; eauto.
+    intros (s' & MS' & EXECBK'). rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
+    exploit exec_trans_pcincr_exec; eauto. intros (s'' & MS'' & EXECINCR'). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
+    eapply exec_exit_none; eauto.
+  - left. reflexivity.
+Qed.
+
+
+Lemma state_eq_decomp:
+  forall rs1 m1 rs2 m2, rs1 = rs2 -> m1 = m2 -> State rs1 m1 = State rs2 m2.
+Proof.
+  intros. congruence.
+Qed.
+
+Theorem state_equiv:
   forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
+Proof.
+  intros. inv H. unfold match_states in H0, H1. destruct S1 as (rs1 & m1). destruct S2 as (rs2 & m2). inv H0. inv H1.
+  apply state_eq_decomp.
+  - apply functional_extensionality. intros. assert (Val (rs1 x) = Val (rs2 x)) by congruence. congruence.
+  - congruence.
+Qed.
+
 
 Axiom bblock_equiv_reduce: 
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
   L.bblock_equiv Ge (trans_block p1) (trans_block p2) ->
-  Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+  Asmblockgenproof0.bblock_equiv ge fn p1 p2. (* FIXME *)
 
 Definition string_of_name (x: P.R.t): ?? pstring := RET (Str ("resname")).
 (*   match x with
@@ -1023,7 +1088,7 @@ Theorem bblock_eq_test_correct verb p1 p2 :
 Proof.
   intros ge fn genv_eq.
   wlp_simplify.
-Admitted.
+Admitted. (* FIXME - à voir avec Sylvain *)
 Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
 
@@ -1041,7 +1106,7 @@ Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
 
 Axiom bblock_equiv'_eq:
   forall b1 b2,
-  bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2.
+  bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
 
 End SECT.
 
