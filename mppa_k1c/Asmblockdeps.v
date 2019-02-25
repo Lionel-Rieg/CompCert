@@ -966,4 +966,83 @@ Proof.
   eassumption.
 Qed.
 
+Axiom forward_simu_stuck:
+  forall rs1 m1 s1' b ge fn,
+    Ge = Genv ge fn ->
+    exec_bblock ge fn b rs1 m1 = Stuck ->
+    match_states (State rs1 m1) s1' ->
+    exec Ge (trans_block b) s1' = None.
+
+Axiom trans_block_reverse_stuck:
+  forall ge fn b rs m s',
+  Ge = Genv ge fn ->
+  exec Ge (trans_block b) s' = None ->
+  match_states (State rs m) s' ->
+  exec_bblock ge fn b rs m = Stuck.
+
+Axiom state_equiv:
+  forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
+
+Axiom bblock_equiv_reduce: 
+  forall p1 p2 ge fn,
+  Ge = Genv ge fn ->
+  L.bblock_equiv Ge (trans_block p1) (trans_block p2) ->
+  Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+
+Definition string_of_name (x: P.R.t): ?? pstring := RET (Str ("resname")).
+(*   match x with
+  | xH => RET (Str ("the_mem"))
+  | _ as x => 
+     DO s <~ string_of_Z (Zpos (Pos.pred x)) ;;
+     RET ("R" +; s)
+  end. *)
+
+Definition string_of_op (op: P.op): ?? pstring := RET (Str ("OP")).
+(*   match op with
+  | P.Imm i => 
+     DO s <~ string_of_Z i ;;
+     RET s
+  | P.ARITH ADD => RET (Str "ADD")
+  | P.ARITH SUB => RET (Str "SUB")
+  | P.ARITH MUL => RET (Str "MUL")
+  | P.LOAD => RET (Str "LOAD")
+  | P.STORE => RET (Str "STORE")
+  end. *)
+
+Definition bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock) : ?? bool :=
+  if verb then
+    IDT.verb_bblock_eq_test string_of_name string_of_op Ge (trans_block p1) (trans_block p2)
+  else
+    IDT.bblock_eq_test Ge (trans_block p1) (trans_block p2).
+
+Local Hint Resolve IDT.bblock_eq_test_correct bblock_equiv_reduce IDT.verb_bblock_eq_test_correct: wlp.
+
+Theorem bblock_eq_test_correct verb p1 p2 :
+  forall ge fn, Ge = Genv ge fn ->
+  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Proof.
+  intros ge fn genv_eq.
+  wlp_simplify.
+Admitted.
+Global Opaque bblock_eq_test.
+Hint Resolve bblock_eq_test_correct: wlp.
+
+Inductive bblock_equiv' (bb bb': L.bblock) :=
+  | bblock_equiv_intro':
+    (forall s, exec Ge bb s = exec Ge bb' s) ->
+    bblock_equiv' bb bb'.
+
+Lemma bblock_equiv'_refl: forall tbb, bblock_equiv' tbb tbb.
+Proof.
+  repeat constructor.
+Qed.
+
+Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
+
+Axiom bblock_equiv'_eq:
+  forall b1 b2,
+  bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2.
+
 End SECT.
+
+Extract Constant bblock_equivb => "PostpassSchedulingOracle.bblock_equivb'".

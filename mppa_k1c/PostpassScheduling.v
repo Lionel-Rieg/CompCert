@@ -12,6 +12,8 @@
 
 Require Import Coqlib Errors AST Integers.
 Require Import Asmblock Axioms Memory Globalenvs.
+Require Import Asmblockdeps Asmblockgenproof0.
+Require Import ImpDep.
 
 Local Open Scope error_monad_scope.
 
@@ -21,72 +23,16 @@ Axiom schedule: bblock -> list bblock.
 
 Extract Constant schedule => "PostpassSchedulingOracle.schedule".
 
-(** Specification of the "coming soon" Asmblockdeps.v *)
-Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
-  | bblock_equiv_intro:
-      (forall rs m,
-      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
-      bblock_equiv ge f bb bb'.
-
-Axiom state': Type.
+Definition state' := L.mem.
 Definition outcome' := option state'.
 
-Axiom bblock': Type.
-Extract Constant bblock' => "PostpassSchedulingOracle.bblock'". (* FIXME *)
-Axiom exec': genv -> function -> bblock' -> state' -> outcome'.
-Axiom match_states: state -> state' -> Prop. 
-Axiom trans_block: bblock -> bblock'.
-Extract Constant trans_block => "PostpassSchedulingOracle.trans_block". (* FIXME *)
-Axiom trans_state: state -> state'.
+Definition bblock' := L.bblock.
 
-Axiom trans_state_match: forall S, match_states S (trans_state S).
-
-Inductive bblock_equiv' (ge: Genv.t fundef unit) (f: function) (bb bb': bblock') :=
-  | bblock_equiv_intro':
-      (forall s,
-      exec' ge f bb s = exec' ge f bb' s) ->
-      bblock_equiv' ge f bb bb'.
-
-Lemma bblock_equiv'_refl: forall ge fn tbb, bblock_equiv' ge fn tbb tbb.
-Proof.
-  repeat constructor.
-Qed.
-
-
+Definition exec' := L.run.
 
 Definition exec := exec_bblock.
 
-Axiom forward_simu:
-  forall rs1 m1 rs2 m2 s1' b ge fn,
-    exec ge fn b rs1 m1 = Next rs2 m2 ->
-    match_states (State rs1 m1) s1' ->
-    exists s2',
-       exec' ge fn (trans_block b) s1' = Some s2'
-    /\ match_states (State rs2 m2) s2'.
-
-Axiom forward_simu_stuck:
-  forall rs1 m1 s1' b ge fn,
-    exec ge fn b rs1 m1 = Stuck ->
-    match_states (State rs1 m1) s1' ->
-    exec' ge fn (trans_block b) s1' = None.
-
-Axiom trans_block_reverse_stuck:
-  forall ge fn b rs m s',
-  exec' ge fn (trans_block b) s' = None ->
-  match_states (State rs m) s' ->
-  exec ge fn b rs m = Stuck.
-
-Axiom state_equiv:
-  forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
-
-
-(* TODO - replace it by the actual bblock_equivb' *)
-Axiom bblock_equivb': bblock' -> bblock' -> bool.
-Extract Constant bblock_equivb' => "PostpassSchedulingOracle.bblock_equivb'". (* FIXME *)
-
-Axiom bblock_equiv'_eq:
-  forall ge fn b1 b2,
-  bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
+Definition bblock_equivb' := bblock_equivb.
 
 Lemma bblock_equivb'_refl: forall tbb, bblock_equivb' tbb tbb = true.
 Proof.
@@ -94,39 +40,41 @@ Proof.
   Unshelve. (* FIXME - problem of Genv and function *)
 Admitted.
 
-
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
-  bblock_equiv' ge fn (trans_block b1) (trans_block b2) ->
+  bblock_equiv' (P.Genv ge fn) (trans_block b1) (trans_block b2) ->
   (exec ge fn b1 rs m = Stuck <-> exec ge fn b2 rs m = Stuck).
 Proof.
   intros. inv H.
   pose (trans_state_match (State rs m)).
   split.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck; eassumption.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck; eassumption.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck.
+      reflexivity. eassumption. eassumption.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck.
+      reflexivity. eassumption. eassumption.
 Qed.
-
 
 
 Lemma bblock_equiv'_comm:
   forall ge fn b1 b2,
-  bblock_equiv' ge fn b1 b2 <-> bblock_equiv' ge fn b2 b1.
+  bblock_equiv' (P.Genv ge fn) b1 b2 <-> bblock_equiv' (P.Genv ge fn) b2 b1.
 Proof.
   intros. repeat constructor. all: inv H; congruence.
 Qed.
 
 Theorem trans_exec:
-  forall b1 b2 ge f, bblock_equiv' ge f (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
+  forall b1 b2 ge f, bblock_equiv' (P.Genv ge f) (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
 Proof.
   repeat constructor. intros rs1 m1.
   destruct (exec_bblock _ _ b1 _ _) as [rs2 m2|] eqn:EXEB; destruct (exec_bblock _ _ b2 _ _) as [rs3 m3|] eqn:EXEB2; auto.
   - pose (trans_state_match (State rs1 m1)).
     exploit forward_simu.
+      reflexivity.
       eapply EXEB.
       eapply m.
     intros (s2' & EXEB' & MS).
     exploit forward_simu.
+      reflexivity.
       eapply EXEB2.
       eapply m.
     intros (s3' & EXEB'2 & MS2). inv H.
@@ -543,8 +491,8 @@ Proof.
   intros (tbb & CONC & STH).
   exists tbb. split; auto.
   rewrite verify_schedule_no_header in EQ0. erewrite stick_header_verify_schedule in EQ0; eauto.
-  apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0.
-  destruct (bblock_equivb' _ _); auto; try discriminate.
+  apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0. unfold bblock_equivb' in EQ0.
+  destruct (bblock_equivb _ _); auto; try discriminate.
 Qed.
 
 
