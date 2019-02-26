@@ -984,16 +984,36 @@ Proof.
   - destruct H as (rs' & m' & EXEB & EXEC). unfold exec_bblock. rewrite EXEB. assumption.
 Qed.
 
-Lemma exec_body_next_exec:
-  forall ge fn b rs m rs' m' s,
+Lemma exec_basic_instr_next_exec:
+  forall ge fn i rs m rs' m' s tc,
   Ge = Genv ge fn ->
-  exec_body ge (body b) rs m = Next rs' m' ->
+  exec_basic_instr ge i rs m = Next rs' m' ->
   match_states (State rs m) s ->
   exists s',
-     match_states (State rs' m') s'
-  /\ exec Ge (trans_block b) s = exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s'.
+     exec Ge (trans_basic i :: tc) s = exec Ge tc s'
+  /\ match_states (State rs' m') s'.
 Proof.
-Admitted.
+  intros. exploit forward_simu_basic; eauto.
+  intros (s' & MRUN & MS').
+  simpl exec. exists s'. subst. rewrite MRUN. split; auto.
+Qed.
+
+Lemma exec_body_next_exec:
+  forall c ge fn rs m rs' m' s tc,
+  Ge = Genv ge fn ->
+  exec_body ge c rs m = Next rs' m' ->
+  match_states (State rs m) s ->
+  exists s',
+     exec Ge (trans_body c ++ tc) s = exec Ge tc s'
+  /\ match_states (State rs' m') s'.
+Proof.
+  induction c.
+  - intros. simpl in H0. inv H0. simpl. exists s. split; auto.
+  - intros. simpl in H0. destruct (exec_basic_instr _ _ _ _) eqn:EBI; try discriminate.
+    exploit exec_basic_instr_next_exec; eauto. intros (s' & EXEGEBASIC & MS').
+    simpl trans_body. rewrite <- app_comm_cons. rewrite EXEGEBASIC.
+    eapply IHc; eauto.
+Qed.
 
 Lemma exec_trans_pcincr_exec:
   forall rs m s b,
@@ -1066,7 +1086,7 @@ Proof.
   destruct (exec_body _ _ _ _) eqn:EXEB.
   - right. repeat eexists.
     exploit exec_body_next_exec; eauto.
-    intros (s' & MS' & EXECBK'). rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
+    intros (s' & EXECBK' & MS'). unfold trans_block in EXECBK. rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
     exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS''). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
     eapply exec_exit_none; eauto.
   - left. reflexivity.
