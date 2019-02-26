@@ -84,6 +84,7 @@ Inductive op_wrap :=
   | Freeframe (sz: Z) (pos: ptrofs)
   | Freeframe2 (sz: Z) (pos: ptrofs)
   | Constant (v: val)
+  | Fail
 .
 
 Coercion Arith: arith_op >-> op_wrap.
@@ -363,6 +364,7 @@ Definition op_eval (o: op) (l: list value) :=
           end
       end
   | Constant v, [] => Some (Val v)
+  | Fail, _ => None
   | _, _ => None
   end.
 
@@ -451,6 +453,7 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
   | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
   | Constant c1, Constant c2 => phys_eq c1 c2
+  | Fail, Fail => RET true
   | _, _ => RET false
   end.
 
@@ -595,8 +598,14 @@ Definition trans_basic (b: basic) : macro :=
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
                           (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Old (Name pmem) @ Enil));
                           (#RTMP, Op (Constant Vundef) Enil)]
-  | Pget rd ra => [(#rd, Name (#ra))]
-  | Pset ra rd => [(#ra, Name (#rd))]
+  | Pget rd ra => match ra with
+                  | RA => [(#rd, Name (#ra))]
+                  | _ => [(#rd, Op Fail Enil)]
+                  end
+  | Pset ra rd => match ra with
+                  | RA => [(#ra, Name (#rd))]
+                  | _ => [(#rd, Op Fail Enil)]
+                  end
   | Pnop => []
   end.
 
@@ -683,11 +692,18 @@ Proof.
   destruct g; reflexivity.
 Qed.
 
-Lemma exec_match_app:
+Lemma exec_app_some:
   forall c c' s s' s'',
   exec Ge c s = Some s' ->
   exec Ge c' s' = Some s'' ->
   exec Ge (c ++ c') s = Some s''.
+Proof.
+Admitted.
+
+Lemma exec_app_none:
+  forall c c' s,
+  exec Ge c s = None ->
+  exec Ge (c ++ c') s = None.
 Proof.
 Admitted.
 
@@ -962,26 +978,23 @@ Proof.
   exploit forward_simu_control; eauto. intros (s'' & EXETRANSEX & MS'').
 
   eexists. split.
-  unfold trans_block. eapply exec_match_app. eassumption. eassumption.
+  unfold trans_block. eapply exec_app_some. eassumption. eassumption.
   eassumption.
 Qed.
-
-Axiom forward_simu_stuck:
-  forall rs1 m1 s1' b ge fn,
-    Ge = Genv ge fn ->
-    exec_bblock ge fn b rs1 m1 = Stuck ->
-    match_states (State rs1 m1) s1' ->
-    exec Ge (trans_block b) s1' = None.
 
 Lemma exec_bblock_stuck_nec:
   forall ge fn b rs m,
      exec_body ge (body b) rs m = Stuck
   \/ (exists rs' m', exec_body ge (body b) rs m = Next rs' m' /\ exec_control ge fn (exit b) (nextblock b rs') m' = Stuck)
-  -> exec_bblock ge fn b rs m = Stuck.
+  <-> exec_bblock ge fn b rs m = Stuck.
 Proof.
-  intros. destruct H.
-  - unfold exec_bblock. rewrite H. reflexivity.
-  - destruct H as (rs' & m' & EXEB & EXEC). unfold exec_bblock. rewrite EXEB. assumption.
+  intros. split.
+  + intros. destruct H.
+    - unfold exec_bblock. rewrite H. reflexivity.
+    - destruct H as (rs' & m' & EXEB & EXEC). unfold exec_bblock. rewrite EXEB. assumption.
+  + intros. unfold exec_bblock in H. destruct (exec_body _ _ _ _) eqn:EXEB.
+    - right. repeat eexists. assumption.
+    - left. reflexivity.
 Qed.
 
 Lemma exec_basic_instr_next_exec:
@@ -1090,6 +1103,110 @@ Proof.
     exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS''). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
     eapply exec_exit_none; eauto.
   - left. reflexivity.
+Qed.
+
+Lemma forward_simu_basic_instr_stuck:
+  forall i ge fn rs m s,
+  Ge = Genv ge fn ->
+  exec_basic_instr ge i rs m = Stuck ->
+  match_states (State rs m) s ->
+  exec Ge [trans_basic i] s = None.
+Proof.
+  intros. inv H1. unfold exec_basic_instr in H0. destruct i; try discriminate.
+(* PLoad *)
+  - destruct i; destruct i.
+    all: simpl; rewrite H2; pose (H3 ra); simpl in e; rewrite e; clear e;
+    unfold exec_load in H0; destruct (eval_offset _ _); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
+(* PStore *)
+  - destruct i; destruct i;
+    simpl; rewrite H2; pose (H3 ra); simpl in e; rewrite e; clear e; pose (H3 rs0); simpl in e; rewrite e; clear e;
+    unfold exec_store in H0; destruct (eval_offset _ _); auto; destruct (Mem.storev _ _ _); auto; discriminate.
+(* Pallocframe *)
+  - simpl. Simpl. pose (H3 SP); simpl in e; rewrite e; clear e. rewrite H2. destruct (Mem.alloc _ _ _). simpl in H0.
+    destruct (Mem.store _ _ _ _); try discriminate. reflexivity.
+(* Pfreeframe *)
+  - simpl. Simpl. pose (H3 SP); simpl in e; rewrite e; clear e. rewrite H2.
+    destruct (Mem.loadv _ _ _); auto. destruct (rs GPR12); auto. destruct (Mem.free _ _ _ _); auto.
+    discriminate.
+(* Pget *)
+  - simpl. destruct rs0; subst; try discriminate.
+    all: simpl; auto.
+  - simpl. destruct rd; subst; try discriminate.
+    all: simpl; auto.
+Qed.
+
+Lemma forward_simu_body_stuck:
+  forall bdy ge fn rs m s,
+  Ge = Genv ge fn ->
+  exec_body ge bdy rs m = Stuck ->
+  match_states (State rs m) s ->
+  exec Ge (trans_body bdy) s = None.
+Proof.
+  induction bdy.
+  - simpl. discriminate.
+  - intros. simpl trans_body. simpl in H0.
+    destruct (exec_basic_instr _ _ _ _) eqn:EBI.
+    + exploit exec_basic_instr_next_exec; eauto. intros (s' & EXEGEB & MS'). rewrite EXEGEB. eapply IHbdy; eauto.
+    + cutrewrite (trans_basic a :: trans_body bdy = (trans_basic a :: nil) ++ trans_body bdy); try reflexivity. apply exec_app_none.
+      eapply forward_simu_basic_instr_stuck; eauto.
+Qed.
+
+
+Lemma forward_simu_exit_stuck:
+  forall ex ge fn rs m s,
+  Ge = Genv ge fn ->
+  exec_control ge fn ex rs m = Stuck ->
+  match_states (State rs m) s ->
+  exec Ge (trans_exit ex) s = None.
+Proof.
+  intros. inv H1. destruct ex as [ctl|]; try discriminate.
+  destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
+(* Pj_l *)
+  - simpl in *. pose (H3 PC); simpl in e; rewrite e. unfold goto_label_deps. unfold goto_label in H0.
+    destruct (label_pos _ _ _); auto. clear e. destruct (rs PC); auto. discriminate.
+(* Pcb *)
+  - simpl in *. destruct (cmp_for_btest bt). destruct i.
+    -- destruct o.
+      + unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmp_bool _ _ _); auto.
+        destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
+        destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
+      + pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+    -- destruct o.
+      + unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmpl_bool _ _ _); auto.
+        destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
+        destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
+      + pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+(* Pcbu *)
+  - simpl in *. destruct (cmpu_for_btest bt). destruct i.
+    -- destruct o.
+      + rewrite H2. unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmpu_bool _ _ _); auto.
+        destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
+        destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
+      + rewrite H2. pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+    -- destruct o.
+      + rewrite H2. unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmplu_bool _ _ _); auto.
+        destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
+        destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
+      + rewrite H2. pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+Qed.
+
+
+Theorem forward_simu_stuck:
+  forall rs1 m1 s1' b ge fn,
+    Ge = Genv ge fn ->
+    exec_bblock ge fn b rs1 m1 = Stuck ->
+    match_states (State rs1 m1) s1' ->
+    exec Ge (trans_block b) s1' = None.
+Proof.
+  intros until fn. intros GENV EXECB MS. apply exec_bblock_stuck_nec in EXECB. destruct EXECB.
+  - unfold trans_block. apply exec_app_none. eapply forward_simu_body_stuck; eauto.
+  - destruct H as (rs' & m' & EXEB & EXEC). unfold trans_block. exploit exec_body_next_exec; eauto.
+    intros (s' & EXEGEBODY & MS'). rewrite EXEGEBODY. exploit exec_trans_pcincr_exec; eauto.
+    intros (s'' & EXEGEPC & MS''). rewrite EXEGEPC. eapply forward_simu_exit_stuck; eauto.
 Qed.
 
 
