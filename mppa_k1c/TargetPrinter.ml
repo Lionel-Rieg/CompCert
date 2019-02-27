@@ -382,9 +382,9 @@ module Target (*: TARGET*) =
       | Pfaddw (rd, rs1, rs2) ->
          fprintf oc "	faddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfsbfd (rd, rs1, rs2) ->
-         fprintf oc "	fsbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	fsbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Pfsbfw (rd, rs1, rs2) ->
-         fprintf oc "	fsbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	fsbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Pfmuld (rd, rs1, rs2) ->
          fprintf oc "	fmuld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfmulw (rd, rs1, rs2) ->
