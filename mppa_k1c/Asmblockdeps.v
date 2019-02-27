@@ -620,6 +620,16 @@ Definition trans_pcincr (sz: Z) := [(#PC, Op (Control (OIncremPC sz)) (Name (#PC
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ trans_pcincr (size b) ++ trans_exit (exit b).
 
+Theorem trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]; unfold no_header; simpl. unfold trans_block. simpl. reflexivity.
+Qed.
+
+Theorem trans_block_header_inv: forall bb hd, trans_block (stick_header hd bb) = trans_block bb.
+Proof.
+  intros. destruct bb as [hdr bdy ex COR]; unfold no_header; simpl. unfold trans_block. simpl. reflexivity.
+Qed.
+
 Definition state := L.mem.
 Definition exec := L.run.
 

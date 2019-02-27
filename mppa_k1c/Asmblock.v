@@ -578,6 +578,36 @@ Proof.
   - destruct e; simpl; try omega. contradict H; simpl; auto.
  *)Qed.
 
+
+Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Defined.
+
+Lemma no_header_size:
+  forall bb, size (no_header bb) = size bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
+Qed.
+
+Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Defined.
+
+Lemma stick_header_size:
+  forall h bb, size (stick_header h bb) = size bb.
+Proof.
+  intros. destruct bb. unfold stick_header. simpl. reflexivity.
+Qed.
+
+Lemma stick_header_no_header:
+  forall bb, stick_header (header bb) (no_header bb) = bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
+Qed.
+
+
 Definition bblocks := list bblock.
 
 Fixpoint size_blocks (l: bblocks): Z :=

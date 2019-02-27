@@ -38,14 +38,14 @@ Proof.
   eapply H1; eauto.
 Qed.
 
-Lemma verified_schedule_builtin_idem:
+Lemma verified_schedule_builtin_idem  (ge: Genv.t fundef unit) (fn: function):
   forall bb ef args res lbb,
   exit bb = Some (PExpand (Pbuiltin ef args res)) ->
   verified_schedule bb = OK lbb ->
   lbb = bb :: nil.
 Proof.
   intros. exploit builtin_body_nil; eauto. intros.
-  rewrite verified_schedule_single_inst in H0.
+  rewrite verified_schedule_single_inst in H0; auto.
   - inv H0. auto.
   - unfold size. rewrite H. rewrite H1. simpl. auto.
 Qed.

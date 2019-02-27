@@ -34,11 +34,12 @@ Definition exec := exec_bblock.
 
 Definition bblock_equivb' := bblock_equivb.
 
-Lemma bblock_equivb'_refl: forall tbb, bblock_equivb' tbb tbb = true.
+Lemma bblock_equivb'_refl (ge: Genv.t fundef unit) (fn: function): forall tbb, bblock_equivb' tbb tbb = true.
 Proof.
   intros. rewrite bblock_equiv'_eq. apply bblock_equiv'_refl.
   Unshelve. (* FIXME - problem of Genv and function *)
-Admitted.
+  constructor; auto.
+Qed.
 
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
@@ -270,10 +271,10 @@ Definition verify_schedule (bb bb' : bblock) : res unit :=
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
 
-Lemma verify_schedule_refl:
+Lemma verify_schedule_refl (ge: Genv.t fundef unit) (fn: function):
   forall bb, verify_schedule bb bb = OK tt.
 Proof.
-  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity.
+  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity. all: auto.
 Qed.
 
 
@@ -287,21 +288,6 @@ Proof.
   apply Z.eqb_eq. assumption.
 Qed.
 
-
-
-Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Lemma no_header_size:
-  forall bb, size (no_header bb) = size bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
-Qed.
-
-Axiom trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
-
 Lemma verify_schedule_no_header:
   forall bb bb',
   verify_schedule (no_header bb) bb' = verify_schedule bb bb'.
@@ -309,26 +295,6 @@ Proof.
   intros. unfold verify_schedule. rewrite trans_block_noheader_inv. reflexivity.
 Qed.
 
-
-
-Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Axiom trans_block_header_inv: forall bb hd, trans_block (stick_header hd bb) = trans_block bb.
-
-Lemma stick_header_size:
-  forall h bb, size (stick_header h bb) = size bb.
-Proof.
-  intros. destruct bb. unfold stick_header. simpl. reflexivity.
-Qed.
-
-Lemma stick_header_no_header:
-  forall bb, stick_header (header bb) (no_header bb) = bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
-Qed.
 
 Lemma stick_header_verify_schedule:
   forall hd bb' hbb' bb,
@@ -448,13 +414,13 @@ Proof.
   destruct x0; try discriminate. assumption.
 Qed.
 
-Lemma verified_schedule_single_inst:
+Lemma verified_schedule_single_inst (ge: Genv.t fundef unit) (fn: function):
   forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 Proof.
   intros. unfold verified_schedule.
   unfold do_schedule. rewrite no_header_size. rewrite H. simpl.
   unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). rewrite verify_schedule_refl. simpl.
-  apply stick_header_code_no_header.
+  apply stick_header_code_no_header. all: auto.
   rewrite H. reflexivity.
 Qed.
 
