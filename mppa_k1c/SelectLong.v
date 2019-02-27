@@ -755,20 +755,29 @@ Definition floatoflongu (e: expr) :=
   if Archi.splitlong then SplitLong.floatoflongu e else 
   Eop Ofloatoflongu (e:::Enil).
 
-Definition longofsingle (e: expr) := 
+(* FIXME - normally we can have it natively, but in practice it requires proving that we can do Fwidenlwd + fixedd.rz.. To do later *)
+Definition longofsingle (e: expr) := SplitLong.longofsingle e.
+(*
   if Archi.splitlong then SplitLong.longofsingle e else 
   Eop Olongofsingle (e:::Enil).
+*)
 
-Definition longuofsingle (e: expr) := 
+Definition longuofsingle (e: expr) := SplitLong.longuofsingle e.
+(*
   if Archi.splitlong then SplitLong.longuofsingle e else 
   Eop Olonguofsingle (e:::Enil).
+*)
 
-Definition singleoflong (e: expr) := 
+Definition singleoflong (e: expr) := SplitLong.singleoflong e.
+(*
   if Archi.splitlong then SplitLong.singleoflong e else 
   Eop Osingleoflong (e:::Enil).
+*)
 
-Definition singleoflongu (e: expr) := 
+Definition singleoflongu (e: expr) := SplitLong.singleoflongu e.
+(*
   if Archi.splitlong then SplitLong.singleoflongu e else 
   Eop Osingleoflongu (e:::Enil).
+*)
 
 End SELECT.

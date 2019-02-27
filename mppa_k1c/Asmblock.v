@@ -287,11 +287,17 @@ Inductive arith_name_rr : Type :=
   | Pfnegw                                          (**r float negate word *)
   | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
-  | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (int -> single) *)
-  | Pfloatudrnsz                                    (**r Floating Point Conversion from unsigned integer (ulong -> float) *)
+  | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
+  | Pfloatuwrnsz                                    (**r Floating Point conversion from integer (unsigned int -> SINGLE) *)
+  | Pfloatudrnsz                                    (**r Floating Point Conversion from integer (unsigned long -> float) *)
+  | Pfloatudrnsz_i32                                (**r Floating Point Conversion from integer (unsigned int -> float) *)
   | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (long -> float) *)
+  | Pfloatdrnsz_i32                                 (**r Floating Point Conversion from integer (int -> float) *)
   | Pfixedwrzz                                      (**r Integer conversion from floating point (single -> int) *)
   | Pfixeddrzz                                      (**r Integer conversion from floating point (float -> long) *)
+  | Pfixedudrzz                                      (**r Integer conversion from floating point (float -> unsigned long) *)
+  | Pfixeddrzz_i32                                  (**r Integer conversion from floating point (float -> int) *)
+  | Pfixedudrzz_i32                                  (**r Integer conversion from floating point (float -> unsigned int) *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -936,10 +942,16 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pfnarrowdw => rs#d <- (Val.singleoffloat rs#s)
       | Pfwidenlwd => rs#d <- (Val.floatofsingle rs#s)
       | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
+      | Pfloatuwrnsz => rs#d <- (match Val.singleofintu rs#s with Some f => f | _ => Vundef end)
       | Pfloatudrnsz => rs#d <- (match Val.floatoflongu rs#s with Some f => f | _ => Vundef end)
+      | Pfloatudrnsz_i32 => rs#d <- (match Val.floatofintu rs#s with Some f => f | _ => Vundef end)
       | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
+      | Pfloatdrnsz_i32 => rs#d <- (match Val.floatofint rs#s with Some f => f | _ => Vundef end)
       | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
       | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixeddrzz_i32 => rs#d <- (match Val.intoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixedudrzz => rs#d <- (match Val.longuoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixedudrzz_i32 => rs#d <- (match Val.intuoffloat rs#s with Some i => i | _ => Vundef end)
       end
 
   | PArithRI32 n d i =>

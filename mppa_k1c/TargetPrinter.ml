@@ -302,16 +302,20 @@ module Target (*: TARGET*) =
          fprintf oc "	fnarrowdw	%a = %a\n" ireg rd ireg rs
       | Pfwidenlwd(rd, rs) ->
          fprintf oc "	fwidenlwd	%a = %a\n" ireg rd ireg rs
+      | Pfloatuwrnsz(rd, rs) ->
+         fprintf oc "	floatuw.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatwrnsz(rd, rs) ->
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatudrnsz(rd, rs) ->
+      | Pfloatudrnsz(rd, rs) | Pfloatudrnsz_i32(rd, rs) ->
          fprintf oc "	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatdrnsz(rd, rs) ->
+      | Pfloatdrnsz(rd, rs) | Pfloatdrnsz_i32(rd, rs) ->
          fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
-      | Pfixeddrzz(rd, rs) ->
+      | Pfixeddrzz(rd, rs) | Pfixeddrzz_i32(rd, rs) ->
          fprintf oc "	fixedd.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixedudrzz(rd, rs) | Pfixedudrzz_i32(rd, rs) ->
+         fprintf oc "	fixedud.rz	%a = %a, 0\n" ireg rd ireg rs
 
       (* Arith RI32 instructions *)
       | Pmake (rd, imm) ->

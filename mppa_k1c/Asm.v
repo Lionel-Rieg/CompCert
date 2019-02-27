@@ -103,11 +103,17 @@ Inductive instruction : Type :=
   | Pfnegw  (rd rs: ireg)                           (**r float negate word *)
   | Pfnarrowdw (rd rs: ireg)                        (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd (rd rs: ireg)                        (**r float widen 32 -> 64 bits *)
-  | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer *)
+  | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 -> 32) *)
+  | Pfloatuwrnsz (rd rs: ireg)                      (**r Floating Point Conversion from integer (u32 -> 32) *)
   | Pfloatudrnsz (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (64 bits) *)
+  | Pfloatudrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (32 bits) *)
   | Pfloatdrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (64 bits) *)
+  | Pfloatdrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 bits) *)
   | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
-  | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (64 bits) *)
+  | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (i64 -> 64 bits) *)
+  | Pfixeddrzz_i32 (rd rs: ireg)                        (**r Integer conversion from floating point (i32 -> f64) *)
+  | Pfixedudrzz (rd rs: ireg)                        (**r unsigned Integer conversion from floating point (u64 -> 64 bits) *)
+  | Pfixedudrzz_i32 (rd rs: ireg)                        (**r unsigned Integer conversion from floating point (u32 -> 64 bits) *)
 
   (** Arith RI32 *)
   | Pmake   (rd: ireg) (imm: int)                   (**r load immediate *)
@@ -216,11 +222,17 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmblock.Pfnegw rd rs => Pfnegw rd rs
   | PArithRR Asmblock.Pfnarrowdw rd rs => Pfnarrowdw rd rs
   | PArithRR Asmblock.Pfwidenlwd rd rs => Pfwidenlwd rd rs
+  | PArithRR Asmblock.Pfloatuwrnsz rd rs => Pfloatuwrnsz rd rs
   | PArithRR Asmblock.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
   | PArithRR Asmblock.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
   | PArithRR Asmblock.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
+  | PArithRR Asmblock.Pfloatudrnsz_i32 rd rs => Pfloatudrnsz_i32 rd rs
+  | PArithRR Asmblock.Pfloatdrnsz_i32 rd rs => Pfloatdrnsz_i32 rd rs
   | PArithRR Asmblock.Pfixedwrzz rd rs => Pfixedwrzz rd rs
   | PArithRR Asmblock.Pfixeddrzz rd rs => Pfixeddrzz rd rs
+  | PArithRR Asmblock.Pfixedudrzz rd rs => Pfixedudrzz rd rs
+  | PArithRR Asmblock.Pfixeddrzz_i32 rd rs => Pfixeddrzz_i32 rd rs
+  | PArithRR Asmblock.Pfixedudrzz_i32 rd rs => Pfixedudrzz_i32 rd rs
 
   (* RI32 *)
   | PArithRI32 Asmblock.Pmake rd imm  => Pmake rd imm

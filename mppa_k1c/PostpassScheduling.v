@@ -13,7 +13,6 @@
 Require Import Coqlib Errors AST Integers.
 Require Import Asmblock Axioms Memory Globalenvs.
 Require Import Asmblockdeps Asmblockgenproof0.
-Require Import ImpDep.
 
 Local Open Scope error_monad_scope.
 

@@ -579,18 +579,42 @@ Definition transl_op
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatwrnsz rd rs ::i k)
+  | Osingleofintu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatuwrnsz rd rs ::i k)
   | Ofloatoflong, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatdrnsz rd rs ::i k)
   | Ofloatoflongu, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatudrnsz rd rs ::i k)
+  | Ofloatofint, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatdrnsz_i32 rd rs ::i k)
+  | Ofloatofintu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatudrnsz_i32 rd rs ::i k)
+  (* | Ofloatofint, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatwrnsz rd rs ::i k)
+  | Ofloatofintu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatuwrnsz rd rs ::i k) *) (* FIXME - Ofloatofint and Ofloatofintu are currently incorrect *)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)
   | Olongoffloat, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixeddrzz rd rs ::i k)
+  | Ointoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixeddrzz_i32 rd rs ::i k)
+  | Olonguoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixedudrzz rd rs ::i k)
+  | Ointuoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixedudrzz_i32 rd rs ::i k)
 
   | Ofloatofsingle, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;

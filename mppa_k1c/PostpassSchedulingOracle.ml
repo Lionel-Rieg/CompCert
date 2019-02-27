@@ -40,10 +40,16 @@ let arith_rr_str = function
   | Pfnarrowdw -> "Pfnarrowdw"
   | Pfwidenlwd -> "Pfwidenlwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
+  | Pfloatuwrnsz -> "Pfloatuwrnsz"
+  | Pfloatudrnsz_i32 -> "Pfloatudrnsz_i32"
   | Pfloatudrnsz -> "Pfloatudrnsz"
   | Pfloatdrnsz -> "Pfloatdrnsz"
+  | Pfloatdrnsz_i32 -> "Pfloatdrnsz_i32"
   | Pfixedwrzz -> "Pfixedwrzz"
   | Pfixeddrzz -> "Pfixeddrzz"
+  | Pfixedudrzz -> "Pfixedudrzz"
+  | Pfixeddrzz_i32 -> "Pfixeddrzz_i32"
+  | Pfixedudrzz_i32 -> "Pfixedudrzz_i32"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw"
@@ -365,7 +371,7 @@ type real_instruction =
   (* FPU *)
   | Fabsd | Fabsw | Fnegw | Fnegd
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
-  | Fnarrowdw | Fwidenlwd | Floatwz | Floatdz | Floatudz | Fixedwz | Fixeddz
+  | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeddz | Fixedudz
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
@@ -395,10 +401,16 @@ let ab_inst_to_real = function
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
+  | "Pfloatuwrnsz" -> Floatuwz
   | "Pfloatdrnsz" -> Floatdz
+  | "Pfloatdrnsz_i32" -> Floatdz
   | "Pfloatudrnsz" -> Floatudz
+  | "Pfloatudrnsz_i32" -> Floatudz
   | "Pfixedwrzz" -> Fixedwz
   | "Pfixeddrzz" -> Fixeddz
+  | "Pfixedudrzz" -> Fixedudz
+  | "Pfixeddrzz_i32" -> Fixeddz
+  | "Pfixedudrzz_i32" -> Fixedudz
 
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
@@ -469,7 +481,7 @@ let rec_to_usage r =
   | Nop -> alu_nop
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
-  | Fixedwz | Floatwz | Fixeddz | Floatdz | Floatudz -> mau
+  | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
@@ -490,7 +502,7 @@ let real_inst_to_latency = function
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd
         -> 1
-  | Floatwz | Fixedwz | Floatdz | Floatudz | Fixeddz -> 4
+  | Floatwz | Floatuwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 

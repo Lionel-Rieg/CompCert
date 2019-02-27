@@ -1,6 +1,6 @@
 #include "framework.h"
 
-BEGIN_TEST(double)
+BEGIN_TEST(float)
 {
     c = (-(float)a);
 }
