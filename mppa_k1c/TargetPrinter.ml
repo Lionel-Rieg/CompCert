@@ -295,13 +295,13 @@ module Target (*: TARGET*) =
       | Pfabsw(rd, rs) ->
          fprintf oc "	fabsw	%a = %a\n" ireg rd ireg rs
       | Pfnegd(rd, rs) ->
-         fprintf oc "	fnegd	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnegd	%a = %a\n" ireg rd ireg rs
       | Pfnegw(rd, rs) ->
-         fprintf oc "	fnegw	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnegw	%a = %a\n" ireg rd ireg rs
       | Pfnarrowdw(rd, rs) ->
-         fprintf oc "	fnarrowdw	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnarrowdw	%a = %a\n" ireg rd ireg rs
       | Pfwidenlwd(rd, rs) ->
-         fprintf oc "	fwidenlwd	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fwidenlwd	%a = %a\n" ireg rd ireg rs
       | Pfloatwrnsz(rd, rs) ->
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatudrnsz(rd, rs) ->
