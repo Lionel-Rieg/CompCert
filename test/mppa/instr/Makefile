@@ -5,6 +5,7 @@ OPTIM ?= -O2
 CFLAGS ?= $(OPTIM)
 SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 120s
+DIFF ?= python2.7 floatcmp.py -reltol .00001
 
 DIR=./
 SRCDIR=$(DIR)
@@ -50,7 +51,7 @@ test: $(X86_GCC_OUT) $(GCC_OUT)
 	@for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
-		if diff -q $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
+		if $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
 			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
 			printf "$(GREEN)GOOD: $$x86out and $$gccout concur$(NC)\n";\
@@ -63,7 +64,7 @@ check: $(GCC_OUT) $(CCOMP_OUT)
 	@for test in $(TESTNAMES); do\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		ccompout=$(OUTDIR)/$$test.ccomp.out;\
-		if diff -q $$ccompout $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
+		if $(DIFF) $$ccompout $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
 			>&2 printf "$(RED)ERROR: $$ccompout and $$gccout differ$(NC)\n";\
 		else\
 			printf "$(GREEN)GOOD: $$ccompout and $$gccout concur$(NC)\n";\

@@ -4,4 +4,4 @@ BEGIN_TEST(double)
 {
     c = ((float)a * (float)b);
 }
-END_TESTF64()
+END_TESTF32()
