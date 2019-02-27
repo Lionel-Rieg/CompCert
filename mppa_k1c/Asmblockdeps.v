@@ -650,25 +650,42 @@ Proof.
   all: destruct n; simpl; try (destruct n; discriminate); try discriminate.
 Qed.
 
+Lemma not_eq_add:
+  forall k n n', n <> n' -> k + n <> k + n'.
+Proof.
+Admitted. (* FIXME - help Sylvain ? *)
+
 Lemma not_eq_ireg_to_pos:
   forall n r r', r' <> r -> n + ireg_to_pos r <> n + ireg_to_pos r'.
 Proof.
-Admitted.
-
-Lemma not_eq_ireg_to_pos_ppos:
-  forall n r r', r' <> r -> n + ireg_to_pos r <> # r'.
-Proof.
-Admitted.
+  intros. destruct r; destruct r'; try contradiction; apply not_eq_add; discriminate. (* FIXME - quite long to prove *)
+Qed.
 
 Lemma not_eq_ireg_ppos: 
   forall r r', r <> r' -> (# r') <> (# r).
 Proof.
-Admitted.
+  intros. unfold ppos. destruct r.
+  - destruct r'; try discriminate.
+    + apply not_eq_ireg_to_pos; congruence.
+    + destruct g; discriminate.
+    + destruct g; discriminate.
+  - destruct r'; try discriminate; try contradiction.
+    destruct g; discriminate.
+  - destruct r'; try discriminate; try contradiction.
+    destruct g; discriminate.
+Qed.
+
+Lemma not_eq_ireg_to_pos_ppos:
+  forall r r', r' <> r -> 3 + ireg_to_pos r <> # r'.
+Proof.
+  intros. unfold ppos. apply not_eq_ireg_to_pos. assumption.
+Qed.
 
 Lemma not_eq_IR:
   forall r r', r <> r' -> IR r <> IR r'.
 Proof.
-Admitted.
+  intros. congruence.
+Qed.
 
 Ltac Simplif :=
   ((rewrite nextblock_inv by eauto with asmgen)
@@ -698,14 +715,20 @@ Lemma exec_app_some:
   exec Ge c' s' = Some s'' ->
   exec Ge (c ++ c') s = Some s''.
 Proof.
-Admitted.
+  induction c.
+  - simpl. intros. congruence.
+  - intros. simpl in *. destruct (macro_run _ _ _ _); auto. eapply IHc; eauto. discriminate.
+Qed.
 
 Lemma exec_app_none:
   forall c c' s,
   exec Ge c s = None ->
   exec Ge (c ++ c') s = None.
 Proof.
-Admitted.
+  induction c.
+  - simpl. discriminate.
+  - intros. simpl. simpl in H. destruct (macro_run _ _ _ _); auto.
+Qed.
 
 Lemma trans_arith_correct:
   forall ge fn i rs m rs' s,
@@ -821,9 +844,9 @@ Proof.
       ** subst. Simpl.
       ** subst. Simpl.
       ** Simpl. repeat (rewrite assign_diff). auto.
-         pose (not_eq_ireg_to_pos_ppos 3 GPR14 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos 3 GPR12 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos 3 GPR32 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos GPR14 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos GPR12 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos GPR32 g). simpl ireg_to_pos in n2. auto.
 (* Freeframe *)
   - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rs GPR12) eqn:SPeq; try discriminate.
     destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv H0.
@@ -837,8 +860,8 @@ Proof.
       ** subst. Simpl.
       ** Simpl. repeat (rewrite assign_diff). auto.
          unfold ppos. pose (not_3_plus_n (ireg_to_pos g)). destruct a as (A & _ & _). auto.
-         pose (not_eq_ireg_to_pos_ppos 3 GPR12 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos 3 GPR32 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos GPR12 g). simpl ireg_to_pos in n2. auto.
+         pose (not_eq_ireg_to_pos_ppos GPR32 g). simpl ireg_to_pos in n2. auto.
 (* Pget *)
   - simpl in H. destruct rs0 eqn:rs0eq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
