@@ -159,6 +159,8 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
   | OArithRRR n, [Val v1; Val v2] =>
       match n with
+      | Pfcompw c => Some (Val (compare_single c v1 v2))
+
       | Paddw  => Some (Val (Val.add  v1 v2))
       | Psubw  => Some (Val (Val.sub  v1 v2))
       | Pmulw  => Some (Val (Val.mul  v1 v2))

@@ -282,6 +282,18 @@ Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: 
 Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: bcode) :=
   Pcompil (itest_for_cmp cmp Unsigned) rd r1 n ::i k.
 
+Definition transl_cond_float32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompw ft rd r2 r1 ::i k
+  end.
+
+Definition transl_cond_notfloat32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompw ft rd r2 r1 ::i k
+  end.
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -309,10 +321,14 @@ Definition transl_cond_op
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (transl_condimm_int64u c rd r1 n k)
+  | Ccompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_float32 c rd r1 r2 k)
+(*   | Cnotcompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_notfloat32 c rd r1 r2 k) *) (* FIXME - because of proofs, might have to use a xor instead *)
   | Ccompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompf")
   | Cnotcompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompf")
-  | Ccompfs _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompfs")
-  | Cnotcompfs _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompfs")
 (*| Ccompf c, f1 :: f2 :: nil =>
       do r1 <- freg_of f1; do r2 <- freg_of f2;
       let (insn, normal) := transl_cond_float c rd r1 r2 in
@@ -388,13 +404,7 @@ Definition transl_op
       OK (Pmulw rd rs1 rs2 ::i k)
   | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs")
   | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu")
-(*| Omulhs, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhw rd rs1 rs2 :: k)
-  | Omulhu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhuw rd rs1 rs2 :: k)
-*)| Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
+  | Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
       (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pdivw rd rs1 rs2 :: k) *)
   | Odivu, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odivu: 32-bits division not supported yet. Please use 64-bits.")
@@ -483,25 +493,7 @@ Definition transl_op
   | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu")
   | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl")
   | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu")
-(*| Omullhs, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhl rd rs1 rs2 :: k)
-  | Omullhu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhul rd rs1 rs2 :: k)
-  | Odivl, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivl rd rs1 rs2 :: k)
-  | Odivlu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivul rd rs1 rs2 :: k)
-  | Omodl, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Preml rd rs1 rs2 :: k)
-  | Omodlu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Premul rd rs1 rs2 :: k)
-*)| Oandl, a1 :: a2 :: nil =>
+  | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 ::i k)
   | Oandlimm n, a1 :: nil =>

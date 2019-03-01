@@ -968,6 +968,36 @@ Proof.
   split; intros; Simpl.
 Qed.
 
+Lemma swap_comparison_cmpfs:
+  forall v1 v2 cmp,
+  Val.lessdef (Val.cmpfs cmp v1 v2) (Val.cmpfs (swap_comparison cmp) v2 v1).
+Proof.
+  intros. unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto.
+  rewrite Float32.cmp_swap. auto.
+Qed.
+
+Lemma transl_cond_float32_correct:
+  forall cmp rd r1 r2 k rs m,
+  exists rs',
+     exec_straight ge (basics_to_code (transl_cond_float32 cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
+  /\ Val.lessdef (Val.cmpfs cmp rs#r1 rs#r2) rs'#rd
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r. 
+Proof.
+  intros. destruct cmp; simpl. 
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpfs.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpfs.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+Qed.
+
 Lemma transl_cond_op_correct:
   forall cond rd args k c rs m,
   transl_cond_op cond rd args k = OK c ->
@@ -1003,6 +1033,8 @@ Proof.
   exploit transl_condimm_int64u_correct; eauto. instantiate (1 := x); eauto with asmgen. simpl. 
   intros (rs' & A & B & C).
   exists rs'; repeat split; eauto. rewrite MKTOT; eauto.
++ (* cmpfloat *) 
+  exploit transl_cond_float32_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
 Qed.
 
 (*

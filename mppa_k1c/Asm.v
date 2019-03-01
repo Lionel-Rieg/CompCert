@@ -131,6 +131,7 @@ Inductive instruction : Type :=
   (** Arith RRR *)
   | Pcompw  (it: itest) (rd rs1 rs2: ireg)          (**r comparison word *)
   | Pcompl  (it: itest) (rd rs1 rs2: ireg)          (**r comparison long *)
+  | Pfcompw (ft: ftest) (rd rs1 rs2: ireg)          (**r comparison float *)
 
   | Paddw               (rd rs1 rs2: ireg)          (**r add word *)
   | Psubw               (rd rs1 rs2: ireg)          (**r sub word *)
@@ -251,6 +252,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RRR *)
   | PArithRRR (Asmblock.Pcompw it) rd rs1 rs2 => Pcompw it rd rs1 rs2
   | PArithRRR (Asmblock.Pcompl it) rd rs1 rs2 => Pcompl it rd rs1 rs2
+  | PArithRRR (Asmblock.Pfcompw ft) rd rs1 rs2 => Pfcompw ft rd rs1 rs2
   | PArithRRR Asmblock.Paddw rd rs1 rs2       => Paddw rd rs1 rs2
   | PArithRRR Asmblock.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
   | PArithRRR Asmblock.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2

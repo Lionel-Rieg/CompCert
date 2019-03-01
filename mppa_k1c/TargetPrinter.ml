@@ -173,6 +173,18 @@ module Target (*: TARGET*) =
       | ITnone -> "none"
 
     let icond oc c = fprintf oc "%s" (icond_name c)
+
+    let fcond_name = let open Asmblock in function
+      | FTone -> "one"
+      | FTueq -> "ueq"
+      | FToeq -> "oeq"
+      | FTune -> "une"
+      | FTolt -> "olt"
+      | FTuge -> "uge"
+      | FToge -> "oge"
+      | FTult -> "ult"
+
+    let fcond oc c = fprintf oc "%s" (fcond_name c)
   
     let bcond_name = let open Asmblock in function
       | BTwnez -> "wnez"
@@ -344,6 +356,9 @@ module Target (*: TARGET*) =
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs1 ireg rs2
       | Pcompl (it, rd, rs1, rs2) ->
          fprintf oc "	compd.%a	%a = %a, %a\n" icond it ireg rd ireg rs1 ireg rs2
+
+      | Pfcompw (ft, rd, rs1, rs2) ->
+         fprintf oc "	fcompw.%a	%a = %a, %a\n" fcond ft ireg rd ireg rs1 ireg rs2
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
