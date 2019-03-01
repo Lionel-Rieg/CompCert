@@ -312,6 +312,8 @@ module Target (*: TARGET*) =
          fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixeduwrzz(rd, rs) ->
+         fprintf oc "	fixeduw.rz	%a = %a, 0\n" ireg rd ireg rs
       | Pfixeddrzz(rd, rs) | Pfixeddrzz_i32(rd, rs) ->
          fprintf oc "	fixedd.rz	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedudrzz(rd, rs) | Pfixedudrzz_i32(rd, rs) ->

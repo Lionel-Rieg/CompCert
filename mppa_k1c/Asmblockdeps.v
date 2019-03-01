@@ -123,6 +123,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
       | Pfloatudrnsz_i32 => Some (Val (match Val.floatofintu v with Some f => f | _ => Vundef end))
       | Pfloatdrnsz_i32 => Some (Val (match Val.floatofint v with Some f => f | _ => Vundef end))
       | Pfixedwrzz => Some (Val (match Val.intofsingle v with Some i => i | _ => Vundef end))
+      | Pfixeduwrzz => Some (Val (match Val.intuofsingle v with Some i => i | _ => Vundef end))
       | Pfixeddrzz => Some (Val (match Val.longoffloat v with Some i => i | _ => Vundef end))
       | Pfixedudrzz => Some (Val (match Val.longuoffloat v with Some i => i | _ => Vundef end))
       | Pfixeddrzz_i32 => Some (Val (match Val.intoffloat v with Some i => i | _ => Vundef end))
