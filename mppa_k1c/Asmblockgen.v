@@ -324,9 +324,9 @@ Definition transl_cond_op
   | Ccompfs c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
       OK (transl_cond_float32 c rd r1 r2 k)
-(*   | Cnotcompfs c, a1 :: a2 :: nil =>
+  | Cnotcompfs c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_notfloat32 c rd r1 r2 k) *) (* FIXME - because of proofs, might have to use a xor instead *)
+      OK (transl_cond_notfloat32 c rd r1 r2 k) (* FIXME - because of proofs, might have to use a xor instead *)
   | Ccompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompf")
   | Cnotcompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompf")
 (*| Ccompf c, f1 :: f2 :: nil =>

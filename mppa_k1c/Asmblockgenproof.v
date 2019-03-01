@@ -951,6 +951,7 @@ Proof.
   - simpl in TIB. unfold transl_op in TIB. exploreInst; try discriminate.
     unfold transl_cond_op in EQ0. exploreInst; try discriminate.
     unfold transl_cond_float32. exploreInst; try discriminate.
+    unfold transl_cond_notfloat32. exploreInst; try discriminate.
   - simpl in TIB. unfold transl_load in TIB. exploreInst; try discriminate.
     all: unfold transl_memory_access in EQ0; exploreInst; try discriminate.
   - simpl in TIB. unfold transl_store in TIB. exploreInst; try discriminate.
