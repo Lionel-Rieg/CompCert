@@ -331,7 +331,8 @@ Inductive arith_name_rf64 : Type :=
 Inductive arith_name_rrr : Type :=
   | Pcompw  (it: itest)                             (**r comparison word *)
   | Pcompl  (it: itest)                             (**r comparison long *)
-  | Pfcompw (it: ftest)                             (**r comparison float32 *)
+  | Pfcompw (ft: ftest)                             (**r comparison float32 *)
+  | Pfcompl (ft: ftest)                             (**r comparison float64 *)
 
   | Paddw                                           (**r add word *)
   | Psubw                                           (**r sub word *)
@@ -958,6 +959,17 @@ Definition compare_single (t: ftest) (v1 v2: val): val :=
   | FTult => Val.notbool (Val.cmpfs Cge v1 v2)
   end.
 
+Definition compare_float (t: ftest) (v1 v2: val): val :=
+  match t with
+  | FTone | FTueq => Vundef (* unused *)
+  | FToeq => Val.cmpf Ceq v1 v2
+  | FTune => Val.cmpf Cne v1 v2
+  | FTolt => Val.cmpf Clt v1 v2
+  | FTuge => Val.notbool (Val.cmpf Clt v1 v2)
+  | FToge => Val.cmpf Cge v1 v2
+  | FTult => Val.notbool (Val.cmpf Cge v1 v2)
+  end.
+
 (** Execution of arith instructions 
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
@@ -1029,6 +1041,7 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2 m)
       | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2 m)
       | Pfcompw c => rs#d <- (compare_single c rs#s1 rs#s2)
+      | Pfcompl c => rs#d <- (compare_float c rs#s1 rs#s2)
       | Paddw  => rs#d <- (Val.add  rs#s1 rs#s2)
       | Psubw  => rs#d <- (Val.sub  rs#s1 rs#s2)
       | Pmulw  => rs#d <- (Val.mul  rs#s1 rs#s2)

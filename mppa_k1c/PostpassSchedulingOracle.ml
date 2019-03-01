@@ -56,6 +56,7 @@ let arith_rrr_str = function
   | Pcompw it -> "Pcompw"
   | Pcompl it -> "Pcompl"
   | Pfcompw ft -> "Pfcompw"
+  | Pfcompl ft -> "Pfcompl"
   | Paddw -> "Paddw"
   | Psubw -> "Psubw"
   | Pmulw -> "Pmulw"
@@ -378,7 +379,7 @@ type real_instruction =
   | Fabsd | Fabsw | Fnegw | Fnegd
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
   | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
-  | Fcompw
+  | Fcompw | Fcompd
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
@@ -388,6 +389,7 @@ let ab_inst_to_real = function
   | "Pcompw" | "Pcompiw" -> Compw
   | "Pcompl" | "Pcompil" -> Compd
   | "Pfcompw" -> Fcompw
+  | "Pfcompl" -> Fcompd
   | "Pmulw" -> Mulw
   | "Pmull" -> Muld
   | "Porw" | "Poriw" -> Orw
@@ -480,6 +482,9 @@ let rec_to_usage r =
   | Fcompw -> (match encoding with None -> alu_lite
                                 | Some U6 | Some S10 | Some U27L5 -> alu_lite_x
                                 | _ -> raise InvalidEncoding)
+  | Fcompd -> (match encoding with None -> alu_lite
+                                | Some U6 | Some S10 | Some U27L5 -> alu_lite_x
+                                | _ -> raise InvalidEncoding)
   | Make -> (match encoding with Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
@@ -512,7 +517,7 @@ let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
-  | Sxwd | Zxwd | Fcompw
+  | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)

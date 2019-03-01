@@ -294,6 +294,18 @@ Definition transl_cond_notfloat32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) 
   | Reversed ft => Pfcompw ft rd r2 r1 ::i k
   end.
 
+Definition transl_cond_float64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompl ft rd r2 r1 ::i k
+  end.
+
+Definition transl_cond_notfloat64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompl ft rd r2 r1 ::i k
+  end.
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -326,26 +338,14 @@ Definition transl_cond_op
       OK (transl_cond_float32 c rd r1 r2 k)
   | Cnotcompfs c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
-      OK (transl_cond_notfloat32 c rd r1 r2 k) (* FIXME - because of proofs, might have to use a xor instead *)
-  | Ccompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompf")
-  | Cnotcompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompf")
-(*| Ccompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-  | Ccompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-*)| _, _ =>
+      OK (transl_cond_notfloat32 c rd r1 r2 k)
+  | Ccompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_float64 c rd r1 r2 k)
+  | Cnotcompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_notfloat64 c rd r1 r2 k)
+  | _, _ =>
       Error(msg "Asmblockgen.transl_cond_op")
 end.
 

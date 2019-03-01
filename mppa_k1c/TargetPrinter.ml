@@ -359,6 +359,8 @@ module Target (*: TARGET*) =
 
       | Pfcompw (ft, rd, rs1, rs2) ->
          fprintf oc "	fcompw.%a	%a = %a, %a\n" fcond ft ireg rd ireg rs1 ireg rs2
+      | Pfcompl (ft, rd, rs1, rs2) ->
+         fprintf oc "	fcompd.%a	%a = %a, %a\n" fcond ft ireg rd ireg rs1 ireg rs2
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
