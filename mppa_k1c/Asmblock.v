@@ -126,6 +126,17 @@ Inductive itest: Type :=
   | ITnone                              (**r Not Any Bits Set in Mask *)
   .
 
+Inductive ftest: Type :=
+  | FTone                               (**r Ordered and Not Equal *)
+  | FTueq                               (**r Unordered or Equal *)
+  | FToeq                               (**r Ordered and Equal *)
+  | FTune                               (**r Unordered or Not Equal *)
+  | FTolt                               (**r Ordered and Less Than *)
+  | FTuge                               (**r Unordered or Greater Than or Equal *)
+  | FToge                               (**r Ordered and Greater Than or Equal *)
+  | FTult                               (**r Unordered or Less Than *)
+  .
+
 (** Offsets for load and store instructions.  An offset is either an
   immediate integer or the low part of a symbol. *)
 
@@ -287,11 +298,18 @@ Inductive arith_name_rr : Type :=
   | Pfnegw                                          (**r float negate word *)
   | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
-  | Pfloatwrnsz                                     (**r Floating Point Conversion from integer (int -> single) *)
-  | Pfloatudrnsz                                    (**r Floating Point Conversion from unsigned integer (ulong -> float) *)
+  | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
+  | Pfloatuwrnsz                                    (**r Floating Point conversion from integer (unsigned int -> SINGLE) *)
+  | Pfloatudrnsz                                    (**r Floating Point Conversion from integer (unsigned long -> float) *)
+  | Pfloatudrnsz_i32                                (**r Floating Point Conversion from integer (unsigned int -> float) *)
   | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (long -> float) *)
+  | Pfloatdrnsz_i32                                 (**r Floating Point Conversion from integer (int -> float) *)
   | Pfixedwrzz                                      (**r Integer conversion from floating point (single -> int) *)
+  | Pfixeduwrzz                                     (**r Integer conversion from floating point (single -> unsigned int) *)
   | Pfixeddrzz                                      (**r Integer conversion from floating point (float -> long) *)
+  | Pfixedudrzz                                      (**r Integer conversion from floating point (float -> unsigned long) *)
+  | Pfixeddrzz_i32                                  (**r Integer conversion from floating point (float -> int) *)
+  | Pfixedudrzz_i32                                  (**r Integer conversion from floating point (float -> unsigned int) *)
 .
 
 Inductive arith_name_ri32 : Type :=
@@ -313,6 +331,8 @@ Inductive arith_name_rf64 : Type :=
 Inductive arith_name_rrr : Type :=
   | Pcompw  (it: itest)                             (**r comparison word *)
   | Pcompl  (it: itest)                             (**r comparison long *)
+  | Pfcompw (ft: ftest)                             (**r comparison float32 *)
+  | Pfcompl (ft: ftest)                             (**r comparison float64 *)
 
   | Paddw                                           (**r add word *)
   | Psubw                                           (**r sub word *)
@@ -578,6 +598,36 @@ Proof.
   - destruct e; simpl; try omega. contradict H; simpl; auto.
  *)Qed.
 
+
+Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Defined.
+
+Lemma no_header_size:
+  forall bb, size (no_header bb) = size bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
+Qed.
+
+Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
+Next Obligation.
+  destruct bb; simpl. assumption.
+Defined.
+
+Lemma stick_header_size:
+  forall h bb, size (stick_header h bb) = size bb.
+Proof.
+  intros. destruct bb. unfold stick_header. simpl. reflexivity.
+Qed.
+
+Lemma stick_header_no_header:
+  forall bb, stick_header (header bb) (no_header bb) = bb.
+Proof.
+  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
+Qed.
+
+
 Definition bblocks := list bblock.
 
 Fixpoint size_blocks (l: bblocks): Z :=
@@ -779,6 +829,31 @@ Definition itest_for_cmp (c: comparison) (s: signedness) :=
   | Cgt, Unsigned => ITgtu
   end.
 
+Inductive oporder_ftest :=
+  | Normal (ft: ftest)
+  | Reversed (ft: ftest)
+.
+
+Definition ftest_for_cmp (c: comparison) :=
+  match c with
+  | Ceq => Normal FToeq
+  | Cne => Normal FTune
+  | Clt => Normal FTolt
+  | Cle => Reversed FToge
+  | Cgt => Reversed FTolt
+  | Cge => Normal FToge
+  end.
+
+Definition notftest_for_cmp (c: comparison) :=
+  match c with
+  | Ceq => Normal FTune
+  | Cne => Normal FToeq
+  | Clt => Normal FTuge
+  | Cle => Reversed FTult
+  | Cgt => Reversed FTuge
+  | Cge => Normal FTult
+  end.
+
 (* CoMPare Signed Words to Zero *)
 Definition btest_for_cmpswz (c: comparison) :=
   match c with
@@ -873,6 +948,28 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   end
   .
 
+Definition compare_single (t: ftest) (v1 v2: val): val :=
+  match t with
+  | FTone | FTueq => Vundef (* unused *)
+  | FToeq => Val.cmpfs Ceq v1 v2
+  | FTune => Val.cmpfs Cne v1 v2
+  | FTolt => Val.cmpfs Clt v1 v2
+  | FTuge => Val.notbool (Val.cmpfs Clt v1 v2)
+  | FToge => Val.cmpfs Cge v1 v2
+  | FTult => Val.notbool (Val.cmpfs Cge v1 v2)
+  end.
+
+Definition compare_float (t: ftest) (v1 v2: val): val :=
+  match t with
+  | FTone | FTueq => Vundef (* unused *)
+  | FToeq => Val.cmpf Ceq v1 v2
+  | FTune => Val.cmpf Cne v1 v2
+  | FTolt => Val.cmpf Clt v1 v2
+  | FTuge => Val.notbool (Val.cmpf Clt v1 v2)
+  | FToge => Val.cmpf Cge v1 v2
+  | FTult => Val.notbool (Val.cmpf Cge v1 v2)
+  end.
+
 (** Execution of arith instructions 
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
@@ -906,10 +1003,17 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       | Pfnarrowdw => rs#d <- (Val.singleoffloat rs#s)
       | Pfwidenlwd => rs#d <- (Val.floatofsingle rs#s)
       | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
+      | Pfloatuwrnsz => rs#d <- (match Val.singleofintu rs#s with Some f => f | _ => Vundef end)
       | Pfloatudrnsz => rs#d <- (match Val.floatoflongu rs#s with Some f => f | _ => Vundef end)
+      | Pfloatudrnsz_i32 => rs#d <- (match Val.floatofintu rs#s with Some f => f | _ => Vundef end)
       | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
+      | Pfloatdrnsz_i32 => rs#d <- (match Val.floatofint rs#s with Some f => f | _ => Vundef end)
       | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
+      | Pfixeduwrzz => rs#d <- (match Val.intuofsingle rs#s with Some i => i | _ => Vundef end)
       | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixeddrzz_i32 => rs#d <- (match Val.intoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixedudrzz => rs#d <- (match Val.longuoffloat rs#s with Some i => i | _ => Vundef end)
+      | Pfixedudrzz_i32 => rs#d <- (match Val.intuoffloat rs#s with Some i => i | _ => Vundef end)
       end
 
   | PArithRI32 n d i =>
@@ -936,6 +1040,8 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
       match n with
       | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2 m)
       | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2 m)
+      | Pfcompw c => rs#d <- (compare_single c rs#s1 rs#s2)
+      | Pfcompl c => rs#d <- (compare_float c rs#s1 rs#s2)
       | Paddw  => rs#d <- (Val.add  rs#s1 rs#s2)
       | Psubw  => rs#d <- (Val.sub  rs#s1 rs#s2)
       | Pmulw  => rs#d <- (Val.mul  rs#s1 rs#s2)

@@ -968,6 +968,138 @@ Proof.
   split; intros; Simpl.
 Qed.
 
+Lemma swap_comparison_cmpfs:
+  forall v1 v2 cmp,
+  Val.lessdef (Val.cmpfs cmp v1 v2) (Val.cmpfs (swap_comparison cmp) v2 v1).
+Proof.
+  intros. unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto.
+  rewrite Float32.cmp_swap. auto.
+Qed.
+
+Lemma transl_cond_float32_correct:
+  forall cmp rd r1 r2 k rs m,
+  exists rs',
+     exec_straight ge (basics_to_code (transl_cond_float32 cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
+  /\ Val.lessdef (Val.cmpfs cmp rs#r1 rs#r2) rs'#rd
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r. 
+Proof.
+  intros. destruct cmp; simpl. 
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpfs.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpfs.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+Qed.
+
+Lemma transl_cond_nofloat32_correct:
+  forall cmp rd r1 r2 k rs m,
+  exists rs',
+     exec_straight ge (basics_to_code (transl_cond_notfloat32 cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
+  /\ Val.lessdef (Val.of_optbool (option_map negb (Val.cmpfs_bool cmp (rs r1) (rs r2)))) rs'#rd
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r. 
+Proof.
+  intros. destruct cmp; simpl. 
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto.
+  rewrite Float32.cmp_ne_eq. auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto.
+  rewrite Float32.cmp_ne_eq. simpl. destruct (Float32.cmp Ceq f f0); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  destruct (Float32.cmp Clt f f0); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  cutrewrite (Cge = swap_comparison Cle); auto. rewrite Float32.cmp_swap.
+  destruct (Float32.cmp _ _ _); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  cutrewrite (Clt = swap_comparison Cgt); auto. rewrite Float32.cmp_swap.
+  destruct (Float32.cmp _ _ _); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpfs. unfold Val.cmpfs_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  destruct (Float32.cmp _ _ _); auto.
+Qed.
+
+Lemma swap_comparison_cmpf:
+  forall v1 v2 cmp,
+  Val.lessdef (Val.cmpf cmp v1 v2) (Val.cmpf (swap_comparison cmp) v2 v1).
+Proof.
+  intros. unfold Val.cmpf. unfold Val.cmpf_bool. destruct v1; destruct v2; auto.
+  rewrite Float.cmp_swap. auto.
+Qed.
+
+Lemma transl_cond_float64_correct:
+  forall cmp rd r1 r2 k rs m,
+  exists rs',
+     exec_straight ge (basics_to_code (transl_cond_float64 cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
+  /\ Val.lessdef (Val.cmpf cmp rs#r1 rs#r2) rs'#rd
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r. 
+Proof.
+  intros. destruct cmp; simpl. 
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpf.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl. apply swap_comparison_cmpf.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+Qed.
+
+Lemma transl_cond_nofloat64_correct:
+  forall cmp rd r1 r2 k rs m,
+  exists rs',
+     exec_straight ge (basics_to_code (transl_cond_notfloat64 cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
+  /\ Val.lessdef (Val.of_optbool (option_map negb (Val.cmpf_bool cmp (rs r1) (rs r2)))) rs'#rd
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros. destruct cmp; simpl.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto.
+  rewrite Float.cmp_ne_eq. auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto.
+  rewrite Float.cmp_ne_eq. simpl. destruct (Float.cmp Ceq f f0); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  destruct (Float.cmp Clt f f0); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  cutrewrite (Cge = swap_comparison Cle); auto. rewrite Float.cmp_swap.
+  destruct (Float.cmp _ _ _); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  cutrewrite (Clt = swap_comparison Cgt); auto. rewrite Float.cmp_swap.
+  destruct (Float.cmp _ _ _); auto.
+- econstructor; split. apply exec_straight_one; [simpl; eauto].
+  split; intros; Simpl.
+  unfold Val.cmpf. unfold Val.cmpf_bool. destruct (rs r1); auto. destruct (rs r2); auto. simpl.
+  destruct (Float.cmp _ _ _); auto.
+Qed.
+
 Lemma transl_cond_op_correct:
   forall cond rd args k c rs m,
   transl_cond_op cond rd args k = OK c ->
@@ -1003,6 +1135,14 @@ Proof.
   exploit transl_condimm_int64u_correct; eauto. instantiate (1 := x); eauto with asmgen. simpl. 
   intros (rs' & A & B & C).
   exists rs'; repeat split; eauto. rewrite MKTOT; eauto.
++ (* cmpfloat *) 
+  exploit transl_cond_float64_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
++ (* cmpnosingle *)
+  exploit transl_cond_nofloat64_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
++ (* cmpsingle *) 
+  exploit transl_cond_float32_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
++ (* cmpnosingle *)
+  exploit transl_cond_nofloat32_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
 Qed.
 
 (*

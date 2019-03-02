@@ -173,6 +173,18 @@ module Target (*: TARGET*) =
       | ITnone -> "none"
 
     let icond oc c = fprintf oc "%s" (icond_name c)
+
+    let fcond_name = let open Asmblock in function
+      | FTone -> "one"
+      | FTueq -> "ueq"
+      | FToeq -> "oeq"
+      | FTune -> "une"
+      | FTolt -> "olt"
+      | FTuge -> "uge"
+      | FToge -> "oge"
+      | FTult -> "ult"
+
+    let fcond oc c = fprintf oc "%s" (fcond_name c)
   
     let bcond_name = let open Asmblock in function
       | BTwnez -> "wnez"
@@ -295,23 +307,29 @@ module Target (*: TARGET*) =
       | Pfabsw(rd, rs) ->
          fprintf oc "	fabsw	%a = %a\n" ireg rd ireg rs
       | Pfnegd(rd, rs) ->
-         fprintf oc "	fnegd	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnegd	%a = %a\n" ireg rd ireg rs
       | Pfnegw(rd, rs) ->
-         fprintf oc "	fnegw	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnegw	%a = %a\n" ireg rd ireg rs
       | Pfnarrowdw(rd, rs) ->
-         fprintf oc "	fnarrowdw	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fnarrowdw	%a = %a\n" ireg rd ireg rs
       | Pfwidenlwd(rd, rs) ->
-         fprintf oc "	fwidenlwd	%a = %a\n" ireg rs ireg rd
+         fprintf oc "	fwidenlwd	%a = %a\n" ireg rd ireg rs
+      | Pfloatuwrnsz(rd, rs) ->
+         fprintf oc "	floatuw.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatwrnsz(rd, rs) ->
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatudrnsz(rd, rs) ->
+      | Pfloatudrnsz(rd, rs) | Pfloatudrnsz_i32(rd, rs) ->
          fprintf oc "	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatdrnsz(rd, rs) ->
+      | Pfloatdrnsz(rd, rs) | Pfloatdrnsz_i32(rd, rs) ->
          fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
-      | Pfixeddrzz(rd, rs) ->
+      | Pfixeduwrzz(rd, rs) ->
+         fprintf oc "	fixeduw.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixeddrzz(rd, rs) | Pfixeddrzz_i32(rd, rs) ->
          fprintf oc "	fixedd.rz	%a = %a, 0\n" ireg rd ireg rs
+      | Pfixedudrzz(rd, rs) | Pfixedudrzz_i32(rd, rs) ->
+         fprintf oc "	fixedud.rz	%a = %a, 0\n" ireg rd ireg rs
 
       (* Arith RI32 instructions *)
       | Pmake (rd, imm) ->
@@ -338,6 +356,11 @@ module Target (*: TARGET*) =
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs1 ireg rs2
       | Pcompl (it, rd, rs1, rs2) ->
          fprintf oc "	compd.%a	%a = %a, %a\n" icond it ireg rd ireg rs1 ireg rs2
+
+      | Pfcompw (ft, rd, rs1, rs2) ->
+         fprintf oc "	fcompw.%a	%a = %a, %a\n" fcond ft ireg rd ireg rs1 ireg rs2
+      | Pfcompl (ft, rd, rs1, rs2) ->
+         fprintf oc "	fcompd.%a	%a = %a, %a\n" fcond ft ireg rd ireg rs1 ireg rs2
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -382,9 +405,9 @@ module Target (*: TARGET*) =
       | Pfaddw (rd, rs1, rs2) ->
          fprintf oc "	faddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfsbfd (rd, rs1, rs2) ->
-         fprintf oc "	fsbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	fsbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Pfsbfw (rd, rs1, rs2) ->
-         fprintf oc "	fsbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+         fprintf oc "	fsbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Pfmuld (rd, rs1, rs2) ->
          fprintf oc "	fmuld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfmulw (rd, rs1, rs2) ->

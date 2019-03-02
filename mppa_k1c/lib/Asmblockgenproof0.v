@@ -20,6 +20,12 @@ Module AB:=Asmblock.
 
 Hint Extern 2 (_ <> _) => congruence: asmgen.
 
+Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
+  | bblock_equiv_intro:
+      (forall rs m,
+      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
+      bblock_equiv ge f bb bb'.
+
 Lemma ireg_of_eq:
   forall r r', ireg_of r = OK r' -> preg_of r = IR r'.
 Proof.

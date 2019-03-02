@@ -40,14 +40,23 @@ let arith_rr_str = function
   | Pfnarrowdw -> "Pfnarrowdw"
   | Pfwidenlwd -> "Pfwidenlwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
+  | Pfloatuwrnsz -> "Pfloatuwrnsz"
+  | Pfloatudrnsz_i32 -> "Pfloatudrnsz_i32"
   | Pfloatudrnsz -> "Pfloatudrnsz"
   | Pfloatdrnsz -> "Pfloatdrnsz"
+  | Pfloatdrnsz_i32 -> "Pfloatdrnsz_i32"
   | Pfixedwrzz -> "Pfixedwrzz"
+  | Pfixeduwrzz -> "Pfixeduwrzz"
   | Pfixeddrzz -> "Pfixeddrzz"
+  | Pfixedudrzz -> "Pfixedudrzz"
+  | Pfixeddrzz_i32 -> "Pfixeddrzz_i32"
+  | Pfixedudrzz_i32 -> "Pfixedudrzz_i32"
 
 let arith_rrr_str = function
   | Pcompw it -> "Pcompw"
   | Pcompl it -> "Pcompl"
+  | Pfcompw ft -> "Pfcompw"
+  | Pfcompl ft -> "Pfcompl"
   | Paddw -> "Paddw"
   | Psubw -> "Psubw"
   | Pmulw -> "Pmulw"
@@ -298,6 +307,10 @@ let alu_lite : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let alu_lite_x : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 2 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
 let alu_full : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
@@ -365,7 +378,8 @@ type real_instruction =
   (* FPU *)
   | Fabsd | Fabsw | Fnegw | Fnegd
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
-  | Fnarrowdw | Fwidenlwd | Floatwz | Floatdz | Floatudz | Fixedwz | Fixeddz
+  | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
+  | Fcompw | Fcompd
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
@@ -374,6 +388,8 @@ let ab_inst_to_real = function
   | "Pandl" | "Pandil" -> Andd
   | "Pcompw" | "Pcompiw" -> Compw
   | "Pcompl" | "Pcompil" -> Compd
+  | "Pfcompw" -> Fcompw
+  | "Pfcompl" -> Fcompd
   | "Pmulw" -> Mulw
   | "Pmull" -> Muld
   | "Porw" | "Poriw" -> Orw
@@ -395,10 +411,17 @@ let ab_inst_to_real = function
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
+  | "Pfloatuwrnsz" -> Floatuwz
   | "Pfloatdrnsz" -> Floatdz
+  | "Pfloatdrnsz_i32" -> Floatdz
   | "Pfloatudrnsz" -> Floatudz
+  | "Pfloatudrnsz_i32" -> Floatudz
   | "Pfixedwrzz" -> Fixedwz
+  | "Pfixeduwrzz" -> Fixeduwz
   | "Pfixeddrzz" -> Fixeddz
+  | "Pfixedudrzz" -> Fixedudz
+  | "Pfixeddrzz_i32" -> Fixeddz
+  | "Pfixedudrzz_i32" -> Fixedudz
 
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
@@ -456,6 +479,12 @@ let rec_to_usage r =
   | Compd -> (match encoding with None | Some U6 | Some S10 -> alu_tiny
                                 | Some U27L5 | Some U27L10 -> alu_tiny_x
                                 | Some E27U27L10 -> alu_tiny_y)
+  | Fcompw -> (match encoding with None -> alu_lite
+                                | Some U6 | Some S10 | Some U27L5 -> alu_lite_x
+                                | _ -> raise InvalidEncoding)
+  | Fcompd -> (match encoding with None -> alu_lite
+                                | Some U6 | Some S10 | Some U27L5 -> alu_lite_x
+                                | _ -> raise InvalidEncoding)
   | Make -> (match encoding with Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
@@ -469,7 +498,7 @@ let rec_to_usage r =
   | Nop -> alu_nop
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
-  | Fixedwz | Floatwz | Fixeddz | Floatdz | Floatudz -> mau
+  | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
@@ -488,9 +517,9 @@ let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
-  | Sxwd | Zxwd
+  | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1
-  | Floatwz | Fixedwz | Floatdz | Floatudz | Fixeddz -> 4
+  | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 

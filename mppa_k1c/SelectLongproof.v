@@ -582,30 +582,30 @@ Qed.
 
 Theorem eval_longofsingle: partial_unary_constructor_sound longofsingle Val.longofsingle.
 Proof.
-  unfold longofsingle; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold longofsingle; red; intros. (* destruct Archi.splitlong eqn:SL. *)
   eapply SplitLongproof.eval_longofsingle; eauto.
-  TrivialExists.
+(*   TrivialExists. *)
 Qed.
 
 Theorem eval_longuofsingle: partial_unary_constructor_sound longuofsingle Val.longuofsingle.
 Proof.
-  unfold longuofsingle; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold longuofsingle; red; intros. (* destruct Archi.splitlong eqn:SL. *)
   eapply SplitLongproof.eval_longuofsingle; eauto.
-  TrivialExists.
+(*   TrivialExists. *)
 Qed.
 
 Theorem eval_singleoflong: partial_unary_constructor_sound singleoflong Val.singleoflong.
 Proof.
-  unfold singleoflong; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold singleoflong; red; intros. (* destruct Archi.splitlong eqn:SL. *)
   eapply SplitLongproof.eval_singleoflong; eauto.
-  TrivialExists.
+(*   TrivialExists. *)
 Qed.
 
 Theorem eval_singleoflongu: partial_unary_constructor_sound singleoflongu Val.singleoflongu.
 Proof.
-  unfold singleoflongu; red; intros. destruct Archi.splitlong eqn:SL.
+  unfold singleoflongu; red; intros. (* destruct Archi.splitlong eqn:SL. *)
   eapply SplitLongproof.eval_singleoflongu; eauto.
-  TrivialExists.
+(*   TrivialExists. *)
 Qed.
 
 End CMCONSTR.

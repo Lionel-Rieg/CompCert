@@ -12,6 +12,7 @@
 
 Require Import Coqlib Errors AST Integers.
 Require Import Asmblock Axioms Memory Globalenvs.
+Require Import Asmblockdeps Asmblockgenproof0.
 
 Local Open Scope error_monad_scope.
 
@@ -21,112 +22,59 @@ Axiom schedule: bblock -> list bblock.
 
 Extract Constant schedule => "PostpassSchedulingOracle.schedule".
 
-(** Specification of the "coming soon" Asmblockdeps.v *)
-Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
-  | bblock_equiv_intro:
-      (forall rs m,
-      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
-      bblock_equiv ge f bb bb'.
-
-Axiom state': Type.
+Definition state' := L.mem.
 Definition outcome' := option state'.
 
-Axiom bblock': Type.
-Extract Constant bblock' => "PostpassSchedulingOracle.bblock'". (* FIXME *)
-Axiom exec': genv -> function -> bblock' -> state' -> outcome'.
-Axiom match_states: state -> state' -> Prop. 
-Axiom trans_block: bblock -> bblock'.
-Extract Constant trans_block => "PostpassSchedulingOracle.trans_block". (* FIXME *)
-Axiom trans_state: state -> state'.
+Definition bblock' := L.bblock.
 
-Axiom trans_state_match: forall S, match_states S (trans_state S).
-
-Inductive bblock_equiv' (ge: Genv.t fundef unit) (f: function) (bb bb': bblock') :=
-  | bblock_equiv_intro':
-      (forall s,
-      exec' ge f bb s = exec' ge f bb' s) ->
-      bblock_equiv' ge f bb bb'.
-
-Lemma bblock_equiv'_refl: forall ge fn tbb, bblock_equiv' ge fn tbb tbb.
-Proof.
-  repeat constructor.
-Qed.
-
-
+Definition exec' := L.run.
 
 Definition exec := exec_bblock.
 
-Axiom forward_simu:
-  forall rs1 m1 rs2 m2 s1' b ge fn,
-    exec ge fn b rs1 m1 = Next rs2 m2 ->
-    match_states (State rs1 m1) s1' ->
-    exists s2',
-       exec' ge fn (trans_block b) s1' = Some s2'
-    /\ match_states (State rs2 m2) s2'.
+Definition bblock_equivb' := bblock_equivb.
 
-Axiom forward_simu_stuck:
-  forall rs1 m1 s1' b ge fn,
-    exec ge fn b rs1 m1 = Stuck ->
-    match_states (State rs1 m1) s1' ->
-    exec' ge fn (trans_block b) s1' = None.
-
-Axiom trans_block_reverse_stuck:
-  forall ge fn b rs m s',
-  exec' ge fn (trans_block b) s' = None ->
-  match_states (State rs m) s' ->
-  exec ge fn b rs m = Stuck.
-
-Axiom state_equiv:
-  forall S1 S2 S', match_states S1 S' /\ match_states S2 S' -> S1 = S2.
-
-
-(* TODO - replace it by the actual bblock_equivb' *)
-Axiom bblock_equivb': bblock' -> bblock' -> bool.
-Extract Constant bblock_equivb' => "PostpassSchedulingOracle.bblock_equivb'". (* FIXME *)
-
-Axiom bblock_equiv'_eq:
-  forall ge fn b1 b2,
-  bblock_equivb' b1 b2 = true <-> bblock_equiv' ge fn b1 b2.
-
-Lemma bblock_equivb'_refl: forall tbb, bblock_equivb' tbb tbb = true.
+Lemma bblock_equivb'_refl (ge: Genv.t fundef unit) (fn: function): forall tbb, bblock_equivb' tbb tbb = true.
 Proof.
   intros. rewrite bblock_equiv'_eq. apply bblock_equiv'_refl.
   Unshelve. (* FIXME - problem of Genv and function *)
-Admitted.
-
+  constructor; auto.
+Qed.
 
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
-  bblock_equiv' ge fn (trans_block b1) (trans_block b2) ->
+  bblock_equiv' (P.Genv ge fn) (trans_block b1) (trans_block b2) ->
   (exec ge fn b1 rs m = Stuck <-> exec ge fn b2 rs m = Stuck).
 Proof.
   intros. inv H.
   pose (trans_state_match (State rs m)).
   split.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck; eassumption.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck; eassumption.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck.
+      reflexivity. eassumption. eassumption.
+  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck.
+      reflexivity. eassumption. eassumption.
 Qed.
-
 
 
 Lemma bblock_equiv'_comm:
   forall ge fn b1 b2,
-  bblock_equiv' ge fn b1 b2 <-> bblock_equiv' ge fn b2 b1.
+  bblock_equiv' (P.Genv ge fn) b1 b2 <-> bblock_equiv' (P.Genv ge fn) b2 b1.
 Proof.
   intros. repeat constructor. all: inv H; congruence.
 Qed.
 
 Theorem trans_exec:
-  forall b1 b2 ge f, bblock_equiv' ge f (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
+  forall b1 b2 ge f, bblock_equiv' (P.Genv ge f) (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
 Proof.
   repeat constructor. intros rs1 m1.
   destruct (exec_bblock _ _ b1 _ _) as [rs2 m2|] eqn:EXEB; destruct (exec_bblock _ _ b2 _ _) as [rs3 m3|] eqn:EXEB2; auto.
   - pose (trans_state_match (State rs1 m1)).
     exploit forward_simu.
+      reflexivity.
       eapply EXEB.
       eapply m.
     intros (s2' & EXEB' & MS).
     exploit forward_simu.
+      reflexivity.
       eapply EXEB2.
       eapply m.
     intros (s3' & EXEB'2 & MS2). inv H.
@@ -322,10 +270,10 @@ Definition verify_schedule (bb bb' : bblock) : res unit :=
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
 
-Lemma verify_schedule_refl:
+Lemma verify_schedule_refl (ge: Genv.t fundef unit) (fn: function):
   forall bb, verify_schedule bb bb = OK tt.
 Proof.
-  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity.
+  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity. all: auto.
 Qed.
 
 
@@ -339,21 +287,6 @@ Proof.
   apply Z.eqb_eq. assumption.
 Qed.
 
-
-
-Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Lemma no_header_size:
-  forall bb, size (no_header bb) = size bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
-Qed.
-
-Axiom trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
-
 Lemma verify_schedule_no_header:
   forall bb bb',
   verify_schedule (no_header bb) bb' = verify_schedule bb bb'.
@@ -361,26 +294,6 @@ Proof.
   intros. unfold verify_schedule. rewrite trans_block_noheader_inv. reflexivity.
 Qed.
 
-
-
-Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Axiom trans_block_header_inv: forall bb hd, trans_block (stick_header hd bb) = trans_block bb.
-
-Lemma stick_header_size:
-  forall h bb, size (stick_header h bb) = size bb.
-Proof.
-  intros. destruct bb. unfold stick_header. simpl. reflexivity.
-Qed.
-
-Lemma stick_header_no_header:
-  forall bb, stick_header (header bb) (no_header bb) = bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
-Qed.
 
 Lemma stick_header_verify_schedule:
   forall hd bb' hbb' bb,
@@ -500,13 +413,13 @@ Proof.
   destruct x0; try discriminate. assumption.
 Qed.
 
-Lemma verified_schedule_single_inst:
+Lemma verified_schedule_single_inst (ge: Genv.t fundef unit) (fn: function):
   forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
 Proof.
   intros. unfold verified_schedule.
   unfold do_schedule. rewrite no_header_size. rewrite H. simpl.
   unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). rewrite verify_schedule_refl. simpl.
-  apply stick_header_code_no_header.
+  apply stick_header_code_no_header. all: auto.
   rewrite H. reflexivity.
 Qed.
 
@@ -543,8 +456,8 @@ Proof.
   intros (tbb & CONC & STH).
   exists tbb. split; auto.
   rewrite verify_schedule_no_header in EQ0. erewrite stick_header_verify_schedule in EQ0; eauto.
-  apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0.
-  destruct (bblock_equivb' _ _); auto; try discriminate.
+  apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0. unfold bblock_equivb' in EQ0.
+  destruct (bblock_equivb _ _); auto; try discriminate.
 Qed.
 
 

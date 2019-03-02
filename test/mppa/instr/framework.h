@@ -46,7 +46,7 @@
     /* END END_TEST32 */
 
 #define END_TESTF32()\
-            printf("%f\t%f\t%f\n", a, b, c);\
+            printf("%e\t%e\t%e\n", a, b, c);\
             S += c;\
         }\
         return 0;\
@@ -54,7 +54,7 @@
     /* END END_TESTF32 */
 
 #define END_TESTF64()\
-            printf("%lf\t%lf\t%lf\n", a, b, c);\
+            printf("%e\t%e\t%e\n", a, b, c);\
             S += c;\
         }\
         return 0;\

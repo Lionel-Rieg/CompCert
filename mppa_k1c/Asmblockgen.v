@@ -282,6 +282,30 @@ Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: 
 Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: bcode) :=
   Pcompil (itest_for_cmp cmp Unsigned) rd r1 n ::i k.
 
+Definition transl_cond_float32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompw ft rd r2 r1 ::i k
+  end.
+
+Definition transl_cond_notfloat32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompw ft rd r2 r1 ::i k
+  end.
+
+Definition transl_cond_float64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompl ft rd r2 r1 ::i k
+  end.
+
+Definition transl_cond_notfloat64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft rd r1 r2 ::i k
+  | Reversed ft => Pfcompl ft rd r2 r1 ::i k
+  end.
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -309,27 +333,19 @@ Definition transl_cond_op
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
       OK (transl_condimm_int64u c rd r1 n k)
-  | Ccompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompf")
-  | Cnotcompf _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompf")
-  | Ccompfs _, _ => Error(msg "Asmblockgen.transl_cond_op: Ccompfs")
-  | Cnotcompfs _, _ => Error(msg "Asmblockgen.transl_cond_op: Cnotcompfs")
-(*| Ccompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-  | Ccompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-*)| _, _ =>
+  | Ccompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_float32 c rd r1 r2 k)
+  | Cnotcompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_notfloat32 c rd r1 r2 k)
+  | Ccompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_float64 c rd r1 r2 k)
+  | Cnotcompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_cond_notfloat64 c rd r1 r2 k)
+  | _, _ =>
       Error(msg "Asmblockgen.transl_cond_op")
 end.
 
@@ -388,13 +404,7 @@ Definition transl_op
       OK (Pmulw rd rs1 rs2 ::i k)
   | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs")
   | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu")
-(*| Omulhs, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhw rd rs1 rs2 :: k)
-  | Omulhu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhuw rd rs1 rs2 :: k)
-*)| Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
+  | Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
       (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pdivw rd rs1 rs2 :: k) *)
   | Odivu, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odivu: 32-bits division not supported yet. Please use 64-bits.")
@@ -483,25 +493,7 @@ Definition transl_op
   | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu")
   | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl")
   | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu")
-(*| Omullhs, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhl rd rs1 rs2 :: k)
-  | Omullhu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pmulhul rd rs1 rs2 :: k)
-  | Odivl, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivl rd rs1 rs2 :: k)
-  | Odivlu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Pdivul rd rs1 rs2 :: k)
-  | Omodl, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Preml rd rs1 rs2 :: k)
-  | Omodlu, a1 :: a2 :: nil =>
-      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
-      OK (Premul rd rs1 rs2 :: k)
-*)| Oandl, a1 :: a2 :: nil =>
+  | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 ::i k)
   | Oandlimm n, a1 :: nil =>
@@ -579,18 +571,39 @@ Definition transl_op
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatwrnsz rd rs ::i k)
+  | Osingleofintu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatuwrnsz rd rs ::i k)
   | Ofloatoflong, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatdrnsz rd rs ::i k)
   | Ofloatoflongu, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatudrnsz rd rs ::i k)
+  | Ofloatofint, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatdrnsz_i32 rd rs ::i k)
+  | Ofloatofintu, a1 :: nil =>
+      do rd <- freg_of res; do rs <- ireg_of a1;
+      OK (Pfloatudrnsz_i32 rd rs ::i k)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)
+  | Ointuofsingle, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixeduwrzz rd rs ::i k)
   | Olongoffloat, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixeddrzz rd rs ::i k)
+  | Ointoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixeddrzz_i32 rd rs ::i k)
+  | Ointuoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixedudrzz_i32 rd rs ::i k)
+  | Olonguoffloat, a1 :: nil =>
+      do rd <- ireg_of res; do rs <- freg_of a1;
+      OK (Pfixedudrzz rd rs ::i k)
 
   | Ofloatofsingle, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
@@ -600,33 +613,15 @@ Definition transl_op
       OK (Pfnarrowdw rd rs ::i k)
 
 
-  | Oabsf , _ => Error (msg "Asmblockgen.transl_op: Oabsf")
-  | Oaddf , _ => Error (msg "Asmblockgen.transl_op: Oaddf")
-  | Osubf , _ => Error (msg "Asmblockgen.transl_op: Osubf")
-  | Omulf , _ => Error (msg "Asmblockgen.transl_op: Omulf")
   | Odivf , _ => Error (msg "Asmblockgen.transl_op: Odivf")
-  | Onegfs , _ => Error (msg "Asmblockgen.transl_op: Onegfs")
-  | Oabsfs , _ => Error (msg "Asmblockgen.transl_op: Oabsfs")
-  | Oaddfs , _ => Error (msg "Asmblockgen.transl_op: Oaddfs")
-  | Osubfs , _ => Error (msg "Asmblockgen.transl_op: Osubfs")
-  | Omulfs , _ => Error (msg "Asmblockgen.transl_op: Omulfs")
-  | Odivfs , _ => Error (msg "Asmblockgen.transl_op: Odivfs")
-  | Ofloatoflongu , _ => Error (msg "Asmblockgen.transl_op: Ofloatoflongu")
-  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong")
+
+  (* We use the Splitlong instead for these four conversions *)
+  | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong") 
   | Osingleoflongu , _ => Error (msg "Asmblockgen.transl_op: Osingleoflongu")
-  | Osingleoffloat , _ => Error (msg "Asmblockgen.transl_op: Osingleoffloat")
-  | Ofloatofsingle , _ => Error (msg "Asmblockgen.transl_op: Ofloatofsingle")
-  | Ointoffloat , _ => Error (msg "Asmblockgen.transl_op: Ointoffloat")
-  | Ointuoffloat , _ => Error (msg "Asmblockgen.transl_op: Ointuoffloat")
-  | Ofloatofint , _ => Error (msg "Asmblockgen.transl_op: Ofloatofint")
-  | Ofloatofintu , _ => Error (msg "Asmblockgen.transl_op: Ofloatofintu")
-  | Ointuofsingle , _ => Error (msg "Asmblockgen.transl_op: Ointuofsingle")
-  | Osingleofintu , _ => Error (msg "Asmblockgen.transl_op: Osingleofintu")
-  | Olonguoffloat , _ => Error (msg "Asmblockgen.transl_op: Olonguoffloat")
-
-
   | Olongofsingle , _ => Error (msg "Asmblockgen.transl_op: Olongofsingle")
   | Olonguofsingle , _ => Error (msg "Asmblockgen.transl_op: Olonguofsingle")
+
+
 
   | Ocmp cmp, _ =>
       do rd <- ireg_of res;
