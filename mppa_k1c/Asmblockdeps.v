@@ -1313,6 +1313,7 @@ Admitted. (* FIXME - à voir avec Sylvain *)
 Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
 
+
 Inductive bblock_equiv' (bb bb': L.bblock) :=
   | bblock_equiv_intro':
     (forall s, exec Ge bb s = exec Ge bb' s) ->
@@ -1328,6 +1329,22 @@ Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
 Axiom bblock_equiv'_eq:
   forall b1 b2,
   bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
+
+
+(* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
+
+Import UnsafeImpure.
+
+Definition pure_bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock): bool := unsafe_coerce (bblock_eq_test verb p1 p2).
+
+Theorem pure_bblock_eq_test_correct verb p1 p2:
+  forall ge fn, Ge = Genv ge fn ->
+   pure_bblock_eq_test verb p1 p2 = true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Proof.
+   intros; unfold pure_bblock_eq_test. intros; eapply bblock_eq_test_correct; eauto.
+   apply unsafe_coerce_not_really_correct; eauto.
+Qed.
+
 
 End SECT.
 
