@@ -1300,11 +1300,16 @@ Proof.
   - congruence.
 Qed.
 
-Axiom forward_simu_alt:
+Theorem forward_simu_alt:
   forall rs1 m1 s1' b ge fn,
     Ge = Genv ge fn ->
     match_states (State rs1 m1) s1' -> 
     match_outcome (exec_bblock ge fn b rs1 m1) (exec Ge (trans_block b) s1').
+Proof.
+  intros until fn. intros GENV MS. destruct (exec_bblock _ _ _ _ _) eqn:EXEB.
+  - eapply forward_simu; eauto.
+  - eapply forward_simu_stuck; eauto.
+Qed.
 
 Local Hint Resolve trans_state_match.
 
