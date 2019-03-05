@@ -129,19 +129,17 @@ with list_exp_tree (le: list_exp) (d old: deps): list_tree :=
 Definition failsafe (t: tree): bool :=
   match t with
   | Tname x => true
-  | Top o Tnil => 
-     match op_eval ge o nil with
-     | Some _ => true
-     | None => false
-     end
+  | Top o Tnil => is_constant o
   | _ => false
   end.
+
+Local Hint Resolve is_constant_correct.
 
 Lemma failsafe_correct (t: tree) m: failsafe t = true -> tree_eval t m <> None.
 Proof.
   destruct t; simpl; try congruence.
   destruct l; simpl; try congruence.
-  destruct (op_eval ge o nil); try congruence.
+  eauto.
 Qed.
 
 Fixpoint macro_deps (i: macro) (d old: deps): deps :=

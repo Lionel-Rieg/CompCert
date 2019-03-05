@@ -379,6 +379,29 @@ Definition op_eval (o: op) (l: list value) :=
   | _, _ => None
   end.
 
+
+Definition is_constant (o: op): bool := 
+ (* FIXME
+
+   => répondre "true" autant que possible mais en satisfaisant [is_constant_correct] ci-dessous.
+
+   ATTENTION, is_constant ne doit pas dépendre de [ge].
+   Sinon, on aurait une implémentation facile: [match op_eval o nil with Some _ => true | _ => false end]
+
+   => REM: il n'est pas sûr que ce soit utile de faire qqchose de très exhaustif en pratique...
+   (ça sert juste à une petite optimisation du vérificateur de scheduling).
+  *)
+  match o with
+  | Constant _ => true
+  | _ => false
+  end.
+
+Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
+Proof.
+  destruct o; simpl; try congruence.
+Qed.
+
+
 Definition iandb (ib1 ib2: ?? bool): ?? bool :=
   DO b1 <~ ib1;;
   DO b2 <~ ib2;;
@@ -483,6 +506,7 @@ Proof.
 Qed.
 
 End IMPPARAM.
+
 End P.
 
 Module L <: ISeqLanguage with Module LP:=P.
@@ -1335,19 +1359,17 @@ Definition string_of_op (op: P.op): ?? pstring := RET (Str ("OP")).
 
 Definition bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_eq_test string_of_name string_of_op Ge (trans_block p1) (trans_block p2)
+    IDT.verb_bblock_eq_test string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IDT.bblock_eq_test Ge (trans_block p1) (trans_block p2).
+    IDT.bblock_eq_test (trans_block p1) (trans_block p2).
 
 Local Hint Resolve IDT.bblock_eq_test_correct bblock_equiv_reduce IDT.verb_bblock_eq_test_correct: wlp.
 
 Theorem bblock_eq_test_correct verb p1 p2 :
-  forall ge fn, Ge = Genv ge fn ->
-  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
 Proof.
-  intros ge fn genv_eq.
   wlp_simplify.
-Admitted. (* FIXME - à voir avec Sylvain *)
+Qed.
 Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
 
