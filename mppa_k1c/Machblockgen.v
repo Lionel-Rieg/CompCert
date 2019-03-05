@@ -126,7 +126,15 @@ Inductive is_trans_code: Mach.code -> code -> Prop :=
       is_trans_code c (bh::bl) ->
       trans_inst i = MB_basic bi ->
       header bh = nil ->
-      is_trans_code (i::c) (add_basic bi bh::bl).
+      is_trans_code (i::c) (add_basic bi bh::bl)
+  | Tr_empty_bblock c bh bl:
+      is_trans_code c bl ->
+      bh = empty_bblock ->
+      is_trans_code c (bh::bl)
+  | Tr_cfi i bi c bl:
+      is_trans_code c bl ->
+      trans_inst i = MB_cfi bi ->
+      is_trans_code (i::c) (cfi_bblock bi :: bl).
 
 Local Hint Resolve Tr_nil Tr_end_block.
 
@@ -135,12 +143,15 @@ Lemma add_to_code_is_trans_code i c bl:
   is_trans_code (i::c) (add_to_code (trans_inst i) bl).
 Proof.
   destruct bl as [|bh0 bl]; simpl.
-  - intro H; inversion H; subst; eauto.
+  - intro H. inversion H. subst. eauto.
   - remember (trans_inst i) as ti.
     destruct ti as [l|bi|cfi].
     + intros; eapply Tr_add_label; eauto. destruct i; simpl in * |- *; congruence.
-    + 
-Admitted. (* A FINIR *)
+    + intros. remember (header bh0) as hbh0. destruct hbh0 as [|b].
+      * eapply Tr_add_basic; eauto.
+      * eapply Tr_add_basic; eauto. eapply Tr_empty_bblock. eauto. reflexivity.
+    + intros. eapply Tr_cfi. eauto. symmetry in Heqti. eauto.
+Qed. (* A FINIR *)
 
 Local Hint Resolve add_to_code_is_trans_code.
 
