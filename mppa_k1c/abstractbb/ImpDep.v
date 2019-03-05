@@ -215,7 +215,7 @@ Fixpoint hmacro_deps (i: macro) (d od: hdeps): ?? hdeps :=
   | (x, e)::i' =>
      DO dbg <~ debug_assign x;;
      DO t0 <~ hdeps_get d x None;;
-     DO v' <~ (if failsafe ge (data t0) 
+     DO v' <~ (if failsafe (data t0) 
       then 
         hexp_tree e d od dbg 
       else
@@ -248,16 +248,16 @@ Lemma hmacro_deps_correct i: forall d1 od1,
   WHEN hmacro_deps i d1 od1 ~> d1' THEN
     forall od2 d2, (forall x, pdeps_get od1 x = deps_get od2 x) ->
     (forall x, pdeps_get d1 x = deps_get d2 x) -> 
-    forall x, pdeps_get d1' x = deps_get (macro_deps ge i d2 od2) x.
+    forall x, pdeps_get d1' x = deps_get (macro_deps i d2 od2) x.
 Proof.
   induction i; simpl; wlp_simplify.
-  + cutrewrite (failsafe ge (deps_get d2 a0) = failsafe ge (data exta0)). 
+  + cutrewrite (failsafe (deps_get d2 a0) = failsafe (data exta0)). 
     - erewrite H0, H2; simpl; eauto. clear exta2 Hexta2 H2; auto.
       intros x0; destruct (R.eq_dec a0 x0).
       * subst. autorewrite with dict_rw. rewrite set_spec_eq. erewrite H1; eauto.
       * rewrite set_spec_diff, pset_spec_diff; auto.
     - rewrite H, H4; auto.
-  + cutrewrite (failsafe ge (deps_get d2 a0) = failsafe ge (data exta0)).
+  + cutrewrite (failsafe (deps_get d2 a0) = failsafe (data exta0)).
     - erewrite H0, H3; simpl; eauto. clear exta3 Hexta3 H3; auto.
       intros x0; destruct (R.eq_dec a0 x0).
       * subst; autorewrite with dict_rw. rewrite H2.
@@ -282,7 +282,7 @@ Fixpoint hbblock_deps_rec (p: bblock) (d: hdeps): ?? hdeps :=
 
 Lemma hbblock_deps_rec_correct p: forall d1,
   WHEN hbblock_deps_rec p d1 ~> d1' THEN
-    forall d2, (forall x, pdeps_get d1 x = deps_get d2 x) -> forall x, pdeps_get d1' x = deps_get (bblock_deps_rec ge p d2) x.
+    forall d2, (forall x, pdeps_get d1 x = deps_get d2 x) -> forall x, pdeps_get d1' x = deps_get (bblock_deps_rec p d2) x.
 Proof.
   induction p; simpl; wlp_simplify.
 Qed.
@@ -294,7 +294,7 @@ Definition hbblock_deps: bblock -> ?? hdeps
  := fun p => hbblock_deps_rec p Dict.empty.
 
 Lemma hbblock_deps_correct p:
-  WHEN hbblock_deps p ~> d1 THEN forall x, pdeps_get d1 x = deps_get (bblock_deps ge p) x.
+  WHEN hbblock_deps p ~> d1 THEN forall x, pdeps_get d1 x = deps_get (bblock_deps p) x.
 Proof.
   unfold bblock_deps; wlp_simplify. erewrite H; eauto.
   intros; autorewrite with dict_rw; auto. rewrite empty_spec. reflexivity.
@@ -375,7 +375,6 @@ Variable dbg1: R.t -> ?? option pstring. (* debugging of p1 macros *)
 Variable dbg2: R.t -> ?? option pstring. (* log of p2 macros *)
 Variable log1: unit -> ?? unit. (* log of p1 macros *)
 Variable log2: unit -> ?? unit. (* log of p2 macros *)
-Variable ge: genv.
 
 
 Variable hco_tree: hashConsing tree.
@@ -388,8 +387,8 @@ Variable print_error: pstring -> ?? unit.
 
 Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
   DO r <~ (TRY 
-    DO d1 <~ hbblock_deps (hC hco_tree) (hC hco_list) ge dbg1 log1 p1 ;;
-    DO d2 <~ hbblock_deps (hC_known hco_tree) (hC_known hco_list) ge dbg2 log2 p2 ;;
+    DO d1 <~ hbblock_deps (hC hco_tree) (hC hco_list) dbg1 log1 p1 ;;
+    DO d2 <~ hbblock_deps (hC_known hco_tree) (hC_known hco_list) dbg2 log2 p2 ;;
     DO b <~ Dict.eq_test d1 d2 ;;
     if b then RET true
     else (
@@ -399,7 +398,7 @@ Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
   CATCH_FAIL s, _ => 
     print_error s;;
     RET false
-  ENSURE (fun b => b=true -> bblock_equiv ge p1 p2));;
+  ENSURE (fun b => b=true -> forall ge, bblock_equiv ge p1 p2));;
   RET (`r).
 Obligation 1.
   destruct hco_tree_correct as [X1 X2], hco_list_correct as [Y1 Y2].
@@ -410,7 +409,7 @@ Obligation 1.
 Qed.
 
 Theorem g_bblock_eq_test_correct p1 p2:
-  WHEN g_bblock_eq_test p1 p2 ~> b THEN b=true -> bblock_equiv ge p1 p2.
+  WHEN g_bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
 Proof.
   wlp_simplify.
   destruct exta; simpl in * |- *; auto.
@@ -439,11 +438,11 @@ Definition print_error (log: logger unit) (s:pstring): ?? unit
     println (msg_prefix +; msg_number +; n +; " -- " +; s). 
 
 
-Program Definition bblock_eq_test (ge: genv) (p1 p2: bblock): ?? bool :=
+Program Definition bblock_eq_test (p1 p2: bblock): ?? bool :=
   DO log <~ count_logger ();;
   DO hco_tree <~ mk_annot (hCons tree_hash_eq (fun _ => RET msg_unknow_tree));;
   DO hco_list <~ mk_annot (hCons list_tree_hash_eq (fun _ => RET msg_unknow_list_tree));;
-  g_bblock_eq_test no_dbg no_dbg skip (log_insert log) ge hco_tree _ hco_list _ print_error_end (print_error log) p1 p2.
+  g_bblock_eq_test no_dbg no_dbg skip (log_insert log) hco_tree _ hco_list _ print_error_end (print_error log) p1 p2.
 Obligation 1.  
   generalize (hCons_correct _ _ _ _ H0); clear H0.
   constructor 1; wlp_simplify.
@@ -455,8 +454,8 @@ Qed.
 
 Local Hint Resolve g_bblock_eq_test_correct.
 
-Theorem bblock_eq_test_correct ge p1 p2:
-  WHEN bblock_eq_test ge p1 p2 ~> b THEN b=true -> bblock_equiv ge p1 p2.
+Theorem bblock_eq_test_correct p1 p2:
+  WHEN bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
 Proof.
   wlp_simplify.
 Qed.
@@ -690,7 +689,7 @@ Definition hlog (log: logger unit) (hct: hashConsing tree) (hcl: hashConsing lis
       next_log hcl s
     ).
 
-Program Definition verb_bblock_eq_test (ge: genv) (p1 p2: bblock): ?? bool :=
+Program Definition verb_bblock_eq_test (p1 p2: bblock): ?? bool :=
   DO log1 <~ count_logger ();;
   DO log2 <~ count_logger ();;
   DO cr <~ make_cref Nothing;;
@@ -701,7 +700,6 @@ Program Definition verb_bblock_eq_test (ge: genv) (p1 p2: bblock): ?? bool :=
      simple_debug
      (hlog log1 hco_tree hco_list)
      (log_insert log2) 
-     ge
      hco_tree _ 
      hco_list _ 
      (print_error_end1 hco_tree hco_list)
@@ -719,8 +717,7 @@ Program Definition verb_bblock_eq_test (ge: genv) (p1 p2: bblock): ?? bool :=
        (log_debug log1)
        simple_debug
        (hlog log1 hco_tree hco_list)
-       (log_insert log2) 
-       ge
+       (log_insert log2)
        hco_tree _ 
        hco_list _ 
        (print_error_end2 hco_tree hco_list)
@@ -749,8 +746,8 @@ Obligation 4.
   constructor 1; wlp_simplify.
 Qed.
 
-Theorem verb_bblock_eq_test_correct ge p1 p2:
-  WHEN verb_bblock_eq_test ge p1 p2 ~> b THEN b=true -> bblock_equiv ge p1 p2.
+Theorem verb_bblock_eq_test_correct p1 p2:
+  WHEN verb_bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
 Proof.
   wlp_simplify.
 Qed.

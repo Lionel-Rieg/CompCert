@@ -33,13 +33,6 @@ Definition exec := exec_bblock.
 
 Definition bblock_equivb' := bblock_equivb.
 
-Lemma bblock_equivb'_refl (ge: Genv.t fundef unit) (fn: function): forall tbb, bblock_equivb' tbb tbb = true.
-Proof.
-  intros. rewrite bblock_equiv'_eq. apply bblock_equiv'_refl.
-  Unshelve. (* FIXME - problem of Genv and function *)
-  constructor; auto.
-Qed.
-
 Lemma trans_equiv_stuck:
   forall b1 b2 ge fn rs m,
   bblock_equiv' (P.Genv ge fn) (trans_block b1) (trans_block b2) ->
@@ -53,7 +46,6 @@ Proof.
   - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck.
       reflexivity. eassumption. eassumption.
 Qed.
-
 
 Lemma bblock_equiv'_comm:
   forall ge fn b1 b2,
@@ -270,13 +262,6 @@ Definition verify_schedule (bb bb' : bblock) : res unit :=
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
 
-Lemma verify_schedule_refl (ge: Genv.t fundef unit) (fn: function):
-  forall bb, verify_schedule bb bb = OK tt.
-Proof.
-  intros. unfold verify_schedule. rewrite bblock_equivb'_refl. reflexivity. all: auto.
-Qed.
-
-
 
 Definition verify_size bb lbb := if (Z.eqb (size bb) (size_blocks lbb)) then OK tt else Error (msg "PostpassScheduling:verify_size: wrong size").
 
@@ -397,7 +382,7 @@ Qed.
 Definition do_schedule (bb: bblock) : list bblock :=
   if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
 
-Definition verified_schedule (bb : bblock) : res (list bblock) :=
+Definition verified_schedule_nob (bb : bblock) : res (list bblock) :=
   let bb' := no_header bb in
   let lbb := do_schedule bb' in
   do tbb <- concat_all lbb;
@@ -405,22 +390,48 @@ Definition verified_schedule (bb : bblock) : res (list bblock) :=
   do schedcheck <- verify_schedule bb' tbb;
   stick_header_code (header bb) lbb.
 
-Lemma verified_schedule_size:
-  forall bb lbb, verified_schedule bb = OK lbb -> size bb = size_blocks lbb.
+Lemma verified_schedule_nob_size:
+  forall bb lbb, verified_schedule_nob bb = OK lbb -> size bb = size_blocks lbb.
 Proof.
   intros. monadInv H. erewrite <- stick_header_code_size; eauto.
   apply verify_size_size.
   destruct x0; try discriminate. assumption.
 Qed.
 
-Lemma verified_schedule_single_inst (ge: Genv.t fundef unit) (fn: function):
-  forall bb, size bb = 1 -> verified_schedule bb = OK (bb::nil).
+Lemma verified_schedule_nob_no_header_in_middle:
+  forall lbb bb,
+  verified_schedule_nob bb = OK lbb ->
+     Forall (fun b => header b = nil) (tail lbb).
 Proof.
-  intros. unfold verified_schedule.
-  unfold do_schedule. rewrite no_header_size. rewrite H. simpl.
-  unfold verify_size. simpl. rewrite no_header_size. rewrite Z.add_0_r. cutrewrite (size bb =? size bb = true). rewrite verify_schedule_refl. simpl.
-  apply stick_header_code_no_header. all: auto.
-  rewrite H. reflexivity.
+  intros. monadInv H. eapply stick_header_code_no_header_in_middle; eauto.
+  eapply concat_all_no_header_in_middle. eassumption.
+Qed.
+
+Lemma verified_schedule_nob_header:
+  forall bb tbb lbb,
+  verified_schedule_nob bb = OK (tbb :: lbb) ->
+     header bb = header tbb
+  /\ Forall (fun b => header b = nil) lbb.
+Proof.
+  intros. split.
+  - monadInv H. unfold stick_header_code in EQ3. destruct (hd_error _); try discriminate. inv EQ3.
+    simpl. reflexivity.
+  - apply verified_schedule_nob_no_header_in_middle in H. assumption.
+Qed.
+
+
+Definition verified_schedule (bb : bblock) : res (list bblock) :=
+  match exit bb with
+  | Some (PExpand (Pbuiltin ef args res)) => OK (bb::nil) (* Special case for ensuring the lemma verified_schedule_builtin_idem *)
+  | _ => verified_schedule_nob bb
+  end.
+
+Lemma verified_schedule_size:
+  forall bb lbb, verified_schedule bb = OK lbb -> size bb = size_blocks lbb.
+Proof.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  all: try (apply verified_schedule_nob_size; auto; fail).
+  destruct i. inv H. simpl. omega.
 Qed.
 
 Lemma verified_schedule_no_header_in_middle:
@@ -428,8 +439,9 @@ Lemma verified_schedule_no_header_in_middle:
   verified_schedule bb = OK lbb ->
      Forall (fun b => header b = nil) (tail lbb).
 Proof.
-  intros. monadInv H. eapply stick_header_code_no_header_in_middle; eauto.
-  eapply concat_all_no_header_in_middle. eassumption.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  all: try (eapply verified_schedule_nob_no_header_in_middle; eauto; fail).
+  destruct i. inv H. simpl. auto.
 Qed.
 
 Lemma verified_schedule_header:
@@ -438,15 +450,15 @@ Lemma verified_schedule_header:
      header bb = header tbb
   /\ Forall (fun b => header b = nil) lbb.
 Proof.
-  intros. split.
-  - monadInv H. unfold stick_header_code in EQ3. destruct (hd_error _); try discriminate. inv EQ3.
-    simpl. reflexivity.
-  - apply verified_schedule_no_header_in_middle in H. assumption.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  all: try (eapply verified_schedule_nob_header; eauto; fail).
+  destruct i. inv H. split; simpl; auto.
 Qed.
 
-Theorem verified_schedule_correct:
+
+Lemma verified_schedule_nob_correct:
   forall ge f bb lbb,
-  verified_schedule bb = OK lbb ->
+  verified_schedule_nob bb = OK lbb ->
   exists tbb, 
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
@@ -460,6 +472,26 @@ Proof.
   destruct (bblock_equivb _ _); auto; try discriminate.
 Qed.
 
+Theorem verified_schedule_correct:
+  forall ge f bb lbb,
+  verified_schedule bb = OK lbb ->
+  exists tbb, 
+     concat_all lbb = OK tbb
+  /\ bblock_equiv ge f bb tbb.
+Proof.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  all: try (eapply verified_schedule_nob_correct; eauto; fail).
+  destruct i. inv H. eexists. split; simpl; auto. constructor; auto.
+Qed.
+
+Lemma verified_schedule_builtin_idem:
+  forall bb ef args res lbb,
+  exit bb = Some (PExpand (Pbuiltin ef args res)) ->
+  verified_schedule bb = OK lbb ->
+  lbb = bb :: nil.
+Proof.
+  intros. unfold verified_schedule in H0. rewrite H in H0. inv H0. reflexivity.
+Qed.
 
 
 Fixpoint transf_blocks (lbb : list bblock) : res (list bblock) :=

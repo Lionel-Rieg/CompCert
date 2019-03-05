@@ -10,6 +10,7 @@ Require Import Floats.
 Require Import ZArith.
 Require Import Coqlib.
 Require Import ImpDep.
+Require Import Axioms.
 
 Open Scope impure.
 
@@ -378,6 +379,29 @@ Definition op_eval (o: op) (l: list value) :=
   | _, _ => None
   end.
 
+
+Definition is_constant (o: op): bool := 
+ (* FIXME
+
+   => répondre "true" autant que possible mais en satisfaisant [is_constant_correct] ci-dessous.
+
+   ATTENTION, is_constant ne doit pas dépendre de [ge].
+   Sinon, on aurait une implémentation facile: [match op_eval o nil with Some _ => true | _ => false end]
+
+   => REM: il n'est pas sûr que ce soit utile de faire qqchose de très exhaustif en pratique...
+   (ça sert juste à une petite optimisation du vérificateur de scheduling).
+  *)
+  match o with
+  | Constant _ => true
+  | _ => false
+  end.
+
+Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
+Proof.
+  destruct o; simpl; try congruence.
+Qed.
+
+
 Definition iandb (ib1 ib2: ?? bool): ?? bool :=
   DO b1 <~ ib1;;
   DO b2 <~ ib2;;
@@ -482,6 +506,7 @@ Proof.
 Qed.
 
 End IMPPARAM.
+
 End P.
 
 Module L <: ISeqLanguage with Module LP:=P.
@@ -648,6 +673,12 @@ Definition match_states (s: Asmblock.state) (s': state) :=
      s' pmem = Memstate m
   /\ forall r, s' (#r) = Val (rs r).
 
+Definition match_outcome (o:outcome) (s: option state) :=
+  match o with
+  | Next rs m => exists s', s=Some s' /\ match_states (State rs m) s'
+  | Stuck => s=None
+  end.
+ 
 Notation "a <[ b <- c ]>" := (assign a b c) (at level 102, right associativity).
 
 Definition trans_state (s: Asmblock.state) : state :=
@@ -673,12 +704,13 @@ Qed.
 Lemma not_eq_add:
   forall k n n', n <> n' -> k + n <> k + n'.
 Proof.
-Admitted. (* FIXME - help Sylvain ? *)
+  intros k n n' H1 H2. apply H1; clear H1. eapply Pos.add_reg_l; eauto.
+Qed.
 
 Lemma not_eq_ireg_to_pos:
   forall n r r', r' <> r -> n + ireg_to_pos r <> n + ireg_to_pos r'.
 Proof.
-  intros. destruct r; destruct r'; try contradiction; apply not_eq_add; discriminate. (* FIXME - quite long to prove *)
+  intros. destruct r; destruct r'; try contradiction; apply not_eq_add; discriminate.
 Qed.
 
 Lemma not_eq_ireg_ppos: 
@@ -1268,12 +1300,47 @@ Proof.
   - congruence.
 Qed.
 
+Theorem forward_simu_alt:
+  forall rs1 m1 s1' b ge fn,
+    Ge = Genv ge fn ->
+    match_states (State rs1 m1) s1' -> 
+    match_outcome (exec_bblock ge fn b rs1 m1) (exec Ge (trans_block b) s1').
+Proof.
+  intros until fn. intros GENV MS. destruct (exec_bblock _ _ _ _ _) eqn:EXEB.
+  - eapply forward_simu; eauto.
+  - eapply forward_simu_stuck; eauto.
+Qed.
 
-Axiom bblock_equiv_reduce: 
+Local Hint Resolve trans_state_match.
+
+Lemma bblock_equiv_reduce: 
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
   L.bblock_equiv Ge (trans_block p1) (trans_block p2) ->
-  Asmblockgenproof0.bblock_equiv ge fn p1 p2. (* FIXME *)
+  Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Proof.
+  unfold bblock_equiv, res_eq; intros p1 p2 ge fn H1 H2; constructor.
+  intros rs m.
+  generalize (H2 (trans_state (State rs m))); clear H2.
+  intro H2. 
+  exploit (forward_simu_alt rs m (trans_state (State rs m)) p1 ge fn); eauto.
+  exploit (forward_simu_alt rs m (trans_state (State rs m)) p2 ge fn); eauto.
+  remember (exec_bblock ge fn p1 rs m) as exp1.
+  destruct exp1.
+  + (* Next *) 
+    intros H3 (s2' & exp2 & MS'). unfold exec in exp2, H3. rewrite exp2 in H2.
+    destruct H2 as (m2' & H2 & H4). rewrite H2 in H3.
+    destruct (exec_bblock ge fn p2 rs m); simpl in H3.
+    * destruct H3 as (s' & H3 & H5 & H6). inv H3. inv MS'.
+      cutrewrite (rs0=rs1).
+      - cutrewrite (m0=m1); auto. congruence.
+      - apply functional_extensionality. intros r.
+        generalize (H0 r). intros Hr. congruence.
+    * discriminate.
+  + intros MO MO2. remember (trans_state (State rs m)) as s1. inversion MO2. clear MO2. unfold exec in *.
+    rewrite H0 in H2. clear H0. destruct (exec_bblock ge fn p2 rs m); auto. rewrite H2 in MO. unfold match_outcome in MO.
+    destruct MO as (? & ? & ?). discriminate.
+Qed.
 
 Definition string_of_name (x: P.R.t): ?? pstring := RET (Str ("resname")).
 (*   match x with
@@ -1297,21 +1364,20 @@ Definition string_of_op (op: P.op): ?? pstring := RET (Str ("OP")).
 
 Definition bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_eq_test string_of_name string_of_op Ge (trans_block p1) (trans_block p2)
+    IDT.verb_bblock_eq_test string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IDT.bblock_eq_test Ge (trans_block p1) (trans_block p2).
+    IDT.bblock_eq_test (trans_block p1) (trans_block p2).
 
 Local Hint Resolve IDT.bblock_eq_test_correct bblock_equiv_reduce IDT.verb_bblock_eq_test_correct: wlp.
 
 Theorem bblock_eq_test_correct verb p1 p2 :
-  forall ge fn, Ge = Genv ge fn ->
-  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
 Proof.
-  intros ge fn genv_eq.
   wlp_simplify.
-Admitted. (* FIXME - à voir avec Sylvain *)
+Qed.
 Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
+
 
 Inductive bblock_equiv' (bb bb': L.bblock) :=
   | bblock_equiv_intro':
@@ -1327,7 +1393,23 @@ Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
 
 Axiom bblock_equiv'_eq:
   forall b1 b2,
-  bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
+  bblock_equivb b1 b2 = true -> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
+
+
+(* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
+
+Import UnsafeImpure.
+
+Definition pure_bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock): bool := unsafe_coerce (bblock_eq_test verb p1 p2).
+
+Theorem pure_bblock_eq_test_correct verb p1 p2:
+  forall ge fn, Ge = Genv ge fn ->
+   pure_bblock_eq_test verb p1 p2 = true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Proof.
+   intros; unfold pure_bblock_eq_test. intros; eapply bblock_eq_test_correct; eauto.
+   apply unsafe_coerce_not_really_correct; eauto.
+Qed.
+
 
 End SECT.
 

@@ -19,7 +19,7 @@ Module Type ImpureView.
 
 *)
 
-(*
+(* *)
  Module UnsafeImpure.
 
  Parameter unsafe_coerce: forall {A}, t A -> A.
@@ -27,7 +27,7 @@ Module Type ImpureView.
  Parameter unsafe_coerce_not_really_correct: forall A (k: t A) (x:A), (unsafe_coerce k)=x -> mayRet k x. 
 
  End UnsafeImpure.
-*)
+(* *)
 
 End ImpureView.
 

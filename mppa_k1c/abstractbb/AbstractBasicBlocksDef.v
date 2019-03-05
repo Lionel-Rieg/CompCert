@@ -29,6 +29,11 @@ Parameter genv: Type. (* environment to be used for evaluating an op *)
 *)
 Parameter op_eval: genv -> op -> list value -> option value.
 
+Parameter is_constant: op -> bool.
+
+Parameter is_constant_correct: 
+  forall ge o, is_constant o = true -> op_eval ge o nil <> None.
+
 End LangParam.
 
 
