@@ -1366,7 +1366,7 @@ Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
 
 Axiom bblock_equiv'_eq:
   forall b1 b2,
-  bblock_equivb b1 b2 = true <-> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
+  bblock_equivb b1 b2 = true -> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
 
 
 (* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
