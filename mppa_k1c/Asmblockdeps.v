@@ -477,7 +477,9 @@ Proof.
 Qed.
 
 
-Definition op_eq (o1 o2: op): ?? bool :=
+Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. (* FIXME - quick hack: could be improved ? *)
+
+(*
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
   | Load i1, Load i2 => load_op_eq i1 i2
@@ -490,11 +492,13 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | Fail, Fail => RET true
   | _, _ => RET false
   end.
+*)
 
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
+(*
   - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
@@ -503,6 +507,7 @@ Proof.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - congruence.
+*)
 Qed.
 
 End IMPPARAM.
@@ -1342,25 +1347,214 @@ Proof.
     destruct MO as (? & ? & ?). discriminate.
 Qed.
 
-Definition string_of_name (x: P.R.t): ?? pstring := RET (Str ("resname")).
-(*   match x with
-  | xH => RET (Str ("the_mem"))
-  | _ as x => 
-     DO s <~ string_of_Z (Zpos (Pos.pred x)) ;;
-     RET ("R" +; s)
-  end. *)
+Definition gpreg_name (gpr: gpreg) :=
+  match gpr with
+  | GPR0 => Str ("GPR0") | GPR1 => Str ("GPR1") | GPR2 => Str ("GPR2") | GPR3 => Str ("GPR3") | GPR4 => Str ("GPR4")
+  | GPR5 => Str ("GPR5") | GPR6 => Str ("GPR6") | GPR7 => Str ("GPR7") | GPR8 => Str ("GPR8") | GPR9 => Str ("GPR9")
+  | GPR10 => Str ("GPR10") | GPR11 => Str ("GPR11") | GPR12 => Str ("GPR12") | GPR13 => Str ("GPR13") | GPR14 => Str ("GPR14")
+  | GPR15 => Str ("GPR15") | GPR16 => Str ("GPR16") | GPR17 => Str ("GPR17") | GPR18 => Str ("GPR18") | GPR19 => Str ("GPR19")
+  | GPR20 => Str ("GPR20") | GPR21 => Str ("GPR21") | GPR22 => Str ("GPR22") | GPR23 => Str ("GPR23") | GPR24 => Str ("GPR24")
+  | GPR25 => Str ("GPR25") | GPR26 => Str ("GPR26") | GPR27 => Str ("GPR27") | GPR28 => Str ("GPR28") | GPR29 => Str ("GPR29")
+  | GPR30 => Str ("GPR30") | GPR31 => Str ("GPR31") | GPR32 => Str ("GPR32") | GPR33 => Str ("GPR33") | GPR34 => Str ("GPR34")
+  | GPR35 => Str ("GPR35") | GPR36 => Str ("GPR36") | GPR37 => Str ("GPR37") | GPR38 => Str ("GPR38") | GPR39 => Str ("GPR39")
+  | GPR40 => Str ("GPR40") | GPR41 => Str ("GPR41") | GPR42 => Str ("GPR42") | GPR43 => Str ("GPR43") | GPR44 => Str ("GPR44")
+  | GPR45 => Str ("GPR45") | GPR46 => Str ("GPR46") | GPR47 => Str ("GPR47") | GPR48 => Str ("GPR48") | GPR49 => Str ("GPR49")
+  | GPR50 => Str ("GPR50") | GPR51 => Str ("GPR51") | GPR52 => Str ("GPR52") | GPR53 => Str ("GPR53") | GPR54 => Str ("GPR54")
+  | GPR55 => Str ("GPR55") | GPR56 => Str ("GPR56") | GPR57 => Str ("GPR57") | GPR58 => Str ("GPR58") | GPR59 => Str ("GPR59")
+  | GPR60 => Str ("GPR60") | GPR61 => Str ("GPR61") | GPR62 => Str ("GPR62") | GPR63 => Str ("GPR63")
+  end.
 
-Definition string_of_op (op: P.op): ?? pstring := RET (Str ("OP")).
-(*   match op with
-  | P.Imm i => 
-     DO s <~ string_of_Z i ;;
-     RET s
-  | P.ARITH ADD => RET (Str "ADD")
-  | P.ARITH SUB => RET (Str "SUB")
-  | P.ARITH MUL => RET (Str "MUL")
-  | P.LOAD => RET (Str "LOAD")
-  | P.STORE => RET (Str "STORE")
-  end. *)
+Definition string_of_name (x: P.R.t): ?? pstring := 
+  if (Pos.eqb x pmem) then 
+    RET (Str "MEM")
+  else
+    match inv_ppos x with
+         | Some RA => RET (Str ("RA"))
+         | Some PC => RET (Str ("PC"))
+         | Some (IR gpr) => RET (gpreg_name gpr)
+         | _ => RET (Str ("UNDEFINED"))
+    end.
+
+Definition string_of_name_r (n: arith_name_r): pstring :=
+  match n with
+  | Ploadsymbol _ _ => "Ploadsymbol"
+  end.
+
+Definition string_of_name_rr (n: arith_name_rr): pstring :=
+  match n with
+    Pmv => "Pmv"
+  | Pnegw => "Pnegw"
+  | Pnegl => "Pnegl"
+  | Pcvtl2w => "Pcvtl2w"
+  | Psxwd => "Psxwd"
+  | Pzxwd => "Pzxwd"
+  | Pfabsd => "Pfabsd"
+  | Pfabsw => "Pfabsw"
+  | Pfnegd => "Pfnegd"
+  | Pfnegw => "Pfnegw"
+  | Pfnarrowdw => "Pfnarrowdw"
+  | Pfwidenlwd => "Pfwidenlwd"
+  | Pfloatwrnsz => "Pfloatwrnsz"
+  | Pfloatuwrnsz => "Pfloatuwrnsz"
+  | Pfloatudrnsz => "Pfloatudrnsz"
+  | Pfloatudrnsz_i32 => "Pfloatudrnsz_i32"
+  | Pfloatdrnsz => "Pfloatdrnsz"
+  | Pfloatdrnsz_i32 => "Pfloatdrnsz_i32"
+  | Pfixedwrzz => "Pfixedwrzz"
+  | Pfixeduwrzz => "Pfixeduwrzz"
+  | Pfixeddrzz => "Pfixeddrzz"
+  | Pfixedudrzz => "Pfixedudrzz"
+  | Pfixeddrzz_i32 => "Pfixeddrzz_i32"
+  | Pfixedudrzz_i32 => "Pfixedudrzz_i32"
+  end.
+
+Definition string_of_name_ri32 (n: arith_name_ri32): pstring :=
+  match n with
+  | Pmake => "Pmake"
+  end.
+
+Definition string_of_name_ri64 (n: arith_name_ri64): pstring :=
+  match n with
+  | Pmakel => "Pmakel"
+  end.
+
+Definition string_of_name_rf32 (n: arith_name_rf32): pstring :=
+  match n with
+  | Pmakefs => "Pmakefs"
+  end.
+
+Definition string_of_name_rf64 (n: arith_name_rf64): pstring :=
+  match n with
+  | Pmakef => "Pmakef"
+  end.
+
+Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
+  match n with
+    Pcompw _ => "Pcompw"
+  | Pcompl _ => "Pcompl"
+  | Pfcompw _ => "Pfcompw"
+  | Pfcompl _ => "Pfcompl"
+  | Paddw => "Paddw"
+  | Psubw => "Psubw"
+  | Pmulw => "Pmulw"
+  | Pandw => "Pandw"
+  | Porw => "Porw"
+  | Pxorw => "Pxorw"
+  | Psraw => "Psraw"
+  | Psrlw => "Psrlw"
+  | Psllw => "Psllw"
+  | Paddl => "Paddl"
+  | Psubl => "Psubl"
+  | Pandl => "Pandl"
+  | Porl => "Porl"
+  | Pxorl => "Pxorl"
+  | Pmull => "Pmull"
+  | Pslll => "Pslll"
+  | Psrll => "Psrll"
+  | Psral => "Psral"
+  | Pfaddd => "Pfaddd"
+  | Pfaddw => "Pfaddw"
+  | Pfsbfd => "Pfsbfd"
+  | Pfsbfw => "Pfsbfw"
+  | Pfmuld => "Pfmuld"
+  | Pfmulw => "Pfmulw"
+  end.
+
+Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
+  match n with
+    Pcompiw _ => "Pcompiw"
+  | Paddiw => "Paddiw"
+  | Pandiw => "Pandiw"
+  | Poriw => "Poriw"
+  | Pxoriw => "Pxoriw"
+  | Psraiw => "Psraiw"
+  | Psrliw => "Psrliw"
+  | Pslliw => "Pslliw"
+  | Psllil => "Psllil"
+  | Psrlil => "Psrlil"
+  | Psrail => "Psrail"
+  end.
+
+Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
+  match n with
+    Pcompil _ => "Pcompil"
+  | Paddil => "Paddil"
+  | Pandil => "Pandil"
+  | Poril => "Poril"
+  | Pxoril => "Pxoril"
+  end.
+
+Definition string_of_arith (op: arith_op): pstring :=
+  match op with
+  | OArithR n => string_of_name_r n
+  | OArithRR n => string_of_name_rr n
+  | OArithRI32 n _ => string_of_name_ri32 n
+  | OArithRI64 n _ => string_of_name_ri64 n
+  | OArithRF32 n _ => string_of_name_rf32 n
+  | OArithRF64 n _ => string_of_name_rf64 n
+  | OArithRRR n => string_of_name_rrr n
+  | OArithRRI32 n _ => string_of_name_rri32 n
+  | OArithRRI64 n _ => string_of_name_rri64 n
+  end.
+
+Definition string_of_name_lrro (n: load_name_rro) : pstring :=
+  match n with
+    Plb => "Plb"
+  | Plbu => "Plbu"
+  | Plh => "Plh"
+  | Plhu => "Plhu"
+  | Plw => "Plw"
+  | Plw_a => "Plw_a"
+  | Pld => "Pld"
+  | Pld_a => "Pld_a"
+  | Pfls => "Pfls"
+  | Pfld => "Pfld"
+  end.
+
+Definition string_of_load (op: load_op): pstring :=
+  match op with
+  | OLoadRRO n _ => string_of_name_lrro n
+  end.
+
+Definition string_of_name_srro (n: store_name_rro) : pstring :=
+  match n with
+    Psb => "Psb"
+  | Psh => "Psh"
+  | Psw => "Psw"
+  | Psw_a => "Psw_a"
+  | Psd => "Psd"
+  | Psd_a => "Psd_a"
+  | Pfss => "Pfss"
+  | Pfsd => "Pfsd"
+  end.
+
+Definition string_of_store (op: store_op) : pstring :=
+  match op with
+  | OStoreRRO n _ => string_of_name_srro n
+  end.
+
+Definition string_of_control (op: control_op) : pstring :=
+  match op with
+  | Oj_l _ => "Oj_l"
+  | Ocb _ _ => "Ocb"
+  | Ocbu _ _ => "Ocbu"
+  | OError => "OError"
+  | OIncremPC _ => "OIncremPC"
+  end.
+
+Definition string_of_op (op: P.op): ?? pstring := 
+  match op with
+  | Arith op => RET (string_of_arith op)
+  | Load op => RET (string_of_load op)
+  | Store op => RET (string_of_store op)
+  | Control op => RET (string_of_control op)
+  | Allocframe _ _ => RET (Str "Allocframe")
+  | Allocframe2 _ _ => RET (Str "Allocframe2")
+  | Freeframe _ _ => RET (Str "Freeframe")
+  | Freeframe2 _ _ => RET (Str "Freeframe2")
+  | Constant _ => RET (Str "Constant")
+  | Fail => RET (Str "Fail")
+  end.
 
 Definition bblock_eq_test (verb: bool) (p1 p2: Asmblock.bblock) : ?? bool :=
   if verb then

@@ -82,6 +82,10 @@ Export PhysEqModel.
 Extract Constant phys_eq => "(==)".
 Hint Resolve phys_eq_correct: wlp.
 
+Axiom struct_eq: forall {A}, A -> A -> ?? bool.
+Axiom struct_eq_correct: forall A (x y:A), WHEN struct_eq x y ~> b THEN b=true -> x=y.
+Extract Constant struct_eq => "(=)".
+Hint Resolve struct_eq_correct: wlp.
 
 
 (** Data-structure for generic hash-consing *)
