@@ -6,8 +6,10 @@ These oracles assumes the following extraction directives:
 *)
 
 open ImpPrelude
+(*
 open BinNums
 open Datatypes
+*)
 
 (* two auxiliary functions, for efficient mapping of "int" to "BinNums.positive" *)
 exception Overflow
@@ -52,12 +54,13 @@ let memo_int2pos: int -> int -> BinNums.positive
           pi
      in find;;
            
-  
+(* 
 let string_coq2caml: char list -> string
   = fun l ->
     let buf = Buffer.create (List.length l) in
     List.iter (fun c -> Buffer.add_char buf c) l;
     Buffer.contents buf;;
+*)
 
 let new_exit_observer: (unit -> unit) -> (unit -> unit) ref
   = fun f ->
@@ -120,16 +123,18 @@ let zTr: BinNums.coq_Z -> int
 let ten = BinNums.Zpos (BinNums.Coq_xO (BinNums.Coq_xI (BinNums.Coq_xO BinNums.Coq_xH)))
 
 let rec string_of_pos (p:BinNums.positive) (acc: pstring): pstring
-= let (q,r) = BinIntDef.Z.pos_div_eucl p ten in       
+= let (q,r) = BinInt.Z.pos_div_eucl p ten in       
   let acc0 = Concat (CamlStr (string_of_int (zTr r)), acc) in    
   match q with
   | BinNums.Z0 -> acc0
   | BinNums.Zpos p0 -> string_of_pos p0 acc0
   | _ -> assert false
 
+(*
 let string_of_Z_debug: BinNums.coq_Z -> pstring
 = fun p -> CamlStr (string_of_int (zTr p))
-
+*)
+     
 let string_of_Z: BinNums.coq_Z -> pstring
 = function
   | BinNums.Z0 -> CamlStr "0"
