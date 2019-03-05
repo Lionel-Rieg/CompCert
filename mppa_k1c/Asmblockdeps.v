@@ -477,7 +477,9 @@ Proof.
 Qed.
 
 
-Definition op_eq (o1 o2: op): ?? bool :=
+Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. (* FIXME - quick hack: could be improved ? *)
+
+(*
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
   | Load i1, Load i2 => load_op_eq i1 i2
@@ -490,11 +492,13 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | Fail, Fail => RET true
   | _, _ => RET false
   end.
+*)
 
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
+(*
   - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
@@ -503,6 +507,7 @@ Proof.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - congruence.
+*)
 Qed.
 
 End IMPPARAM.
