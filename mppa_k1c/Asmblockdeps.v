@@ -1375,26 +1375,7 @@ Theorem bblock_eq_test_correct verb p1 p2 :
 Proof.
   wlp_simplify.
 Qed.
-Global Opaque bblock_eq_test.
 Hint Resolve bblock_eq_test_correct: wlp.
-
-
-Inductive bblock_equiv' (bb bb': L.bblock) :=
-  | bblock_equiv_intro':
-    (forall s, exec Ge bb s = exec Ge bb' s) ->
-    bblock_equiv' bb bb'.
-
-Lemma bblock_equiv'_refl: forall tbb, bblock_equiv' tbb tbb.
-Proof.
-  repeat constructor.
-Qed.
-
-Axiom bblock_equivb: L.bblock -> L.bblock -> bool.
-
-Axiom bblock_equiv'_eq:
-  forall b1 b2,
-  bblock_equivb b1 b2 = true -> bblock_equiv' b1 b2. (* FIXME - à voir avec Sylvain *)
-
 
 (* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
 
@@ -1410,7 +1391,8 @@ Proof.
    apply unsafe_coerce_not_really_correct; eauto.
 Qed.
 
+Definition bblock_equivb: Asmblock.bblock -> Asmblock.bblock -> bool := pure_bblock_eq_test true.
+
+Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT.
-
-Extract Constant bblock_equivb => "PostpassSchedulingOracle.bblock_equivb'".

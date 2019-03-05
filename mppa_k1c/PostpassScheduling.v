@@ -31,54 +31,6 @@ Definition exec' := L.run.
 
 Definition exec := exec_bblock.
 
-Definition bblock_equivb' := bblock_equivb.
-
-Lemma trans_equiv_stuck:
-  forall b1 b2 ge fn rs m,
-  bblock_equiv' (P.Genv ge fn) (trans_block b1) (trans_block b2) ->
-  (exec ge fn b1 rs m = Stuck <-> exec ge fn b2 rs m = Stuck).
-Proof.
-  intros. inv H.
-  pose (trans_state_match (State rs m)).
-  split.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite H0 in H. eapply trans_block_reverse_stuck.
-      reflexivity. eassumption. eassumption.
-  - intros. eapply forward_simu_stuck in H; eauto. rewrite <- H0 in H. eapply trans_block_reverse_stuck.
-      reflexivity. eassumption. eassumption.
-Qed.
-
-Lemma bblock_equiv'_comm:
-  forall ge fn b1 b2,
-  bblock_equiv' (P.Genv ge fn) b1 b2 <-> bblock_equiv' (P.Genv ge fn) b2 b1.
-Proof.
-  intros. repeat constructor. all: inv H; congruence.
-Qed.
-
-Theorem trans_exec:
-  forall b1 b2 ge f, bblock_equiv' (P.Genv ge f) (trans_block b1) (trans_block b2) -> bblock_equiv ge f b1 b2.
-Proof.
-  repeat constructor. intros rs1 m1.
-  destruct (exec_bblock _ _ b1 _ _) as [rs2 m2|] eqn:EXEB; destruct (exec_bblock _ _ b2 _ _) as [rs3 m3|] eqn:EXEB2; auto.
-  - pose (trans_state_match (State rs1 m1)).
-    exploit forward_simu.
-      reflexivity.
-      eapply EXEB.
-      eapply m.
-    intros (s2' & EXEB' & MS).
-    exploit forward_simu.
-      reflexivity.
-      eapply EXEB2.
-      eapply m.
-    intros (s3' & EXEB'2 & MS2). inv H.
-    rewrite H0 in EXEB'. rewrite EXEB'2 in EXEB'. inv EXEB'.
-    exploit (state_equiv (State rs2 m2) (State rs3 m3) s2'). eauto.
-    congruence.
-  - rewrite trans_equiv_stuck in EXEB2. 2: eapply bblock_equiv'_comm; eauto. unfold exec in EXEB2. rewrite EXEB2 in EXEB. discriminate.
-  - rewrite trans_equiv_stuck in EXEB; eauto. unfold exec in EXEB. rewrite EXEB in EXEB2. discriminate.
-Qed.
-
-
-
 (* Lemmas necessary for defining concat_all *)
 Lemma app_nonil {A: Type} (l l': list A) : l <> nil -> l ++ l' <> nil.
 Proof.
@@ -257,7 +209,7 @@ Qed.
 
 
 Definition verify_schedule (bb bb' : bblock) : res unit :=
-  match (bblock_equivb' (trans_block bb) (trans_block bb')) with
+  match (bblock_equivb bb bb') with
   | true => OK tt
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
@@ -276,7 +228,8 @@ Lemma verify_schedule_no_header:
   forall bb bb',
   verify_schedule (no_header bb) bb' = verify_schedule bb bb'.
 Proof.
-  intros. unfold verify_schedule. rewrite trans_block_noheader_inv. reflexivity.
+  intros. unfold verify_schedule. unfold bblock_equivb. unfold pure_bblock_eq_test. unfold bblock_eq_test. rewrite trans_block_noheader_inv.
+  reflexivity.
 Qed.
 
 
@@ -285,7 +238,8 @@ Lemma stick_header_verify_schedule:
   stick_header hd bb' = hbb' ->
   verify_schedule bb bb' = verify_schedule bb hbb'.
 Proof.
-  intros. unfold verify_schedule. rewrite <- H. rewrite trans_block_header_inv. reflexivity.
+  intros. unfold verify_schedule. unfold bblock_equivb. unfold pure_bblock_eq_test. unfold bblock_eq_test.
+  rewrite <- H. rewrite trans_block_header_inv. reflexivity.
 Qed.
 
 Lemma check_size_stick_header:
@@ -468,8 +422,8 @@ Proof.
   intros (tbb & CONC & STH).
   exists tbb. split; auto.
   rewrite verify_schedule_no_header in EQ0. erewrite stick_header_verify_schedule in EQ0; eauto.
-  apply trans_exec. apply bblock_equiv'_eq. unfold verify_schedule in EQ0. unfold bblock_equivb' in EQ0.
-  destruct (bblock_equivb _ _); auto; try discriminate.
+  eapply bblock_equiv_eq; eauto. unfold verify_schedule in EQ0. unfold bblock_equivb in EQ0.
+  destruct (pure_bblock_eq_test true _ _); auto; try discriminate.
 Qed.
 
 Theorem verified_schedule_correct:
