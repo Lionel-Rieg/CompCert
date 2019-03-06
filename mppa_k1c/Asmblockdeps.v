@@ -461,7 +461,7 @@ Definition control_op_eq (c1 c2: control_op): ?? bool :=
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
   | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
   | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
-  | OIncremPC sz1, OIncremPC sz2 => phys_eq sz1 sz2
+  | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
   | OError, OError => RET true
   | _, _ => RET false
   end.
@@ -473,13 +473,11 @@ Proof.
   - congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - congruence.
+  - rewrite Z.eqb_eq in * |-. congruence.
 Qed.
 
-
-Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. (* FIXME - quick hack: could be improved ? *)
-
 (*
+Definition op_eq (o1 o2: op): ?? bool :=
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
   | Load i1, Load i2 => load_op_eq i1 i2
@@ -492,13 +490,12 @@ Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. (* FIXME - quick hack:
   | Fail, Fail => RET true
   | _, _ => RET false
   end.
-*)
+
 
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-(*
   - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
@@ -507,7 +504,17 @@ Proof.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - congruence.
+Qed.
 *)
+
+(* QUICK FIX WITH struct_eq *)
+
+Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
+
+Theorem op_eq_correct o1 o2: 
+ WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
+Proof.
+  wlp_simplify.
 Qed.
 
 End IMPPARAM.
