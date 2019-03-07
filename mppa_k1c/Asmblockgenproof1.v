@@ -374,7 +374,7 @@ Lemma transl_compu_correct:
   exists rs',
      exec_straight ge (transl_comp cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
-  /\ (Val_cmpu_bool (*Mem.valid_pointer m*) cmp rs#r1 rs#r2 = Some b ->
+  /\ (Val_cmpu_bool cmp rs#r1 rs#r2 = Some b ->
        exec_control ge fn (Some (PCtlFlow ((Pcb BTwnez RTMP lbl)))) (nextblock tbb rs') m
         = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
@@ -390,7 +390,7 @@ Proof.
       assert ((nextblock tbb rs') # RTMP = (compare_int (itest_for_cmp cmp Unsigned) rs # r1 rs # r2)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
-      remember (Val_cmpu_bool (*Mem.valid_pointer m*) cmp rs#r1 rs#r2) as cmpubool.
+      remember (Val_cmpu_bool cmp rs#r1 rs#r2) as cmpubool.
       destruct cmp; simpl; unfold Val_cmpu;
         rewrite <- Heqcmpubool; destruct cmpubool; simpl; auto;
       destruct b0; simpl; auto.
@@ -413,16 +413,16 @@ Proof.
 - split.
   + intros; Simpl.
   + intros.
-    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)) as rs'.
+    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2)) as rs'.
     simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
     { 
-      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmpl_bool cmp rs#r1 rs#r2) as cmpbool.
       destruct cmp; simpl;
-      unfold compare_long;
-      unfold Val.cmpl; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      unfold compare_long, Val.cmpl;
+      rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
       destruct b0; simpl; auto.
     }
     rewrite H0. simpl; auto.
@@ -433,7 +433,7 @@ Lemma transl_complu_correct:
   exists rs',
      exec_straight ge (transl_compl cmp Unsigned r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
-  /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2 = Some b ->
+  /\ ( Val_cmplu_bool cmp rs#r1 rs#r2 = Some b ->
        exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
         = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
@@ -443,16 +443,15 @@ Proof.
 - split.
   + intros; Simpl.
   + intros.
-    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)) as rs'.
+    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2)) as rs'.
     simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
     { 
-      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2 m)).
+      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Unsigned) rs # r1 rs # r2)).
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
-      remember (Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 rs#r2) as cmpbool.
+      remember (Val_cmplu_bool cmp rs#r1 rs#r2) as cmpbool.
       destruct cmp; simpl;
-      unfold compare_long;
-      unfold Val.cmplu; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      unfold compare_long, Val_cmplu; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
       destruct b0; simpl; auto.
     }
     rewrite H0. simpl; auto.
@@ -608,7 +607,7 @@ Proof.
     destruct cmp; discriminate.
 Qed.
 
-Local Hint Resolve Val_cmpu_bool_correct.
+Local Hint Resolve Val_cmpu_bool_correct Val_cmplu_bool_correct.
 
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m' tbb,
@@ -701,7 +700,7 @@ Proof.
   exists rs', (Pcb BTwnez RTMP lbl).
   split.
   + constructor. eexact A.
-  + split; auto. apply C; auto.
+  + split; auto. apply C; eauto.
 (* Ccomplimm *)
 - remember (Int64.eq n Int64.zero) as eqz.
   destruct eqz.
@@ -862,12 +861,12 @@ Lemma transl_cond_int64u_correct:
   forall cmp rd r1 r2 k rs m,
   exists rs',
      exec_straight ge (basics_to_code (transl_cond_int64u cmp rd r1 r2 k)) rs m (basics_to_code k) rs' m
-  /\ rs'#rd = Val.maketotal (Val.cmplu (Mem.valid_pointer m) cmp rs#r1 rs#r2)
+  /\ rs'#rd = Val_cmplu cmp rs#r1 rs#r2
   /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r. 
 Proof.
   intros. destruct cmp; simpl. 
 - econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
+  split; intros; Simpl. 
 - econstructor; split. apply exec_straight_one; [simpl; eauto].
   split; intros; Simpl.
 - econstructor; split. apply exec_straight_one; [simpl; eauto].
@@ -903,7 +902,7 @@ Proof.
   split; intros; Simpl.
 Qed.
 
-Local Hint Resolve Val_cmpu_correct.
+Local Hint Resolve Val_cmpu_correct Val_cmplu_correct.
 
 Lemma transl_condimm_int32u_correct:
   forall cmp rd r1 n k rs m,
@@ -959,19 +958,10 @@ Lemma transl_condimm_int64u_correct:
   /\ Val.lessdef (Val.maketotal (Val.cmplu (Mem.valid_pointer m) cmp rs#r1 (Vlong n))) rs'#rd
   /\ forall r, r <> PC -> r <> rd -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros. destruct cmp; simpl. 
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
-  split; intros; Simpl.
+  intros. destruct cmp; simpl;
+  (econstructor; split; 
+  [ apply exec_straight_one; [simpl; eauto] | 
+    split; intros; Simpl; unfold compare_long; eauto]).
 Qed.
 
 Lemma swap_comparison_cmpfs:
@@ -1000,7 +990,8 @@ Proof.
   split; intros; Simpl. apply swap_comparison_cmpfs.
 - econstructor; split. apply exec_straight_one; [simpl; eauto].
   split; intros; Simpl. apply swap_comparison_cmpfs.
-- econstructor; split. apply exec_straight_one; [simpl; eauto].
+- econstructor; split. apply exec_straight_one; [simpl;
+ eauto].
   split; intros; Simpl.
 Qed.
 
@@ -1133,6 +1124,7 @@ Proof.
 + (* cmplu *)
   exploit transl_cond_int64u_correct; eauto. simpl. intros (rs' & A & B & C).
   exists rs'; repeat split; eauto. rewrite B, MKTOT; eauto.
+  eapply Val_cmplu_correct.
 + (* cmplimm *)
   exploit transl_condimm_int64s_correct; eauto. instantiate (1 := x); eauto with asmgen. simpl. 
   intros (rs' & A & B & C).

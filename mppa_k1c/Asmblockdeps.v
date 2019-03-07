@@ -154,7 +154,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | OArithRRR n, [Val v1; Val v2; Memstate m] =>
       match n with
       | Pcompw c => Some (Val (compare_int c v1 v2))
-      | Pcompl c => Some (Val (compare_long c v1 v2 m))
+      | Pcompl c => Some (Val (compare_long c v1 v2))
       | _ => None
       end
 
@@ -193,14 +193,9 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
       | _ => None
       end
 
-  | OArithRRI32 n i, [Val v; Memstate m] =>
-      match n with
-      | Pcompiw c => Some (Val (compare_int c v (Vint i)))
-      | _ => None
-      end
-
   | OArithRRI32 n i, [Val v] =>
       match n with
+      | Pcompiw c => Some (Val (compare_int c v (Vint i)))
       | Paddiw  => Some (Val (Val.add   v (Vint i)))
       | Pandiw  => Some (Val (Val.and   v (Vint i)))
       | Poriw   => Some (Val (Val.or    v (Vint i)))
@@ -211,22 +206,15 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
       | Psllil  => Some (Val (Val.shll  v (Vint i)))
       | Psrlil  => Some (Val (Val.shrlu v (Vint i)))
       | Psrail  => Some (Val (Val.shrl  v (Vint i)))
-      | _ => None
-      end
-
-  | OArithRRI64 n i, [Val v; Memstate m] =>
-      match n with
-      | Pcompil c => Some (Val (compare_long c v (Vlong i) m))
-      | _ => None
       end
 
   | OArithRRI64 n i, [Val v] =>
       match n with
+      | Pcompil c => Some (Val (compare_long c v (Vlong i)))
       | Paddil  => Some (Val (Val.addl v (Vlong i)))
       | Pandil  => Some (Val (Val.andl v (Vlong i)))
       | Poril   => Some (Val (Val.orl  v (Vlong i)))
       | Pxoril  => Some (Val (Val.xorl  v (Vlong i)))
-      | _ => None
       end
 
   | _, _ => None
@@ -796,7 +784,7 @@ Qed.
 
 Lemma trans_arith_correct:
   forall ge fn i rs m rs' s,
-  exec_arith_instr ge i rs m = rs' ->
+  exec_arith_instr ge i rs = rs' ->
   match_states (State rs m) s ->
   exists s',
      macro_run (Genv ge fn) (trans_arith i) s s = Some s'
@@ -851,9 +839,11 @@ Proof.
       destruct (ireg_eq g rd); subst; Simpl ].
 (* PArithRRI32 *)
   - destruct i.
+Admitted.
+(* FIXME: A FINIR
     all: inv H; inv H0;
     eexists; split; try split;
-    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); reflexivity
+    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); auto
     | Simpl
     | intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
@@ -866,6 +856,7 @@ Proof.
     | intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
 Qed.
+*)
 
 Lemma forward_simu_basic:
   forall ge fn b rs m rs' m' s,

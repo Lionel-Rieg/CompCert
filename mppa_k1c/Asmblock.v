@@ -902,26 +902,56 @@ Definition cmpu_for_btest (bt: btest) :=
   | _ => (None, Int)
   end.
 
-(* FIXME: move these axioms and definitions in a separate file (e.g. PatchMemoryModel). *)
-Axiom Val_cmpu_bool: comparison -> val -> val -> option bool.
+(* FIXME: put this stuff related to the memory model in a distinct module *)
+(* FIXME: currently, only deal with the special case with Archi.ptr64 = true *)
+Definition Val_cmpu_bool c v1 v2: option bool :=
+  match v1, v2 with
+  | Vint n1, Vint n2 => Some (Int.cmpu c n1 n2)
+  | _, _ => None
+  end.
 
-Axiom Val_cmpu_bool_correct: forall (m:mem) (cmp: comparison) (v1 v2: val) b,
+Lemma Val_cmpu_bool_correct (m:mem) (cmp: comparison) (v1 v2: val) b:
    (Val.cmpu_bool (Mem.valid_pointer m) cmp v1 v2) = Some b
    -> (Val_cmpu_bool cmp v1 v2) = Some b.
+Proof.
+  unfold Val.cmpu_bool, Val_cmpu_bool. 
+  destruct v1, v2; try congruence; vm_compute; try congruence.
+Qed.
 
 Definition Val_cmpu cmp v1 v2 := Val.of_optbool (Val_cmpu_bool cmp v1 v2).
 
-Lemma Val_cmpu_correct: forall (m:mem) (cmp: comparison) (v1 v2: val),
+Lemma Val_cmpu_correct (m:mem) (cmp: comparison) (v1 v2: val):
    Val.lessdef (Val.cmpu (Mem.valid_pointer m) cmp v1 v2)
                (Val_cmpu cmp v1 v2).
 Proof.
-  intros; unfold Val.cmpu, Val_cmpu.
+  unfold Val.cmpu, Val_cmpu.
   remember (Val.cmpu_bool (Mem.valid_pointer m) cmp v1 v2) as ob.
   destruct ob; simpl.
   - erewrite Val_cmpu_bool_correct; eauto.
     econstructor.
   - econstructor.
 Qed.
+
+Axiom Val_cmplu_bool: forall (cmp: comparison) (v1 v2: val), option bool.
+
+Axiom Val_cmplu_bool_correct: forall (m:mem) (cmp: comparison) (v1 v2: val) b,
+   (Val.cmplu_bool (Mem.valid_pointer m) cmp v1 v2) = Some b
+   -> (Val_cmplu_bool cmp v1 v2) = Some b.
+
+Definition Val_cmplu cmp v1 v2 := Val.of_optbool (Val_cmplu_bool cmp v1 v2).
+
+Lemma Val_cmplu_correct (m:mem) (cmp: comparison) (v1 v2: val):
+   Val.lessdef (Val.maketotal (Val.cmplu (Mem.valid_pointer m) cmp v1 v2))
+               (Val_cmplu cmp v1 v2).
+Proof.
+  unfold Val.cmplu, Val_cmplu.
+  remember (Val.cmplu_bool (Mem.valid_pointer m) cmp v1 v2) as ob.
+  destruct ob as [b|]; simpl.
+  - erewrite Val_cmplu_bool_correct; eauto.
+    simpl. econstructor.
+  - econstructor.
+Qed.
+
 
 (** Comparing integers *)
 Definition compare_int (t: itest) (v1 v2: val): val :=
@@ -944,7 +974,7 @@ Definition compare_int (t: itest) (v1 v2: val): val :=
   | ITnone => Vundef
   end.
 
-Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
+Definition compare_long (t: itest) (v1 v2: val): val :=
   let res := match t with
   | ITne  => Val.cmpl Cne v1 v2
   | ITeq  => Val.cmpl Ceq v1 v2
@@ -952,12 +982,12 @@ Definition compare_long (t: itest) (v1 v2: val) (m: mem): val :=
   | ITge  => Val.cmpl Cge v1 v2
   | ITle  => Val.cmpl Cle v1 v2
   | ITgt  => Val.cmpl Cgt v1 v2
-  | ITneu => Val.cmplu (Mem.valid_pointer m) Cne v1 v2
-  | ITequ => Val.cmplu (Mem.valid_pointer m) Ceq v1 v2
-  | ITltu => Val.cmplu (Mem.valid_pointer m) Clt v1 v2
-  | ITgeu => Val.cmplu (Mem.valid_pointer m) Cge v1 v2
-  | ITleu => Val.cmplu (Mem.valid_pointer m) Cle v1 v2
-  | ITgtu => Val.cmplu (Mem.valid_pointer m) Cgt v1 v2
+  | ITneu => Some (Val_cmplu Cne v1 v2)
+  | ITequ => Some (Val_cmplu Ceq v1 v2)
+  | ITltu => Some (Val_cmplu Clt v1 v2)
+  | ITgeu => Some (Val_cmplu Cge v1 v2)
+  | ITleu => Some (Val_cmplu Cle v1 v2)
+  | ITgtu => Some (Val_cmplu Cgt v1 v2)
   | ITall
   | ITnall
   | ITany
@@ -995,14 +1025,12 @@ Definition compare_float (t: ftest) (v1 v2: val): val :=
 
 TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
 
-FIXME: replace parameter "m" by a function corresponding to the resul of "(Mem.valid_pointer m)"
-
 *)
 
 Variable ge: genv.
 
 
-Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset :=
+Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   match ai with
   | PArithR n d =>
       match n with
@@ -1060,7 +1088,7 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
   | PArithRRR n d s1 s2 =>
       match n with
       | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2)
-      | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2 m)
+      | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2)
       | Pfcompw c => rs#d <- (compare_single c rs#s1 rs#s2)
       | Pfcompl c => rs#d <- (compare_float c rs#s1 rs#s2)
       | Paddw  => rs#d <- (Val.add  rs#s1 rs#s2)
@@ -1108,7 +1136,7 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
 
   | PArithRRI64 n d s i =>
       match n with
-      | Pcompil c => rs#d <- (compare_long c rs#s (Vlong i) m)
+      | Pcompil c => rs#d <- (compare_long c rs#s (Vlong i))
       | Paddil  => rs#d <- (Val.addl rs#s (Vlong i))
       | Pandil  => rs#d <- (Val.andl rs#s (Vlong i))
       | Poril   => rs#d <- (Val.orl  rs#s (Vlong i))
@@ -1156,7 +1184,7 @@ Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
 
 Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :=
  match bi with
- | PArith ai => Next (exec_arith_instr ai rs m) m
+ | PArith ai => Next (exec_arith_instr ai rs) m
 
  | PLoadRRO n d a ofs =>
       match n with
