@@ -135,9 +135,15 @@ let load_str = function
 let set_str = "Pset"
 let get_str = "Pget"
 
-let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
+let arith_rri32_rec i rd rs imm32 = 
+  match i with
+  | Pcompiw _ -> { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs; Mem]; imm = imm32; is_control = false }
+  | _ -> { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
 
-let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
+let arith_rri64_rec i rd rs imm64 =
+  match i with
+  | Pcompil _ -> { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs; Mem]; imm = imm64; is_control = false } 
+  | _ -> { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
 
 let arith_rrr_rec i rd rs1 rs2 =  (* FIXME - hack for memory problem with Pcompw and Pcompl, performance decreased *)
   match i with
