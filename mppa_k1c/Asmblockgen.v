@@ -190,14 +190,29 @@ Definition transl_opt_compluimm
     loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
   .
 
-(*   match select_compl n c with
-  | Some Ceq => Pcbu BTdeqz r1 lbl ::g k
-  | Some Cne => Pcbu BTdnez r1 lbl ::g k
-  | Some _   => nil (* Never happens *)
-  | None     => loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
-  end
-  .
- *)
+Definition transl_comp_float32 (cmp: comparison) (r1 r2: ireg) (lbl: label) (k: code) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft GPR32 r1 r2 ::g Pcb BTwnez GPR32 lbl ::g k
+  | Reversed ft => Pfcompw ft GPR32 r2 r1 ::g Pcb BTwnez GPR32 lbl ::g k
+  end.
+
+Definition transl_comp_notfloat32 (cmp: comparison) (r1 r2: ireg) (lbl: label) (k: code) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompw ft GPR32 r1 r2 ::g Pcb BTwnez GPR32 lbl ::g k
+  | Reversed ft => Pfcompw ft GPR32 r2 r1 ::g Pcb BTwnez GPR32 lbl ::g k
+  end.
+
+Definition transl_comp_float64 (cmp: comparison) (r1 r2: ireg) (lbl: label) (k: code) :=
+  match ftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft GPR32 r1 r2 ::g Pcb BTwnez GPR32 lbl ::g k
+  | Reversed ft => Pfcompl ft GPR32 r2 r1 ::g Pcb BTwnez GPR32 lbl ::g k
+  end.
+
+Definition transl_comp_notfloat64 (cmp: comparison) (r1 r2: ireg) (lbl: label) (k: code) :=
+  match notftest_for_cmp cmp with
+  | Normal ft => Pfcompl ft GPR32 r1 r2 ::g Pcb BTwnez GPR32 lbl ::g k
+  | Reversed ft => Pfcompl ft GPR32 r2 r1 ::g Pcb BTwnez GPR32 lbl ::g k
+  end.
 
 Definition transl_cbranch
     (cond: condition) (args: list mreg) (lbl: label) (k: code) : res (list instruction ) :=
@@ -234,23 +249,19 @@ Definition transl_cbranch
           else
             loadimm64 RTMP n ::g (transl_compl c Signed r1 RTMP lbl k)
          )
-(*| Ccompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompf c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_float c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-  | Ccompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then k else Pxoriw rd rd Int.one :: k)
-  | Cnotcompfs c, f1 :: f2 :: nil =>
-      do r1 <- freg_of f1; do r2 <- freg_of f2;
-      let (insn, normal) := transl_cond_single c rd r1 r2 in
-      OK (insn :: if normal then Pxoriw rd rd Int.one :: k else k)
-*)| _, _ =>
+  | Ccompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_comp_float64 c r1 r2 lbl k)
+  | Cnotcompf c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_comp_notfloat64 c r1 r2 lbl k)
+  | Ccompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_comp_float32 c r1 r2 lbl k)
+  | Cnotcompfs c, a1 :: a2 :: nil =>
+      do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+      OK (transl_comp_notfloat32 c r1 r2 lbl k)
+  | _, _ =>
       Error(msg "Asmgenblock.transl_cbranch")
   end.
 
@@ -281,6 +292,7 @@ Definition transl_condimm_int64s (cmp: comparison) (rd r1: ireg) (n: int64) (k: 
 
 Definition transl_condimm_int64u (cmp: comparison) (rd r1: ireg) (n: int64) (k: bcode) :=
   Pcompil (itest_for_cmp cmp Unsigned) rd r1 n ::i k.
+
 
 Definition transl_cond_float32 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) :=
   match ftest_for_cmp cmp with

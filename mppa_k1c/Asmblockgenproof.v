@@ -891,6 +891,10 @@ Proof.
     + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; simpl; eauto.
       * unfold transl_opt_compuimm. exploreInst; simpl; eauto.
       * unfold transl_opt_compluimm. exploreInst; simpl; eauto.
+      * unfold transl_comp_float64. exploreInst; simpl; eauto.
+      * unfold transl_comp_notfloat64. exploreInst; simpl; eauto.
+      * unfold transl_comp_float32. exploreInst; simpl; eauto.
+      * unfold transl_comp_notfloat32. exploreInst; simpl; eauto.
     + simpl in TIC. inv TIC.
     + simpl in TIC. monadInv TIC. simpl. eauto.
   - monadInv TIC. simpl; auto.
@@ -990,6 +994,10 @@ Proof.
     + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; try discriminate.
       * unfold transl_opt_compuimm. exploreInst; try discriminate.
       * unfold transl_opt_compluimm. exploreInst; try discriminate.
+      * unfold transl_comp_float64. exploreInst; try discriminate.
+      * unfold transl_comp_notfloat64. exploreInst; try discriminate.
+      * unfold transl_comp_float32. exploreInst; try discriminate.
+      * unfold transl_comp_notfloat32. exploreInst; try discriminate.
   - contradict Hnonil; auto.
 Qed.
 
@@ -1005,8 +1013,12 @@ Proof.
   - assert False. eapply Hnobuiltin; eauto. destruct H.
   - unfold transl_cbranch in TIC. exploreInst.
     all: try discriminate.
-    + unfold transl_opt_compuimm. exploreInst. all: try discriminate.
-    + unfold transl_opt_compluimm. exploreInst. all: try discriminate.
+    * unfold transl_opt_compuimm. exploreInst. all: try discriminate.
+    * unfold transl_opt_compluimm. exploreInst. all: try discriminate.
+    * unfold transl_comp_float64. exploreInst; try discriminate.
+    * unfold transl_comp_notfloat64. exploreInst; try discriminate.
+    * unfold transl_comp_float32. exploreInst; try discriminate.
+    * unfold transl_comp_notfloat32. exploreInst; try discriminate.
 Qed.
 
 Theorem match_state_codestate:

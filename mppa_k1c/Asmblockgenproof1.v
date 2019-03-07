@@ -427,6 +427,69 @@ Proof.
     rewrite H0. simpl; auto.
 Qed.
 
+Lemma transl_compf_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_float64 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpf_bool cmp rs#r1 rs#r2 = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof. Admitted.
+(*   intros. esplit. split.
+- unfold transl_compl. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)) as rs'.
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+    { 
+      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Signed) rs # r1 rs # r2 m)).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val.cmpl_bool cmp rs#r1 rs#r2) as cmpbool.
+      destruct cmp; simpl;
+      unfold compare_long;
+      unfold Val.cmpl; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed. *)
+
+Lemma transl_compnotf_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_notfloat64 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\   (option_map negb (Val.cmpf_bool cmp rs#r1 rs#r2) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof. Admitted.
+
+Lemma transl_compfs_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_float32 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpfs_bool cmp rs#r1 rs#r2 = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof. Admitted.
+
+Lemma transl_compnotfs_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_notfloat32 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\   (option_map negb (Val.cmpfs_bool cmp rs#r1 rs#r2) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof. Admitted.
+
 Lemma transl_complu_correct:
   forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
@@ -751,6 +814,34 @@ Proof.
     * split; auto.
       { apply C'; auto. rewrite B, C; eauto with asmgen. }
       { intros. rewrite B'; eauto with asmgen. }
+
+(* Ccompf *)
+- exploit (transl_compf_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Cnotcompf *)
+- exploit (transl_compnotf_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Ccompfs *)
+- exploit (transl_compfs_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Cnotcompfs *)
+- exploit (transl_compnotfs_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
 Qed.
 
 Lemma transl_cbranch_correct_true:
