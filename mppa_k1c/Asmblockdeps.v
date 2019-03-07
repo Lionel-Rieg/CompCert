@@ -153,7 +153,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
   | OArithRRR n, [Val v1; Val v2; Memstate m] =>
       match n with
-      | Pcompw c => Some (Val (compare_int c v1 v2 m))
+      | Pcompw c => Some (Val (compare_int c v1 v2))
       | Pcompl c => Some (Val (compare_long c v1 v2 m))
       | _ => None
       end
@@ -195,7 +195,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
   | OArithRRI32 n i, [Val v; Memstate m] =>
       match n with
-      | Pcompiw c => Some (Val (compare_int c v (Vint i) m))
+      | Pcompiw c => Some (Val (compare_int c v (Vint i)))
       | _ => None
       end
 

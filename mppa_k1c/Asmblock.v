@@ -902,8 +902,29 @@ Definition cmpu_for_btest (bt: btest) :=
   | _ => (None, Int)
   end.
 
+(* FIXME: move these axioms and definitions in a separate file (e.g. PatchMemoryModel). *)
+Axiom Val_cmpu_bool: comparison -> val -> val -> option bool.
+
+Axiom Val_cmpu_bool_correct: forall (m:mem) (cmp: comparison) (v1 v2: val) b,
+   (Val.cmpu_bool (Mem.valid_pointer m) cmp v1 v2) = Some b
+   -> (Val_cmpu_bool cmp v1 v2) = Some b.
+
+Definition Val_cmpu cmp v1 v2 := Val.of_optbool (Val_cmpu_bool cmp v1 v2).
+
+Lemma Val_cmpu_correct: forall (m:mem) (cmp: comparison) (v1 v2: val),
+   Val.lessdef (Val.cmpu (Mem.valid_pointer m) cmp v1 v2)
+               (Val_cmpu cmp v1 v2).
+Proof.
+  intros; unfold Val.cmpu, Val_cmpu.
+  remember (Val.cmpu_bool (Mem.valid_pointer m) cmp v1 v2) as ob.
+  destruct ob; simpl.
+  - erewrite Val_cmpu_bool_correct; eauto.
+    econstructor.
+  - econstructor.
+Qed.
+
 (** Comparing integers *)
-Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
+Definition compare_int (t: itest) (v1 v2: val): val :=
   match t with
   | ITne  => Val.cmp Cne v1 v2
   | ITeq  => Val.cmp Ceq v1 v2
@@ -911,12 +932,12 @@ Definition compare_int (t: itest) (v1 v2: val) (m: mem): val :=
   | ITge  => Val.cmp Cge v1 v2
   | ITle  => Val.cmp Cle v1 v2
   | ITgt  => Val.cmp Cgt v1 v2
-  | ITneu => Val.cmpu (Mem.valid_pointer m) Cne v1 v2
-  | ITequ => Val.cmpu (Mem.valid_pointer m) Ceq v1 v2
-  | ITltu => Val.cmpu (Mem.valid_pointer m) Clt v1 v2
-  | ITgeu => Val.cmpu (Mem.valid_pointer m) Cge v1 v2
-  | ITleu => Val.cmpu (Mem.valid_pointer m) Cle v1 v2
-  | ITgtu => Val.cmpu (Mem.valid_pointer m) Cgt v1 v2
+  | ITneu => Val_cmpu Cne v1 v2
+  | ITequ => Val_cmpu Ceq v1 v2
+  | ITltu => Val_cmpu Clt v1 v2
+  | ITgeu => Val_cmpu Cge v1 v2
+  | ITleu => Val_cmpu Cle v1 v2
+  | ITgtu => Val_cmpu Cgt v1 v2
   | ITall
   | ITnall
   | ITany
@@ -1038,7 +1059,7 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
 
   | PArithRRR n d s1 s2 =>
       match n with
-      | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2 m)
+      | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2)
       | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2 m)
       | Pfcompw c => rs#d <- (compare_single c rs#s1 rs#s2)
       | Pfcompl c => rs#d <- (compare_float c rs#s1 rs#s2)
@@ -1072,7 +1093,7 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset) (m: mem) : regset 
 
   | PArithRRI32 n d s i =>
       match n with
-      | Pcompiw c => rs#d <- (compare_int c rs#s (Vint i) m)
+      | Pcompiw c => rs#d <- (compare_int c rs#s (Vint i))
       | Paddiw  => rs#d <- (Val.add   rs#s (Vint i))
       | Pandiw  => rs#d <- (Val.and   rs#s (Vint i))
       | Poriw   => rs#d <- (Val.or    rs#s (Vint i))
