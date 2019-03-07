@@ -175,8 +175,8 @@ Proof.
   + (* case Tr_end_block *) inversion H3; subst; simpl; auto.
      * destruct (header bh); congruence.
      * destruct bl0; simpl; congruence.
-  + (* case Tr_add_basic *)
-Admitted. (* A FINIR *)
+  + (* case Tr_add_basic *) rewrite H3. simpl. destruct (header bh); congruence.
+Qed. 
 
 Lemma trans_code_is_trans_code_rev_inv c1: forall c2 mbi, 
   is_trans_code (rev_append c1 c2) mbi ->
@@ -186,11 +186,22 @@ Proof.
   intros; exploit IHc1; eauto.
   intros (mbi0 & H1 & H2); subst.
   exploit add_to_code_is_trans_code_inv; eauto.
-Admitted. (* A FINIR *)
+  intros. destruct H0 as [mbi1 [H2 H3]].
+  exists mbi1. split; congruence.
+Qed.
 
 Local Hint Resolve trans_code_is_trans_code.
 
 Theorem is_trans_code_inv c bl: is_trans_code c bl <-> bl=(trans_code c).
 Proof.
   constructor; intros; subst; auto.
-Admitted. (* A FINIR *)
+  unfold trans_code.
+  exploit (trans_code_is_trans_code_rev_inv (rev_append c nil) nil bl); eauto.
+  * rewrite <- rev_alt.
+    rewrite <- rev_alt.
+    rewrite (rev_involutive c).
+    apply H.
+  * intros.
+    destruct H0 as [mbi [H0 H1]].
+    inversion H0. subst. reflexivity.
+Qed.
