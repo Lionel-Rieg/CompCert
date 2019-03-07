@@ -902,20 +902,17 @@ Definition cmpu_for_btest (bt: btest) :=
   | _ => (None, Int)
   end.
 
-(* FIXME: put this stuff related to the memory model in a distinct module *)
-(* FIXME: currently, only deal with the special case with Archi.ptr64 = true *)
-Definition Val_cmpu_bool c v1 v2: option bool :=
-  match v1, v2 with
-  | Vint n1, Vint n2 => Some (Int.cmpu c n1 n2)
-  | _, _ => None
-  end.
+
+(* a few lemma on comparisons of unsigned (e.g. pointers) *)
+
+Definition Val_cmpu_bool cmp v1 v2: option bool :=
+  Val.cmpu_bool (fun _ _ => true) cmp v1 v2.
 
 Lemma Val_cmpu_bool_correct (m:mem) (cmp: comparison) (v1 v2: val) b:
    (Val.cmpu_bool (Mem.valid_pointer m) cmp v1 v2) = Some b
    -> (Val_cmpu_bool cmp v1 v2) = Some b.
 Proof.
-  unfold Val.cmpu_bool, Val_cmpu_bool. 
-  destruct v1, v2; try congruence; vm_compute; try congruence.
+  intros; eapply Val.cmpu_bool_lessdef; (econstructor 1 || eauto).
 Qed.
 
 Definition Val_cmpu cmp v1 v2 := Val.of_optbool (Val_cmpu_bool cmp v1 v2).
@@ -932,11 +929,15 @@ Proof.
   - econstructor.
 Qed.
 
-Axiom Val_cmplu_bool: forall (cmp: comparison) (v1 v2: val), option bool.
+Definition Val_cmplu_bool (cmp: comparison) (v1 v2: val)
+ := (Val.cmplu_bool (fun _ _ => true) cmp v1 v2).
 
-Axiom Val_cmplu_bool_correct: forall (m:mem) (cmp: comparison) (v1 v2: val) b,
+Lemma Val_cmplu_bool_correct (m:mem) (cmp: comparison) (v1 v2: val) b:
    (Val.cmplu_bool (Mem.valid_pointer m) cmp v1 v2) = Some b
    -> (Val_cmplu_bool cmp v1 v2) = Some b.
+Proof.
+  intros; eapply Val.cmplu_bool_lessdef; (econstructor 1 || eauto).
+Qed.
 
 Definition Val_cmplu cmp v1 v2 := Val.of_optbool (Val_cmplu_bool cmp v1 v2).
 
