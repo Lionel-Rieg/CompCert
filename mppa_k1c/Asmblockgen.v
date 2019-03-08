@@ -626,6 +626,7 @@ Definition transl_op
 
 
   | Odivf , _ => Error (msg "Asmblockgen.transl_op: Odivf")
+  | Odivfs, _ => Error (msg "Asmblockgen.transl_op: Odivfs")
 
   (* We use the Splitlong instead for these four conversions *)
   | Osingleoflong , _ => Error (msg "Asmblockgen.transl_op: Osingleoflong") 
