@@ -1030,119 +1030,135 @@ TODO: subsplitting by instruction type ? Could be useful for expressing auxiliar
 
 Variable ge: genv.
 
+Definition arith_eval_r n :=
+  match n with
+  | Ploadsymbol s ofs => Genv.symbol_address ge s ofs
+  end
+.
+
+Definition arith_eval_rr n v :=
+  match n with
+  | Pmv => v
+  | Pnegw => Val.neg v
+  | Pnegl => Val.negl v
+  | Pcvtl2w => Val.loword v
+  | Psxwd => Val.longofint v
+  | Pzxwd => Val.longofintu v
+  | Pfnegd => Val.negf v
+  | Pfnegw => Val.negfs v
+  | Pfabsd => Val.absf v
+  | Pfabsw => Val.absfs v
+  | Pfnarrowdw => Val.singleoffloat v
+  | Pfwidenlwd => Val.floatofsingle v
+  | Pfloatwrnsz => match Val.singleofint v with Some f => f | _ => Vundef end
+  | Pfloatuwrnsz => match Val.singleofintu v with Some f => f | _ => Vundef end
+  | Pfloatudrnsz => match Val.floatoflongu v with Some f => f | _ => Vundef end
+  | Pfloatdrnsz => match Val.floatoflong v with Some f => f | _ => Vundef end
+  | Pfloatudrnsz_i32 => match Val.floatofintu v with Some f => f | _ => Vundef end
+  | Pfloatdrnsz_i32 => match Val.floatofint v with Some f => f | _ => Vundef end
+  | Pfixedwrzz => match Val.intofsingle v with Some i => i | _ => Vundef end
+  | Pfixeduwrzz => match Val.intuofsingle v with Some i => i | _ => Vundef end
+  | Pfixeddrzz => match Val.longoffloat v with Some i => i | _ => Vundef end
+  | Pfixedudrzz => match Val.longuoffloat v with Some i => i | _ => Vundef end
+  | Pfixeddrzz_i32 => match Val.intoffloat v with Some i => i | _ => Vundef end
+  | Pfixedudrzz_i32 => match Val.intuoffloat v with Some i => i | _ => Vundef end
+  end.
+
+Definition arith_eval_ri32 n i :=
+  match n with
+  | Pmake => Vint i
+  end.
+
+Definition arith_eval_ri64 n i :=
+  match n with
+  | Pmakel => Vlong i
+  end.
+
+Definition arith_eval_rf32 n i :=
+  match n with
+  | Pmakefs => Vsingle i
+  end.
+
+Definition arith_eval_rf64 n i :=
+  match n with
+  | Pmakef => Vfloat i
+  end.
+
+Definition arith_eval_rrr n v1 v2 :=
+  match n with
+  | Pcompw c => compare_int c v1 v2
+  | Pcompl c => compare_long c v1 v2
+  | Pfcompw c => compare_single c v1 v2
+  | Pfcompl c => compare_float c v1 v2
+
+  | Paddw  => Val.add  v1 v2
+  | Psubw  => Val.sub  v1 v2
+  | Pmulw  => Val.mul  v1 v2
+  | Pandw  => Val.and  v1 v2
+  | Porw   => Val.or   v1 v2
+  | Pxorw  => Val.xor  v1 v2
+  | Psrlw  => Val.shru v1 v2
+  | Psraw  => Val.shr  v1 v2
+  | Psllw  => Val.shl  v1 v2
+
+  | Paddl => Val.addl v1 v2
+  | Psubl => Val.subl v1 v2
+  | Pandl => Val.andl v1 v2
+  | Porl  => Val.orl  v1 v2
+  | Pxorl  => Val.xorl  v1 v2
+  | Pmull => Val.mull v1 v2
+  | Pslll => Val.shll v1 v2
+  | Psrll => Val.shrlu v1 v2
+  | Psral => Val.shrl v1 v2
+
+  | Pfaddd => Val.addf v1 v2
+  | Pfaddw => Val.addfs v1 v2
+  | Pfsbfd => Val.subf v1 v2
+  | Pfsbfw => Val.subfs v1 v2
+  | Pfmuld => Val.mulf v1 v2
+  | Pfmulw => Val.mulfs v1 v2
+  end.
+
+Definition arith_eval_rri32 n v i :=
+  match n with
+  | Pcompiw c => compare_int c v (Vint i)
+  | Paddiw  => Val.add   v (Vint i)
+  | Pandiw  => Val.and   v (Vint i)
+  | Poriw   => Val.or    v (Vint i)
+  | Pxoriw  => Val.xor   v (Vint i)
+  | Psraiw  => Val.shr   v (Vint i)
+  | Psrliw  => Val.shru  v (Vint i)
+  | Pslliw  => Val.shl   v (Vint i)
+  | Psllil  => Val.shll  v (Vint i)
+  | Psrlil  => Val.shrlu v (Vint i)
+  | Psrail  => Val.shrl  v (Vint i)
+  end.
+
+Definition arith_eval_rri64 n v i :=
+  match n with
+  | Pcompil c => compare_long c v (Vlong i)
+  | Paddil  => Val.addl v (Vlong i)
+  | Pandil  => Val.andl v (Vlong i)
+  | Poril   => Val.orl  v (Vlong i)
+  | Pxoril  => Val.xorl  v (Vlong i)
+  end.
 
 Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   match ai with
-  | PArithR n d =>
-      match n with
-      | Ploadsymbol s ofs => rs#d <- (Genv.symbol_address ge s ofs)
-      end
+  | PArithR n d => rs#d <- (arith_eval_r n)
 
-  | PArithRR n d s =>
-      match n with
-      | Pmv => rs#d <- (rs#s)
-      | Pnegw => rs#d <- (Val.neg rs#s)
-      | Pnegl => rs#d <- (Val.negl rs#s)
-      | Pcvtl2w => rs#d <- (Val.loword rs#s)
-      | Psxwd => rs#d <- (Val.longofint rs#s)
-      | Pzxwd => rs#d <- (Val.longofintu rs#s)
-      | Pfnegd => rs#d <- (Val.negf rs#s)
-      | Pfnegw => rs#d <- (Val.negfs rs#s)
-      | Pfabsd => rs#d <- (Val.absf rs#s)
-      | Pfabsw => rs#d <- (Val.absfs rs#s)
-      | Pfnarrowdw => rs#d <- (Val.singleoffloat rs#s)
-      | Pfwidenlwd => rs#d <- (Val.floatofsingle rs#s)
-      | Pfloatwrnsz => rs#d <- (match Val.singleofint rs#s with Some f => f | _ => Vundef end)
-      | Pfloatuwrnsz => rs#d <- (match Val.singleofintu rs#s with Some f => f | _ => Vundef end)
-      | Pfloatudrnsz => rs#d <- (match Val.floatoflongu rs#s with Some f => f | _ => Vundef end)
-      | Pfloatudrnsz_i32 => rs#d <- (match Val.floatofintu rs#s with Some f => f | _ => Vundef end)
-      | Pfloatdrnsz => rs#d <- (match Val.floatoflong rs#s with Some f => f | _ => Vundef end)
-      | Pfloatdrnsz_i32 => rs#d <- (match Val.floatofint rs#s with Some f => f | _ => Vundef end)
-      | Pfixedwrzz => rs#d <- (match Val.intofsingle rs#s with Some i => i | _ => Vundef end)
-      | Pfixeduwrzz => rs#d <- (match Val.intuofsingle rs#s with Some i => i | _ => Vundef end)
-      | Pfixeddrzz => rs#d <- (match Val.longoffloat rs#s with Some i => i | _ => Vundef end)
-      | Pfixeddrzz_i32 => rs#d <- (match Val.intoffloat rs#s with Some i => i | _ => Vundef end)
-      | Pfixedudrzz => rs#d <- (match Val.longuoffloat rs#s with Some i => i | _ => Vundef end)
-      | Pfixedudrzz_i32 => rs#d <- (match Val.intuoffloat rs#s with Some i => i | _ => Vundef end)
-      end
+  | PArithRR n d s => rs#d <- (arith_eval_rr n rs#s)
 
-  | PArithRI32 n d i =>
-      match n with
-      | Pmake => rs#d <- (Vint i)
-      end
+  | PArithRI32 n d i => rs#d <- (arith_eval_ri32 n i)
+  | PArithRI64 n d i => rs#d <- (arith_eval_ri64 n i)
+  | PArithRF32 n d i => rs#d <- (arith_eval_rf32 n i)
+  | PArithRF64 n d i => rs#d <- (arith_eval_rf64 n i)
 
-  | PArithRI64 n d i =>
-      match n with
-      | Pmakel => rs#d <- (Vlong i)
-      end
+  | PArithRRR n d s1 s2 => rs#d <- (arith_eval_rrr n rs#s1 rs#s2)
 
-  | PArithRF32 n d i =>
-      match n with
-      | Pmakefs => rs#d <- (Vsingle i)
-      end
+  | PArithRRI32 n d s i => rs#d <- (arith_eval_rri32 n rs#s i)
 
-  | PArithRF64 n d i =>
-      match n with
-      | Pmakef => rs#d <- (Vfloat i)
-      end
-
-  | PArithRRR n d s1 s2 =>
-      match n with
-      | Pcompw c => rs#d <- (compare_int c rs#s1 rs#s2)
-      | Pcompl c => rs#d <- (compare_long c rs#s1 rs#s2)
-      | Pfcompw c => rs#d <- (compare_single c rs#s1 rs#s2)
-      | Pfcompl c => rs#d <- (compare_float c rs#s1 rs#s2)
-      | Paddw  => rs#d <- (Val.add  rs#s1 rs#s2)
-      | Psubw  => rs#d <- (Val.sub  rs#s1 rs#s2)
-      | Pmulw  => rs#d <- (Val.mul  rs#s1 rs#s2)
-      | Pandw  => rs#d <- (Val.and  rs#s1 rs#s2)
-      | Porw   => rs#d <- (Val.or   rs#s1 rs#s2)
-      | Pxorw  => rs#d <- (Val.xor  rs#s1 rs#s2)
-      | Psrlw  => rs#d <- (Val.shru rs#s1 rs#s2)
-      | Psraw  => rs#d <- (Val.shr  rs#s1 rs#s2)
-      | Psllw  => rs#d <- (Val.shl  rs#s1 rs#s2)
-
-      | Paddl => rs#d <- (Val.addl rs#s1 rs#s2)
-      | Psubl => rs#d <- (Val.subl rs#s1 rs#s2)
-      | Pandl => rs#d <- (Val.andl rs#s1 rs#s2)
-      | Porl  => rs#d <- (Val.orl  rs#s1 rs#s2)
-      | Pxorl  => rs#d <- (Val.xorl  rs#s1 rs#s2)
-      | Pmull => rs#d <- (Val.mull rs#s1 rs#s2)
-      | Pslll => rs#d <- (Val.shll rs#s1 rs#s2)
-      | Psrll => rs#d <- (Val.shrlu rs#s1 rs#s2)
-      | Psral => rs#d <- (Val.shrl rs#s1 rs#s2)
-
-      | Pfaddd => rs#d <- (Val.addf rs#s1 rs#s2)
-      | Pfaddw => rs#d <- (Val.addfs rs#s1 rs#s2)
-      | Pfsbfd => rs#d <- (Val.subf rs#s1 rs#s2)
-      | Pfsbfw => rs#d <- (Val.subfs rs#s1 rs#s2)
-      | Pfmuld => rs#d <- (Val.mulf rs#s1 rs#s2)
-      | Pfmulw => rs#d <- (Val.mulfs rs#s1 rs#s2)
-      end
-
-  | PArithRRI32 n d s i =>
-      match n with
-      | Pcompiw c => rs#d <- (compare_int c rs#s (Vint i))
-      | Paddiw  => rs#d <- (Val.add   rs#s (Vint i))
-      | Pandiw  => rs#d <- (Val.and   rs#s (Vint i))
-      | Poriw   => rs#d <- (Val.or    rs#s (Vint i))
-      | Pxoriw  => rs#d <- (Val.xor   rs#s (Vint i))
-      | Psraiw  => rs#d <- (Val.shr   rs#s (Vint i))
-      | Psrliw  => rs#d <- (Val.shru  rs#s (Vint i))
-      | Pslliw  => rs#d <- (Val.shl   rs#s (Vint i))
-      | Psllil  => rs#d <- (Val.shll  rs#s (Vint i))
-      | Psrlil  => rs#d <- (Val.shrlu rs#s (Vint i))
-      | Psrail  => rs#d <- (Val.shrl  rs#s (Vint i))
-      end
-
-  | PArithRRI64 n d s i =>
-      match n with
-      | Pcompil c => rs#d <- (compare_long c rs#s (Vlong i))
-      | Paddil  => rs#d <- (Val.addl rs#s (Vlong i))
-      | Pandil  => rs#d <- (Val.andl rs#s (Vlong i))
-      | Poril   => rs#d <- (Val.orl  rs#s (Vlong i))
-      | Pxoril  => rs#d <- (Val.xorl  rs#s (Vlong i))
-      end
+  | PArithRRI64 n d s i => rs#d <- (arith_eval_rri64 n rs#s i)
   end.
 
 (** * load/store *)

@@ -575,7 +575,7 @@ Lemma transf_exec_basic_instr:
 Proof.
   intros. pose symbol_address_preserved.
   unfold exec_basic_instr. exploreInst; simpl; auto; try congruence.
-  1: unfold exec_arith_instr; exploreInst; simpl; auto; try congruence.
+  1: unfold exec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
   1-10: apply transf_exec_load.
   all: apply transf_exec_store.
 Qed.
