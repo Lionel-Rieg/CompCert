@@ -135,26 +135,15 @@ let load_str = function
 let set_str = "Pset"
 let get_str = "Pget"
 
-let arith_rri32_rec i rd rs imm32 = 
-  match i with
-  | Pcompiw _ -> { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs; Mem]; imm = imm32; is_control = false }
-  | _ -> { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
 
-let arith_rri64_rec i rd rs imm64 =
-  match i with
-  | Pcompil _ -> { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs; Mem]; imm = imm64; is_control = false } 
-  | _ -> { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
 
-let arith_rrr_rec i rd rs1 rs2 =  (* FIXME - hack for memory problem with Pcompw and Pcompl, performance decreased *)
-  match i with
-  | Pcompw _ | Pcompl _ -> { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2; Mem]; imm = None; is_control = false}
-  | _ -> { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
 let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
 
 let arith_r_rec i rd = match i with
-    (* FIXME - this instruction is expanded to nothing, yet it still has a semantic in Asmblock.v.
-     *          It will introduce unneeded dependencies.. *)
     (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
   | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
 
