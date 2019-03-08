@@ -39,7 +39,7 @@ MKDIR = mkdir -p
 # C compiler and flags.
 CC = ../../../ccomp -fstruct-passing
 GCC=k1-mbr-gcc
-CFLAGS = -W -Wall -O3 -D_POSIX_C_SOURCE=200909L
+CFLAGS = -W -Wall -Wno-c11-extensions -O3 -D_POSIX_C_SOURCE=200909L
 CCOUT = -c -o 
 
 # Static library building tool.

@@ -10,7 +10,7 @@ CC= ../../../ccomp
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 
 # You may need to adjust these cc options:
-CFLAGS= -O3 -Wall
+CFLAGS= -O3 -Wall -Wno-c11-extensions
 # Generally, we recommend defining any configuration symbols in jconfig.h,
 # NOT via -D switches here.
 # However, any special defines for ansi2knr.c may be included here:

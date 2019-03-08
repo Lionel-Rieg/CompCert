@@ -5,7 +5,7 @@ CC           = ../../../ccomp
 LD           = ../../../ccomp
 AR           = ar
 ARFLAGS      = rcs
-CFLAGS       = -Wall -O3 -c
+CFLAGS       = -Wall -Wno-c11-extensions -O3 -c
 LDFLAGS      = -Wall -O3 # -Wl,-Map,test.map
 ifdef AES192
 CFLAGS += -DAES192=1

@@ -8,7 +8,7 @@ idea.gcc.host: idea.c idea.h ../clock.gcc.host.o
 	$(CC) $(CFLAGS) idea.c ../clock.gcc.host.o -o $@
 
 idea.ccomp.host: idea.c idea.h ../clock.gcc.host.o
-	$(CCOMP) $(CFLAGS) idea.c ../clock.gcc.host.o -o $@
+	$(CCOMP) $(CCOMPFLAGS) idea.c ../clock.gcc.host.o -o $@
 
 idea.gcc.k1c.s idea.ccomp.k1c.s idea_run.gcc.k1c.s: idea.h
 
