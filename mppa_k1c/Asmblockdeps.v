@@ -98,124 +98,19 @@ Definition op := op_wrap.
 Definition arith_eval (ao: arith_op) (l: list value) :=
   let (ge, fn) := Ge in
   match ao, l with
-  | OArithR n, [] =>
-      match n with
-      | Ploadsymbol s ofs => Some (Val (Genv.symbol_address ge s ofs))
-      end
+  | OArithR n, [] => Some (Val (arith_eval_r ge n))
 
-  | OArithRR n, [Val v] =>
-      match n with
-      | Pmv => Some (Val v)
-      | Pnegw => Some (Val (Val.neg v))
-      | Pnegl => Some (Val (Val.negl v))
-      | Pcvtl2w => Some (Val (Val.loword v))
-      | Psxwd => Some (Val (Val.longofint v))
-      | Pzxwd => Some (Val (Val.longofintu v))
-      | Pfnegd => Some (Val (Val.negf v))
-      | Pfnegw => Some (Val (Val.negfs v))
-      | Pfabsd => Some (Val (Val.absf v))
-      | Pfabsw => Some (Val (Val.absfs v))
-      | Pfnarrowdw => Some (Val (Val.singleoffloat v))
-      | Pfwidenlwd => Some (Val (Val.floatofsingle v))
-      | Pfloatwrnsz => Some (Val (match Val.singleofint v with Some f => f | _ => Vundef end))
-      | Pfloatuwrnsz => Some (Val (match Val.singleofintu v with Some f => f | _ => Vundef end))
-      | Pfloatudrnsz => Some (Val (match Val.floatoflongu v with Some f => f | _ => Vundef end))
-      | Pfloatdrnsz => Some (Val (match Val.floatoflong v with Some f => f | _ => Vundef end))
-      | Pfloatudrnsz_i32 => Some (Val (match Val.floatofintu v with Some f => f | _ => Vundef end))
-      | Pfloatdrnsz_i32 => Some (Val (match Val.floatofint v with Some f => f | _ => Vundef end))
-      | Pfixedwrzz => Some (Val (match Val.intofsingle v with Some i => i | _ => Vundef end))
-      | Pfixeduwrzz => Some (Val (match Val.intuofsingle v with Some i => i | _ => Vundef end))
-      | Pfixeddrzz => Some (Val (match Val.longoffloat v with Some i => i | _ => Vundef end))
-      | Pfixedudrzz => Some (Val (match Val.longuoffloat v with Some i => i | _ => Vundef end))
-      | Pfixeddrzz_i32 => Some (Val (match Val.intoffloat v with Some i => i | _ => Vundef end))
-      | Pfixedudrzz_i32 => Some (Val (match Val.intuoffloat v with Some i => i | _ => Vundef end))
-      end
+  | OArithRR n, [Val v] => Some (Val (arith_eval_rr n v))
 
-  | OArithRI32 n i, [] =>
-      match n with
-      | Pmake => Some (Val (Vint i))
-      end
+  | OArithRI32 n i, [] => Some (Val (arith_eval_ri32 n i))
+  | OArithRI64 n i, [] => Some (Val (arith_eval_ri64 n i))
+  | OArithRF32 n i, [] => Some (Val (arith_eval_rf32 n i))
+  | OArithRF64 n i, [] => Some (Val (arith_eval_rf64 n i))
 
-  | OArithRI64 n i, [] =>
-      match n with
-      | Pmakel => Some (Val (Vlong i))
-      end
+  | OArithRRR n, [Val v1; Val v2] => Some (Val (arith_eval_rrr n v1 v2))
 
-  | OArithRF32 n i, [] =>
-      match n with
-      | Pmakefs => Some (Val (Vsingle i))
-      end
-
-  | OArithRF64 n i, [] =>
-      match n with
-      | Pmakef => Some (Val (Vfloat i))
-      end
-
-  | OArithRRR n, [Val v1; Val v2; Memstate m] =>
-      match n with
-      | Pcompw c => Some (Val (compare_int c v1 v2))
-      | Pcompl c => Some (Val (compare_long c v1 v2))
-      | _ => None
-      end
-
-  | OArithRRR n, [Val v1; Val v2] =>
-      match n with
-      | Pfcompw c => Some (Val (compare_single c v1 v2))
-      | Pfcompl c => Some (Val (compare_float c v1 v2))
-
-      | Paddw  => Some (Val (Val.add  v1 v2))
-      | Psubw  => Some (Val (Val.sub  v1 v2))
-      | Pmulw  => Some (Val (Val.mul  v1 v2))
-      | Pandw  => Some (Val (Val.and  v1 v2))
-      | Porw   => Some (Val (Val.or   v1 v2))
-      | Pxorw  => Some (Val (Val.xor  v1 v2))
-      | Psrlw  => Some (Val (Val.shru v1 v2))
-      | Psraw  => Some (Val (Val.shr  v1 v2))
-      | Psllw  => Some (Val (Val.shl  v1 v2))
-
-      | Paddl => Some (Val (Val.addl v1 v2))
-      | Psubl => Some (Val (Val.subl v1 v2))
-      | Pandl => Some (Val (Val.andl v1 v2))
-      | Porl  => Some (Val (Val.orl  v1 v2))
-      | Pxorl  => Some (Val (Val.xorl  v1 v2))
-      | Pmull => Some (Val (Val.mull v1 v2))
-      | Pslll => Some (Val (Val.shll v1 v2))
-      | Psrll => Some (Val (Val.shrlu v1 v2))
-      | Psral => Some (Val (Val.shrl v1 v2))
-
-      | Pfaddd => Some (Val (Val.addf v1 v2))
-      | Pfaddw => Some (Val (Val.addfs v1 v2))
-      | Pfsbfd => Some (Val (Val.subf v1 v2))
-      | Pfsbfw => Some (Val (Val.subfs v1 v2))
-      | Pfmuld => Some (Val (Val.mulf v1 v2))
-      | Pfmulw => Some (Val (Val.mulfs v1 v2))
-
-      | _ => None
-      end
-
-  | OArithRRI32 n i, [Val v] =>
-      match n with
-      | Pcompiw c => Some (Val (compare_int c v (Vint i)))
-      | Paddiw  => Some (Val (Val.add   v (Vint i)))
-      | Pandiw  => Some (Val (Val.and   v (Vint i)))
-      | Poriw   => Some (Val (Val.or    v (Vint i)))
-      | Pxoriw  => Some (Val (Val.xor   v (Vint i)))
-      | Psraiw  => Some (Val (Val.shr   v (Vint i)))
-      | Psrliw  => Some (Val (Val.shru  v (Vint i)))
-      | Pslliw  => Some (Val (Val.shl   v (Vint i)))
-      | Psllil  => Some (Val (Val.shll  v (Vint i)))
-      | Psrlil  => Some (Val (Val.shrlu v (Vint i)))
-      | Psrail  => Some (Val (Val.shrl  v (Vint i)))
-      end
-
-  | OArithRRI64 n i, [Val v] =>
-      match n with
-      | Pcompil c => Some (Val (compare_long c v (Vlong i)))
-      | Paddil  => Some (Val (Val.addl v (Vlong i)))
-      | Pandil  => Some (Val (Val.andl v (Vlong i)))
-      | Poril   => Some (Val (Val.orl  v (Vlong i)))
-      | Pxoril  => Some (Val (Val.xorl  v (Vlong i)))
-      end
+  | OArithRRI32 n i, [Val v] => Some (Val (arith_eval_rri32 n v i))
+  | OArithRRI64 n i, [Val v] => Some (Val (arith_eval_rri64 n v i))
 
   | _, _ => None
   end.
@@ -605,21 +500,9 @@ Definition trans_arith (ai: ar_instruction) : macro :=
   | PArithRI64 n d i => [(#d, Op (Arith (OArithRI64 n i)) Enil)]
   | PArithRF32 n d i => [(#d, Op (Arith (OArithRF32 n i)) Enil)]
   | PArithRF64 n d i => [(#d, Op (Arith (OArithRF64 n i)) Enil)]
-  | PArithRRR n d s1 s2 => 
-      match n with
-      | Pcompw _ | Pcompl _ => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Name pmem @ Enil))]
-      | _ => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
-      end
-  | PArithRRI32 n d s i =>
-      match n with
-      | Pcompiw _ => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Name pmem @ Enil))]
-      | _ => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
-      end
-  | PArithRRI64 n d s i => 
-      match n with
-      | Pcompil _ => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Name pmem @ Enil))]
-      | _ => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
-      end
+  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
+  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
+  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
   end.
 
 
@@ -792,71 +675,62 @@ Lemma trans_arith_correct:
 Proof.
   intros. unfold exec_arith_instr in H. destruct i.
 (* Ploadsymbol *)
-  - destruct i. inv H. inv H0.
-    eexists; split; try split.
+  - inv H; inv H0. eexists; split; try split.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRR *)
-  - destruct i.
-    all: inv H; inv H0;
+  - inv H; inv H0;
     eexists; split; try split;
     [ simpl; pose (H1 rs0); simpl in e; rewrite e; reflexivity |
       Simpl |
       intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
 (* PArithRI32 *)
-  - destruct i. inv H. inv H0.
+  - inv H. inv H0.
     eexists; split; try split.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRI64 *)
-  - destruct i. inv H. inv H0.
+  - inv H. inv H0.
     eexists; split; try split.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRF32 *)
-  - destruct i. inv H. inv H0.
+  - inv H. inv H0.
     eexists; split; try split.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRF64 *)
-  - destruct i. inv H. inv H0.
+  - inv H. inv H0.
     eexists; split; try split.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRRR *)
-  - destruct i.
-    all: inv H; inv H0;
+  - inv H; inv H0;
     eexists; split; try split;
     [ simpl; pose (H1 rs1); simpl in e; rewrite e; pose (H1 rs2); simpl in e0; rewrite e0; try (rewrite H); reflexivity
     | Simpl
     | intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
 (* PArithRRI32 *)
-  - destruct i.
-Admitted.
-(* FIXME: A FINIR
-    all: inv H; inv H0;
+  - inv H; inv H0;
     eexists; split; try split;
     [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); auto
     | Simpl
     | intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
-(* PArithRRI64 *)
-  - destruct i.
-    all: inv H; inv H0;
+  - inv H; inv H0;
     eexists; split; try split;
     [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); reflexivity
     | Simpl
     | intros rr; destruct rr; Simpl;
       destruct (ireg_eq g rd); subst; Simpl ].
 Qed.
-*)
 
 Lemma forward_simu_basic:
   forall ge fn b rs m rs' m' s,
