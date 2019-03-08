@@ -415,21 +415,21 @@ module Target (*: TARGET*) =
 
       (* Arith RRI32 instructions *)
       | Pcompiw (it, rd, rs, imm) ->
-         fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint64 imm
+         fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint imm
       | Paddiw (rd, rs, imm) ->
-         fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pandiw (rd, rs, imm) ->
-         fprintf oc "	andw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	andw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Poriw (rd, rs, imm) -> 
-         fprintf oc "	orw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	orw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pxoriw (rd, rs, imm) -> 
-         fprintf oc "	xorw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	xorw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psraiw (rd, rs, imm) ->
-         fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psrliw (rd, rs, imm) ->
-         fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pslliw (rd, rs, imm) ->
-         fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psllil (rd, rs, imm) ->
          fprintf oc "	slld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrlil (rd, rs, imm) ->
