@@ -414,8 +414,8 @@ Definition transl_op
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 ::i k)
-  | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs")
-  | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu")
+  | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs") (* Normalement pas émis *)
+  | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu") (* Normalement pas émis *)
   | Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
       (* do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pdivw rd rs1 rs2 :: k) *)
@@ -499,12 +499,12 @@ Definition transl_op
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
-  | Omullhs, _ => Error (msg "Asmblockgen.transl_op: Omullhs")
-  | Omullhu, _ => Error (msg "Asmblockgen.transl_op: Omullhu")
-  | Odivl, _ => Error (msg "Asmblockgen.transl_op: Odivl")
-  | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu")
-  | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl")
-  | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu")
+  | Omullhs, _ => Error (msg "Asmblockgen.transl_op: Omullhs") (* Normalement pas émis *)
+  | Omullhu, _ => Error (msg "Asmblockgen.transl_op: Omullhu") (* Normalement pas émis *)
+  | Odivl, _ => Error (msg "Asmblockgen.transl_op: Odivl") (* Géré par fonction externe *)
+  | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu") (* Géré par fonction externe *)
+  | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl") (* Géré par fonction externe *)
+  | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu") (* Géré par fonction externe *)
   | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 ::i k)
