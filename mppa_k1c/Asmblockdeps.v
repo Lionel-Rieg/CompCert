@@ -292,7 +292,7 @@ Definition iandb (ib1 ib2: ?? bool): ?? bool :=
 
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   match o1, o2 with
-  | OArithR n1, OArithR n2 => phys_eq n1 n2
+  | OArithR n1, OArithR n2 => struct_eq n1 n2
   | OArithRR n1, OArithRR n2 => phys_eq n1 n2
   | OArithRI32 n1 i1, OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
   | OArithRI64 n1 i1, OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
@@ -359,16 +359,17 @@ Proof.
   - rewrite Z.eqb_eq in * |-. congruence.
 Qed.
 
-(*
+
 Definition op_eq (o1 o2: op): ?? bool :=
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
   | Load i1, Load i2 => load_op_eq i1 i2
   | Store i1, Store i2 => store_op_eq i1 i2
   | Control i1, Control i2 => control_op_eq i1 i2
-  | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
-  | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
-  | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (phys_eq sz1 sz2) (phys_eq pos1 pos2)
+  | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
+  | Allocframe2 sz1 pos1, Allocframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
+  | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
+  | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
   | Constant c1, Constant c2 => phys_eq c1 c2
   | Fail, Fail => RET true
   | _, _ => RET false
@@ -383,22 +384,25 @@ Proof.
   - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
   - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
+  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
+  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
+  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
   - congruence.
 Qed.
-*)
+
 
 (* QUICK FIX WITH struct_eq *)
 
-Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
+(* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
+
 
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   wlp_simplify.
 Qed.
+ *)
 
 End IMPPARAM.
 

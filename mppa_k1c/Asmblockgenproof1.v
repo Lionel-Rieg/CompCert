@@ -222,8 +222,6 @@ Qed.
 *)
 *)
 
-Definition yolo := 4.
-
 Lemma opimm64_correct:
   forall (op: arith_name_rrr)
          (opi: arith_name_rri64)
@@ -426,6 +424,288 @@ Proof.
       destruct b0; simpl; auto.
     }
     rewrite H0. simpl; auto.
+Qed.
+
+Lemma swap_comparison_cmpf_eq:
+  forall v1 v2 cmp,
+  (Val.cmpf cmp v1 v2) = (Val.cmpf (swap_comparison cmp) v2 v1).
+Proof.
+  intros. unfold Val.cmpf. unfold Val.cmpf_bool. destruct v1; destruct v2; auto.
+  rewrite Float.cmp_swap. auto.
+Qed.
+
+Lemma swap_comparison_cmpf_bool:
+  forall cmp ft v1 v2,
+  ftest_for_cmp cmp = Reversed ft ->
+  Val.cmpf_bool cmp v1 v2 = Val.cmpf_bool (swap_comparison cmp) v2 v1.
+Proof.
+  intros. unfold Val.cmpf_bool. destruct v1; destruct v2; auto. rewrite Float.cmp_swap. reflexivity.
+Qed.
+
+Lemma transl_compf_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_float64 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpf_bool cmp rs#r1 rs#r2 = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. unfold transl_comp_float64. destruct (ftest_for_cmp cmp) eqn:FT.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_float _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_float ft (rs r1) (rs r2))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpf_bool cmp rs#r1 rs#r2) as cmpbool.
+          destruct cmp; simpl;
+          unfold compare_float;
+          unfold Val.cmpf; simpl in FT; inversion FT; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+          destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_float _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_float ft (rs r2) (rs r1))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpf_bool cmp rs#r1 rs#r2) as cmpbool.
+          erewrite swap_comparison_cmpf_bool in Heqcmpbool; eauto.
+          destruct cmp; simpl;
+          unfold compare_float;
+          unfold Val.cmpf; simpl in FT; inversion FT; simpl in Heqcmpbool; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+          destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+Qed.
+
+Lemma cmpf_bool_ne_eq:
+  forall v1 v2,
+  Val.cmpf_bool Cne v1 v2 = option_map negb (Val.cmpf_bool Ceq v1 v2).
+Proof.
+  intros. unfold Val.cmpf_bool. destruct v1; destruct v2; auto. rewrite Float.cmp_ne_eq. simpl. reflexivity.
+Qed.
+
+Lemma cmpf_bool_ne_eq_rev:
+  forall v1 v2,
+  Val.cmpf_bool Ceq v1 v2 = option_map negb (Val.cmpf_bool Cne v1 v2).
+Proof.
+  intros. unfold Val.cmpf_bool. destruct v1; destruct v2; auto. rewrite Float.cmp_ne_eq. simpl. rewrite negb_involutive. reflexivity.
+Qed.
+
+Lemma option_map_negb_negb:
+  forall v,
+  option_map negb (option_map negb v) = v.
+Proof.
+  destruct v; simpl; auto. rewrite negb_involutive. reflexivity.
+Qed.
+
+Lemma notbool_option_map_negb:
+  forall v, Val.notbool (Val.of_optbool v) = Val.of_optbool (option_map negb v).
+Proof.
+  unfold Val.notbool. unfold Val.of_optbool.
+  destruct v; auto. destruct b; auto.
+Qed.
+
+Lemma swap_comparison_cmpf_bool_notftest:
+  forall cmp ft v1 v2,
+  notftest_for_cmp cmp = Reversed ft ->
+  Val.cmpf_bool cmp v1 v2 = Val.cmpf_bool (swap_comparison cmp) v2 v1.
+Proof.
+  intros. unfold Val.cmpf_bool. destruct v1; destruct v2; auto. rewrite Float.cmp_swap. reflexivity.
+Qed.
+
+Lemma transl_compnotf_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_notfloat64 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\   (option_map negb (Val.cmpf_bool cmp rs#r1 rs#r2) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. unfold transl_comp_notfloat64. destruct (notftest_for_cmp cmp) eqn:FT.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_float _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_float ft (rs r1) (rs r2))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (option_map negb (Val.cmpf_bool cmp rs#r1 rs#r2)) as cmpbool.
+          destruct cmp; simpl;
+          unfold compare_float;
+          unfold Val.cmpf; simpl in FT; inversion FT.
+          * rewrite cmpf_bool_ne_eq; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite cmpf_bool_ne_eq_rev. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_float _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_float ft (rs r2) (rs r1))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpf_bool cmp rs#r1 rs#r2) as cmpbool.
+          erewrite swap_comparison_cmpf_bool_notftest in Heqcmpbool; eauto.
+          destruct cmp; simpl;
+          unfold compare_float;
+          unfold Val.cmpf; simpl in FT; inversion FT; simpl in Heqcmpbool.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+Qed.
+
+Lemma swap_comparison_cmpfs_bool:
+  forall cmp ft v1 v2,
+  ftest_for_cmp cmp = Reversed ft ->
+  Val.cmpfs_bool cmp v1 v2 = Val.cmpfs_bool (swap_comparison cmp) v2 v1.
+Proof.
+  intros. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto. rewrite Float32.cmp_swap. reflexivity.
+Qed.
+
+Lemma transl_compfs_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_float32 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpfs_bool cmp rs#r1 rs#r2 = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. unfold transl_comp_float32. destruct (ftest_for_cmp cmp) eqn:FT.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_single _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_single ft (rs r1) (rs r2))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpfs_bool cmp rs#r1 rs#r2) as cmpbool.
+          destruct cmp; simpl;
+          unfold compare_single;
+          unfold Val.cmpfs; simpl in FT; inversion FT; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+          destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_single _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_single ft (rs r2) (rs r1))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpfs_bool cmp rs#r1 rs#r2) as cmpbool.
+          erewrite swap_comparison_cmpfs_bool in Heqcmpbool; eauto.
+          destruct cmp; simpl;
+          unfold compare_single;
+          unfold Val.cmpfs; simpl in FT; inversion FT; simpl in Heqcmpbool; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+          destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+Qed.
+
+Lemma swap_comparison_cmpfs_bool_notftest:
+  forall cmp ft v1 v2,
+  notftest_for_cmp cmp = Reversed ft ->
+  Val.cmpfs_bool cmp v1 v2 = Val.cmpfs_bool (swap_comparison cmp) v2 v1.
+Proof.
+  intros. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto. rewrite Float32.cmp_swap. reflexivity.
+Qed.
+
+Lemma cmpfs_bool_ne_eq:
+  forall v1 v2,
+  Val.cmpfs_bool Cne v1 v2 = option_map negb (Val.cmpfs_bool Ceq v1 v2).
+Proof.
+  intros. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto. rewrite Float32.cmp_ne_eq. simpl. reflexivity.
+Qed.
+
+Lemma cmpfs_bool_ne_eq_rev:
+  forall v1 v2,
+  Val.cmpfs_bool Ceq v1 v2 = option_map negb (Val.cmpfs_bool Cne v1 v2).
+Proof.
+  intros. unfold Val.cmpfs_bool. destruct v1; destruct v2; auto. rewrite Float32.cmp_ne_eq. simpl. rewrite negb_involutive. reflexivity.
+Qed.
+
+Lemma transl_compnotfs_correct:
+  forall cmp r1 r2 lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_comp_notfloat32 cmp r1 r2 lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\   (option_map negb (Val.cmpfs_bool cmp rs#r1 rs#r2) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. unfold transl_comp_notfloat32. destruct (notftest_for_cmp cmp) eqn:FT.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_single _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_single ft (rs r1) (rs r2))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (option_map negb (Val.cmpfs_bool cmp rs#r1 rs#r2)) as cmpbool.
+          destruct cmp; simpl;
+          unfold compare_single;
+          unfold Val.cmpfs; simpl in FT; inversion FT.
+          * rewrite cmpfs_bool_ne_eq; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite cmpfs_bool_ne_eq_rev. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
+  * esplit. split.
+    - apply exec_straight_one; simpl; eauto.
+    - split.
+      + intros; Simpl.
+      + intros. remember (rs # RTMP <- (compare_single _ _ _)) as rs'.
+        simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+        { 
+          assert ((nextblock tbb rs') # RTMP = (compare_single ft (rs r2) (rs r1))).
+          { rewrite Heqrs'. auto. }
+          rewrite H0. rewrite <- H.
+          remember (Val.cmpfs_bool cmp rs#r1 rs#r2) as cmpbool.
+          erewrite swap_comparison_cmpfs_bool_notftest in Heqcmpbool; eauto.
+          destruct cmp; simpl;
+          unfold compare_single;
+          unfold Val.cmpfs; simpl in FT; inversion FT; simpl in Heqcmpbool.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+          * rewrite notbool_option_map_negb. rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto; destruct b0; simpl; auto.
+        }
+        rewrite H0. simpl; auto.
 Qed.
 
 Lemma transl_complu_correct:
@@ -753,6 +1033,34 @@ Proof.
     * split; auto.
       { apply C'; auto. rewrite B, C; eauto with asmgen. }
       { intros. rewrite B'; eauto with asmgen. }
+
+(* Ccompf *)
+- exploit (transl_compf_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Cnotcompf *)
+- exploit (transl_compnotf_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Ccompfs *)
+- exploit (transl_compfs_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
+
+(* Cnotcompfs *)
+- exploit (transl_compnotfs_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
+  exists rs', (Pcb BTwnez RTMP lbl).
+  split.
+  + constructor. eexact A.
+  + split; auto. apply C; auto.
 Qed.
 
 Lemma transl_cbranch_correct_true:
