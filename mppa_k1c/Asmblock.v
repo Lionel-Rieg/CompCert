@@ -1022,11 +1022,7 @@ Definition compare_float (t: ftest) (v1 v2: val): val :=
   | FTult => Val.notbool (Val.cmpf Cge v1 v2)
   end.
 
-(** Execution of arith instructions 
-
-TODO: subsplitting by instruction type ? Could be useful for expressing auxiliary lemma...
-
-*)
+(** Execution of arith instructions *)
 
 Variable ge: genv.
 
@@ -1197,37 +1193,41 @@ Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
   | _ => Stuck
   end.
 
+Definition load_chunk n :=
+  match n with
+  | Plb => Mint8signed
+  | Plbu => Mint8unsigned
+  | Plh => Mint16signed
+  | Plhu => Mint16unsigned
+  | Plw => Mint32
+  | Plw_a => Many32
+  | Pld => Mint64
+  | Pld_a => Many64
+  | Pfls => Mfloat32
+  | Pfld => Mfloat64
+  end.
+
+Definition store_chunk n :=
+  match n with
+  | Psb => Mint8unsigned
+  | Psh => Mint16unsigned
+  | Psw => Mint32
+  | Psw_a => Many32
+  | Psd => Mint64
+  | Psd_a => Many64
+  | Pfss => Mfloat32
+  | Pfsd => Mfloat64
+  end.
+
 (** * basic instructions *)
 
 Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :=
- match bi with
- | PArith ai => Next (exec_arith_instr ai rs) m
+  match bi with
+  | PArith ai => Next (exec_arith_instr ai rs) m
 
- | PLoadRRO n d a ofs =>
-      match n with
-        | Plb => exec_load Mint8signed rs m d a ofs
-        | Plbu => exec_load Mint8unsigned rs m d a ofs
-        | Plh => exec_load Mint16signed rs m d a ofs
-        | Plhu => exec_load Mint16unsigned rs m d a ofs
-        | Plw => exec_load Mint32 rs m d a ofs
-        | Plw_a => exec_load Many32 rs m d a ofs
-        | Pld => exec_load Mint64 rs m d a ofs
-        | Pld_a => exec_load Many64 rs m d a ofs
-        | Pfls => exec_load Mfloat32 rs m d a ofs
-        | Pfld => exec_load Mfloat64 rs m d a ofs
-      end
+  | PLoadRRO n d a ofs => exec_load (load_chunk n) rs m d a ofs
 
-  | PStoreRRO n s a ofs =>
-      match n with
-        | Psb => exec_store Mint8unsigned rs m s a ofs
-        | Psh => exec_store Mint16unsigned rs m s a ofs
-        | Psw => exec_store Mint32 rs m s a ofs
-        | Psw_a => exec_store Many32 rs m s a ofs
-        | Psd => exec_store Mint64 rs m s a ofs
-        | Psd_a => exec_store Many64 rs m s a ofs
-        | Pfss => exec_store Mfloat32 rs m s a ofs
-        | Pfsd => exec_store Mfloat64 rs m s a ofs
-      end
+  | PStoreRRO n s a ofs => exec_store (store_chunk n) rs m s a ofs
 
   | Pallocframe sz pos =>
       let (m1, stk) := Mem.alloc m 0 sz in

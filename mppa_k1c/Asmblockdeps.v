@@ -129,19 +129,7 @@ Definition exec_load_deps (chunk: memory_chunk) (m: mem)
 
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
-  | OLoadRRO n ofs, [Val v; Memstate m] =>
-      match n with
-        | Plb => exec_load_deps Mint8signed m v ofs
-        | Plbu => exec_load_deps Mint8unsigned m v ofs
-        | Plh => exec_load_deps Mint16signed m v ofs
-        | Plhu => exec_load_deps Mint16unsigned m v ofs
-        | Plw => exec_load_deps Mint32 m v ofs
-        | Plw_a => exec_load_deps Many32 m v ofs
-        | Pld => exec_load_deps Mint64 m v ofs
-        | Pld_a => exec_load_deps Many64 m v ofs
-        | Pfls => exec_load_deps Mfloat32 m v ofs
-        | Pfld => exec_load_deps Mfloat64 m v ofs
-      end
+  | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps (load_chunk n) m v ofs
   | _, _ => None
   end.
 
@@ -159,17 +147,7 @@ Definition exec_store_deps (chunk: memory_chunk) (m: mem)
 
 Definition store_eval (so: store_op) (l: list value) :=
   match so, l with
-  | OStoreRRO n ofs, [Val vs; Val va; Memstate m] =>
-      match n with
-        | Psb => exec_store_deps Mint8unsigned m vs va ofs
-        | Psh => exec_store_deps Mint16unsigned m vs va ofs
-        | Psw => exec_store_deps Mint32 m vs va ofs
-        | Psw_a => exec_store_deps Many32 m vs va ofs
-        | Psd => exec_store_deps Mint64 m vs va ofs
-        | Psd_a => exec_store_deps Many64 m vs va ofs
-        | Pfss => exec_store_deps Mfloat32 m vs va ofs
-        | Pfsd => exec_store_deps Mfloat64 m vs va ofs
-      end
+  | OStoreRRO n ofs, [Val vs; Val va; Memstate m] => exec_store_deps (store_chunk n) m vs va ofs
   | _, _ => None
   end.
 
@@ -748,8 +726,8 @@ Proof.
 (* Arith *)
   - simpl in H. inv H. simpl macro_run. eapply trans_arith_correct; eauto.
 (* Load *)
-  - simpl in H. destruct i; destruct i.
-    all: unfold exec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+  - simpl in H. destruct i.
+    unfold exec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
     destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
     eexists; split; try split;
     [ simpl; rewrite EVALOFF; rewrite H; pose (H1 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
@@ -759,7 +737,7 @@ Proof.
        subst; Simpl|
        Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
 (* Store *)
-  - simpl in H. destruct i; destruct i.
+  - simpl in H. destruct i.
     all: unfold exec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
     destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
     eexists; split; try split;
