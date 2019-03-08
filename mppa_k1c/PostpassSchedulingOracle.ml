@@ -249,14 +249,24 @@ let signed_length (i:int64) =
     in if (within i interv) then n else f i (n+1)
   in f i 1
 
+let unsigned_length (i:int64) = (signed_length i) - 1
+
 let encode_imm (imm:int64) =
-  let length = signed_length imm
-  in if length <= 7 then U6 (* Unsigned -> 1 bit less needed *)
-  else if length <= 10 then S10
-  else if length <= 32 then U27L5 (* Upper 27 Lower 5 is signed *)
-  else if length <= 37 then U27L10
-  else if length <= 64 then E27U27L10
-  else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
+  if (Int64.compare imm Int64.zero < 0) then
+    let length = signed_length imm
+    in if length <= 10 then S10
+    else if length <= 32 then U27L5
+    else if length <= 37 then U27L10
+    else if length <= 64 then E27U27L10
+    else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
+  else
+    let length = unsigned_length imm
+    in if length <= 6 then U6
+    else if length <= 10 then S10
+    else if length <= 32 then U27L5
+    else if length <= 37 then U27L10
+    else if length <= 64 then E27U27L10
+    else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
 
 (** Resources *)
 let resource_names = ["ISSUE"; "TINY"; "LITE"; "ALU"; "LSU"; "MAU"; "BCU"; "ACC"; "DATA"; "TCA"; "BRE"; "BRO"; "NOP"]
