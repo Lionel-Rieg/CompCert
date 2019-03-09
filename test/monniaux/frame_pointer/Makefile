@@ -1,13 +1,16 @@
 whole : a.o b.o
 	../../../ccomp $+ -o $@
 
-a.o : a.c
-	k1-mbr-gcc -std=c99 -Wall -c $<
+a.s : a.c
+	k1-mbr-gcc -std=c99 -Wall -S $<
 
-b.o : b.c
-	../../../ccomp -Wall -Wno-c11-extensions -c $<
+b.s : b.c
+	../../../ccomp -Wall -Wno-c11-extensions -S $<
+
+%.o : %.s
+	k1-mbr-gcc -c $<
 
 clean:
-	-rm -f a.o b.o whole
+	-rm -f a.o b.o a.s b.s whole
 
 .PHONY: clean
