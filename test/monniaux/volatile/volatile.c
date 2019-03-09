@@ -1,32 +1,33 @@
-#include <pthread.h>
 #include <stdio.h>
 #include <time.h>
 
-#define VOLATILE volatile
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                          void *(*start_routine) (void *), void *arg);
+int pthread_join(pthread_t thread, void **retval);
 
 typedef unsigned data;
 
-static data powm(data x, unsigned e, data m) {
+static inline data powM(data x, unsigned e) {
   data y = 1;
   for(unsigned i=0; i<e; i++) {
-    y = (y * x) % m;
+    y = (y * x) % 65537;
   }
   return y;
 }
 
 void* second_thread_entry(void *ptr) {
-  *((data*) ptr) = powm(3, 65536, 65537);
+  *((data*) ptr) = powM(3, 65536);
   return NULL;
 }
 
 int main() {
   pthread_t second_thread_id;
-  VOLATILE data value;
+  volatile data value;
   pthread_create(&second_thread_id, NULL,
                  second_thread_entry, (void*) &value);
-  value = 0;
-  data correct = powm(3, 65536*4, 65537);;
+  value = 69;
+  data correct = powM(3, 65536*2);
   data read = value;
   pthread_join(second_thread_id, NULL);
-  printf("%u %u\n", correct, read);
+  printf("%u %u %s\n", read, correct, read == correct ? "OK" : "FAIL");
 }
