@@ -40,7 +40,9 @@ __compcert_va_int32:
 	.text
 	.balign 2
 	.globl __compcert_va_int64
+	.globl __compcert_va_float64
 __compcert_va_int64:
+__compcert_va_float64:
 # Prologue
 	addd	$r14 = $r12, 0
 ;;
