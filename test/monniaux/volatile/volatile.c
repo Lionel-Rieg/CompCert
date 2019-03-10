@@ -16,7 +16,7 @@ static inline data powM(data x, unsigned e) {
 }
 
 void* second_thread_entry(void *ptr) {
-  *((data*) ptr) = powM(3, 65536);
+  *((volatile data*) ptr) = powM(3, 65536);
   return NULL;
 }
 

@@ -26,7 +26,7 @@ open Camlcoq
 open !Integers
 
 exception Error of string
-
+                  
 (* Useful constants and helper functions *)
 
 let _0  = Integers.Int.zero
@@ -41,6 +41,8 @@ let wordsize = if Archi.ptr64 then 8 else 4
 
 let align n a = (n + a - 1) land (-a)
 
+let stack_pointer = Asmblock.GPR12
+                  
 (* Emit instruction sequences that set or offset a register by a constant. *)
 (*
   let expand_loadimm32 dst n =
@@ -120,8 +122,6 @@ let expand_annot_val kind txt targ args res = assert false
 
 (* Handling of memcpy *)
 
-let stack_pointer = Asmblock.GPR12
-                  
 let offset_in_range ofs =
   let ofs = Z.to_int64 ofs in -2048L <= ofs && ofs < 2048L
 
@@ -210,10 +210,10 @@ let expand_builtin_vload chunk args res =
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vload_common chunk Asmblock.GPR12 ofs res
+        expand_builtin_vload_common chunk stack_pointer ofs res
       else begin
         assert false (* FIXME
-        expand_addptrofs Asmblock.GPR32 Asmblock.GPR12 ofs; (* X31 <- sp + ofs *)
+        expand_addptrofs Asmblock.GPR32 stack_pointer ofs; (* X31 <- sp + ofs *)
         expand_builtin_vload_common chunk GPR32 _0 res *)
       end
   | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs))] ->
@@ -228,49 +228,47 @@ let expand_builtin_vload chunk args res =
       assert false
 
 
-let expand_builtin_vstore_common chunk base ofs src = assert false
-(*match chunk, src with
-  | (Mint8signed | Mint8unsigned), BA(IR src) ->
-     emit (Psb (src, base, Ofsimm ofs))
-  | (Mint16signed | Mint16unsigned), BA(IR src) ->
-     emit (Psh (src, base, Ofsimm ofs))
-  | Mint32, BA(IR src) ->
-     emit (Psw (src, base, Ofsimm ofs))
-  | Mint64, BA(IR src) ->
-     emit (Psd (src, base, Ofsimm ofs))
-  | Mint64, BA_splitlong(BA(IR src1), BA(IR src2)) ->
+let expand_builtin_vstore_common chunk base ofs src =
+  match chunk, src with
+  | (Mint8signed | Mint8unsigned), BA(Asmblock.IR src) ->
+     emit (Psb (src, base, Asmblock.Ofsimm ofs))
+  | (Mint16signed | Mint16unsigned), BA(Asmblock.IR src) ->
+     emit (Psh (src, base, Asmblock.Ofsimm ofs))
+  | Mint32, BA(Asmblock.IR src) ->
+     emit (Psw (src, base, Asmblock.Ofsimm ofs))
+  | Mint64, BA(Asmblock.IR src) ->
+     emit (Psd (src, base, Asmblock.Ofsimm ofs))
+  | Mint64, BA_splitlong(BA(Asmblock.IR src1), BA(Asmblock.IR src2)) ->
      let ofs' = Ptrofs.add ofs _4 in
-     emit (Psw (src2, base, Ofsimm ofs));
-     emit (Psw (src1, base, Ofsimm ofs'))
-  | Mfloat32, BA(FR src) ->
-     emit (Pfss (src, base, Ofsimm ofs))
-  | Mfloat64, BA(FR src) ->
-     emit (Pfsd (src, base, Ofsimm ofs))
+     emit (Psw (src2, base, Asmblock.Ofsimm ofs));
+     emit (Psw (src1, base, Asmblock.Ofsimm ofs'))
+  | Mfloat32, BA(Asmblock.IR src) ->
+     emit (Pfss (src, base, Asmblock.Ofsimm ofs))
+  | Mfloat64, BA(Asmblock.IR src) ->
+     emit (Pfsd (src, base, Asmblock.Ofsimm ofs))
   | _ ->
      assert false
-*)
 
-let expand_builtin_vstore chunk args = assert false
-(*match args with
-  | [BA(IR addr); src] ->
+let expand_builtin_vstore chunk args =
+  match args with
+  | [BA(Asmblock.IR addr); src] ->
       expand_builtin_vstore_common chunk addr _0 src
   | [BA_addrstack ofs; src] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vstore_common chunk X2 ofs src
-      else begin
+        expand_builtin_vstore_common chunk stack_pointer ofs src
+      else begin (* FIXME 
         expand_addptrofs X31 X2 ofs; (* X31 <- sp + ofs *)
-        expand_builtin_vstore_common chunk X31 _0 src
+        expand_builtin_vstore_common chunk X31 _0 src *)
       end
-  | [BA_addptr(BA(IR addr), (BA_int ofs | BA_long ofs)); src] ->
+  | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs)); src] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vstore_common chunk addr ofs src
-      else begin
+      else begin (* FIXME
         expand_addptrofs X31 addr ofs; (* X31 <- addr + ofs *)
-        expand_builtin_vstore_common chunk X31 _0 src
+        expand_builtin_vstore_common chunk X31 _0 src *)
       end
   | _ ->
       assert false
-*)
 
 (* Handling of varargs *)
 
@@ -306,7 +304,7 @@ match !vararg_start_ofs with
   | None ->
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
-      expand_addptrofs Asmblock.GPR32 Asmblock.GPR12 (Ptrofs.repr ofs);
+      expand_addptrofs Asmblock.GPR32 stack_pointer (Ptrofs.repr ofs);
       emit Psemi;
       expand_storeind_ptr Asmblock.GPR32 r Ptrofs.zero
 
@@ -401,14 +399,14 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (Asmblock.GPR14, Asmblock.GPR12));
+      emit (Pmv (Asmblock.GPR14, stack_pointer));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
-        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg full_sz));
+        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
         emit Psemi;
-        expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
+        expand_storeind_ptr Asmblock.GPR14 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
             sz in
@@ -416,9 +414,9 @@ let expand_instruction instr =
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.neg sz));
+        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
         emit Psemi;
-        expand_storeind_ptr Asmblock.GPR14 Asmblock.GPR12 ofs;
+        expand_storeind_ptr Asmblock.GPR14 stack_pointer ofs;
         emit Psemi;
         vararg_start_ofs := None
       end
@@ -429,7 +427,7 @@ let expand_instruction instr =
         let n = arguments_size sg in
         if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize)
       end else 0 in
-     expand_addptrofs Asmblock.GPR12 Asmblock.GPR12 (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
+     expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
 (*| Pseqw(rd, rs1, rs2) ->
       (* emulate based on the fact that x == 0 iff x <u 1 (unsigned cmp) *)
@@ -478,9 +476,9 @@ let expand_instruction instr =
         expand_builtin_inline (camlstring_of_coqstring name) args res
      | EF_vload chunk ->
         expand_builtin_vload chunk args res
- (* | EF_vstore chunk ->
+     | EF_vstore chunk ->
         expand_builtin_vstore chunk args
-     | EF_annot_val (kind,txt,targ) ->
+(*     | EF_annot_val (kind,txt,targ) ->
         expand_annot_val kind txt targ args res *)
      | EF_memcpy(sz, al) ->
         expand_builtin_memcpy sz al args
@@ -489,7 +487,6 @@ let expand_instruction instr =
     *)
      | EF_malloc -> failwith "asmexpand: malloc"
      | EF_free -> failwith "asmexpand: free"
-     | EF_vstore _ -> failwith "asmexpand: vstore"
      | EF_debug _ -> failwith "asmexpand: debug"
      | EF_annot _ -> failwith "asmexpand: annot"
      | EF_annot_val _ -> failwith "asmexpand: annot_val"
