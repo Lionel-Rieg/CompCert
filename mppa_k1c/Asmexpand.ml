@@ -174,58 +174,59 @@ let expand_builtin_memcpy  sz al args =
 
 (* Handling of volatile reads and writes *)
 
-let expand_builtin_vload_common chunk base ofs res = assert false
-(*match chunk, res with
-  | Mint8unsigned, BR(IR res) ->
-     emit (Plbu (res, base, Ofsimm ofs))
-  | Mint8signed, BR(IR res) ->
-     emit (Plb  (res, base, Ofsimm ofs))
-  | Mint16unsigned, BR(IR res) ->
-     emit (Plhu (res, base, Ofsimm ofs))
-  | Mint16signed, BR(IR res) ->
-     emit (Plh  (res, base, Ofsimm ofs))
-  | Mint32, BR(IR res) ->
-     emit (Plw  (res, base, Ofsimm ofs))
-  | Mint64, BR(IR res) ->
-     emit (Pld  (res, base, Ofsimm ofs))
-  | Mint64, BR_splitlong(BR(IR res1), BR(IR res2)) ->
+let expand_builtin_vload_common chunk base ofs res =
+  match chunk, res with
+  | Mint8unsigned, BR(Asmblock.IR res) ->
+     emit (Plbu (res, base, Asmblock.Ofsimm ofs))
+  | Mint8signed, BR(Asmblock.IR res) ->
+     emit (Plb  (res, base, Asmblock.Ofsimm ofs))
+  | Mint16unsigned, BR(Asmblock.IR res) ->
+     emit (Plhu (res, base, Asmblock.Ofsimm ofs))
+  | Mint16signed, BR(Asmblock.IR res) ->
+     emit (Plh  (res, base, Asmblock.Ofsimm ofs))
+  | Mint32, BR(Asmblock.IR res) ->
+     emit (Plw  (res, base, Asmblock.Ofsimm ofs))
+  | Mint64, BR(Asmblock.IR res) ->
+     emit (Pld  (res, base, Asmblock.Ofsimm ofs))
+  | Mint64, BR_splitlong(BR(Asmblock.IR res1), BR(Asmblock.IR res2)) ->
      let ofs' = Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, Ofsimm ofs));
-         emit (Plw (res1, base, Ofsimm ofs'))
+         emit (Plw (res2, base, Asmblock.Ofsimm ofs));
+         emit (Plw (res1, base, Asmblock.Ofsimm ofs'))
        end else begin
-         emit (Plw (res1, base, Ofsimm ofs'));
-         emit (Plw (res2, base, Ofsimm ofs))
+         emit (Plw (res1, base, Asmblock.Ofsimm ofs'));
+         emit (Plw (res2, base, Asmblock.Ofsimm ofs))
        end
-  | Mfloat32, BR(FR res) ->
-     emit (Pfls (res, base, Ofsimm ofs))
-  | Mfloat64, BR(FR res) ->
-     emit (Pfld (res, base, Ofsimm ofs))
+  | Mfloat32, BR(Asmblock.IR res) ->
+     emit (Pfls (res, base, Asmblock.Ofsimm ofs))
+  | Mfloat64, BR(Asmblock.IR res) ->
+     emit (Pfld (res, base, Asmblock.Ofsimm ofs))
   | _ ->
      assert false
-*)
 
-let expand_builtin_vload chunk args res = assert false
-(*match args with
-  | [BA(IR addr)] ->
+let expand_builtin_vload chunk args res =
+  match args with
+  | [BA(Asmblock.IR addr)] ->
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vload_common chunk GPR12 ofs res
+        expand_builtin_vload_common chunk Asmblock.GPR12 ofs res
       else begin
-        expand_addptrofs GPR32 GPR12 ofs; (* X31 <- sp + ofs *)
-        expand_builtin_vload_common chunk GPR32 _0 res
+        assert false (* FIXME
+        expand_addptrofs Asmblock.GPR32 Asmblock.GPR12 ofs; (* X31 <- sp + ofs *)
+        expand_builtin_vload_common chunk GPR32 _0 res *)
       end
-  | [BA_addptr(BA(IR addr), (BA_int ofs | BA_long ofs))] ->
+  | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs))] ->
       if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vload_common chunk addr ofs res
       else begin
-        expand_addptrofs GPR32 addr ofs; (* X31 <- addr + ofs *)
-        expand_builtin_vload_common chunk GPR32 _0 res
+          assert false (* FIXME
+        expand_addptrofs Asmblock.GPR32 addr ofs; (* X31 <- addr + ofs *)
+        expand_builtin_vload_common chunk Asmblock.GPR32 _0 res *)
       end
   | _ ->
       assert false
-*)
+
 
 let expand_builtin_vstore_common chunk base ofs src = assert false
 (*match chunk, src with
@@ -475,9 +476,9 @@ let expand_instruction instr =
      begin match ef with
      | EF_builtin (name,sg) ->
         expand_builtin_inline (camlstring_of_coqstring name) args res
-   (*| EF_vload chunk ->
+     | EF_vload chunk ->
         expand_builtin_vload chunk args res
-     | EF_vstore chunk ->
+ (* | EF_vstore chunk ->
         expand_builtin_vstore chunk args
      | EF_annot_val (kind,txt,targ) ->
         expand_annot_val kind txt targ args res *)
@@ -488,7 +489,6 @@ let expand_instruction instr =
     *)
      | EF_malloc -> failwith "asmexpand: malloc"
      | EF_free -> failwith "asmexpand: free"
-     | EF_vload _ -> failwith "asmexpand: vload"
      | EF_vstore _ -> failwith "asmexpand: vstore"
      | EF_debug _ -> failwith "asmexpand: debug"
      | EF_annot _ -> failwith "asmexpand: annot"
