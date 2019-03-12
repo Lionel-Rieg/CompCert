@@ -10,3 +10,8 @@ complex_mat.gcc.host.s complex_mat.ccomp.host.s complex_mat.gcc.k1c.s complex_ma
 
 complex_mat.gcc.host complex_mat.ccomp.host : ../clock.gcc.host.o
 complex_mat.gcc.k1c complex_mat.ccomp.k1c : ../clock.gcc.k1c.o
+
+clean:
+	-rm -f *.o *.s *.k1c
+
+.PHONY: clean

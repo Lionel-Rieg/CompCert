@@ -1094,11 +1094,14 @@ let ilp_read_solution mapper channel =
     times;;
 
 let ilp_solver = ref "ilp_solver"
-               
+
+let problem_nr = ref 0
+                             
 let ilp_scheduler pb_type problem =
   try
-    let filename_in = "problem.lp"
-    and filename_out = "problem.sol" in
+    let filename_in = Printf.sprintf  "problem%05d.lp" !problem_nr
+    and filename_out = Printf.sprintf "problem%05d.sol" !problem_nr in
+    incr problem_nr;
     let opb_problem = open_out filename_in in
     let mapper = ilp_print_problem opb_problem problem pb_type in
     close_out opb_problem;
