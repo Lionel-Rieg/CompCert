@@ -113,6 +113,8 @@ Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>
   "fun _ -> !Clflags.option_fpostpass".
+Extract Constant Compopts.optim_pp_optimizer =>
+  "fun _ -> !Clflags.option_pp_optimizer".
 Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
@@ -191,4 +193,4 @@ Separate Extraction
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
    Parser.translation_unit_file
-   Compopts.optim_postpass.
+   Compopts.optim_postpass Compopts.optim_pp_optimizer.

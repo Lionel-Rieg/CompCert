@@ -336,12 +336,22 @@ Qed.
 Definition do_schedule (bb: bblock) : list bblock :=
   if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
 
+Definition verify_par_bblock (bb: bblock) : res unit :=
+  if (bblock_para_check bb) then OK tt else Error (msg "PostpassScheduling.verify_par_bblock").
+
+Fixpoint verify_par (lbb: list bblock) :=
+  match lbb with
+  | nil => OK tt
+  | bb :: lbb => do res <- verify_par_bblock bb; verify_par lbb
+  end.
+
 Definition verified_schedule_nob (bb : bblock) : res (list bblock) :=
   let bb' := no_header bb in
   let lbb := do_schedule bb' in
   do tbb <- concat_all lbb;
   do sizecheck <- verify_size bb lbb;
   do schedcheck <- verify_schedule bb' tbb;
+  do parcheck <- verify_par lbb;
   stick_header_code (header bb) lbb.
 
 Lemma verified_schedule_nob_size:
@@ -368,7 +378,7 @@ Lemma verified_schedule_nob_header:
   /\ Forall (fun b => header b = nil) lbb.
 Proof.
   intros. split.
-  - monadInv H. unfold stick_header_code in EQ3. destruct (hd_error _); try discriminate. inv EQ3.
+  - monadInv H. unfold stick_header_code in EQ4. destruct (hd_error _); try discriminate. inv EQ4.
     simpl. reflexivity.
   - apply verified_schedule_nob_no_header_in_middle in H. assumption.
 Qed.

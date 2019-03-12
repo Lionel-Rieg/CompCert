@@ -11,6 +11,7 @@ Require Import ZArith.
 Require Import Coqlib.
 Require Import ImpDep.
 Require Import Axioms.
+Require Import Parallelizability.
 
 Open Scope impure.
 
@@ -404,6 +405,8 @@ Import P.
 Section SECT.
 Variable Ge: genv.
 
+Local Open Scope positive_scope.
+
 Definition pmem : R.t := 1.
 
 Definition ireg_to_pos (ir: ireg) : R.t :=
@@ -418,7 +421,51 @@ Definition ireg_to_pos (ir: ireg) : R.t :=
   end
 .
 
-Local Open Scope positive_scope.
+Lemma ireg_to_pos_discr: forall r r', r <> r' -> ireg_to_pos r <> ireg_to_pos r'.
+Proof.
+  destruct r; destruct r'; try contradiction; discriminate.
+Qed.
+
+Definition ppos (r: preg) : R.t :=
+  match r with
+  | RA => 2
+  | PC => 3
+  | IR ir => 3 + ireg_to_pos ir
+  end
+.
+
+Notation "# r" := (ppos r) (at level 100, right associativity).
+
+Lemma not_eq_add:
+  forall k n n', n <> n' -> k + n <> k + n'.
+Proof.
+  intros k n n' H1 H2. apply H1; clear H1. eapply Pos.add_reg_l; eauto.
+Qed.
+
+Lemma ppos_discr: forall r r', r <> r' -> ppos r <> ppos r'.
+Proof.
+  destruct r; destruct r'.
+  all: try discriminate; try contradiction.
+  - intros. apply not_eq_add. apply ireg_to_pos_discr. congruence.
+  - intros. unfold ppos. cutrewrite (3 + ireg_to_pos g = (1 + ireg_to_pos g) + 2). apply Pos.add_no_neutral.
+    apply eq_sym. rewrite Pos.add_comm. rewrite Pos.add_assoc. reflexivity.
+  - intros. unfold ppos. rewrite Pos.add_comm. apply Pos.add_no_neutral.
+  - intros. unfold ppos. apply not_eq_sym.
+    cutrewrite (3 + ireg_to_pos g = (1 + ireg_to_pos g) + 2). apply Pos.add_no_neutral.
+    apply eq_sym. rewrite Pos.add_comm. rewrite Pos.add_assoc. reflexivity.
+  - intros. unfold ppos. apply not_eq_sym. rewrite Pos.add_comm. apply Pos.add_no_neutral.
+Qed.
+
+Lemma ppos_pmem_discr: forall r, pmem <> ppos r.
+Proof.
+  intros. destruct r.
+  - unfold ppos. unfold pmem. apply not_eq_sym. rewrite Pos.add_comm. cutrewrite (3 = 2 + 1). rewrite Pos.add_assoc. apply Pos.add_no_neutral.
+    reflexivity.
+  - unfold ppos. unfold pmem. discriminate.
+  - unfold ppos. unfold pmem. discriminate.
+Qed.
+
+(** Inversion functions, used for debugging *)
 
 Definition pos_to_ireg (p: R.t) : option gpreg :=
   match p with
@@ -432,14 +479,6 @@ Definition pos_to_ireg (p: R.t) : option gpreg :=
   | _ => None
   end.
 
-Definition ppos (r: preg) : R.t :=
-  match r with
-  | RA => 2
-  | PC => 3
-  | IR ir => 3 + ireg_to_pos ir
-  end
-.
-
 Definition inv_ppos (p: R.t) : option preg :=
   match p with
   | 1 => None
@@ -450,7 +489,8 @@ Definition inv_ppos (p: R.t) : option preg :=
        end
   end.
 
-Notation "# r" := (ppos r) (at level 100, right associativity).
+
+(** Traduction Asmblock -> Asmblockdeps *)
 
 Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
@@ -467,10 +507,10 @@ Definition trans_control (ctl: control) : macro :=
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
-Definition trans_exit (ex: option control) : list L.macro :=
+Definition trans_exit (ex: option control) : L.macro :=
   match ex with
-  | None => nil
-  | Some ctl => trans_control ctl :: nil
+  | None => []
+  | Some ctl => trans_control ctl
   end
 .
 
@@ -515,10 +555,10 @@ Fixpoint trans_body (b: list basic) : list L.macro :=
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-Definition trans_pcincr (sz: Z) := [(#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil))] :: nil.
+Definition trans_pcincr (sz: Z) (k: L.macro) := [(#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k].
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
-  trans_body (body b) ++ trans_pcincr (size b) ++ trans_exit (exit b).
+  trans_body (body b) ++ trans_pcincr (size b) (trans_exit (exit b)).
 
 Theorem trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
 Proof.
@@ -554,50 +594,6 @@ Definition trans_state (s: Asmblock.state) : state :=
            | None => Val Vundef
            end.
 
-Lemma pos_gpreg_not: forall g: gpreg, pmem <> (#g) /\ 2 <> (#g) /\ 3 <> (#g).
-Proof.
-  intros. split; try split. all: destruct g; try discriminate.
-Qed.
-
-Lemma not_3_plus_n:
-  forall n, 3 + n <> pmem /\ 3 + n <> (# RA) /\ 3 + n <> (# PC).
-Proof.
-  intros. split; try split.
-  all: destruct n; simpl; try (destruct n; discriminate); try discriminate.
-Qed.
-
-Lemma not_eq_add:
-  forall k n n', n <> n' -> k + n <> k + n'.
-Proof.
-  intros k n n' H1 H2. apply H1; clear H1. eapply Pos.add_reg_l; eauto.
-Qed.
-
-Lemma not_eq_ireg_to_pos:
-  forall n r r', r' <> r -> n + ireg_to_pos r <> n + ireg_to_pos r'.
-Proof.
-  intros. destruct r; destruct r'; try contradiction; apply not_eq_add; discriminate.
-Qed.
-
-Lemma not_eq_ireg_ppos: 
-  forall r r', r <> r' -> (# r') <> (# r).
-Proof.
-  intros. unfold ppos. destruct r.
-  - destruct r'; try discriminate.
-    + apply not_eq_ireg_to_pos; congruence.
-    + destruct g; discriminate.
-    + destruct g; discriminate.
-  - destruct r'; try discriminate; try contradiction.
-    destruct g; discriminate.
-  - destruct r'; try discriminate; try contradiction.
-    destruct g; discriminate.
-Qed.
-
-Lemma not_eq_ireg_to_pos_ppos:
-  forall r r', r' <> r -> 3 + ireg_to_pos r <> # r'.
-Proof.
-  intros. unfold ppos. apply not_eq_ireg_to_pos. assumption.
-Qed.
-
 Lemma not_eq_IR:
   forall r r', r <> r' -> IR r <> IR r'.
 Proof.
@@ -610,13 +606,15 @@ Ltac Simplif :=
   || (rewrite Pregmap.gss)
   || (rewrite nextblock_pc)
   || (rewrite Pregmap.gso by eauto with asmgen)
-  || (rewrite assign_diff by (try discriminate; try (apply pos_gpreg_not); try (apply not_3_plus_n); try (apply not_eq_ireg_ppos; apply not_eq_IR; auto); try (apply not_eq_ireg_to_pos_ppos; auto)))
+  || (rewrite assign_diff by (auto; try discriminate; try (apply ppos_discr; try discriminate; congruence); try (apply ppos_pmem_discr); 
+                                    try (apply not_eq_sym; apply ppos_discr; try discriminate; congruence); try (apply not_eq_sym; apply ppos_pmem_discr); auto))
   || (rewrite assign_eq)
   ); auto with asmgen.
 
 Ltac Simpl := repeat Simplif.
 
 Arguments Pos.add: simpl never.
+Arguments ppos: simpl never.
 
 Theorem trans_state_match: forall S, match_states S (trans_state S).
 Proof.
@@ -663,11 +661,11 @@ Proof.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRR *)
   - inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; pose (H1 rs0); simpl in e; rewrite e; reflexivity |
-      Simpl |
-      intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); subst; Simpl ].
+    eexists; split; try split.
+    * simpl. pose (H1 rs0). rewrite e; reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRI32 *)
   - inv H. inv H0.
     eexists; split; try split.
@@ -694,24 +692,25 @@ Proof.
       destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRRR *)
   - inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; pose (H1 rs1); simpl in e; rewrite e; pose (H1 rs2); simpl in e0; rewrite e0; try (rewrite H); reflexivity
-    | Simpl
-    | intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); subst; Simpl ].
+    eexists; split; try split.
+    * simpl. pose (H1 rs1); rewrite e. pose (H1 rs2); rewrite e0. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
 (* PArithRRI32 *)
   - inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); auto
-    | Simpl
-    | intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); subst; Simpl ].
+    eexists; split; try split.
+    * simpl. pose (H1 rs0); rewrite e. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRRI64 *)
   - inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; pose (H1 rs0); simpl in e; rewrite e; try (rewrite H); reflexivity
-    | Simpl
-    | intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); subst; Simpl ].
+    eexists; split; try split.
+    * simpl. pose (H1 rs0); rewrite e. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
 Qed.
 
 Lemma forward_simu_basic:
@@ -750,14 +749,8 @@ Proof.
     * simpl. Simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite MEMAL. rewrite MEMS. Simpl.
       rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
     * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]].
-      ** subst. Simpl.
-      ** subst. Simpl.
-      ** subst. Simpl.
-      ** Simpl. repeat (rewrite assign_diff). auto.
-         pose (not_eq_ireg_to_pos_ppos GPR14 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos GPR12 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos GPR32 g). simpl ireg_to_pos in n2. auto.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
 (* Freeframe *)
   - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rs GPR12) eqn:SPeq; try discriminate.
     destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv H0.
@@ -765,20 +758,11 @@ Proof.
     * simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
       Simpl. rewrite e. rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
     * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]].
-      ** subst. Simpl.
-      ** subst. Simpl.
-      ** subst. Simpl.
-      ** Simpl. repeat (rewrite assign_diff). auto.
-         unfold ppos. pose (not_3_plus_n (ireg_to_pos g)). destruct a as (A & _ & _). auto.
-         pose (not_eq_ireg_to_pos_ppos GPR12 g). simpl ireg_to_pos in n2. auto.
-         pose (not_eq_ireg_to_pos_ppos GPR32 g). simpl ireg_to_pos in n2. auto.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
 (* Pget *)
   - simpl in H. destruct rs0 eqn:rs0eq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
-    destruct (ireg_eq g rd).
-    * subst. Simpl.
-    * Simpl.
+    destruct (ireg_eq g rd); subst; Simpl.
 (* Pset *)
   - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
@@ -811,7 +795,7 @@ Lemma forward_simu_control:
   exec_control ge fn ex (nextblock b rs) m = Next rs2 m2 ->
   match_states (State rs m) s ->
   exists s',
-     exec Ge (trans_pcincr (size b) ++ trans_exit ex) s = Some s'
+     exec Ge (trans_pcincr (size b) (trans_exit ex)) s = Some s'
   /\ match_states (State rs2 m2) s'.
 Proof.
   intros. destruct ex.
@@ -962,25 +946,48 @@ Proof.
     eapply IHc; eauto.
 Qed.
 
+Lemma exec_trans_pcincr_exec_macrorun:
+  forall rs m s b k,
+  match_states (State rs m) s ->
+  exists s',
+     macro_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = macro_run Ge k s' s
+  /\ match_states (State (nextblock b rs) m) s'.
+Proof.
+  intros. inv H. eexists. split. simpl. pose (H1 PC); simpl in e; rewrite e. destruct Ge. simpl. eapply eq_refl.
+  simpl. split.
+  - Simpl.
+  - intros rr; destruct rr; Simpl.
+Qed.
+
+Lemma macro_run_trans_exit_noold:
+  forall ex s s' s'',
+  macro_run Ge (trans_exit ex) s s' = macro_run Ge (trans_exit ex) s s''.
+Proof.
+  intros. destruct ex.
+  - destruct c; destruct i; reflexivity.
+  - reflexivity.
+Qed.
+
 Lemma exec_trans_pcincr_exec:
   forall rs m s b,
   match_states (State rs m) s ->
   exists s',
-     exec Ge (trans_pcincr (size b) ++ trans_exit (exit b)) s = exec Ge (trans_exit (exit b)) s'
+     exec Ge (trans_pcincr (size b) (trans_exit (exit b))) s = exec Ge [trans_exit (exit b)] s'
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
-  intros. inv H. eexists. split. simpl.
-  unfold control_eval. pose (H1 PC); simpl in e; rewrite e. destruct Ge. reflexivity.
-  simpl. split.
-  - Simpl.
-  - intros rr; destruct rr; Simpl.
+  intros.
+  exploit exec_trans_pcincr_exec_macrorun; eauto.
+  intros (s' & MRUN & MS).
+  eexists. split. unfold exec. unfold trans_pcincr. unfold run. rewrite MRUN.
+  erewrite macro_run_trans_exit_noold; eauto.
+  assumption.
 Qed.
 
 Lemma exec_exit_none:
   forall ge fn rs m s ex,
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
-  exec Ge (trans_exit ex) s = None ->
+  exec Ge [trans_exit ex] s = None ->
   exec_control ge fn ex rs m = Stuck.
 Proof.
   intros. inv H0. destruct ex as [ctl|]; try discriminate.
@@ -1034,7 +1041,8 @@ Proof.
   - right. repeat eexists.
     exploit exec_body_next_exec; eauto.
     intros (s' & EXECBK' & MS'). unfold trans_block in EXECBK. rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
-    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS''). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
+    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS'').
+    rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
     eapply exec_exit_none; eauto.
   - left. reflexivity.
 Qed.
@@ -1091,7 +1099,7 @@ Lemma forward_simu_exit_stuck:
   Ge = Genv ge fn ->
   exec_control ge fn ex rs m = Stuck ->
   match_states (State rs m) s ->
-  exec Ge (trans_exit ex) s = None.
+  exec Ge [(trans_exit ex)] s = None.
 Proof.
   intros. inv H1. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
@@ -1444,3 +1452,10 @@ Definition bblock_equivb: Asmblock.bblock -> Asmblock.bblock -> bool := pure_bbl
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT.
+
+(** Parallelizability of a bblock *)
+
+Module PChk := ParallelChecks L PosResourceSet.
+
+Definition bblock_para_check (p: Asmblock.bblock) : bool :=
+  PChk.is_parallelizable (trans_block p).
