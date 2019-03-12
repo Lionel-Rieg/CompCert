@@ -42,6 +42,9 @@ Parameter optim_redundancy: unit -> bool.
 (** Flag -fpostpass. Postpass scheduling for K1 architecture *)
 Parameter optim_postpass: unit -> bool.
 
+(** Flag -fpp_optimizer, to specify the postpass optimizer to use *)
+Parameter optim_pp_optimizer: unit -> nat.
+
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.
 

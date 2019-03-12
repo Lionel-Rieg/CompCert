@@ -684,8 +684,9 @@ let print_bb oc bb =
   in List.iter (print_inst oc) asm_instructions
 
 let do_schedule bb =
-  let problem = build_problem bb
-  in let solution = validated_scheduler list_scheduler problem
+  let scheduler = match Compopts.optim_pp_optimizer () with 1 -> list_scheduler | _ -> failwith "No scheduler provided"
+  in let problem = build_problem bb
+  in let solution = validated_scheduler scheduler problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> let bundles = bundlize_solution bb sol in 
