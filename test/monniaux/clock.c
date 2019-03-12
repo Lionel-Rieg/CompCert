@@ -19,6 +19,10 @@ cycle_t get_total_clock(void) {
   return total_clock;
 }
 
+cycle_t get_current_cycle(void) {
+  return get_cycle();
+}
+
 void print_total_clock(void) {
   printf("cycles: %lu\n", total_clock);
 }
