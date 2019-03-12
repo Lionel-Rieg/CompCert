@@ -128,5 +128,6 @@ int main() {
   free(c5);
   free(c6);
   free(c7);
+  free(c8);
   return 0;
 }
