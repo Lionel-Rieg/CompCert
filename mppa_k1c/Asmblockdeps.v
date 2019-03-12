@@ -946,6 +946,28 @@ Proof.
     eapply IHc; eauto.
 Qed.
 
+Lemma exec_trans_pcincr_exec_macrorun:
+  forall rs m s b k,
+  match_states (State rs m) s ->
+  exists s',
+     macro_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = macro_run Ge k s' s
+  /\ match_states (State (nextblock b rs) m) s'.
+Proof.
+  intros. inv H. eexists. split. simpl. pose (H1 PC); simpl in e; rewrite e. destruct Ge. simpl. eapply eq_refl.
+  simpl. split.
+  - Simpl.
+  - intros rr; destruct rr; Simpl.
+Qed.
+
+Lemma macro_run_trans_exit_noold:
+  forall ex s s' s'',
+  macro_run Ge (trans_exit ex) s s' = macro_run Ge (trans_exit ex) s s''.
+Proof.
+  intros. destruct ex.
+  - destruct c; destruct i; reflexivity.
+  - reflexivity.
+Qed.
+
 Lemma exec_trans_pcincr_exec:
   forall rs m s b,
   match_states (State rs m) s ->
@@ -953,12 +975,13 @@ Lemma exec_trans_pcincr_exec:
      exec Ge (trans_pcincr (size b) (trans_exit (exit b))) s = exec Ge [trans_exit (exit b)] s'
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
-  intros. inv H. eexists. split. simpl.
-  unfold control_eval. pose (H1 PC); simpl in e; rewrite e. destruct Ge. (* eapply eq_refl.
-  simpl. split.
-  - Simpl.
-  - intros rr; destruct rr; Simpl.*)
-Admitted. (* FIXME *)
+  intros.
+  exploit exec_trans_pcincr_exec_macrorun; eauto.
+  intros (s' & MRUN & MS).
+  eexists. split. unfold exec. unfold trans_pcincr. unfold run. rewrite MRUN.
+  erewrite macro_run_trans_exit_noold; eauto.
+  assumption.
+Qed.
 
 Lemma exec_exit_none:
   forall ge fn rs m s ex,
@@ -1018,7 +1041,8 @@ Proof.
   - right. repeat eexists.
     exploit exec_body_next_exec; eauto.
     intros (s' & EXECBK' & MS'). unfold trans_block in EXECBK. rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
-    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS''). rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
+    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS'').
+    rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
     eapply exec_exit_none; eauto.
   - left. reflexivity.
 Qed.
