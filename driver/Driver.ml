@@ -194,6 +194,7 @@ Processing options:
   -fcse          Perform common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
+  -fpostpass-ilp Use integer linear programming for postpass scheduling [off]
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
@@ -363,6 +364,7 @@ let cmdline_actions =
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
+  @ f_opt "postpass-ilp" option_fpostpass_ilp
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
 (* Code generation options *)

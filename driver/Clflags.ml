@@ -28,6 +28,7 @@ let option_fconstprop = ref true
 let option_fcse = ref true
 let option_fredundancy = ref true
 let option_fpostpass = ref true
+let option_fpostpass_ilp = ref false
 let option_falignfunctions = ref (None: int option)
 let option_falignbranchtargets = ref 0
 let option_faligncondbranchs = ref 0
