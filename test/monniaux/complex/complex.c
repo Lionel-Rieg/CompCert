@@ -41,15 +41,12 @@ static inline void COMPLEX_mul_addto(COMPLEX *r,
   r->im = im;
 }
 
-#define MACRO_COMPLEX_mul_addto(r, x, y) \
+#define MACRO_COMPLEX_mul_addto(rre, rim, x, y)	\
   { \
-    double rre=(r).re, rim=(r).im, \
-           xre = (x).re, xim=(x).im, \
-           yre = (y).re, yim = (y).im; \
-    double re = rre + xre * yre - xim * yim; \
-    double im = rim + xim * yre + xre * yim; \
-    r.re = re; \
-    r.im = im; \
+    double xre = (x).re, xim=(x).im, \
+           yre = (y).re, yim=(y).im; \
+    (rre) += xre * yre - xim * yim; \
+    (rim) += xim * yre + xre * yim; \
   }
 
 
@@ -121,7 +118,7 @@ void COMPLEX_mat_mul8(unsigned m, unsigned n, unsigned p,
 
 #undef CHUNK
 #define CHUNK \
-  MACRO_COMPLEX_mul_addto(total, *pa_i_j, *pb_j_k)	       		\
+  MACRO_COMPLEX_mul_addto(totalre, totalim, *pa_i_j, *pb_j_k)	      	\
   pa_i_j ++;								\
   pb_j_k = (COMPLEX*) ((char*) pb_j_k + stride_b_scaled);
 
@@ -135,8 +132,7 @@ void COMPLEX_mat_mul9(unsigned m, unsigned n, unsigned p,
   for(unsigned i=0; i<m; i++) {
     for(unsigned k=0; k<p; k++) {
       const COMPLEX *pb_j_k = b+k, *pa_i_j = pa_i;
-      COMPLEX total;
-      COMPLEX_zero(&total);
+      REAL totalre=0.0, totalim=0.0;
       {
 	unsigned j4=0, n4=n/UNROLL;
 	if (n4 > 0) {
@@ -158,7 +154,8 @@ void COMPLEX_mat_mul9(unsigned m, unsigned n, unsigned p,
 	  } while (j4 < n4);
 	}
       }
-      pc_i[k] = total;
+      pc_i[k].re = totalre;
+      pc_i[k].im = totalim;
     }
     pa_i += stride_a;
     pc_i += stride_c;
