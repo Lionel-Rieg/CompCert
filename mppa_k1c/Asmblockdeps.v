@@ -11,6 +11,7 @@ Require Import ZArith.
 Require Import Coqlib.
 Require Import ImpDep.
 Require Import Axioms.
+Require Import Parallelizability.
 
 Open Scope impure.
 
@@ -1444,3 +1445,10 @@ Definition bblock_equivb: Asmblock.bblock -> Asmblock.bblock -> bool := pure_bbl
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT.
+
+(** Parallelizability of a bblock *)
+
+Module PChk := ParallelChecks L PosResourceSet.
+
+Definition bblock_para_check (p: Asmblock.bblock) : bool :=
+  PChk.is_parallelizable (trans_block p).
