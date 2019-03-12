@@ -1,0 +1,3 @@
+#!/bin/sh
+# For using -fpostpass-ilp with Gurobi
+exec gurobi_cl DegenMoves=4 Heuristics=0 MIPFocus=2 PrePasses=2 ResultFile=$2 $1
