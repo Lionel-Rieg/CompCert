@@ -296,7 +296,6 @@ let cmdline_actions =
   Exact "-O", Unit (set_all optimization_options);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
-  Exact "-pp-optimizer", String(fun s -> option_pp_optimizer := if (s == "list_scheduler") then 1 else if (s == "cascaded_scheduler") then 2 else 0);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n);

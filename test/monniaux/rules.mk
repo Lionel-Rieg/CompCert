@@ -7,7 +7,7 @@ K1C_CC=k1-mbr-gcc
 K1C_CFLAGS =-g -std=c99 -O2 -Wall -Wextra -Werror=implicit
 
 K1C_CCOMP = ../../../ccomp
-K1C_CCOMPFLAGS=-O3 -Wall -Wno-c11-extensions -fno-unprototyped
+K1C_CCOMPFLAGS=-O3 -Wall -Wno-c11-extensions -fno-unprototyped # -fpostpass-ilp
 
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 
