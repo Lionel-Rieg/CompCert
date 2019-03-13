@@ -743,7 +743,7 @@ Lemma transl_opt_compuimm_correct:
   exists rs', exists insn,
      exec_straight_opt (transl_opt_compuimm n cmp r1 lbl k) rs m ((PControl insn) ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
-  /\ ( Val.cmpu_bool (Mem.valid_pointer m) cmp rs#r1 (Vint n) = Some b ->
+  /\ ( Val_cmpu_bool cmp rs#r1 (Vint n) = Some b ->
        exec_control ge fn (Some insn) (nextblock tbb rs') m = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
@@ -819,7 +819,7 @@ Lemma transl_opt_compluimm_correct:
   exists rs', exists insn,
      exec_straight_opt (transl_opt_compluimm n cmp r1 lbl k) rs m ((PControl insn) ::g k) rs' m
   /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)
-  /\ ( Val.cmplu_bool (Mem.valid_pointer m) cmp rs#r1 (Vlong n) = Some b ->
+  /\ ( Val_cmplu_bool cmp rs#r1 (Vlong n) = Some b ->
        exec_control ge fn (Some insn) (nextblock tbb rs') m = eval_branch fn lbl (nextblock tbb rs') m (Some b))
   .
 Proof.
@@ -1016,7 +1016,7 @@ Proof.
     exists rs', i.
     split.
     * apply A.
-    * split; auto. apply C. apply EVAL'.
+    * split; eauto. (*  apply C. apply EVAL'. *)
   + assert (transl_opt_compluimm n c0 x lbl k = loadimm64 RTMP n ::g transl_compl c0 Unsigned x RTMP lbl k).
     { unfold transl_opt_compluimm.
       destruct (Int64.eq n Int64.zero) eqn:EQN.

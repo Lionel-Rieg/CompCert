@@ -179,10 +179,10 @@ Definition control_eval (o: control_op) (l: list value) :=
     | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmpl_bool c v (Vlong (Int64.repr 0)))
     | (None, _) => None
     end
-  | Ocbu bt l, [Val v; Val vpc; Memstate m] =>
+  | Ocbu bt l, [Val v; Val vpc] =>
     match cmpu_for_btest bt with
-    | (Some c, Int) => eval_branch_deps fn l vpc (Val.cmpu_bool (Mem.valid_pointer m) c v (Vint (Int.repr 0)))
-    | (Some c, Long) => eval_branch_deps fn l vpc (Val.cmplu_bool (Mem.valid_pointer m) c v (Vlong (Int64.repr 0)))
+    | (Some c, Int) => eval_branch_deps fn l vpc (Val_cmpu_bool c v (Vint (Int.repr 0)))
+    | (Some c, Long) => eval_branch_deps fn l vpc (Val_cmplu_bool c v (Vlong (Int64.repr 0)))
     | (None, _) => None
     end
   | OIncremPC sz, [Val vpc] => Some (Val (Val.offset_ptr vpc (Ptrofs.repr sz)))
@@ -503,7 +503,7 @@ Definition trans_control (ctl: control) : macro :=
   | Pigoto r => [(#PC, Name (#r))]
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Name pmem @ Enil))]
+  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
@@ -844,34 +844,34 @@ Proof.
             * intros rr; destruct rr; Simpl.
     (* Pcbu *)
     + destruct (cmpu_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
-      ++ unfold eval_branch in H0. destruct (Val.cmpu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b0.
+      ++ unfold eval_branch in H0. destruct (Val_cmpu_bool  _ _) eqn:VALCMP; try discriminate. destruct b0.
         +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
             inv H0. eexists; split; try split.
             * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. rewrite H2. pose (H3 r). simpl in e0. rewrite e0.
+              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
               unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
               unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
             * Simpl.
             * intros rr; destruct rr; Simpl.
         +++ inv H0. eexists; split; try split.
             * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. rewrite H2. pose (H3 r). simpl in e0. rewrite e0.
+              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
               unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
               reflexivity.
             * Simpl.
             * intros rr; destruct rr; Simpl.
-      ++ unfold eval_branch in H0. destruct (Val.cmplu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b0.
+      ++ unfold eval_branch in H0. destruct (Val_cmplu_bool  _ _) eqn:VALCMP; try discriminate. destruct b0.
         +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
             inv H0. eexists; split; try split.
             * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. rewrite H2. pose (H3 r). simpl in e0. rewrite e0.
+              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
               unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
               unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
             * Simpl.
             * intros rr; destruct rr; Simpl.
         +++ inv H0. eexists; split; try split.
             * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. rewrite H2. pose (H3 r). simpl in e0. rewrite e0.
+              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
               unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
               reflexivity.
             * Simpl.
@@ -1013,17 +1013,17 @@ Proof.
 (* Pcbu *)
   - simpl in *. destruct (cmpu_for_btest bt). destruct i.
     + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
-      destruct o; auto. rewrite H2 in H1.
+      destruct o; auto.
       pose (H3 r); simpl in e; rewrite e in H1; clear e.
       unfold eval_branch_deps in H1; unfold eval_branch.
-      destruct (Val.cmpu_bool _ _ _ _); auto. destruct b; try discriminate.
+      destruct (Val_cmpu_bool _ _ _); auto. destruct b; try discriminate.
       unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
       destruct (rs PC); auto. discriminate.
     + pose (H3 PC); simpl in e; rewrite e in H1; clear e.
-      destruct o; auto. rewrite H2 in H1.
+      destruct o; auto.
       pose (H3 r); simpl in e; rewrite e in H1; clear e.
       unfold eval_branch_deps in H1; unfold eval_branch.
-      destruct (Val.cmplu_bool _ _ _); auto. destruct b; try discriminate.
+      destruct (Val_cmplu_bool _ _); auto. destruct b; try discriminate.
       unfold goto_label_deps in H1; unfold goto_label. destruct (label_pos _ _ _); auto.
       destruct (rs PC); auto. discriminate.
 Qed.
@@ -1123,17 +1123,17 @@ Proof.
 (* Pcbu *)
   - simpl in *. destruct (cmpu_for_btest bt). destruct i.
     -- destruct o.
-      + rewrite H2. unfold eval_branch in H0; unfold eval_branch_deps.
-        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmpu_bool _ _ _); auto.
+      + unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val_cmpu_bool _ _); auto.
         destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
         destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
-      + rewrite H2. pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+      + pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
     -- destruct o.
-      + rewrite H2. unfold eval_branch in H0; unfold eval_branch_deps.
-        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val.cmplu_bool _ _ _); auto.
+      + unfold eval_branch in H0; unfold eval_branch_deps.
+        pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. destruct (Val_cmplu_bool _ _); auto.
         destruct b; try discriminate. unfold goto_label_deps; unfold goto_label in H0. clear e0.
         destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
-      + rewrite H2. pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
+      + pose (H3 r); simpl in e; rewrite e. pose (H3 PC); simpl in e0; rewrite e0. reflexivity.
 Qed.
 
 

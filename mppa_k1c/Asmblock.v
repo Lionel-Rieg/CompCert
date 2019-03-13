@@ -1390,8 +1390,8 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       end
   | Pcbu bt r l => 
       match cmpu_for_btest bt with
-      | (Some c, Int) => eval_branch f l rs m (Val.cmpu_bool (Mem.valid_pointer m) c rs#r (Vint (Int.repr 0)))
-      | (Some c, Long) => eval_branch f l rs m (Val.cmplu_bool (Mem.valid_pointer m) c rs#r (Vlong (Int64.repr 0)))
+      | (Some c, Int) => eval_branch f l rs m (Val_cmpu_bool c rs#r (Vint (Int.repr 0)))
+      | (Some c, Long) => eval_branch f l rs m (Val_cmplu_bool c rs#r (Vlong (Int64.repr 0)))
       | (None, _) => Stuck
       end
 
