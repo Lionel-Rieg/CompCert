@@ -529,11 +529,10 @@ let real_inst_to_latency = function
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld
-  | Sb | Sh | Sw | Sd 
-        -> 3 (* FIXME - random value *)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
+  | Sb | Sh | Sw | Sd -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
-  | Set -> 3
+  | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
   | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd | Fnarrowdw -> 1
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> 4
