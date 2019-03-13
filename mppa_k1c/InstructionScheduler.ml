@@ -1050,6 +1050,17 @@ let ilp_print_problem channel problem pb_type =
     mapper_final_predecessors = predecessors.(nr_instructions)
   };;
 
+(* Guess what? Cplex sometimes outputs 11.000000004 instead of integer 11 *)
+
+let positive_float_round x = truncate (x +. 0.5)
+                           
+let float_round (x : float) : int =
+  if x > 0.0
+  then positive_float_round x
+  else - (positive_float_round (-. x))
+  
+let rounded_int_of_string x =  float_round (float_of_string x)
+                             
 let ilp_read_solution mapper channel =
   let times = Array.make
                 (match mapper.mapper_pb_type with
@@ -1075,7 +1086,7 @@ let ilp_read_solution mapper channel =
                (if tnumber < 0 || tnumber >= (Array.length times)
                 then failwith (Printf.sprintf "bad ilp output: not a correct variable number: %d (%d)" tnumber (Array.length times)));
                let value =
-                 try int_of_string (String.sub line (space+1) ((String.length line)-space-1))
+                 try rounded_int_of_string (String.sub line (space+1) ((String.length line)-space-1))
                  with Failure _ ->
                    failwith "bad ilp output: not a time number"
                in
