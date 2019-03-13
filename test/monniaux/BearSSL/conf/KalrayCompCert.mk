@@ -54,7 +54,7 @@ LDDLLOUT = -o
 
 # Static linker.
 LD = $(CC)
-LDFLAGS = 
+LDFLAGS = ../clock.gcc.k1c.o
 LDOUT = -o 
 
 # C# compiler; we assume usage of Mono.

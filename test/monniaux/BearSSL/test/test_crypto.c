@@ -27,6 +27,7 @@
 #include <string.h>
 #include "bearssl.h"
 #include "inner.h"
+#include "../../clock.h"
 
 /*
  * Decode an hexadecimal string. Returned value is the number of decoded
@@ -9458,7 +9459,9 @@ main(int argc, char *argv[])
 			printf("   %s\n", tfns[u].name);
 		}
 	} else {
-		for (u = 0; tfns[u].name; u ++) {
+	  clock_prepare();
+	  clock_start();
+	  for (u = 0; tfns[u].name; u ++) {
 			int i;
 
 			for (i = 1; i < argc; i ++) {
@@ -9470,6 +9473,8 @@ main(int argc, char *argv[])
 				}
 			}
 		}
+	  clock_stop();
+	  print_total_clock();
 	}
 	return 0;
 }
