@@ -1,0 +1,7 @@
+#!/bin/sh
+tmp=$2.tmp
+rm -f $tmp
+cplex -c "read $1" "optimize" "write $tmp sol"
+grep '<variable name="' $tmp | sed -e 's@ *<variable name="@@' -e 's@" index=.* value="@ @' -e 's@"/>@@' > $2
+touch $2
+
