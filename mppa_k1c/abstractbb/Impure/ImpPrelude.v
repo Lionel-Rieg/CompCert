@@ -4,6 +4,7 @@ Require Extraction.
 Require Import Ascii.
 Require Import BinNums.
 Require Export ImpCore.
+Require Export PArith.
 
 Axiom caml_string: Type.
 Extract Constant caml_string => "string".
