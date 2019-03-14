@@ -1107,16 +1107,20 @@ let ilp_read_solution mapper channel =
 let ilp_solver = ref "ilp_solver"
 
 let problem_nr = ref 0
-                             
+
+let do_with_resource destroy x f =
+  try
+    let r = f x in
+    destroy x; r
+  with exn -> destroy x; raise exn;;
+
 let ilp_scheduler pb_type problem =
   try
     let filename_in = Printf.sprintf  "problem%05d.lp" !problem_nr
     and filename_out = Printf.sprintf "problem%05d.sol" !problem_nr in
     incr problem_nr;
-    let opb_problem = open_out filename_in in
-    let mapper = ilp_print_problem opb_problem problem pb_type in
-    close_out opb_problem;
-
+    let mapper = do_with_resource close_out (open_out filename_in)
+                   (fun opb_problem -> ilp_print_problem opb_problem problem pb_type) in
     begin
       match Unix.system (!ilp_solver ^ " " ^ filename_in ^ " " ^ filename_out) with
       | Unix.WEXITED 0 ->
