@@ -67,11 +67,10 @@ Proof.
     erewrite exec_basic_instr_pc; eauto.
 Qed.
 
-Lemma next_eq {A: Type}:
-  forall (rs rs':A) m m',
+Lemma next_eq rs rs' m m':
   rs = rs' -> m = m' -> Next rs m = Next rs' m'.
 Proof.
-  intros. congruence.
+  intros; apply f_equal2; auto.
 Qed.
 
 Lemma regset_double_set:
@@ -659,8 +658,8 @@ Proof.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
 Qed.
 
-Theorem transf_program_correct:
-  forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
+Theorem transf_program_correct: 
+  forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog). (* FIXME a remplacer par Asmvliw.semantics tprog *)
 Proof.
   eapply forward_simulation_plus.
   - apply senv_preserved.
