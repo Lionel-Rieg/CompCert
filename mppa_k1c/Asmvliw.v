@@ -233,23 +233,27 @@ Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rs: regset) (m: 
   | Stuck => Stuck
   end.
 
-(* utile ? *)
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
   parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs m.
 
-
 Require Import Sorting.Permutation.
 
-Inductive parexec_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome -> Prop :=
-   parexec_bblock_Next bdy1 bdy2 rsw mw:
-      Permutation (bdy1++bdy2) (body b) ->
-      parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Next rsw mw ->
-      parexec_bblock f b rs m (parexec_wio_body bdy2 rs rsw m mw)
- | parexec_bblock_Stuck bdy1 bdy2:
-      Permutation (bdy1++bdy2) (body b) ->
-      parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Stuck ->
-      parexec_bblock f b rs m Stuck.
+Definition parexec_bblock (f: function) (b: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
+   exists bdy1 bdy2, Permutation (bdy1++bdy2) (body b) /\ 
+      o=match parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs m with
+      | Next rsw mw => parexec_wio_body bdy2 rs rsw m mw
+      | Stuck => Stuck
+      end.
 
+Lemma parexec_bblock_write_in_order f b rs m:
+   parexec_bblock f b rs m (parexec_wio_bblock f b rs m).
+Proof.
+   exists (body b). exists nil.
+   constructor 1.
+   - rewrite app_nil_r; auto.
+   - unfold parexec_wio_bblock.
+     destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
+Qed.
 
 Inductive step: state -> trace -> state -> Prop :=
   | exec_step_internal:
@@ -257,8 +261,8 @@ Inductive step: state -> trace -> state -> Prop :=
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
       find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bi ->
-      exec_bblock ge f bi rs m = Next rs' m' ->
-      parexec_bblock f bi rs m (Next rs' m') ->
+      parexec_wio_bblock f bi rs m = Next rs' m' ->
+      (forall o, parexec_bblock f bi rs m o -> o=(Next rs' m')) ->
       step (State rs m) E0 (State rs' m')
   | exec_step_builtin:
       forall b ofs f ef args res rs m vargs t vres rs' m' bi,
@@ -301,11 +305,11 @@ Ltac Equalities :=
   intros; constructor; simpl; intros.
 - (* determ *)
   inv H; inv H0; Equalities.
-  + split. constructor. auto.
-  + unfold exec_bblock in H4. destruct (exec_body _ _ _ _); try discriminate.
+  + split. constructor. auto. 
+  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in H4. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
     rewrite H10 in H4. discriminate.
-  + unfold exec_bblock in H14. (* FIXME: destruct (exec_body _ _ _ _); try discriminate.
-    rewrite H4 in H13. discriminate.
+  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in H11. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+    rewrite H4 in H11. discriminate.
   + assert (vargs0 = vargs) by (eapply eval_builtin_args_determ; eauto). subst vargs0.
     exploit external_call_determ. eexact H6. eexact H13. intros [A B].
     split. auto. intros. destruct B; auto. subst. auto.
@@ -325,5 +329,5 @@ Ltac Equalities :=
   inv H. unfold Vzero in H0. red; intros; red; intros.
   inv H; rewrite H0 in *; eelim NOTNULL; eauto.
 - (* final states *)
-  inv H; inv H0. congruence. *)
-Admitted.
+  inv H; inv H0. congruence.
+Qed.
