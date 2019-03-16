@@ -370,6 +370,8 @@ module Target (*: TARGET*) =
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pandw (rd, rs1, rs2) ->
          fprintf oc "	andw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pnandw (rd, rs1, rs2) ->
+         fprintf oc "	nandw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Porw (rd, rs1, rs2) -> 
          fprintf oc "	orw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pxorw (rd, rs1, rs2) -> 
@@ -420,6 +422,8 @@ module Target (*: TARGET*) =
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pandiw (rd, rs, imm) ->
          fprintf oc "	andw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Pnandiw (rd, rs, imm) ->
+         fprintf oc "	nandw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Poriw (rd, rs, imm) -> 
          fprintf oc "	orw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pxoriw (rd, rs, imm) -> 

@@ -138,6 +138,7 @@ Inductive instruction : Type :=
   | Psubw               (rd rs1 rs2: ireg)          (**r sub word *)
   | Pmulw               (rd rs1 rs2: ireg)          (**r mul word *)
   | Pandw               (rd rs1 rs2: ireg)          (**r and word *)
+  | Pnandw              (rd rs1 rs2: ireg)          (**r and word *)
   | Porw                (rd rs1 rs2: ireg)          (**r or word *)
   | Pxorw               (rd rs1 rs2: ireg)          (**r xor word *)
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
@@ -166,6 +167,7 @@ Inductive instruction : Type :=
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
+  | Pnandiw             (rd rs: ireg) (imm: int)    (**r and imm word *)
   | Poriw               (rd rs: ireg) (imm: int)    (**r or imm word *)
   | Pxoriw              (rd rs: ireg) (imm: int)    (**r xor imm word *)
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
@@ -259,6 +261,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
   | PArithRRR Asmblock.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2
   | PArithRRR Asmblock.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
+  | PArithRRR Asmblock.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
   | PArithRRR Asmblock.Porw rd rs1 rs2        => Porw rd rs1 rs2
   | PArithRRR Asmblock.Pxorw rd rs1 rs2       => Pxorw rd rs1 rs2
   | PArithRRR Asmblock.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
@@ -286,6 +289,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 (Asmblock.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
   | PArithRRI32 Asmblock.Paddiw rd rs imm       => Paddiw rd rs imm
   | PArithRRI32 Asmblock.Pandiw rd rs imm       => Pandiw rd rs imm
+  | PArithRRI32 Asmblock.Pnandiw rd rs imm      => Pnandiw rd rs imm
   | PArithRRI32 Asmblock.Poriw rd rs imm        => Poriw rd rs imm
   | PArithRRI32 Asmblock.Pxoriw rd rs imm       => Pxoriw rd rs imm
   | PArithRRI32 Asmblock.Psraiw rd rs imm       => Psraiw rd rs imm

@@ -61,6 +61,7 @@ let arith_rrr_str = function
   | Psubw -> "Psubw"
   | Pmulw -> "Pmulw"
   | Pandw -> "Pandw"
+  | Pnandw -> "Pnandw"
   | Porw -> "Porw"
   | Pxorw -> "Pxorw"
   | Psraw -> "Psraw"
@@ -86,6 +87,7 @@ let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
   | Pandiw -> "Pandiw"
+  | Pnandiw -> "Pnandiw"
   | Poriw -> "Poriw"
   | Pxoriw -> "Pxoriw"
   | Psraiw -> "Psraiw"
@@ -378,6 +380,7 @@ type real_instruction =
   (* ALU *) 
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
+  | Nandw                                                                 
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -394,6 +397,7 @@ let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
   | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
   | "Pandw" | "Pandiw" -> Andw
+  | "Pnandw" | "Pnandiw" -> Nandw
   | "Pandl" | "Pandil" -> Andd
   | "Pcompw" | "Pcompiw" -> Compw
   | "Pcompl" | "Pcompil" -> Compd
@@ -475,7 +479,7 @@ let rec_to_usage r =
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
-  | Addw | Andw | Orw | Sbfw | Xorw -> 
+  | Addw | Andw | Nandw | Orw | Sbfw | Xorw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
@@ -527,7 +531,8 @@ let rec_to_usage r =
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
-  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw | Rorw
+  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Rorw | Nandw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1

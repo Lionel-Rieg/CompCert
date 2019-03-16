@@ -86,6 +86,7 @@ Definition opimm32 (op: arith_name_rrr)
 
 Definition addimm32 := opimm32 Paddw Paddiw.
 Definition andimm32 := opimm32 Pandw Pandiw.
+Definition nandimm32 := opimm32 Pnandw Pnandiw.
 Definition orimm32  := opimm32 Porw Poriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
 (*
@@ -434,6 +435,12 @@ Definition transl_op
   | Oandimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm32 rd rs n ::i k)
+  | Onand, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pnandw rd rs1 rs2 ::i k)
+  | Onandimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (nandimm32 rd rs n ::i k)
   | Oor, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porw rd rs1 rs2 ::i k)
