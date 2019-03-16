@@ -54,6 +54,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshl | Oshr | Oshru => op2 (default nv)
   | Oshlimm n => op1 (shlimm nv n)
   | Oshrimm n => op1 (shrimm nv n)
+  | Ororimm n => op1 (ror nv n)
   | Oshruimm n => op1 (shruimm nv n)
   | Oshrximm n => op1 (default nv)
   | Omakelong => op2 (default nv)
