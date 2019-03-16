@@ -452,12 +452,48 @@ Proof.
   - TrivialExists.
 Qed.
 
+
+Remark eval_same_expr:
+  forall a1 a2 le v1 v2,
+  same_expr_pure a1 a2 = true ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  a1 = a2 /\ v1 = v2.
+Proof.
+  intros until v2.
+  destruct a1; simpl; try (intros; discriminate).
+  destruct a2; simpl; try (intros; discriminate).
+  case (ident_eq i i0); intros.
+  subst i0. inversion H0. inversion H1. split. auto. congruence.
+  discriminate.
+Qed.
+
 Theorem eval_or: binary_constructor_sound or Val.or.
 Proof.
-  red; intros until y; unfold or; case (or_match a b); intros; InvEval.
+  unfold or; red; intros.
+  assert (DEFAULT: exists v, eval_expr ge sp e m le (Eop Oor (a:::b:::Enil)) v /\ Val.lessdef (Val.or x y) v) by TrivialExists.
+  assert (ROR: forall v n1 n2,
+    Int.add n1 n2 = Int.iwordsize ->
+    Val.lessdef (Val.or (Val.shl v (Vint n1)) (Val.shru v (Vint n2)))
+                (Val.ror v (Vint n2))).
+  { intros. destruct v; simpl; auto.
+    destruct (Int.ltu n1 Int.iwordsize) eqn:N1; auto.
+    destruct (Int.ltu n2 Int.iwordsize) eqn:N2; auto.
+    simpl. rewrite <- Int.or_ror; auto. }
+  
+  destruct (or_match a b); InvEval.
+  
   - rewrite Val.or_commut. apply eval_orimm; auto.
   - apply eval_orimm; auto.
-  - TrivialExists.
+  - predSpec Int.eq Int.eq_spec (Int.add n1 n2) Int.iwordsize; auto.
+    destruct (same_expr_pure t1 t2) eqn:?; auto.
+    InvEval. exploit eval_same_expr; eauto. intros [EQ1 EQ2]; subst.
+    exists (Val.ror v0 (Vint n2)); split. EvalOp. apply ROR; auto.
+  - predSpec Int.eq Int.eq_spec (Int.add n1 n2) Int.iwordsize; auto.
+    destruct (same_expr_pure t1 t2) eqn:?; auto.
+    InvEval. exploit eval_same_expr; eauto. intros [EQ1 EQ2]; subst.
+    exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
+  - apply DEFAULT.
 Qed.
 
 Theorem eval_xorimm:
