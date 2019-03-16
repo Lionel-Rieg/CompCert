@@ -720,7 +720,39 @@ Definition xor (e1: expr) (e2: expr) :=
 
 (** ** Integer logical negation *)
 
-Definition notint (e: expr) := xorimm Int.mone e.
+(** Original definition:
+<<
+Nondetfunction notint (e: expr) :=
+  match e with
+  | Eop Oand (e1:::e2:::Enil) => Eop Onand (e1:::e2:::Enil)
+  | Eop (Oandimm n) (e1:::Enil) => Eop (Onandimm n) (e1:::Enil)
+  | _ => xorimm Int.mone e
+  end.
+>>
+*)
+
+Inductive notint_cases: forall (e: expr), Type :=
+  | notint_case1: forall e1 e2, notint_cases (Eop Oand (e1:::e2:::Enil))
+  | notint_case2: forall n e1, notint_cases (Eop (Oandimm n) (e1:::Enil))
+  | notint_default: forall (e: expr), notint_cases e.
+
+Definition notint_match (e: expr) :=
+  match e as zz1 return notint_cases zz1 with
+  | Eop Oand (e1:::e2:::Enil) => notint_case1 e1 e2
+  | Eop (Oandimm n) (e1:::Enil) => notint_case2 n e1
+  | e => notint_default e
+  end.
+
+Definition notint (e: expr) :=
+  match notint_match e with
+  | notint_case1 e1 e2 => (* Eop Oand (e1:::e2:::Enil) *) 
+      Eop Onand (e1:::e2:::Enil)
+  | notint_case2 n e1 => (* Eop (Oandimm n) (e1:::Enil) *) 
+      Eop (Onandimm n) (e1:::Enil)
+  | notint_default e =>
+      xorimm Int.mone e
+  end.
+
 
 (** ** Integer division and modulus *)
 

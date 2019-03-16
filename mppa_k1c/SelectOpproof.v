@@ -524,7 +524,12 @@ Qed.
 
 Theorem eval_notint: unary_constructor_sound notint Val.notint.
 Proof.
-  unfold notint; red; intros. rewrite Val.not_xor. apply eval_xorimm; auto.
+  assert (forall v, Val.lessdef (Val.notint (Val.notint v)) v).
+    destruct v; simpl; auto. rewrite Int.not_involutive; auto.
+  unfold notint; red; intros until x; case (notint_match a); intros; InvEval.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - apply eval_xorimm; assumption.
 Qed.
 
 Theorem eval_divs_base:
