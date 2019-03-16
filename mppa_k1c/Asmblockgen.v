@@ -471,7 +471,10 @@ Definition transl_op
           Psrliw RTMP RTMP (Int.sub Int.iwordsize n) ::i
           Paddw RTMP rs RTMP ::i
           Psraiw rd RTMP n ::i k)
-
+  | Ororimm n, a1 :: nil =>
+    do rd <- ireg_of res; do rs <- ireg_of a1;
+      OK (Proriw rd rs n ::i k)
+         
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;

@@ -372,7 +372,7 @@ Inductive arith_name_rri32 : Type :=
   | Psraiw                                          (**r shift right arithmetic imm word *)
   | Psrliw                                          (**r shift right logical imm word *)
   | Pslliw                                          (**r shift left logical imm word *)
-
+  | Proriw                                          (**r rotate right imm word *)
   | Psllil                                          (**r shift left logical immediate long *)
   | Psrlil                                          (**r shift right logical immediate long *)
   | Psrail                                          (**r shift right arithmetic immediate long *)
@@ -1125,6 +1125,7 @@ Definition arith_eval_rri32 n v i :=
   | Psraiw  => Val.shr   v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)
   | Pslliw  => Val.shl   v (Vint i)
+  | Proriw  => Val.ror   v (Vint i)
   | Psllil  => Val.shll  v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)

@@ -1332,6 +1332,7 @@ Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   | Psraiw => "Psraiw"
   | Psrliw => "Psrliw"
   | Pslliw => "Pslliw"
+  | Proriw => "Proriw"
   | Psllil => "Psllil"
   | Psrlil => "Psrlil"
   | Psrail => "Psrail"

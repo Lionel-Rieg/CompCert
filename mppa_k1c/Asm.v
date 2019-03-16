@@ -171,7 +171,7 @@ Inductive instruction : Type :=
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
-
+  | Proriw              (rd rs: ireg) (imm: int)    (**r rotate right imm word *) 
   | Psllil              (rd rs: ireg) (imm: int)    (**r shift left logical immediate long *)
   | Psrlil              (rd rs: ireg) (imm: int)    (**r shift right logical immediate long *)
   | Psrail              (rd rs: ireg) (imm: int)    (**r shift right arithmetic immediate long *)
@@ -291,6 +291,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 Asmblock.Psraiw rd rs imm       => Psraiw rd rs imm
   | PArithRRI32 Asmblock.Psrliw rd rs imm       => Psrliw rd rs imm
   | PArithRRI32 Asmblock.Pslliw rd rs imm       => Pslliw rd rs imm
+  | PArithRRI32 Asmblock.Proriw rd rs imm       => Proriw rd rs imm
   | PArithRRI32 Asmblock.Psllil rd rs imm       => Psllil rd rs imm
   | PArithRRI32 Asmblock.Psrlil rd rs imm       => Psrlil rd rs imm
   | PArithRRI32 Asmblock.Psrail rd rs imm       => Psrail rd rs imm

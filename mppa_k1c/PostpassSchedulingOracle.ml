@@ -91,6 +91,7 @@ let arith_rri32_str = function
   | Psraiw -> "Psraiw"
   | Psrliw -> "Psrliw"
   | Pslliw -> "Pslliw"
+  | Proriw -> "Proriw"
   | Psllil -> "Psllil"
   | Psrlil -> "Psrlil"
   | Psrail -> "Psrail"
@@ -375,7 +376,7 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 type real_instruction = 
   (* ALU *) 
-  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
@@ -409,6 +410,7 @@ let ab_inst_to_real = function
   | "Psrlw" | "Psrliw" -> Srlw
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
+  | "Proriw" -> Rorw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pxorl" | "Pxoril" -> Xord
@@ -504,7 +506,7 @@ let rec_to_usage r =
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Sllw | Rorw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
@@ -523,7 +525,7 @@ let rec_to_usage r =
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
-  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw | Rorw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1

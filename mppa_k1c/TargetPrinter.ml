@@ -430,6 +430,9 @@ module Target (*: TARGET*) =
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pslliw (rd, rs, imm) ->
          fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Proriw (rd, rs, imm) ->
+         fprintf oc "	rorw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+
       | Psllil (rd, rs, imm) ->
          fprintf oc "	slld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrlil (rd, rs, imm) ->
