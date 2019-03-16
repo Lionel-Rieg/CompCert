@@ -342,6 +342,7 @@ Inductive arith_name_rrr : Type :=
   | Porw                                            (**r or word *)
   | Pnorw                                           (**r nor word *)
   | Pxorw                                           (**r xor word *)
+  | Pnxorw                                          (**r nxor word *)
   | Psraw                                           (**r shift right arithmetic word *)
   | Psrlw                                           (**r shift right logical word *)
   | Psllw                                           (**r shift left logical word *)
@@ -373,6 +374,7 @@ Inductive arith_name_rri32 : Type :=
   | Poriw                                           (**r or imm word *)
   | Pnoriw                                          (**r nor imm word *)
   | Pxoriw                                          (**r xor imm word *)
+  | Pnxoriw                                         (**r nxor imm word *)
   | Psraiw                                          (**r shift right arithmetic imm word *)
   | Psrliw                                          (**r shift right logical imm word *)
   | Pslliw                                          (**r shift left logical imm word *)
@@ -1099,6 +1101,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Porw   => Val.or   v1 v2
   | Pnorw  => Val.notint (Val.or v1 v2)
   | Pxorw  => Val.xor  v1 v2
+  | Pnxorw => Val.notint (Val.xor v1 v2)
   | Psrlw  => Val.shru v1 v2
   | Psraw  => Val.shr  v1 v2
   | Psllw  => Val.shl  v1 v2
@@ -1130,6 +1133,7 @@ Definition arith_eval_rri32 n v i :=
   | Poriw   => Val.or    v (Vint i)
   | Pnoriw  => Val.notint (Val.or v (Vint i))
   | Pxoriw  => Val.xor   v (Vint i)
+  | Pnxoriw => Val.notint (Val.xor v (Vint i))
   | Psraiw  => Val.shr   v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)
   | Pslliw  => Val.shl   v (Vint i)

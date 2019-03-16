@@ -90,6 +90,7 @@ Definition nandimm32 := opimm32 Pnandw Pnandiw.
 Definition orimm32  := opimm32 Porw Poriw.
 Definition norimm32 := opimm32 Pnorw Pnoriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
+Definition nxorimm32 := opimm32 Pnxorw Pnxoriw.
 (*
 Definition sltimm32 := opimm32 Psltw Psltiw.
 Definition sltuimm32 := opimm32 Psltuw Psltiuw.
@@ -460,6 +461,12 @@ Definition transl_op
   | Oxorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm32 rd rs n ::i k)
+  | Onxor, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pnxorw rd rs1 rs2 ::i k)
+  | Onxorimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (nxorimm32 rd rs n ::i k)
   | Oshl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psllw rd rs1 rs2 ::i k)

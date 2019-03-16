@@ -12,7 +12,11 @@ unsigned nor(unsigned x, unsigned y) {
   return ~(x | y);
 }
 
+unsigned nxor(unsigned x, unsigned y) {
+  return ~(x ^ y);
+}
+
 int main() {
   unsigned x = 0xF4, y = 0x33;
-  printf("%X\n", nor(x, y));
+  printf("%X\n", nxor(x, y));
 }

@@ -728,6 +728,8 @@ Nondetfunction notint (e: expr) :=
   | Eop (Oandimm n) (e1:::Enil) => Eop (Onandimm n) (e1:::Enil)
   | Eop Oor (e1:::e2:::Enil) => Eop Onor (e1:::e2:::Enil)
   | Eop (Oorimm n) (e1:::Enil) => Eop (Onorimm n) (e1:::Enil)
+  | Eop Oxor (e1:::e2:::Enil) => Eop Onxor (e1:::e2:::Enil)
+  | Eop (Oxorimm n) (e1:::Enil) => Eop (Onxorimm n) (e1:::Enil)
   | _ => xorimm Int.mone e
   end.
 >>
@@ -738,6 +740,8 @@ Inductive notint_cases: forall (e: expr), Type :=
   | notint_case2: forall n e1, notint_cases (Eop (Oandimm n) (e1:::Enil))
   | notint_case3: forall e1 e2, notint_cases (Eop Oor (e1:::e2:::Enil))
   | notint_case4: forall n e1, notint_cases (Eop (Oorimm n) (e1:::Enil))
+  | notint_case5: forall e1 e2, notint_cases (Eop Oxor (e1:::e2:::Enil))
+  | notint_case6: forall n e1, notint_cases (Eop (Oxorimm n) (e1:::Enil))
   | notint_default: forall (e: expr), notint_cases e.
 
 Definition notint_match (e: expr) :=
@@ -746,6 +750,8 @@ Definition notint_match (e: expr) :=
   | Eop (Oandimm n) (e1:::Enil) => notint_case2 n e1
   | Eop Oor (e1:::e2:::Enil) => notint_case3 e1 e2
   | Eop (Oorimm n) (e1:::Enil) => notint_case4 n e1
+  | Eop Oxor (e1:::e2:::Enil) => notint_case5 e1 e2
+  | Eop (Oxorimm n) (e1:::Enil) => notint_case6 n e1
   | e => notint_default e
   end.
 
@@ -759,6 +765,10 @@ Definition notint (e: expr) :=
       Eop Onor (e1:::e2:::Enil)
   | notint_case4 n e1 => (* Eop (Oorimm n) (e1:::Enil) *) 
       Eop (Onorimm n) (e1:::Enil)
+  | notint_case5 e1 e2 => (* Eop Oxor (e1:::e2:::Enil) *) 
+      Eop Onxor (e1:::e2:::Enil)
+  | notint_case6 n e1 => (* Eop (Oxorimm n) (e1:::Enil) *) 
+      Eop (Onxorimm n) (e1:::Enil)
   | notint_default e =>
       xorimm Int.mone e
   end.

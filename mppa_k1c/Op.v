@@ -86,6 +86,8 @@ Inductive operation : Type :=
   | Onorimm (n: int)         (**r [rd = r1 | n] *)
   | Oxor                     (**r [rd = r1 ^ r2] *)
   | Oxorimm (n: int)         (**r [rd = r1 ^ n] *)
+  | Onxor                    (**r [rd = ~(r1 ^ r2)] *)
+  | Onxorimm (n: int)        (**r [rd = ~(r1 ^ n)] *)
   | Oshl                     (**r [rd = r1 << r2] *)
   | Oshlimm (n: int)         (**r [rd = r1 << n] *)
   | Oshr                     (**r [rd = r1 >> r2] (signed) *)
@@ -260,6 +262,8 @@ Definition eval_operation
   | Onorimm n, v1 :: nil => Some (Val.notint (Val.or v1 (Vint n)))
   | Oxor, v1 :: v2 :: nil => Some (Val.xor v1 v2)
   | Oxorimm n, v1 :: nil => Some (Val.xor v1 (Vint n))
+  | Onxor, v1 :: v2 :: nil => Some (Val.notint (Val.xor v1 v2))
+  | Onxorimm n, v1 :: nil => Some (Val.notint (Val.xor v1 (Vint n)))
   | Oshl, v1 :: v2 :: nil => Some (Val.shl v1 v2)
   | Oshlimm n, v1 :: nil => Some (Val.shl v1 (Vint n))
   | Oshr, v1 :: v2 :: nil => Some (Val.shr v1 v2)
@@ -421,6 +425,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Onorimm _ => (Tint :: nil, Tint)
   | Oxor => (Tint :: Tint :: nil, Tint)
   | Oxorimm _ => (Tint :: nil, Tint)
+  | Onxor => (Tint :: Tint :: nil, Tint)
+  | Onxorimm _ => (Tint :: nil, Tint)
   | Oshl => (Tint :: Tint :: nil, Tint)
   | Oshlimm _ => (Tint :: nil, Tint)
   | Oshr => (Tint :: Tint :: nil, Tint)
@@ -574,6 +580,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1...
   - destruct v0...
   (* xor, xorimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* nxor, nxorimm *)
   - destruct v0; destruct v1...
   - destruct v0...
   (* shl, shlimm *)
@@ -1044,6 +1053,9 @@ Proof.
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* xor, xorimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* nxor, nxorimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* shl, shlimm *)

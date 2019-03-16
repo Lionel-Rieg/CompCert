@@ -55,6 +55,8 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Onorimm n => op1 (orimm nv n)
   | Oxor => op2 (bitwise nv)
   | Oxorimm n => op1 (bitwise nv)
+  | Onxor => op2 (bitwise nv)
+  | Onxorimm n => op1 (bitwise nv)
   | Oshl | Oshr | Oshru => op2 (default nv)
   | Oshlimm n => op1 (shlimm nv n)
   | Oshrimm n => op1 (shrimm nv n)
@@ -160,6 +162,8 @@ Proof.
 - apply notint_sound; apply orimm_sound; auto.
 - apply xor_sound; auto.
 - apply xor_sound; auto with na.
+- apply notint_sound; apply xor_sound; auto.
+- apply notint_sound; apply xor_sound; auto with na.
 - apply shlimm_sound; auto.
 - apply shrimm_sound; auto.
 - apply shruimm_sound; auto.

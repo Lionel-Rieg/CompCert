@@ -65,6 +65,7 @@ let arith_rrr_str = function
   | Porw -> "Porw"
   | Pnorw -> "Pnorw"
   | Pxorw -> "Pxorw"
+  | Pnxorw -> "Pnxorw"
   | Psraw -> "Psraw"
   | Psrlw -> "Psrlw"
   | Psllw -> "Psllw"
@@ -92,6 +93,7 @@ let arith_rri32_str = function
   | Poriw -> "Poriw"
   | Pnoriw -> "Pnoriw"
   | Pxoriw -> "Pxoriw"
+  | Pnxoriw -> "Pnxoriw"
   | Psraiw -> "Psraiw"
   | Psrliw -> "Psrliw"
   | Pslliw -> "Pslliw"
@@ -382,7 +384,7 @@ type real_instruction =
   (* ALU *) 
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
-  | Nandw | Norw                                                               
+  | Nandw | Norw | Nxorw                                                        
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -420,6 +422,7 @@ let ab_inst_to_real = function
   | "Proriw" -> Rorw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
+  | "Pnxorw" | "Pnxoriw" -> Nxorw
   | "Pxorl" | "Pxoril" -> Xord
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
@@ -482,7 +485,7 @@ let rec_to_usage r =
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
-  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw -> 
+  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw | Nxorw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
@@ -535,7 +538,7 @@ let rec_to_usage r =
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
-  | Rorw | Nandw | Norw
+  | Rorw | Nandw | Norw | Nxorw
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1

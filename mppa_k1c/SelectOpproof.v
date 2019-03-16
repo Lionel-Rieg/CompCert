@@ -531,6 +531,8 @@ Proof.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
   - apply eval_xorimm; assumption.
 Qed.
 
