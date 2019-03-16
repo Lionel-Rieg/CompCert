@@ -1,22 +1,24 @@
 #include <stdio.h>
 
-unsigned not(unsigned x) {
+typedef unsigned long scalar;
+
+scalar not(scalar x) {
   return ~x;
 }
 
-unsigned nand(unsigned x, unsigned y) {
+scalar nand(scalar x, scalar y) {
   return ~(x & y);
 }
 
-unsigned nor(unsigned x, unsigned y) {
+scalar nor(scalar x, scalar y) {
   return ~(x | y);
 }
 
-unsigned nxor(unsigned x, unsigned y) {
+scalar nxor(scalar x, scalar y) {
   return ~(x ^ y);
 }
 
 int main() {
-  unsigned x = 0xF4, y = 0x33;
+  scalar x = 0xF4, y = 0x33;
   printf("%X\n", nxor(x, y));
 }

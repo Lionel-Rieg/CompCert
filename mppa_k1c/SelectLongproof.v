@@ -441,8 +441,16 @@ Qed.
 
 Theorem eval_notl: unary_constructor_sound notl Val.notl.
 Proof.
-  unfold notl; destruct Archi.splitlong. apply SplitLongproof.eval_notl.
-  red; intros. rewrite Val.notl_xorl. apply eval_xorlimm; auto.
+  assert (forall v, Val.lessdef (Val.notl (Val.notl v)) v).
+    destruct v; simpl; auto. rewrite Int64.not_involutive; auto.
+  unfold notl; red; intros until x; case (notl_match a); intros; InvEval.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - apply eval_xorlimm; assumption.
 Qed.
 
 Theorem eval_divls_base: partial_binary_constructor_sound divls_base Val.divls.

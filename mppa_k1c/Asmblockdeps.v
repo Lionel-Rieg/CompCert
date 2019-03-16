@@ -1311,8 +1311,11 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Paddl => "Paddl"
   | Psubl => "Psubl"
   | Pandl => "Pandl"
+  | Pnandl => "Pnandl"
   | Porl => "Porl"
+  | Pnorl => "Pnorl"
   | Pxorl => "Pxorl"
+  | Pnxorl => "Pnxorl"
   | Pmull => "Pmull"
   | Pslll => "Pslll"
   | Psrll => "Psrll"
@@ -1349,8 +1352,11 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
     Pcompil _ => "Pcompil"
   | Paddil => "Paddil"
   | Pandil => "Pandil"
+  | Pnandil => "Pnandil"
   | Poril => "Poril"
+  | Pnoril => "Pnoril"
   | Pxoril => "Pxoril"
+  | Pnxoril => "Pnxoril"
   end.
 
 Definition string_of_arith (op: arith_op): pstring :=

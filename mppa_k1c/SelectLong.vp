@@ -287,8 +287,17 @@ Nondetfunction xorl (e1: expr) (e2: expr) :=
 
 (** ** Integer logical negation *)
 
-Definition notl (e: expr) :=
-  if Archi.splitlong then SplitLong.notl e else xorlimm Int64.mone e.
+Nondetfunction notl (e: expr) :=
+  match e with
+  | Eop Oandl (e1:::e2:::Enil) => Eop Onandl (e1:::e2:::Enil)
+  | Eop (Oandlimm n) (e1:::Enil) => Eop (Onandlimm n) (e1:::Enil)
+  | Eop Oorl (e1:::e2:::Enil) => Eop Onorl (e1:::e2:::Enil)
+  | Eop (Oorlimm n) (e1:::Enil) => Eop (Onorlimm n) (e1:::Enil)
+  | Eop Oxorl (e1:::e2:::Enil) => Eop Onxorl (e1:::e2:::Enil)
+  | Eop (Oxorlimm n) (e1:::Enil) => Eop (Onxorlimm n) (e1:::Enil)
+  | _ => xorlimm Int64.mone e
+  end.
+(* old:  if Archi.splitlong then SplitLong.notl e else xorlimm Int64.mone e. *)
 
 (** ** Integer division and modulus *)
 

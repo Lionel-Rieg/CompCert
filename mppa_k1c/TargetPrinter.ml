@@ -393,10 +393,16 @@ module Target (*: TARGET*) =
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Pandl (rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pnandl (rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	nandd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Porl (rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	ord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pnorl (rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	nord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pxorl (rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pnxorl (rd, rs1, rs2) -> assert Archi.ptr64;
+         fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmull (rd, rs1, rs2) ->
          fprintf oc "	muld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pslll  (rd, rs1, rs2) ->
@@ -459,10 +465,16 @@ module Target (*: TARGET*) =
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pnandil (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Poril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	ord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pnoril (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	nord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pxoril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pnxoril (rd, rs, imm) -> assert Archi.ptr64;
+         fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     let get_section_names name =
       let (text, lit) =

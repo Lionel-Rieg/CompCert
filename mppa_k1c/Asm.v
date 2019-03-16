@@ -150,8 +150,11 @@ Inductive instruction : Type :=
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
   | Psubl               (rd rs1 rs2: ireg)          (**r sub long *)
   | Pandl               (rd rs1 rs2: ireg)          (**r and long *)
+  | Pnandl              (rd rs1 rs2: ireg)          (**r nand long *)
   | Porl                (rd rs1 rs2: ireg)          (**r or long *)
+  | Pnorl               (rd rs1 rs2: ireg)          (**r nor long *)
   | Pxorl               (rd rs1 rs2: ireg)          (**r xor long *)
+  | Pnxorl              (rd rs1 rs2: ireg)          (**r nxor long *)
   | Pmull               (rd rs1 rs2: ireg)          (**r mul long (low part) *)
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
@@ -186,8 +189,11 @@ Inductive instruction : Type :=
   | Pcompil (it: itest) (rd rs: ireg) (imm: int64)  (**r comparison imm long *)
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
+  | Pnandil             (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Poril               (rd rs: ireg) (imm: int64)  (**r or immediate long *) 
+  | Pnoril              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pxoril              (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
+  | Pnxoril             (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
   .
 
 (** Correspondance between Asmblock and Asm *)
@@ -277,8 +283,11 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Paddl rd rs1 rs2       => Paddl rd rs1 rs2
   | PArithRRR Asmblock.Psubl rd rs1 rs2       => Psubl rd rs1 rs2
   | PArithRRR Asmblock.Pandl rd rs1 rs2       => Pandl rd rs1 rs2
+  | PArithRRR Asmblock.Pnandl rd rs1 rs2      => Pnandl rd rs1 rs2
   | PArithRRR Asmblock.Porl rd rs1 rs2        => Porl rd rs1 rs2
+  | PArithRRR Asmblock.Pnorl rd rs1 rs2       => Pnorl rd rs1 rs2
   | PArithRRR Asmblock.Pxorl rd rs1 rs2       => Pxorl rd rs1 rs2
+  | PArithRRR Asmblock.Pnxorl rd rs1 rs2      => Pnxorl rd rs1 rs2
   | PArithRRR Asmblock.Pmull rd rs1 rs2       => Pmull rd rs1 rs2
   | PArithRRR Asmblock.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
   | PArithRRR Asmblock.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
@@ -312,8 +321,11 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI64 (Asmblock.Pcompil it) rd rs imm => Pcompil it rd rs imm
   | PArithRRI64 Asmblock.Paddil rd rs imm       => Paddil rd rs imm
   | PArithRRI64 Asmblock.Pandil rd rs imm       => Pandil rd rs imm
+  | PArithRRI64 Asmblock.Pnandil rd rs imm      => Pnandil rd rs imm
   | PArithRRI64 Asmblock.Poril rd rs imm        => Poril rd rs imm
+  | PArithRRI64 Asmblock.Pnoril rd rs imm       => Pnoril rd rs imm
   | PArithRRI64 Asmblock.Pxoril rd rs imm       => Pxoril rd rs imm
+  | PArithRRI64 Asmblock.Pnxoril rd rs imm      => Pnxoril rd rs imm
 
   (** Load *)
   | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra ofs

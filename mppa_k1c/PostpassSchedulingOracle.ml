@@ -72,8 +72,11 @@ let arith_rrr_str = function
   | Paddl -> "Paddl"
   | Psubl -> "Psubl"
   | Pandl -> "Pandl"
+  | Pnandl -> "Pnandl"
   | Porl -> "Porl"
+  | Pnorl -> "Pnorl"
   | Pxorl -> "Pxorl"
+  | Pnxorl -> "Pnxorl"
   | Pmull -> "Pmull"
   | Pslll -> "Pslll"
   | Psrll -> "Psrll"
@@ -106,8 +109,11 @@ let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
   | Pandil -> "Pandil"
+  | Pnandil -> "Pnandil"
   | Poril -> "Poril"
+  | Pnoril -> "Pnoril"
   | Pxoril -> "Pxoril"
+  | Pnxoril -> "Pnxoril"
 
 let arith_ri32_str = "Pmake"
 
@@ -384,7 +390,7 @@ type real_instruction =
   (* ALU *) 
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
-  | Nandw | Norw | Nxorw                                                        
+  | Nandw | Norw | Nxorw | Nandd | Nord | Nxord                                                      
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -403,6 +409,7 @@ let ab_inst_to_real = function
   | "Pandw" | "Pandiw" -> Andw
   | "Pnandw" | "Pnandiw" -> Nandw
   | "Pandl" | "Pandil" -> Andd
+  | "Pnandl" | "Pnandil" -> Nandd
   | "Pcompw" | "Pcompiw" -> Compw
   | "Pcompl" | "Pcompil" -> Compd
   | "Pfcompw" -> Fcompw
@@ -412,6 +419,7 @@ let ab_inst_to_real = function
   | "Porw" | "Poriw" -> Orw
   | "Pnorw" | "Pnoriw" -> Norw
   | "Porl" | "Poril" -> Ord
+  | "Pnorl" | "Pnoril" -> Nord
   | "Psubw" | "Pnegw" -> Sbfw
   | "Psubl" | "Pnegl" -> Sbfd
   | "Psraw" | "Psraiw" -> Sraw
@@ -424,6 +432,7 @@ let ab_inst_to_real = function
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
   | "Pxorl" | "Pxoril" -> Xord
+  | "Pnxorl" | "Pnxoril" -> Nxord
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Psxwd" -> Sxwd
@@ -489,7 +498,7 @@ let rec_to_usage r =
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
-  | Addd | Andd | Ord | Sbfd | Xord -> 
+  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord | Nxord -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -538,7 +547,7 @@ let rec_to_usage r =
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
-  | Rorw | Nandw | Norw | Nxorw
+  | Rorw | Nandw | Norw | Nxorw | Nandd | Nord | Nxord
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1

@@ -350,8 +350,11 @@ Inductive arith_name_rrr : Type :=
   | Paddl                                           (**r add long *)
   | Psubl                                           (**r sub long *)
   | Pandl                                           (**r and long *)
+  | Pnandl                                          (**r nand long *)
   | Porl                                            (**r or long *)
+  | Pnorl                                           (**r nor long *)
   | Pxorl                                           (**r xor long *)
+  | Pnxorl                                          (**r nxor long *)
   | Pmull                                           (**r mul long (low part) *)
   | Pslll                                           (**r shift left logical long *)
   | Psrll                                           (**r shift right logical long *)
@@ -388,8 +391,11 @@ Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
   | Pandil                                          (**r and immediate long *) 
+  | Pnandil                                         (**r nand immediate long *) 
   | Poril                                           (**r or immediate long *) 
+  | Pnoril                                          (**r nor immediate long *) 
   | Pxoril                                          (**r xor immediate long *) 
+  | Pnxoril                                         (**r nxor immediate long *) 
 .
 
 Inductive ar_instruction : Type :=
@@ -1109,8 +1115,11 @@ Definition arith_eval_rrr n v1 v2 :=
   | Paddl => Val.addl v1 v2
   | Psubl => Val.subl v1 v2
   | Pandl => Val.andl v1 v2
+  | Pnandl => Val.notl (Val.andl v1 v2)
   | Porl  => Val.orl  v1 v2
+  | Pnorl  => Val.notl (Val.orl  v1 v2)
   | Pxorl  => Val.xorl  v1 v2
+  | Pnxorl  => Val.notl (Val.xorl  v1 v2)
   | Pmull => Val.mull v1 v2
   | Pslll => Val.shll v1 v2
   | Psrll => Val.shrlu v1 v2
@@ -1148,8 +1157,11 @@ Definition arith_eval_rri64 n v i :=
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
+  | Pnandil  => Val.notl (Val.andl v (Vlong i))
   | Poril   => Val.orl  v (Vlong i)
+  | Pnoril   => Val.notl (Val.orl  v (Vlong i))
   | Pxoril  => Val.xorl  v (Vlong i)
+  | Pnxoril  => Val.notl (Val.xorl  v (Vlong i))
   end.
 
 Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=

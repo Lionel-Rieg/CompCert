@@ -112,6 +112,9 @@ Definition addimm64 := opimm64 Paddl Paddil.
 Definition orimm64  := opimm64 Porl  Poril.
 Definition andimm64 := opimm64 Pandl Pandil.
 Definition xorimm64 := opimm64 Pxorl  Pxoril.
+Definition norimm64  := opimm64 Pnorl  Pnoril.
+Definition nandimm64 := opimm64 Pnandl Pnandil.
+Definition nxorimm64 := opimm64 Pnxorl  Pnxoril.
 
 (*
 Definition sltimm64 := opimm64 Psltl Psltil.
@@ -535,18 +538,36 @@ Definition transl_op
   | Oandlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (andimm64 rd rs n ::i k)
+  | Onandl, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pnandl rd rs1 rs2 ::i k)
+  | Onandlimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (nandimm64 rd rs n ::i k)
   | Oorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Porl rd rs1 rs2 ::i k)
   | Oorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (orimm64 rd rs n ::i k)
+  | Onorl, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pnorl rd rs1 rs2 ::i k)
+  | Onorlimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (norimm64 rd rs n ::i k)
   | Oxorl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pxorl rd rs1 rs2 ::i k)
   | Oxorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (xorimm64 rd rs n ::i k)
+  | Onxorl, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pnxorl rd rs1 rs2 ::i k)
+  | Onxorlimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (nxorimm64 rd rs n ::i k)
   | Oshll, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pslll rd rs1 rs2 ::i k)

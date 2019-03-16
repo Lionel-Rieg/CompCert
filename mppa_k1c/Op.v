@@ -115,10 +115,16 @@ Inductive operation : Type :=
   | Omodlu                   (**r [rd = r1 % r2] (unsigned) *)
   | Oandl                    (**r [rd = r1 & r2] *)
   | Oandlimm (n: int64)      (**r [rd = r1 & n] *)
+  | Onandl                   (**r [rd = ~(r1 & r2)] *)
+  | Onandlimm (n: int64)     (**r [rd = ~(r1 & n)] *)
   | Oorl                     (**r [rd = r1 | r2] *)
   | Oorlimm (n: int64)       (**r [rd = r1 | n] *)
+  | Onorl                    (**r [rd = ~(r1 | r2)] *)
+  | Onorlimm (n: int64)      (**r [rd = ~(r1 | n)] *)
   | Oxorl                    (**r [rd = r1 ^ r2] *)
   | Oxorlimm (n: int64)      (**r [rd = r1 ^ n] *)
+  | Onxorl                   (**r [rd = ~(r1 ^ r2)] *)
+  | Onxorlimm (n: int64)     (**r [rd = ~(r1 ^ n)] *)
   | Oshll                    (**r [rd = r1 << r2] *)
   | Oshllimm (n: int)        (**r [rd = r1 << n] *)
   | Oshrl                    (**r [rd = r1 >> r2] (signed) *)
@@ -290,10 +296,16 @@ Definition eval_operation
   | Omodlu, v1::v2::nil => Val.modlu v1 v2
   | Oandl, v1::v2::nil => Some(Val.andl v1 v2)
   | Oandlimm n, v1::nil => Some (Val.andl v1 (Vlong n))
+  | Onandl, v1::v2::nil => Some(Val.notl (Val.andl v1 v2))
+  | Onandlimm n, v1::nil => Some(Val.notl (Val.andl v1 (Vlong n)))
   | Oorl, v1::v2::nil => Some(Val.orl v1 v2)
   | Oorlimm n, v1::nil => Some (Val.orl v1 (Vlong n))
+  | Onorl, v1::v2::nil => Some(Val.notl (Val.orl v1 v2))
+  | Onorlimm n, v1::nil => Some(Val.notl (Val.orl v1 (Vlong n)))
   | Oxorl, v1::v2::nil => Some(Val.xorl v1 v2)
   | Oxorlimm n, v1::nil => Some (Val.xorl v1 (Vlong n))
+  | Onxorl, v1::v2::nil => Some(Val.notl (Val.xorl v1 v2))
+  | Onxorlimm n, v1::nil => Some(Val.notl (Val.xorl v1 (Vlong n)))
   | Oshll, v1::v2::nil => Some (Val.shll v1 v2)
   | Oshllimm n, v1::nil => Some (Val.shll v1 (Vint n))
   | Oshrl, v1::v2::nil => Some (Val.shrl v1 v2)
@@ -453,10 +465,16 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Omodlu => (Tlong :: Tlong :: nil, Tlong)
   | Oandl => (Tlong :: Tlong :: nil, Tlong)
   | Oandlimm _ => (Tlong :: nil, Tlong)
+  | Onandl => (Tlong :: Tlong :: nil, Tlong)
+  | Onandlimm _ => (Tlong :: nil, Tlong)
   | Oorl => (Tlong :: Tlong :: nil, Tlong)
   | Oorlimm _ => (Tlong :: nil, Tlong)
+  | Onorl => (Tlong :: Tlong :: nil, Tlong)
+  | Onorlimm _ => (Tlong :: nil, Tlong)
   | Oxorl => (Tlong :: Tlong :: nil, Tlong)
   | Oxorlimm _ => (Tlong :: nil, Tlong)
+  | Onxorl => (Tlong :: Tlong :: nil, Tlong)
+  | Onxorlimm _ => (Tlong :: nil, Tlong)
   | Oshll => (Tlong :: Tint :: nil, Tlong)
   | Oshllimm _ => (Tlong :: nil, Tlong)
   | Oshrl => (Tlong :: Tint :: nil, Tlong)
@@ -630,10 +648,19 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* andl, andlimm *)
   - destruct v0; destruct v1...
   - destruct v0...
+  (* nandl, nandlimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
   (* orl, orlimm *)
   - destruct v0; destruct v1...
   - destruct v0...
+  (* norl, norlimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
   (* xorl, xorlimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* nxorl, nxorlimm *)
   - destruct v0; destruct v1...
   - destruct v0...
   (* shll, shllimm *)
@@ -1106,10 +1133,19 @@ Proof.
   (* andl, andlimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
+  (* nandl, nandlimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
   (* orl, orlimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
+  (* norl, norlimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
   (* xorl, xorlimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* nxorl, nxorlimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* shll, shllimm *)
