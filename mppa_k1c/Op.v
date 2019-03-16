@@ -78,6 +78,8 @@ Inductive operation : Type :=
   | Omodu                    (**r [rd = r1 % r2] (unsigned) *)
   | Oand                     (**r [rd = r1 & r2] *)
   | Oandimm (n: int)         (**r [rd = r1 & n] *)
+  | Onand                    (**r [rd = ~(r1 & r2)] *)
+  | Onandimm (n: int)        (**r [rd = ~(r1 & n)] *)
   | Oor                      (**r [rd = r1 | r2] *)
   | Oorimm (n: int)          (**r [rd = r1 | n] *)
   | Oxor                     (**r [rd = r1 ^ r2] *)
@@ -248,6 +250,8 @@ Definition eval_operation
   | Omodu, v1 :: v2 :: nil => Val.modu v1 v2
   | Oand, v1 :: v2 :: nil => Some (Val.and v1 v2)
   | Oandimm n, v1 :: nil => Some (Val.and v1 (Vint n))
+  | Onand, v1 :: v2 :: nil => Some (Val.notint (Val.and v1 v2))
+  | Onandimm n, v1 :: nil => Some (Val.notint (Val.and v1 (Vint n)))
   | Oor, v1 :: v2 :: nil => Some (Val.or v1 v2)
   | Oorimm n, v1 :: nil => Some (Val.or v1 (Vint n))
   | Oxor, v1 :: v2 :: nil => Some (Val.xor v1 v2)
@@ -405,6 +409,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Omodu => (Tint :: Tint :: nil, Tint)
   | Oand => (Tint :: Tint :: nil, Tint)
   | Oandimm _ => (Tint :: nil, Tint)
+  | Onand => (Tint :: Tint :: nil, Tint)
+  | Onandimm _ => (Tint :: nil, Tint)
   | Oor => (Tint :: Tint :: nil, Tint)
   | Oorimm _ => (Tint :: nil, Tint)
   | Oxor => (Tint :: Tint :: nil, Tint)
@@ -550,6 +556,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1; simpl in *; inv H0.
     destruct (Int.eq i0 Int.zero); inv H2...
   (* and, andimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* nand, nandimm *)
   - destruct v0; destruct v1...
   - destruct v0...
   (* or, orimm *)
@@ -1014,6 +1023,9 @@ Proof.
   - inv H4; inv H3; simpl in H1; inv H1. simpl.
     destruct (Int.eq i0 Int.zero); inv H2. TrivialExists.
   (* and, andimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* nand, nandimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* or, orimm *)
