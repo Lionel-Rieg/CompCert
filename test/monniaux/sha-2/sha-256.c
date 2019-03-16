@@ -52,6 +52,24 @@ static inline uint32_t right_rot(uint32_t value, unsigned int count)
 	return value >> count | value << (32 - count);
 }
 
+/* BEGIN DM */
+#define DEF_ROT(n) \
+static inline uint32_t right_rot##n(uint32_t value) \
+{ \
+	return value >> n | value << (32 - n); \
+}
+DEF_ROT(2)
+DEF_ROT(6)
+DEF_ROT(7)
+DEF_ROT(11)
+DEF_ROT(13)
+DEF_ROT(17)
+DEF_ROT(18)
+DEF_ROT(19)
+DEF_ROT(22)
+DEF_ROT(25)
+/* END DM */
+
 static void init_buf_state(struct buffer_state * state, const void * input, size_t len)
 {
 	state->p = input;
@@ -175,8 +193,8 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
 		for (i = 16; i < 64; i++) {
-			const uint32_t s0 = right_rot(w[i - 15], 7) ^ right_rot(w[i - 15], 18) ^ (w[i - 15] >> 3);
-			const uint32_t s1 = right_rot(w[i - 2], 17) ^ right_rot(w[i - 2], 19) ^ (w[i - 2] >> 10);
+			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
+			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
 			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 		}
 		
@@ -186,10 +204,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Compression function main loop: */
 		for (i = 0; i < 64; i++) {
-			const uint32_t s1 = right_rot(ah[4], 6) ^ right_rot(ah[4], 11) ^ right_rot(ah[4], 25);
+			const uint32_t s1 = right_rot6(ah[4]) ^ right_rot11(ah[4]) ^ right_rot25(ah[4]);
 			const uint32_t ch = (ah[4] & ah[5]) ^ (~ah[4] & ah[6]);
 			const uint32_t temp1 = ah[7] + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah[0], 2) ^ right_rot(ah[0], 13) ^ right_rot(ah[0], 22);
+			const uint32_t s0 = right_rot2(ah[0]) ^ right_rot13(ah[0]) ^ right_rot22(ah[0]);
 			const uint32_t maj = (ah[0] & ah[1]) ^ (ah[0] & ah[2]) ^ (ah[1] & ah[2]);
 			const uint32_t temp2 = s0 + maj;
 
@@ -265,8 +283,8 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
 		for (i = 16; i < 64; i++) {
-			const uint32_t s0 = right_rot(w[i - 15], 7) ^ right_rot(w[i - 15], 18) ^ (w[i - 15] >> 3);
-			const uint32_t s1 = right_rot(w[i - 2], 17) ^ right_rot(w[i - 2], 19) ^ (w[i - 2] >> 10);
+			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
+			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
 			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 		}
 		
@@ -285,7 +303,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		const uint32_t *ki = k, *wi = w;
 #endif
 		for (i = 0; i < 64; i++) {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+		  const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch +
 #if AUTOINCREMENT
@@ -293,7 +311,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 #else
 			  k[i] + w[i];
 #endif
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -374,8 +392,8 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
 		for (i = 16; i < 64; i++) {
-			const uint32_t s0 = right_rot(w[i - 15], 7) ^ right_rot(w[i - 15], 18) ^ (w[i - 15] >> 3);
-			const uint32_t s1 = right_rot(w[i - 2], 17) ^ right_rot(w[i - 2], 19) ^ (w[i - 2] >> 10);
+			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
+			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
 			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 		}
 		
@@ -392,10 +410,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		/* Compression function main loop: */
 		for (i = 0; i < 64; ) {
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -410,10 +428,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -428,10 +446,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -446,10 +464,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -464,10 +482,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -482,10 +500,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -500,10 +518,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
@@ -518,10 +536,10 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			i++;
 		  }
 		  {
-			const uint32_t s1 = right_rot(ah4, 6) ^ right_rot(ah4, 11) ^ right_rot(ah4, 25);
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
 			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot(ah0, 2) ^ right_rot(ah0, 13) ^ right_rot(ah0, 22);
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
 			const uint32_t temp2 = s0 + maj;
 
