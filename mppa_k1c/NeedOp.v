@@ -155,6 +155,7 @@ Proof.
 - apply shlimm_sound; auto.
 - apply shrimm_sound; auto.
 - apply shruimm_sound; auto.
+- apply ror_sound; auto.
 Qed.
 
 Lemma operation_is_redundant_sound:

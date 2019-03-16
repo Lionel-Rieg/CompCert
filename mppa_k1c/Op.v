@@ -256,6 +256,7 @@ Definition eval_operation
   | Oshlimm n, v1 :: nil => Some (Val.shl v1 (Vint n))
   | Oshr, v1 :: v2 :: nil => Some (Val.shr v1 v2)
   | Oshrimm n, v1 :: nil => Some (Val.shr v1 (Vint n))
+  | Ororimm n, v1 :: nil => Some (Val.ror v1 (Vint n))
   | Oshru, v1 :: v2 :: nil => Some (Val.shru v1 v2)
   | Oshruimm n, v1 :: nil => Some (Val.shru v1 (Vint n))
   | Oshrximm n, v1::nil => Val.shrx v1 (Vint n)
@@ -568,6 +569,8 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl... destruct (Int.ltu n Int.iwordsize)...
   (* shrx *)
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 31)); inv H0...
+  (* shrimm *)
+  - destruct v0; simpl...   
   (* makelong, lowlong, highlong *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -1031,6 +1034,8 @@ Proof.
   (* shrx *)
   - inv H4; simpl in H1; try discriminate. simpl.
     destruct (Int.ltu n (Int.repr 31)); inv H1. TrivialExists.
+  (* rorimm *)
+  - inv H4; simpl; auto.
   (* makelong, highlong, lowlong *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
