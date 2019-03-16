@@ -529,6 +529,8 @@ Proof.
   unfold notint; red; intros until x; case (notint_match a); intros; InvEval.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
+  - TrivialExists; simpl; congruence.
   - apply eval_xorimm; assumption.
 Qed.
 

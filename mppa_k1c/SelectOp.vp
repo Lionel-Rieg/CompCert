@@ -279,6 +279,8 @@ Nondetfunction notint (e: expr) :=
   match e with
   | Eop Oand (e1:::e2:::Enil) => Eop Onand (e1:::e2:::Enil)
   | Eop (Oandimm n) (e1:::Enil) => Eop (Onandimm n) (e1:::Enil)
+  | Eop Oor (e1:::e2:::Enil) => Eop Onor (e1:::e2:::Enil)
+  | Eop (Oorimm n) (e1:::Enil) => Eop (Onorimm n) (e1:::Enil)
   | _ => xorimm Int.mone e
   end.
 
