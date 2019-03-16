@@ -338,8 +338,9 @@ Inductive arith_name_rrr : Type :=
   | Psubw                                           (**r sub word *)
   | Pmulw                                           (**r mul word *)
   | Pandw                                           (**r and word *)
-  | Pnandw                                          (**r and word *)
+  | Pnandw                                          (**r nand word *)
   | Porw                                            (**r or word *)
+  | Pnorw                                           (**r nor word *)
   | Pxorw                                           (**r xor word *)
   | Psraw                                           (**r shift right arithmetic word *)
   | Psrlw                                           (**r shift right logical word *)
@@ -368,8 +369,9 @@ Inductive arith_name_rri32 : Type :=
 
   | Paddiw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
-  | Pnandiw                                         (**r and imm word *)
+  | Pnandiw                                         (**r nand imm word *)
   | Poriw                                           (**r or imm word *)
+  | Pnoriw                                          (**r nor imm word *)
   | Pxoriw                                          (**r xor imm word *)
   | Psraiw                                          (**r shift right arithmetic imm word *)
   | Psrliw                                          (**r shift right logical imm word *)
@@ -1095,6 +1097,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pandw  => Val.and  v1 v2
   | Pnandw => Val.notint (Val.and v1 v2)
   | Porw   => Val.or   v1 v2
+  | Pnorw  => Val.notint (Val.or v1 v2)
   | Pxorw  => Val.xor  v1 v2
   | Psrlw  => Val.shru v1 v2
   | Psraw  => Val.shr  v1 v2
@@ -1123,8 +1126,9 @@ Definition arith_eval_rri32 n v i :=
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
-  | Pnandiw => Val.notint(Val.and   v (Vint i))
+  | Pnandiw => Val.notint (Val.and  v (Vint i))
   | Poriw   => Val.or    v (Vint i)
+  | Pnoriw  => Val.notint (Val.or v (Vint i))
   | Pxoriw  => Val.xor   v (Vint i)
   | Psraiw  => Val.shr   v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)

@@ -138,8 +138,9 @@ Inductive instruction : Type :=
   | Psubw               (rd rs1 rs2: ireg)          (**r sub word *)
   | Pmulw               (rd rs1 rs2: ireg)          (**r mul word *)
   | Pandw               (rd rs1 rs2: ireg)          (**r and word *)
-  | Pnandw              (rd rs1 rs2: ireg)          (**r and word *)
+  | Pnandw              (rd rs1 rs2: ireg)          (**r nand word *)
   | Porw                (rd rs1 rs2: ireg)          (**r or word *)
+  | Pnorw               (rd rs1 rs2: ireg)          (**r nor word *)
   | Pxorw               (rd rs1 rs2: ireg)          (**r xor word *)
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
@@ -167,8 +168,9 @@ Inductive instruction : Type :=
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
-  | Pnandiw             (rd rs: ireg) (imm: int)    (**r and imm word *)
+  | Pnandiw             (rd rs: ireg) (imm: int)    (**r nand imm word *)
   | Poriw               (rd rs: ireg) (imm: int)    (**r or imm word *)
+  | Pnoriw              (rd rs: ireg) (imm: int)    (**r nor imm word *)
   | Pxoriw              (rd rs: ireg) (imm: int)    (**r xor imm word *)
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
@@ -263,6 +265,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
   | PArithRRR Asmblock.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
   | PArithRRR Asmblock.Porw rd rs1 rs2        => Porw rd rs1 rs2
+  | PArithRRR Asmblock.Pnorw rd rs1 rs2       => Pnorw rd rs1 rs2
   | PArithRRR Asmblock.Pxorw rd rs1 rs2       => Pxorw rd rs1 rs2
   | PArithRRR Asmblock.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
   | PArithRRR Asmblock.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
@@ -291,6 +294,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 Asmblock.Pandiw rd rs imm       => Pandiw rd rs imm
   | PArithRRI32 Asmblock.Pnandiw rd rs imm      => Pnandiw rd rs imm
   | PArithRRI32 Asmblock.Poriw rd rs imm        => Poriw rd rs imm
+  | PArithRRI32 Asmblock.Pnoriw rd rs imm       => Pnoriw rd rs imm
   | PArithRRI32 Asmblock.Pxoriw rd rs imm       => Pxoriw rd rs imm
   | PArithRRI32 Asmblock.Psraiw rd rs imm       => Psraiw rd rs imm
   | PArithRRI32 Asmblock.Psrliw rd rs imm       => Psrliw rd rs imm
