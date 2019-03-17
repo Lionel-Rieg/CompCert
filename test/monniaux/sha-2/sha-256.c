@@ -433,150 +433,33 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Compression function main loop: */
 		for (i = 0; i < 64; ) {
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
+#define CHUNK								\
+		  {							\
+			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4); \
+			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);	\
+			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i]; \
+			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0); \
+			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2); \
+			const uint32_t temp2 = s0 + maj;		\
+									\
+			ah7 = ah6;					\
+			ah6 = ah5;					\
+			ah5 = ah4;					\
+			ah4 = ah3 + temp1;				\
+			ah3 = ah2;					\
+			ah2 = ah1;					\
+			ah1 = ah0;					\
+			ah0 = temp1 + temp2;				\
+			i++;						\
 		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
-		  {
-			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i];
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-			i++;
-		  }
+		  CHUNK
+		  CHUNK
+		  CHUNK
+		  CHUNK
+		  CHUNK
+		  CHUNK
+		  CHUNK
+		  CHUNK
 		}
 
 		/* Add the compressed chunk to the current hash value: */
