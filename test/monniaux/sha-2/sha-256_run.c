@@ -43,7 +43,7 @@ static const struct string_vector STRING_VECTORS[] = {
 	}
 };
 
-#define LARGE_MESSAGES 0
+#define LARGE_MESSAGES 1
 #define LARGER_MESSAGES 0
 
 static uint8_t data1[] = { 0xbd };
@@ -115,8 +115,12 @@ static struct vector vectors[] = {
 #if LARGE_MESSAGES
 	{
 		NULL,
+		/* too big
 		1000000,
 		"d29751f2649b32ff572b5e0a9f541ea660a50f94ff0beedfb0b692b924cc8025"
+		*/
+		50000,
+		"5b4b67b5d68e02c992760de07640472efe53a7f7553865f83262d0a74efc3e5d"
 	},
 #if LARGER_MESSAGES
 	{
