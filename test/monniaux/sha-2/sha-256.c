@@ -289,6 +289,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		}
 
 		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
+		/* DM this is a SLOW part with ccomp */
 		for (i = 16; i < 64; i++) {
 			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
 			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
