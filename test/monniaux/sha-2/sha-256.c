@@ -8,6 +8,8 @@
 
 #include "sha-256.h"
 
+#define AUTOINCREMENT 1
+
 #define CHUNK_SIZE 64
 #define TOTAL_LEN_LEN 8
 
@@ -144,8 +146,6 @@ static int calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state * state)
  *   for bit string lengths that are not multiples of eight, and it really operates on arrays of bytes.
  *   In particular, the len parameter is a number of bytes.
  */
-/* #define DO_NOT_UNROLL 1 */
-#define AUTOINCREMENT 1
 
 #if USE_ORIGINAL
 void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
@@ -236,7 +236,6 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 	}
 }
 #else
-#if DO_NOT_UNROLL
 /* Modified by D. Monniaux */
 void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 {
@@ -295,7 +294,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
 			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 		}
-		
+
 		/* Initialize working variables to current hash value: */
 		ah0 = h0;
 		ah1 = h1;
@@ -308,136 +307,21 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Compression function main loop: */
 #if AUTOINCREMENT
-		const uint32_t *ki = k, *wi = w;
-#endif
-		for (i = 0; i < 64; i++) {
-		  const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4);
-			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);
-			const uint32_t temp1 = ah7 + s1 + ch +
-#if AUTOINCREMENT
-			  *(ki++) + *(wi++);
+		uint32_t *ki=k, *wi=w;
+#define KI *ki
+#define WI *wi
+#define STEP i++; ki++; wi++;
 #else
-			  k[i] + w[i];
+#define KI k[i]
+#define WI w[i]
+#define STEP i++;
 #endif
-			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0);
-			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2);
-			const uint32_t temp2 = s0 + maj;
-
-			ah7 = ah6;
-			ah6 = ah5;
-			ah5 = ah4;
-			ah4 = ah3 + temp1;
-			ah3 = ah2;
-			ah2 = ah1;
-			ah1 = ah0;
-			ah0 = temp1 + temp2;
-		}
-
-		/* Add the compressed chunk to the current hash value: */
-		h0 += ah0;
-		h1 += ah1;
-		h2 += ah2;
-		h3 += ah3;
-		h4 += ah4;
-		h5 += ah5;
-		h6 += ah6;
-		h7 += ah7;
-	}
-	h[0]=h0;
-	h[1]=h1;
-	h[2]=h2;
-	h[3]=h3;
-	h[4]=h4;
-	h[5]=h5;
-	h[6]=h6;
-	h[7]=h7;
-	
-	/* Produce the final hash value (big-endian): */
-	for (i = 0, j = 0; i < 8; i++)
-	{
-		hash[j++] = (uint8_t) (h[i] >> 24);
-		hash[j++] = (uint8_t) (h[i] >> 16);
-		hash[j++] = (uint8_t) (h[i] >> 8);
-		hash[j++] = (uint8_t) h[i];
-	}
-}
-#else
-/* Modified by D. Monniaux */
-void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
-{
-	/*
-	 * Note 1: All integers (expect indexes) are 32-bit unsigned integers and addition is calculated modulo 2^32.
-	 * Note 2: For each round, there is one round constant k[i] and one entry in the message schedule array w[i], 0 = i = 63
-	 * Note 3: The compression function uses 8 working variables, a through h
-	 * Note 4: Big-endian convention is used when expressing the constants in this pseudocode,
-	 *     and when parsing message block data from bytes to words, for example,
-	 *     the first word of the input message "abc" after padding is 0x61626380
-	 */
-
-	/*
-	 * Initialize hash values:
-	 * (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
-	 */
-	uint32_t h[] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
-	uint32_t h0 = h[0];
-	uint32_t h1 = h[1];
-	uint32_t h2 = h[2];
-	uint32_t h3 = h[3];
-	uint32_t h4 = h[4];
-	uint32_t h5 = h[5];
-	uint32_t h6 = h[6];
-	uint32_t h7 = h[7];
-	int i, j;
-
-	/* 512-bit chunks is what we will operate on. */
-	uint8_t chunk[64];
-
-	struct buffer_state state;
-
-	init_buf_state(&state, input, len);
-
-	while (calc_chunk(chunk, &state)) {
-	        uint32_t ah0, ah1, ah2, ah3, ah4, ah5, ah6, ah7;
-		
-		/*
-		 * create a 64-entry message schedule array w[0..63] of 32-bit words
-		 * (The initial values in w[0..63] don't matter, so many implementations zero them here)
-		 * copy chunk into first 16 words w[0..15] of the message schedule array
-		 */
-		uint32_t w[64];
-		const uint8_t *p = chunk;
-
-		memset(w, 0x00, sizeof w);
-		for (i = 0; i < 16; i++) {
-			w[i] = (uint32_t) p[0] << 24 | (uint32_t) p[1] << 16 |
-				(uint32_t) p[2] << 8 | (uint32_t) p[3];
-			p += 4;
-		}
-
-		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
-		for (i = 16; i < 64; i++) {
-			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
-			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
-			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
-		}
-		
-		/* Initialize working variables to current hash value: */
-		ah0 = h0;
-		ah1 = h1;
-		ah2 = h2;
-		ah3 = h3;
-		ah4 = h4;
-		ah5 = h5;
-		ah6 = h6;
-		ah7 = h7;
-
-		/* Compression function main loop: */
 		for (i = 0; i < 64; ) {
 #define CHUNK								\
 		  {							\
 			const uint32_t s1 = right_rot6(ah4) ^ right_rot11(ah4) ^ right_rot25(ah4); \
 			const uint32_t ch = (ah4 & ah5) ^ (~ah4 & ah6);	\
-			const uint32_t temp1 = ah7 + s1 + ch + k[i] + w[i]; \
+			const uint32_t temp1 = ah7 + s1 + ch + KI + WI; \
 			const uint32_t s0 = right_rot2(ah0) ^ right_rot13(ah0) ^ right_rot22(ah0); \
 			const uint32_t maj = (ah0 & ah1) ^ (ah0 & ah2) ^ (ah1 & ah2); \
 			const uint32_t temp2 = s0 + maj;		\
@@ -450,15 +334,8 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			ah2 = ah1;					\
 			ah1 = ah0;					\
 			ah0 = temp1 + temp2;				\
-			i++;						\
+			STEP						\
 		  }
-		  CHUNK
-		  CHUNK
-		  CHUNK
-		  CHUNK
-		  CHUNK
-		  CHUNK
-		  CHUNK
 		  CHUNK
 		}
 
@@ -490,5 +367,4 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		hash[j++] = (uint8_t) h[i];
 	}
 }
-#endif
 #endif
