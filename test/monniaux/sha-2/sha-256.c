@@ -282,6 +282,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		const uint8_t *p = chunk;
 
 		memset(w, 0x00, sizeof w);
+#ifndef SKIP_SLOW_PARTS
 		for (i = 0; i < 16; i++) {
 			w[i] = (uint32_t) p[0] << 24 | (uint32_t) p[1] << 16 |
 				(uint32_t) p[2] << 8 | (uint32_t) p[3];
@@ -289,13 +290,13 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		}
 
 		/* Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array: */
-		/* DM this is a SLOW part with ccomp */
+		/* DM this is a SLOW part with ccomp; awkward address computations. */
 		for (i = 16; i < 64; i++) {
 			const uint32_t s0 = right_rot7(w[i - 15]) ^ right_rot18(w[i - 15]) ^ (w[i - 15] >> 3);
 			const uint32_t s1 = right_rot17(w[i - 2]) ^ right_rot19(w[i - 2]) ^ (w[i - 2] >> 10);
 			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 		}
-
+#endif
 		/* Initialize working variables to current hash value: */
 		ah0 = h0;
 		ah1 = h1;
@@ -308,7 +309,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 
 		/* Compression function main loop: */
 #if AUTOINCREMENT
-		uint32_t *ki=k, *wi=w;
+		const uint32_t *ki=k, *wi=w;
 #define KI *ki
 #define WI *wi
 #define STEP i++; ki++; wi++;
@@ -337,6 +338,7 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 			ah0 = temp1 + temp2;				\
 			STEP						\
 		  }
+		  CHUNK
 		  CHUNK
 		}
 
