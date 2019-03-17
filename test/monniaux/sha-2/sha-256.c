@@ -254,6 +254,14 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 	 * (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
 	 */
 	uint32_t h[] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
+	uint32_t h0 = h[0];
+	uint32_t h1 = h[1];
+	uint32_t h2 = h[2];
+	uint32_t h3 = h[3];
+	uint32_t h4 = h[4];
+	uint32_t h5 = h[5];
+	uint32_t h6 = h[6];
+	uint32_t h7 = h[7];
 	int i, j;
 
 	/* 512-bit chunks is what we will operate on. */
@@ -289,14 +297,14 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		}
 		
 		/* Initialize working variables to current hash value: */
-		ah0 = h[0];
-		ah1 = h[1];
-		ah2 = h[2];
-		ah3 = h[3];
-		ah4 = h[4];
-		ah5 = h[5];
-		ah6 = h[6];
-		ah7 = h[7];
+		ah0 = h0;
+		ah1 = h1;
+		ah2 = h2;
+		ah3 = h3;
+		ah4 = h4;
+		ah5 = h5;
+		ah6 = h6;
+		ah7 = h7;
 
 		/* Compression function main loop: */
 #if AUTOINCREMENT
@@ -326,16 +334,24 @@ void calc_sha_256(uint8_t hash[32], const void * input, size_t len)
 		}
 
 		/* Add the compressed chunk to the current hash value: */
-		h[0] += ah0;
-		h[1] += ah1;
-		h[2] += ah2;
-		h[3] += ah3;
-		h[4] += ah4;
-		h[5] += ah5;
-		h[6] += ah6;
-		h[7] += ah7;
+		h0 += ah0;
+		h1 += ah1;
+		h2 += ah2;
+		h3 += ah3;
+		h4 += ah4;
+		h5 += ah5;
+		h6 += ah6;
+		h7 += ah7;
 	}
-
+	h[0]=h0;
+	h[1]=h1;
+	h[2]=h2;
+	h[3]=h3;
+	h[4]=h4;
+	h[5]=h5;
+	h[6]=h6;
+	h[7]=h7;
+	
 	/* Produce the final hash value (big-endian): */
 	for (i = 0, j = 0; i < 8; i++)
 	{
