@@ -513,7 +513,12 @@ Definition transl_op
   | Ororimm n, a1 :: nil =>
     do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Proriw rd rs n ::i k)
-         
+  | Omadd, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmaddw r1 r2 r3 ::i k)
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;

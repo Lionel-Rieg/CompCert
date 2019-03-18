@@ -443,6 +443,9 @@ Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
+Coercion PArithARRR:     arith_name_arrr      >-> Funclass.
+Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
+Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
 
 Inductive basic : Type :=
   | PArith          (i: ar_instruction)
