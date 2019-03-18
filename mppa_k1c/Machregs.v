@@ -41,7 +41,7 @@ Require Import Op.
 Inductive mreg: Type :=
   (* Allocatable General Purpose regs. *)
   | R0  | R1  | R2  | R3  | R4  | R5  | R6  | R7  | R8  | R9
-  | R10 | R11 | (* R12 | R13 | *) R14 | R15 (* | R16 *) | R17 | R18 | R19
+  | R10 | R11 (* | R12 | R13 | R14 *) | R15  (* | R16 *) | R17 | R18 | R19
   | R20 | R21 | R22 | R23 | R24 | R25 | R26 | R27 | R28 | R29
   | R30 | R31 (* | R32 *) | R33 | R34 | R35 | R36 | R37 | R38 | R39
   | R40 | R41 | R42 | R43 | R44 | R45 | R46 | R47 | R48 | R49
@@ -54,7 +54,7 @@ Global Opaque mreg_eq.
 
 Definition all_mregs :=
      R0  :: R1  :: R2  :: R3  :: R4  :: R5  :: R6  :: R7  :: R8  :: R9
-  :: R10 :: R11 (* :: R12 :: R13 *) :: R14 :: R15 (* :: R16 *) :: R17 :: R18 :: R19
+  :: R10 :: R11 (* :: R12 :: R13 :: R14 *) :: R15  (* :: R16 *) :: R17 :: R18 :: R19
   :: R20 :: R21 :: R22 :: R23 :: R24 :: R25 :: R26 :: R27 :: R28 :: R29
   :: R30 :: R31 (* :: R32 *) :: R33 :: R34 :: R35 :: R36 :: R37 :: R38 :: R39
   :: R40 :: R41 :: R42 :: R43 :: R44 :: R45 :: R46 :: R47 :: R48 :: R49
@@ -86,7 +86,7 @@ Module IndexedMreg <: INDEXED_TYPE.
     match r with
     | R0  => 1  | R1  => 2  | R2  => 3  | R3  => 4  | R4  => 5
     | R5  => 6  | R6  => 7  | R7  => 8  | R8  => 9  | R9  => 10
-    | R10 => 11 | R11 => 12 (* | R12 => 13 | R13 => 14 *) | R14 => 15
+    | R10 => 11 | R11 => 12 (* | R12 => 13 | R13 => 14 | R14 => 15 *)
     | R15 => 16 (* | R16 => 17 *) | R17 => 18 | R18 => 19 | R19 => 20
     | R20 => 21 | R21 => 22 | R22 => 23 | R23 => 24 | R24 => 25
     | R25 => 26 | R26 => 27 | R27 => 28 | R28 => 29 | R29 => 30
@@ -115,7 +115,7 @@ Local Open Scope string_scope.
 Definition register_names :=
      ("R0" , R0)  :: ("R1" , R1)  :: ("R2" , R2)  :: ("R3" , R3)  :: ("R4" , R4)
   :: ("R5" , R5)  :: ("R6" , R6)  :: ("R7" , R7)  :: ("R8" , R8)  :: ("R9" , R9)
-  :: ("R10", R10) :: ("R11", R11) (* :: ("R12", R12) :: ("R13", R13) *) :: ("R14", R14)
+  :: ("R10", R10) :: ("R11", R11) (* :: ("R12", R12) :: ("R13", R13) :: ("R14", R14) *)
   :: ("R15", R15) (* :: ("R16", R16) *) :: ("R17", R17) :: ("R18", R18) :: ("R19", R19)
   :: ("R20", R20) :: ("R21", R21) :: ("R22", R22) :: ("R23", R23) :: ("R24", R24)
   :: ("R25", R25) :: ("R26", R26) :: ("R27", R27) :: ("R28", R28) :: ("R29", R29)
@@ -174,9 +174,9 @@ Definition destroyed_by_builtin (ef: external_function): list mreg :=
 
 Definition destroyed_by_setstack (ty: typ): list mreg := nil.
 
-Definition destroyed_at_function_entry: list mreg := R14 :: nil.
+Definition destroyed_at_function_entry: list mreg := R17 :: nil.
 
-Definition temp_for_parent_frame: mreg := R14. (* FIXME - ?? *)
+Definition temp_for_parent_frame: mreg := R17. (* Temporary used to store the parent frame, where the arguments are *)
 
 Definition destroyed_at_indirect_call: list mreg := nil.
   (* R10 :: R11 :: R12 :: R13 :: R14 :: R15 :: R16 :: R17 :: nil. *)

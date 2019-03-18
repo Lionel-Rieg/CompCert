@@ -750,7 +750,7 @@ Proof.
       rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
     * Simpl.
     * intros rr; destruct rr; Simpl.
-      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g FP)]]; subst; Simpl.
 (* Freeframe *)
   - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rs GPR12) eqn:SPeq; try discriminate.
     destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv H0.
@@ -758,7 +758,7 @@ Proof.
     * simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
       Simpl. rewrite e. rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
     * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g FP)]]; subst; Simpl.
 (* Pget *)
   - simpl in H. destruct rs0 eqn:rs0eq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.

@@ -85,7 +85,8 @@ Module Pregmap := EMap(PregEq).
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
-Notation "'FP'" := GPR14 (only parsing) : asm.
+Notation "'FP'" := GPR17 (only parsing) : asm.
+Notation "'MFP'" := R17 (only parsing) : asm.
 Notation "'GPRA'" := GPR16 (only parsing) : asm.
 Notation "'RTMP'" := GPR32 (only parsing) : asm.
 
@@ -1445,7 +1446,7 @@ Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
   | R5  => GPR5  | R6  => GPR6  | R7  => GPR7  | R8  => GPR8  | R9  => GPR9
-  | R10 => GPR10 | R11 => GPR11 (* | R12 => GPR12 | R13 => GPR13 | *) | R14  => GPR14
+  | R10 => GPR10 | R11 => GPR11 (* | R12 => GPR12 | R13 => GPR13 | R14  => GPR14 *)
   | R15 => GPR15 (* | R16 => GPR16 *) | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
   | R20 => GPR20 | R21 => GPR21 | R22 => GPR22 | R23 => GPR23 | R24  => GPR24
   | R25 => GPR25 | R26 => GPR26 | R27 => GPR27 | R28 => GPR28 | R29  => GPR29

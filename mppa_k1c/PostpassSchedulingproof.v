@@ -67,8 +67,8 @@ Proof.
     erewrite exec_basic_instr_pc; eauto.
 Qed.
 
-Lemma next_eq {A: Type}:
-  forall (rs rs':A) m m',
+Lemma next_eq:
+  forall (rs rs': regset) m m',
   rs = rs' -> m = m' -> Next rs m = Next rs' m'.
 Proof.
   intros. congruence.
@@ -136,7 +136,7 @@ Proof.
     inv H. apply next_eq; auto. apply functional_extensionality. intros.
     rewrite (regset_double_set GPR32 PC); try discriminate.
     rewrite (regset_double_set GPR12 PC); try discriminate.
-    rewrite (regset_double_set GPR14 PC); try discriminate. reflexivity.
+    rewrite (regset_double_set FP PC); try discriminate. reflexivity.
   - repeat (rewrite Pregmap.gso; try discriminate).
     destruct (Mem.loadv _ _ _); try discriminate.
     destruct (rs GPR12); try discriminate.

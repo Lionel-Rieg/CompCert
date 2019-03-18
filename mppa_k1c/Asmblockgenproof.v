@@ -758,9 +758,9 @@ Qed. *)
   the unwanted behaviour. *)
 
 
-Remark preg_of_not_FP: forall r, negb (mreg_eq r R14) = true -> IR FP <> preg_of r.
+Remark preg_of_not_FP: forall r, negb (mreg_eq r MFP) = true -> IR FP <> preg_of r.
 Proof.
-  intros. change (IR FP) with (preg_of R14). red; intros.
+  intros. change (IR FP) with (preg_of MFP). red; intros.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
 Qed.
 
