@@ -52,6 +52,9 @@ Inductive arith_op :=
   | OArithRRR (n: arith_name_rrr)
   | OArithRRI32 (n: arith_name_rri32) (imm: int)
   | OArithRRI64 (n: arith_name_rri64) (imm: int64)
+  | OArithARRR (n: arith_name_arrr)
+  | OArithARRI32 (n: arith_name_arri32) (imm: int)
+  | OArithARRI64 (n: arith_name_arri64) (imm: int64)
 .
 
 Coercion OArithR: arith_name_r >-> arith_op.
@@ -109,9 +112,12 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | OArithRF64 n i, [] => Some (Val (arith_eval_rf64 n i))
 
   | OArithRRR n, [Val v1; Val v2] => Some (Val (arith_eval_rrr n v1 v2))
-
   | OArithRRI32 n i, [Val v] => Some (Val (arith_eval_rri32 n v i))
   | OArithRRI64 n i, [Val v] => Some (Val (arith_eval_rri64 n v i))
+
+  | OArithARRR n, [Val v1; Val v2; Val v3] => Some (Val (arith_eval_arrr n v1 v2 v3))
+  | OArithARRI32 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri32 n v1 v2 i))
+  | OArithARRI64 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri64 n v1 v2 i))
 
   | _, _ => None
   end.
@@ -525,6 +531,9 @@ Definition trans_arith (ai: ar_instruction) : macro :=
   | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
   | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
   | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
+  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (Name(#d) @ Name (#s1) @ Name (#s2) @ Enil))]
+  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (Name(#d) @ Name (#s) @ Enil))]
+  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (Name(#d) @ Name (#s) @ Enil))]
   end.
 
 
@@ -708,6 +717,27 @@ Proof.
   - inv H; inv H0;
     eexists; split; try split.
     * simpl. pose (H1 rs0); rewrite e. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRR *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs1); rewrite e0. pose (H1 rs2); rewrite e1. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRI32 *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs0); rewrite e0. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRI64 *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs0); rewrite e0. reflexivity.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
@@ -1367,6 +1397,22 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   | Pornil => "Pornil"
   end.
 
+Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
+  match n with
+  | Pmaddw  => "Pmaddw"
+  | Pmaddl  => "Pmaddl"
+  end.
+
+Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
+  match n with
+  | Pmaddiw => "Pmaddw"
+  end.
+
+Definition string_of_name_arri64 (n: arith_name_arri64): pstring :=
+  match n with
+  | Pmaddil => "Pmaddl"
+  end.
+
 Definition string_of_arith (op: arith_op): pstring :=
   match op with
   | OArithR n => string_of_name_r n
@@ -1378,6 +1424,9 @@ Definition string_of_arith (op: arith_op): pstring :=
   | OArithRRR n => string_of_name_rrr n
   | OArithRRI32 n _ => string_of_name_rri32 n
   | OArithRRI64 n _ => string_of_name_rri64 n
+  | OArithARRR n => string_of_name_arrr n
+  | OArithARRI32 n _ => string_of_name_arri32 n
+  | OArithARRI64 n _ => string_of_name_arri64 n
   end.
 
 Definition string_of_name_lrro (n: load_name_rro) : pstring :=

@@ -347,6 +347,16 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI64 Asmblock.Pandnil rd rs imm      => Pandnil rd rs imm
   | PArithRRI64 Asmblock.Pornil rd rs imm       => Pornil rd rs imm
 
+  (** ARRR *)
+  | PArithARRR Asmblock.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
+  | PArithARRR Asmblock.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
+
+  (** ARRI32 *)
+  | PArithARRI32 Asmblock.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
+
+  (** ARRI64 *)
+  | PArithARRI64 Asmblock.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
+                                                          
   (** Load *)
   | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra ofs
   | PLoadRRO Asmblock.Plbu rd ra ofs  => Plbu rd ra ofs

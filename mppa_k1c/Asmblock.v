@@ -406,6 +406,19 @@ Inductive arith_name_rri64 : Type :=
   | Pornil                                          (**r orn immediate long *)
 .
 
+Inductive arith_name_arrr : Type :=
+  | Pmaddw                                           (**r multiply add word *)
+  | Pmaddl                                           (**r multiply add long *)
+.
+
+Inductive arith_name_arri32 : Type :=
+  | Pmaddiw                                           (**r multiply add word *)
+.
+
+Inductive arith_name_arri64 : Type :=
+  | Pmaddil                                           (**r multiply add long *)
+.
+
 Inductive ar_instruction : Type :=
   | PArithR     (i: arith_name_r)     (rd: ireg)
   | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
@@ -416,6 +429,9 @@ Inductive ar_instruction : Type :=
   | PArithRRR   (i: arith_name_rrr)   (rd rs1 rs2: ireg)
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
+  | PArithARRR   (i: arith_name_arrr)   (rd rs1 rs2: ireg)
+  | PArithARRI32 (i: arith_name_arri32) (rd rs: ireg) (imm: int)
+  | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
 
 Coercion PArithR:       arith_name_r        >-> Funclass.
@@ -1180,6 +1196,22 @@ Definition arith_eval_rri64 n v i :=
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
   end.
 
+Definition arith_eval_arrr n v1 v2 v3 :=
+  match n with
+  | Pmaddw => Val.add v1 (Val.mul v2 v3)
+  | Pmaddl => Val.addl v1 (Val.mull v2 v3)
+  end.                    
+
+Definition arith_eval_arri32 n v1 v2 v3 :=
+  match n with
+  | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
+  end.                    
+
+Definition arith_eval_arri64 n v1 v2 v3 :=
+  match n with
+  | Pmaddil => Val.addl v1 (Val.mull v2 (Vlong v3))
+  end.                    
+
 Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   match ai with
   | PArithR n d => rs#d <- (arith_eval_r n)
@@ -1196,6 +1228,12 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   | PArithRRI32 n d s i => rs#d <- (arith_eval_rri32 n rs#s i)
 
   | PArithRRI64 n d s i => rs#d <- (arith_eval_rri64 n rs#s i)
+
+  | PArithARRR n d s1 s2 => rs#d <- (arith_eval_arrr n rs#d rs#s1 rs#s2)
+
+  | PArithARRI32 n d s i => rs#d <- (arith_eval_arri32 n rs#d rs#s i)
+
+  | PArithARRI64 n d s i => rs#d <- (arith_eval_arri64 n rs#d rs#s i)
   end.
 
 (** * load/store *)
