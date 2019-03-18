@@ -123,6 +123,10 @@ let arith_rri64_str = function
   | Pandnil -> "Pandnil"
   | Pornil -> "Pornil"
 
+let arith_arrr_str = function
+  | Pmaddw -> "Pmaddw"
+  | Pmaddl -> "Pmaddl"
+            
 let arith_ri32_str = "Pmake"
 
 let arith_ri64_str = "Pmakel"
@@ -162,6 +166,12 @@ let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Re
 
 let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
+let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+
+let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+
+let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
+
 let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
 
 let arith_r_rec i rd = match i with
@@ -173,6 +183,10 @@ let arith_rec i =
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
+  (* Seems like single constant constructor types are elided *)
+  | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
+  | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
+  | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
   | PArithRF32 (rd, f) -> { inst = arith_rf32_str; write_locs = [Reg (IR rd)]; read_locs = [];
