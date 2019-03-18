@@ -216,6 +216,7 @@ Nondetfunction andimm (n1: int) (e2: expr) :=
   else match e2 with
   | Eop (Ointconst n2) Enil => Eop (Ointconst (Int.and n1 n2)) Enil
   | Eop (Oandimm n2) (t2:::Enil) => Eop (Oandimm (Int.and n1 n2)) (t2:::Enil)
+  | Eop Onot (t2:::Enil) => Eop (Oandnimm n1) (t2:::Enil)
   | _ => Eop (Oandimm n1) (e2:::Enil)
   end.
 
@@ -224,6 +225,7 @@ Nondetfunction and (e1: expr) (e2: expr) :=
   | Eop (Ointconst n1) Enil, t2 => andimm n1 t2
   | t1, Eop (Ointconst n2) Enil => andimm n2 t1
   | (Eop Onot (t1:::Enil)), t2 => Eop Oandn (t1:::t2:::Enil) 
+  | t1, (Eop Onot (t2:::Enil)) => Eop Oandn (t2:::t1:::Enil) 
   | _, _ => Eop Oand (e1:::e2:::Enil)
   end.
 
@@ -233,6 +235,7 @@ Nondetfunction orimm (n1: int) (e2: expr) :=
   else match e2 with
        | Eop (Ointconst n2) Enil => Eop (Ointconst (Int.or n1 n2)) Enil
        | Eop (Oorimm n2) (t2:::Enil) => Eop (Oorimm (Int.or n1 n2)) (t2:::Enil)
+       | Eop Onot (t2:::Enil) => Eop (Oornimm n1) (t2:::Enil)
        | _ => Eop (Oorimm n1) (e2:::Enil)
   end.
 
@@ -255,6 +258,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       then Eop (Ororimm n2) (t1:::Enil)
       else Eop Oor (e1:::e2:::Enil)
   | (Eop Onot (t1:::Enil)), t2 => Eop Oorn (t1:::t2:::Enil) 
+  | t1, (Eop Onot (t2:::Enil))  => Eop Oorn (t2:::t1:::Enil) 
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
 

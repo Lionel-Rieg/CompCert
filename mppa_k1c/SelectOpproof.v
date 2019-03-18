@@ -422,6 +422,7 @@ Proof.
   case (andimm_match a); intros.
   - InvEval. TrivialExists. simpl. rewrite Int.and_commut; auto.
   - InvEval. subst. rewrite Val.and_assoc. simpl. rewrite Int.and_commut. TrivialExists.
+  - InvEval. TrivialExists. simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -431,6 +432,7 @@ Proof.
   - rewrite Val.and_commut. apply eval_andimm; auto.
   - apply eval_andimm; auto.
   - (*andn*) TrivialExists; simpl; congruence.
+  - (*andn reverse*) rewrite Val.and_commut. TrivialExists; simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -450,6 +452,7 @@ Proof.
   destruct (orimm_match a); intros; InvEval.
   - TrivialExists. simpl. rewrite Int.or_commut; auto.
   - subst. rewrite Val.or_assoc. simpl. rewrite Int.or_commut. TrivialExists.
+  - InvEval. TrivialExists. simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -495,6 +498,7 @@ Proof.
     InvEval. exploit eval_same_expr; eauto. intros [EQ1 EQ2]; subst.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
   - (*orn*) TrivialExists; simpl; congruence.
+  - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
   - apply DEFAULT.
 Qed.
 
