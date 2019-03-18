@@ -295,7 +295,7 @@ Nondetfunction notl (e: expr) :=
   | Eop (Oorlimm n) (e1:::Enil) => Eop (Onorlimm n) (e1:::Enil)
   | Eop Oxorl (e1:::e2:::Enil) => Eop Onxorl (e1:::e2:::Enil)
   | Eop (Oxorlimm n) (e1:::Enil) => Eop (Onxorlimm n) (e1:::Enil)
-  | _ => xorlimm Int64.mone e
+  | _ => Eop Onotl (e:::Enil) 
   end.
 (* old:  if Archi.splitlong then SplitLong.notl e else xorlimm Int64.mone e. *)
 

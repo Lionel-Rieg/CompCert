@@ -450,7 +450,7 @@ Proof.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
-  - apply eval_xorlimm; assumption.
+  - TrivialExists.
 Qed.
 
 Theorem eval_divls_base: partial_binary_constructor_sound divls_base Val.divls.

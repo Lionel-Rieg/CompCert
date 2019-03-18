@@ -730,7 +730,7 @@ Nondetfunction notint (e: expr) :=
   | Eop (Oorimm n) (e1:::Enil) => Eop (Onorimm n) (e1:::Enil)
   | Eop Oxor (e1:::e2:::Enil) => Eop Onxor (e1:::e2:::Enil)
   | Eop (Oxorimm n) (e1:::Enil) => Eop (Onxorimm n) (e1:::Enil)
-  | _ => xorimm Int.mone e
+  | _ => Eop Onot (e:::Enil)
   end.
 >>
 *)
@@ -770,7 +770,7 @@ Definition notint (e: expr) :=
   | notint_case6 n e1 => (* Eop (Oxorimm n) (e1:::Enil) *) 
       Eop (Onxorimm n) (e1:::Enil)
   | notint_default e =>
-      xorimm Int.mone e
+      Eop Onot (e:::Enil)
   end.
 
 

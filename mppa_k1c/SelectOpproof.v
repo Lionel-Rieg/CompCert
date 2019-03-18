@@ -533,7 +533,7 @@ Proof.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
-  - apply eval_xorimm; assumption.
+  - TrivialExists.
 Qed.
 
 Theorem eval_divs_base:
