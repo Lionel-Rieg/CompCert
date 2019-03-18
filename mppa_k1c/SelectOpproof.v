@@ -422,6 +422,7 @@ Proof.
   case (andimm_match a); intros.
   - InvEval. TrivialExists. simpl. rewrite Int.and_commut; auto.
   - InvEval. subst. rewrite Val.and_assoc. simpl. rewrite Int.and_commut. TrivialExists.
+  - InvEval. TrivialExists. simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -430,6 +431,8 @@ Proof.
   red; intros until y; unfold and; case (and_match a b); intros; InvEval.
   - rewrite Val.and_commut. apply eval_andimm; auto.
   - apply eval_andimm; auto.
+  - (*andn*) TrivialExists; simpl; congruence.
+  - (*andn reverse*) rewrite Val.and_commut. TrivialExists; simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -449,6 +452,7 @@ Proof.
   destruct (orimm_match a); intros; InvEval.
   - TrivialExists. simpl. rewrite Int.or_commut; auto.
   - subst. rewrite Val.or_assoc. simpl. rewrite Int.or_commut. TrivialExists.
+  - InvEval. TrivialExists. simpl; congruence.
   - TrivialExists.
 Qed.
 
@@ -493,6 +497,8 @@ Proof.
     destruct (same_expr_pure t1 t2) eqn:?; auto.
     InvEval. exploit eval_same_expr; eauto. intros [EQ1 EQ2]; subst.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
+  - (*orn*) TrivialExists; simpl; congruence.
+  - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
   - apply DEFAULT.
 Qed.
 
@@ -526,14 +532,14 @@ Theorem eval_notint: unary_constructor_sound notint Val.notint.
 Proof.
   assert (forall v, Val.lessdef (Val.notint (Val.notint v)) v).
     destruct v; simpl; auto. rewrite Int.not_involutive; auto.
-  unfold notint; red; intros until x; case (notint_match a); intros; InvEval.
-  - TrivialExists; simpl; congruence.
-  - TrivialExists; simpl; congruence.
-  - TrivialExists; simpl; congruence.
-  - TrivialExists; simpl; congruence.
-  - TrivialExists; simpl; congruence.
-  - TrivialExists; simpl; congruence.
-  - apply eval_xorimm; assumption.
+    unfold notint; red; intros until x; case (notint_match a); intros; InvEval.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists; simpl; congruence.
+    - TrivialExists.
 Qed.
 
 Theorem eval_divs_base:

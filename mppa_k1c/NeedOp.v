@@ -57,6 +57,11 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oxorimm n => op1 (bitwise nv)
   | Onxor => op2 (bitwise nv)
   | Onxorimm n => op1 (bitwise nv)
+  | Onot => op1 (bitwise nv)
+  | Oandn => op2 (bitwise nv)
+  | Oandnimm n => op1 (andimm nv n)
+  | Oorn => op2 (bitwise nv)
+  | Oornimm n => op1 (orimm nv n)
   | Oshl | Oshr | Oshru => op2 (default nv)
   | Oshlimm n => op1 (shlimm nv n)
   | Oshrimm n => op1 (shrimm nv n)
@@ -85,6 +90,11 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oxorlimm n => op1 (default nv)
   | Onxorl => op2 (default nv)
   | Onxorlimm n => op1 (default nv)
+  | Onotl => op1 (default nv)
+  | Oandnl => op2 (default nv)
+  | Oandnlimm n => op1 (default nv)
+  | Oornl => op2 (default nv)
+  | Oornlimm n => op1 (default nv)
   | Oshll | Oshrl | Oshrlu => op2 (default nv)
   | Oshllimm n => op1 (default nv)
   | Oshrlimm n => op1 (default nv)
@@ -170,6 +180,11 @@ Proof.
 - apply xor_sound; auto with na.
 - apply notint_sound; apply xor_sound; auto.
 - apply notint_sound; apply xor_sound; auto with na.
+- apply notint_sound; auto.
+- apply and_sound; try apply notint_sound; auto with na.
+- apply andimm_sound; try apply notint_sound; auto with na.
+- apply or_sound; try apply notint_sound; auto with na.
+- apply orimm_sound; try apply notint_sound; auto with na.
 - apply shlimm_sound; auto.
 - apply shrimm_sound; auto.
 - apply shruimm_sound; auto.

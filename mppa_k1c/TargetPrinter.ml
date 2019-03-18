@@ -380,6 +380,10 @@ module Target (*: TARGET*) =
          fprintf oc "	xorw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pnxorw (rd, rs1, rs2) -> 
          fprintf oc "	nxorw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pandnw (rd, rs1, rs2) -> 
+         fprintf oc "	andnw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pornw (rd, rs1, rs2) -> 
+         fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psraw (rd, rs1, rs2) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrlw (rd, rs1, rs2) ->
@@ -403,6 +407,10 @@ module Target (*: TARGET*) =
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pnxorl (rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pandnl (rd, rs1, rs2) -> 
+         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pornl (rd, rs1, rs2) -> 
+         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmull (rd, rs1, rs2) ->
          fprintf oc "	muld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pslll  (rd, rs1, rs2) ->
@@ -442,6 +450,10 @@ module Target (*: TARGET*) =
          fprintf oc "	xorw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pnxoriw (rd, rs, imm) -> 
          fprintf oc "	nxorw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Pandniw (rd, rs, imm) -> 
+         fprintf oc "	andnw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Porniw (rd, rs, imm) -> 
+         fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psraiw (rd, rs, imm) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psrliw (rd, rs, imm) ->
@@ -475,6 +487,10 @@ module Target (*: TARGET*) =
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pnxoril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pandnil (rd, rs, imm) -> 
+         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pornil (rd, rs, imm) -> 
+         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     let get_section_names name =
       let (text, lit) =

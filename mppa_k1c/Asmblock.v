@@ -344,6 +344,8 @@ Inductive arith_name_rrr : Type :=
   | Pnorw                                           (**r nor word *)
   | Pxorw                                           (**r xor word *)
   | Pnxorw                                          (**r nxor word *)
+  | Pandnw                                          (**r andn word *)
+  | Pornw                                           (**r orn word *)
   | Psraw                                           (**r shift right arithmetic word *)
   | Psrlw                                           (**r shift right logical word *)
   | Psllw                                           (**r shift left logical word *)
@@ -356,6 +358,8 @@ Inductive arith_name_rrr : Type :=
   | Pnorl                                           (**r nor long *)
   | Pxorl                                           (**r xor long *)
   | Pnxorl                                          (**r nxor long *)
+  | Pandnl                                          (**r andn long *)
+  | Pornl                                           (**r orn long *)
   | Pmull                                           (**r mul long (low part) *)
   | Pslll                                           (**r shift left logical long *)
   | Psrll                                           (**r shift right logical long *)
@@ -379,6 +383,8 @@ Inductive arith_name_rri32 : Type :=
   | Pnoriw                                          (**r nor imm word *)
   | Pxoriw                                          (**r xor imm word *)
   | Pnxoriw                                         (**r nxor imm word *)
+  | Pandniw                                         (**r andn word *)
+  | Porniw                                          (**r orn word *)
   | Psraiw                                          (**r shift right arithmetic imm word *)
   | Psrliw                                          (**r shift right logical imm word *)
   | Pslliw                                          (**r shift left logical imm word *)
@@ -397,6 +403,8 @@ Inductive arith_name_rri64 : Type :=
   | Pnoril                                          (**r nor immediate long *) 
   | Pxoril                                          (**r xor immediate long *) 
   | Pnxoril                                         (**r nxor immediate long *) 
+  | Pandnil                                         (**r andn immediate long *)
+  | Pornil                                          (**r orn immediate long *)
 .
 
 Inductive ar_instruction : Type :=
@@ -1109,6 +1117,8 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pnorw  => Val.notint (Val.or v1 v2)
   | Pxorw  => Val.xor  v1 v2
   | Pnxorw => Val.notint (Val.xor v1 v2)
+  | Pandnw => Val.and (Val.notint v1) v2
+  | Pornw  => Val.or (Val.notint v1) v2
   | Psrlw  => Val.shru v1 v2
   | Psraw  => Val.shr  v1 v2
   | Psllw  => Val.shl  v1 v2
@@ -1121,6 +1131,8 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pnorl  => Val.notl (Val.orl  v1 v2)
   | Pxorl  => Val.xorl  v1 v2
   | Pnxorl  => Val.notl (Val.xorl  v1 v2)
+  | Pandnl => Val.andl (Val.notl v1) v2
+  | Pornl  => Val.orl (Val.notl v1) v2
   | Pmull => Val.mull v1 v2
   | Pslll => Val.shll v1 v2
   | Psrll => Val.shrlu v1 v2
@@ -1144,6 +1156,8 @@ Definition arith_eval_rri32 n v i :=
   | Pnoriw  => Val.notint (Val.or v (Vint i))
   | Pxoriw  => Val.xor   v (Vint i)
   | Pnxoriw => Val.notint (Val.xor v (Vint i))
+  | Pandniw => Val.and (Val.notint v) (Vint i)
+  | Porniw  => Val.or (Val.notint v) (Vint i)
   | Psraiw  => Val.shr   v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)
   | Pslliw  => Val.shl   v (Vint i)
@@ -1163,6 +1177,8 @@ Definition arith_eval_rri64 n v i :=
   | Pnoril   => Val.notl (Val.orl  v (Vlong i))
   | Pxoril  => Val.xorl  v (Vlong i)
   | Pnxoril  => Val.notl (Val.xorl  v (Vlong i))
+  | Pandnil => Val.andl (Val.notl v) (Vlong i)
+  | Pornil  => Val.orl (Val.notl v) (Vlong i)
   end.
 
 Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=

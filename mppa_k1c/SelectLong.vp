@@ -238,6 +238,7 @@ Nondetfunction andlimm (n1: int64) (e2: expr) :=
       longconst (Int64.and n1 n2)
   | Eop (Oandlimm n2) (t2:::Enil) =>
       Eop (Oandlimm (Int64.and n1 n2)) (t2:::Enil)
+  | Eop Onotl (t2:::Enil) => Eop (Oandnlimm n1) (t2:::Enil)
   | _ =>
       Eop (Oandlimm n1) (e2:::Enil)
   end.
@@ -247,6 +248,8 @@ Nondetfunction andl (e1: expr) (e2: expr) :=
   match e1, e2 with
   | Eop (Olongconst n1) Enil, t2 => andlimm n1 t2
   | t1, Eop (Olongconst n2) Enil => andlimm n2 t1
+  | (Eop Onotl (t1:::Enil)), t2 => Eop Oandnl (t1:::t2:::Enil) 
+  | t1, (Eop Onotl (t2:::Enil)) => Eop Oandnl (t2:::t1:::Enil) 
   | _, _ => Eop Oandl (e1:::e2:::Enil)
   end.
 
@@ -264,6 +267,8 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
   match e1, e2 with
   | Eop (Olongconst n1) Enil, t2 => orlimm n1 t2
   | t1, Eop (Olongconst n2) Enil => orlimm n2 t1
+  | (Eop Onotl (t1:::Enil)), t2 => Eop Oornl (t1:::t2:::Enil) 
+  | t1, (Eop Onotl (t2:::Enil))  => Eop Oornl (t2:::t1:::Enil) 
   | _, _ => Eop Oorl (e1:::e2:::Enil)
   end.
 
@@ -295,7 +300,7 @@ Nondetfunction notl (e: expr) :=
   | Eop (Oorlimm n) (e1:::Enil) => Eop (Onorlimm n) (e1:::Enil)
   | Eop Oxorl (e1:::e2:::Enil) => Eop Onxorl (e1:::e2:::Enil)
   | Eop (Oxorlimm n) (e1:::Enil) => Eop (Onxorlimm n) (e1:::Enil)
-  | _ => xorlimm Int64.mone e
+  | _ => Eop Onotl (e:::Enil) 
   end.
 (* old:  if Archi.splitlong then SplitLong.notl e else xorlimm Int64.mone e. *)
 

@@ -66,6 +66,8 @@ let arith_rrr_str = function
   | Pnorw -> "Pnorw"
   | Pxorw -> "Pxorw"
   | Pnxorw -> "Pnxorw"
+  | Pandnw -> "Pandnw"
+  | Pornw -> "Pornw"
   | Psraw -> "Psraw"
   | Psrlw -> "Psrlw"
   | Psllw -> "Psllw"
@@ -77,6 +79,8 @@ let arith_rrr_str = function
   | Pnorl -> "Pnorl"
   | Pxorl -> "Pxorl"
   | Pnxorl -> "Pnxorl"
+  | Pandnl -> "Pandnl"
+  | Pornl -> "Pornl"
   | Pmull -> "Pmull"
   | Pslll -> "Pslll"
   | Psrll -> "Psrll"
@@ -97,6 +101,8 @@ let arith_rri32_str = function
   | Pnoriw -> "Pnoriw"
   | Pxoriw -> "Pxoriw"
   | Pnxoriw -> "Pnxoriw"
+  | Pandniw -> "Pandniw"
+  | Porniw -> "Porniw"
   | Psraiw -> "Psraiw"
   | Psrliw -> "Psrliw"
   | Pslliw -> "Pslliw"
@@ -114,6 +120,8 @@ let arith_rri64_str = function
   | Pnoril -> "Pnoril"
   | Pxoril -> "Pxoril"
   | Pnxoril -> "Pnxoril"
+  | Pandnil -> "Pandnil"
+  | Pornil -> "Pornil"
 
 let arith_ri32_str = "Pmake"
 
@@ -390,7 +398,7 @@ type real_instruction =
   (* ALU *) 
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
-  | Nandw | Norw | Nxorw | Nandd | Nord | Nxord                                                      
+  | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -431,8 +439,12 @@ let ab_inst_to_real = function
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
+  | "Pandnw" | "Pandniw" -> Andnw
+  | "Pornw" | "Porniw" -> Ornw
   | "Pxorl" | "Pxoril" -> Xord
   | "Pnxorl" | "Pnxoril" -> Nxord
+  | "Pandnl" | "Pandnil" -> Andnd
+  | "Pornl" | "Pornil" -> Ornd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Psxwd" -> Sxwd
@@ -494,11 +506,11 @@ let rec_to_usage r =
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
-  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw | Nxorw -> 
+  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw | Nxorw | Andnw | Ornw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
-  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord | Nxord -> 
+  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord | Nxord | Andnd | Ornd -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -547,7 +559,9 @@ let rec_to_usage r =
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
-  | Rorw | Nandw | Norw | Nxorw | Nandd | Nord | Nxord
+    (* TODO check rorw *)
+  | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
+  | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1

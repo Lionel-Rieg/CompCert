@@ -18,6 +18,22 @@ scalar nxor(scalar x, scalar y) {
   return ~(x ^ y);
 }
 
+scalar andn1(scalar x, scalar y) {
+  return ~x & y;
+}
+
+scalar andn2(scalar x, scalar y) {
+  return x & ~y;
+}
+
+scalar orn1(scalar x, scalar y) {
+  return ~x | y;
+}
+
+scalar orn2(scalar x, scalar y) {
+  return x | ~y;
+}
+
 int main() {
   scalar x = 0xF4, y = 0x33;
   printf("%X\n", nxor(x, y));

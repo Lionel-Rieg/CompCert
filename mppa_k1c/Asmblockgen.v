@@ -467,7 +467,22 @@ Definition transl_op
       OK (Pnxorw rd rs1 rs2 ::i k)
   | Onxorimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
-      OK (nxorimm32 rd rs n ::i k)
+        OK (nxorimm32 rd rs n ::i k)
+  | Onot, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+        OK (xorimm32 rd rs Int.mone ::i k)
+  | Oandn, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pandnw rd rs1 rs2 ::i k)
+  | Oandnimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pandniw rd rs n ::i k)
+  | Oorn, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pornw rd rs1 rs2 ::i k)
+  | Oornimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Porniw rd rs n ::i k)
   | Oshl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psllw rd rs1 rs2 ::i k)
@@ -530,6 +545,9 @@ Definition transl_op
   | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu") (* Géré par fonction externe *)
   | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl") (* Géré par fonction externe *)
   | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu") (* Géré par fonction externe *)
+  | Onotl, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+        OK (xorimm64 rd rs Int64.mone ::i k)
   | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 ::i k)
@@ -566,6 +584,18 @@ Definition transl_op
   | Onxorlimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (nxorimm64 rd rs n ::i k)
+  | Oandnl, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pandnl rd rs1 rs2 ::i k)
+  | Oandnlimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pandnil rd rs n ::i k)
+  | Oornl, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Pornl rd rs1 rs2 ::i k)
+  | Oornlimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pornil rd rs n ::i k)
   | Oshll, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pslll rd rs1 rs2 ::i k)

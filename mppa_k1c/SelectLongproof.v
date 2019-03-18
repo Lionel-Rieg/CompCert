@@ -382,6 +382,7 @@ Proof.
 - econstructor; split. apply eval_longconst. simpl. rewrite Int64.and_commut; auto.
 - TrivialExists. simpl. rewrite Val.andl_assoc. rewrite Int64.and_commut; auto.
 - TrivialExists.
+- TrivialExists.
 Qed.
 
 Theorem eval_andl: binary_constructor_sound andl Val.andl.
@@ -390,6 +391,8 @@ Proof.
   red; intros. destruct (andl_match a b).
 - InvEval. rewrite Val.andl_commut. apply eval_andlimm; auto.
 - InvEval. apply eval_andlimm; auto.
+- (*andn*) InvEval. TrivialExists. simpl. congruence.
+- (*andn reverse*) InvEval. rewrite Val.andl_commut. TrivialExists; simpl. congruence.
 - TrivialExists.
 Qed.
 
@@ -413,6 +416,8 @@ Proof.
   destruct (orl_match a b).
 - InvEval. rewrite Val.orl_commut. apply eval_orlimm; auto.
 - InvEval. apply eval_orlimm; auto.
+- (*orn*) InvEval. TrivialExists; simpl; congruence.
+- (*orn reversed*) InvEval. rewrite Val.orl_commut. TrivialExists; simpl; congruence.
 - TrivialExists.
 Qed.
 
@@ -450,7 +455,7 @@ Proof.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
-  - apply eval_xorlimm; assumption.
+  - TrivialExists.
 Qed.
 
 Theorem eval_divls_base: partial_binary_constructor_sound divls_base Val.divls.

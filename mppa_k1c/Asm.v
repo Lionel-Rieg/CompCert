@@ -143,6 +143,8 @@ Inductive instruction : Type :=
   | Pnorw               (rd rs1 rs2: ireg)          (**r nor word *)
   | Pxorw               (rd rs1 rs2: ireg)          (**r xor word *)
   | Pnxorw              (rd rs1 rs2: ireg)          (**r xor word *)
+  | Pandnw              (rd rs1 rs2: ireg)          (**r andn word *)
+  | Pornw               (rd rs1 rs2: ireg)          (**r orn word *)
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
@@ -155,6 +157,8 @@ Inductive instruction : Type :=
   | Pnorl               (rd rs1 rs2: ireg)          (**r nor long *)
   | Pxorl               (rd rs1 rs2: ireg)          (**r xor long *)
   | Pnxorl              (rd rs1 rs2: ireg)          (**r nxor long *)
+  | Pandnl              (rd rs1 rs2: ireg)          (**r andn long *)
+  | Pornl               (rd rs1 rs2: ireg)          (**r orn long *)
   | Pmull               (rd rs1 rs2: ireg)          (**r mul long (low part) *)
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
@@ -177,6 +181,8 @@ Inductive instruction : Type :=
   | Pnoriw              (rd rs: ireg) (imm: int)    (**r nor imm word *)
   | Pxoriw              (rd rs: ireg) (imm: int)    (**r xor imm word *)
   | Pnxoriw             (rd rs: ireg) (imm: int)    (**r nxor imm word *)
+  | Pandniw             (rd rs: ireg) (imm: int)    (**r andn imm word *)
+  | Porniw              (rd rs: ireg) (imm: int)    (**r orn imm word *)
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
@@ -194,6 +200,8 @@ Inductive instruction : Type :=
   | Pnoril              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pxoril              (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
   | Pnxoril             (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
+  | Pandnil             (rd rs: ireg) (imm: int64)  (**r andn long *)
+  | Pornil              (rd rs: ireg) (imm: int64)  (**r orn long *)
   .
 
 (** Correspondance between Asmblock and Asm *)
@@ -276,6 +284,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Pnorw rd rs1 rs2       => Pnorw rd rs1 rs2
   | PArithRRR Asmblock.Pxorw rd rs1 rs2       => Pxorw rd rs1 rs2
   | PArithRRR Asmblock.Pnxorw rd rs1 rs2      => Pnxorw rd rs1 rs2
+  | PArithRRR Asmblock.Pandnw rd rs1 rs2      => Pandnw rd rs1 rs2
+  | PArithRRR Asmblock.Pornw rd rs1 rs2       => Pornw rd rs1 rs2
   | PArithRRR Asmblock.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
   | PArithRRR Asmblock.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
   | PArithRRR Asmblock.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
@@ -288,6 +298,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmblock.Pnorl rd rs1 rs2       => Pnorl rd rs1 rs2
   | PArithRRR Asmblock.Pxorl rd rs1 rs2       => Pxorl rd rs1 rs2
   | PArithRRR Asmblock.Pnxorl rd rs1 rs2      => Pnxorl rd rs1 rs2
+  | PArithRRR Asmblock.Pandnl rd rs1 rs2      => Pandnl rd rs1 rs2
+  | PArithRRR Asmblock.Pornl rd rs1 rs2       => Pornl rd rs1 rs2
   | PArithRRR Asmblock.Pmull rd rs1 rs2       => Pmull rd rs1 rs2
   | PArithRRR Asmblock.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
   | PArithRRR Asmblock.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
@@ -309,6 +321,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 Asmblock.Pnoriw rd rs imm       => Pnoriw rd rs imm
   | PArithRRI32 Asmblock.Pxoriw rd rs imm       => Pxoriw rd rs imm
   | PArithRRI32 Asmblock.Pnxoriw rd rs imm      => Pnxoriw rd rs imm
+  | PArithRRI32 Asmblock.Pandniw rd rs imm      => Pandniw rd rs imm
+  | PArithRRI32 Asmblock.Porniw rd rs imm       => Porniw rd rs imm
   | PArithRRI32 Asmblock.Psraiw rd rs imm       => Psraiw rd rs imm
   | PArithRRI32 Asmblock.Psrliw rd rs imm       => Psrliw rd rs imm
   | PArithRRI32 Asmblock.Pslliw rd rs imm       => Pslliw rd rs imm
@@ -326,6 +340,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI64 Asmblock.Pnoril rd rs imm       => Pnoril rd rs imm
   | PArithRRI64 Asmblock.Pxoril rd rs imm       => Pxoril rd rs imm
   | PArithRRI64 Asmblock.Pnxoril rd rs imm      => Pnxoril rd rs imm
+  | PArithRRI64 Asmblock.Pandnil rd rs imm      => Pandnil rd rs imm
+  | PArithRRI64 Asmblock.Pornil rd rs imm       => Pornil rd rs imm
 
   (** Load *)
   | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra ofs
