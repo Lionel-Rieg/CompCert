@@ -527,6 +527,7 @@ Nondetfunction and (e1: expr) (e2: expr) :=
   match e1, e2 with
   | Eop (Ointconst n1) Enil, t2 => andimm n1 t2
   | t1, Eop (Ointconst n2) Enil => andimm n2 t1
+  | (Eop Onot (t1:::Enil)), t2 => Eop Oandn (t1:::t2:::Enil) 
   | _, _ => Eop Oand (e1:::e2:::Enil)
   end.
 >>
@@ -535,12 +536,14 @@ Nondetfunction and (e1: expr) (e2: expr) :=
 Inductive and_cases: forall (e1: expr) (e2: expr), Type :=
   | and_case1: forall n1 t2, and_cases (Eop (Ointconst n1) Enil) (t2)
   | and_case2: forall t1 n2, and_cases (t1) (Eop (Ointconst n2) Enil)
+  | and_case3: forall t1 t2, and_cases ((Eop Onot (t1:::Enil))) (t2)
   | and_default: forall (e1: expr) (e2: expr), and_cases e1 e2.
 
 Definition and_match (e1: expr) (e2: expr) :=
   match e1 as zz1, e2 as zz2 return and_cases zz1 zz2 with
   | Eop (Ointconst n1) Enil, t2 => and_case1 n1 t2
   | t1, Eop (Ointconst n2) Enil => and_case2 t1 n2
+  | (Eop Onot (t1:::Enil)), t2 => and_case3 t1 t2
   | e1, e2 => and_default e1 e2
   end.
 
@@ -550,6 +553,8 @@ Definition and (e1: expr) (e2: expr) :=
       andimm n1 t2
   | and_case2 t1 n2 => (* t1, Eop (Ointconst n2) Enil *) 
       andimm n2 t1
+  | and_case3 t1 t2 => (* (Eop Onot (t1:::Enil)), t2 *) 
+      Eop Oandn (t1:::t2:::Enil)
   | and_default e1 e2 =>
       Eop Oand (e1:::e2:::Enil)
   end.
@@ -611,6 +616,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       if Int.eq (Int.add n1 n2) Int.iwordsize && same_expr_pure t1 t2
       then Eop (Ororimm n2) (t1:::Enil)
       else Eop Oor (e1:::e2:::Enil)
+  | (Eop Onot (t1:::Enil)), t2 => Eop Oorn (t1:::t2:::Enil) 
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
 >>
@@ -621,6 +627,7 @@ Inductive or_cases: forall (e1: expr) (e2: expr), Type :=
   | or_case2: forall t1 n2, or_cases (t1) (Eop (Ointconst n2) Enil)
   | or_case3: forall n1 t1 n2 t2, or_cases (Eop (Oshlimm n1) (t1:::Enil)) (Eop (Oshruimm n2) (t2:::Enil))
   | or_case4: forall n2 t2 n1 t1, or_cases (Eop (Oshruimm n2) (t2:::Enil)) (Eop (Oshlimm n1) (t1:::Enil))
+  | or_case5: forall t1 t2, or_cases ((Eop Onot (t1:::Enil))) (t2)
   | or_default: forall (e1: expr) (e2: expr), or_cases e1 e2.
 
 Definition or_match (e1: expr) (e2: expr) :=
@@ -629,6 +636,7 @@ Definition or_match (e1: expr) (e2: expr) :=
   | t1, Eop (Ointconst n2) Enil => or_case2 t1 n2
   | Eop (Oshlimm n1) (t1:::Enil), Eop (Oshruimm n2) (t2:::Enil) => or_case3 n1 t1 n2 t2
   | Eop (Oshruimm n2) (t2:::Enil), Eop (Oshlimm n1) (t1:::Enil) => or_case4 n2 t2 n1 t1
+  | (Eop Onot (t1:::Enil)), t2 => or_case5 t1 t2
   | e1, e2 => or_default e1 e2
   end.
 
@@ -642,6 +650,8 @@ Definition or (e1: expr) (e2: expr) :=
       if Int.eq (Int.add n1 n2) Int.iwordsize && same_expr_pure t1 t2 then Eop (Ororimm n2) (t1:::Enil) else Eop Oor (e1:::e2:::Enil)
   | or_case4 n2 t2 n1 t1 => (* Eop (Oshruimm n2) (t2:::Enil), Eop (Oshlimm n1) (t1:::Enil) *) 
       if Int.eq (Int.add n1 n2) Int.iwordsize && same_expr_pure t1 t2 then Eop (Ororimm n2) (t1:::Enil) else Eop Oor (e1:::e2:::Enil)
+  | or_case5 t1 t2 => (* (Eop Onot (t1:::Enil)), t2 *) 
+      Eop Oorn (t1:::t2:::Enil)
   | or_default e1 e2 =>
       Eop Oor (e1:::e2:::Enil)
   end.

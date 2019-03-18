@@ -223,6 +223,7 @@ Nondetfunction and (e1: expr) (e2: expr) :=
   match e1, e2 with
   | Eop (Ointconst n1) Enil, t2 => andimm n1 t2
   | t1, Eop (Ointconst n2) Enil => andimm n2 t1
+  | (Eop Onot (t1:::Enil)), t2 => Eop Oandn (t1:::t2:::Enil) 
   | _, _ => Eop Oand (e1:::e2:::Enil)
   end.
 
@@ -253,6 +254,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       if Int.eq (Int.add n1 n2) Int.iwordsize && same_expr_pure t1 t2
       then Eop (Ororimm n2) (t1:::Enil)
       else Eop Oor (e1:::e2:::Enil)
+  | (Eop Onot (t1:::Enil)), t2 => Eop Oorn (t1:::t2:::Enil) 
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
 
