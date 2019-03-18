@@ -101,6 +101,8 @@ Inductive operation : Type :=
   | Oshruimm (n: int)        (**r [rd = r1 >> n] (unsigned) *)
   | Oshrximm (n: int)        (**r [rd = r1 / 2^n] (signed) *)
   | Ororimm (n: int)         (**r rotate right immediate *)
+  | Omadd                    (**r [rd = rd + r1 * r2] *)
+  | Omaddimm (n: int)        (**r [rd = rd + r1 * imm] *)
 (*c 64-bit integer arithmetic: *)
   | Omakelong                (**r [rd = r1 << 32 | r2] *)
   | Olowlong                 (**r [rd = low-word(r1)] *)
@@ -142,6 +144,10 @@ Inductive operation : Type :=
   | Oshrlu                   (**r [rd = r1 >> r2] (unsigned) *)
   | Oshrluimm (n: int)       (**r [rd = r1 >> n] (unsigned) *)
   | Oshrxlimm (n: int)       (**r [rd = r1 / 2^n] (signed) *)
+              (* FIXME
+  | Omaddl                   (**r [rd = rd + r1 * r2] *)
+  | Omaddlimm (n: int64)     (**r [rd = rd + r1 * imm] *)
+*)
 (*c Floating-point arithmetic: *)
   | Onegf                    (**r [rd = - r1] *)
   | Oabsf                    (**r [rd = abs(r1)] *)
@@ -293,6 +299,9 @@ Definition eval_operation
   | Oshru, v1 :: v2 :: nil => Some (Val.shru v1 v2)
   | Oshruimm n, v1 :: nil => Some (Val.shru v1 (Vint n))
   | Oshrximm n, v1::nil => Val.shrx v1 (Vint n)
+  | Omadd, v1::v2::v3::nil => Some (Val.add v1 (Val.mul v2 v3))
+  | (Omaddimm n), v1::v2::nil => Some (Val.add v1 (Val.mul v2 (Vint n)))
+                                     
   | Omakelong, v1::v2::nil => Some (Val.longofwords v1 v2)
   | Olowlong, v1::nil => Some (Val.loword v1)
   | Ohighlong, v1::nil => Some (Val.hiword v1)
@@ -333,6 +342,12 @@ Definition eval_operation
   | Oshrlu, v1::v2::nil => Some (Val.shrlu v1 v2)
   | Oshrluimm n, v1::nil => Some (Val.shrlu v1 (Vint n))
   | Oshrxlimm n, v1::nil => Val.shrxl v1 (Vint n)
+
+                                      (*
+  | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
+  | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
+                                       *)
+                                      
   | Onegf, v1::nil => Some (Val.negf v1)
   | Oabsf, v1::nil => Some (Val.absf v1)
   | Oaddf, v1::v2::nil => Some (Val.addf v1 v2)
@@ -472,6 +487,9 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oshruimm _ => (Tint :: nil, Tint)
   | Oshrximm _ => (Tint :: nil, Tint)
   | Ororimm _ => (Tint :: nil, Tint)
+  | Omadd => (Tint :: Tint :: Tint :: nil, Tint)
+  | Omaddimm _ => (Tint :: Tint :: nil, Tint)
+                   
   | Omakelong => (Tint :: Tint :: nil, Tlong)
   | Olowlong => (Tlong :: nil, Tint)
   | Ohighlong => (Tlong :: nil, Tint)
@@ -512,6 +530,10 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oshrlu => (Tlong :: Tint :: nil, Tlong)
   | Oshrluimm _ => (Tlong :: nil, Tlong)
   | Oshrxlimm _ => (Tlong :: nil, Tlong)
+                     (* FIXME
+  | Omaddl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
+  | Omaddlimm _ => (Tlong :: Tlong :: nil, Tlong)
+*)
   | Onegf => (Tfloat :: nil, Tfloat)
   | Oabsf => (Tfloat :: nil, Tfloat)
   | Oaddf => (Tfloat :: Tfloat :: nil, Tfloat)
@@ -654,6 +676,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 31)); inv H0...
   (* shrimm *)
   - destruct v0; simpl...   
+  (* madd *)
+  - destruct v0; destruct v1; destruct v2...   
+  - destruct v0; destruct v1...
   (* makelong, lowlong, highlong *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -720,6 +745,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl... destruct (Int.ltu n Int64.iwordsize')...
   (* shrxl *)
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 63)); inv H0...
+    (* FIXME
+  (* maddl, maddlim *)
+  - destruct v0; destruct v1; destruct v2...
+  - destruct v0; destruct v1... *)
   (* negf, absf *)
   - destruct v0...
   - destruct v0...
@@ -1153,6 +1182,9 @@ Proof.
     destruct (Int.ltu n (Int.repr 31)); inv H1. TrivialExists.
   (* rorimm *)
   - inv H4; simpl; auto.
+  (* madd, maddim *)
+  - inv H2; inv H3; inv H4; simpl; auto.
+  - inv H2; inv H4; simpl; auto.
   (* makelong, highlong, lowlong *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1222,6 +1254,15 @@ Proof.
   (* shrx *)
   - inv H4; simpl in H1; try discriminate. simpl.
     destruct (Int.ltu n (Int.repr 63)); inv H1. TrivialExists.
+
+  (*
+  (* maddl, maddlim *)
+  - inv H2; inv H3; inv H4; simpl; auto; simpl.
+    destruct Archi.ptr64; trivial.
+    s
+  - inv H2; inv H4; simpl; auto.
+   *)
+    
   (* negf, absf *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
