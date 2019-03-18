@@ -547,6 +547,9 @@ Definition transl_op
   | Odivlu, _ => Error (msg "Asmblockgen.transl_op: Odivlu") (* Géré par fonction externe *)
   | Omodl, _ => Error (msg "Asmblockgen.transl_op: Omodl") (* Géré par fonction externe *)
   | Omodlu, _ => Error (msg "Asmblockgen.transl_op: Omodlu") (* Géré par fonction externe *)
+  | Onotl, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+        OK (xorimm64 rd rs Int64.mone ::i k)
   | Oandl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pandl rd rs1 rs2 ::i k)
