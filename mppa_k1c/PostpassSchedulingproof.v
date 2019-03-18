@@ -658,8 +658,8 @@ Proof.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
 Qed.
 
-Theorem transf_program_correct: 
-  forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog). (* FIXME a remplacer par Asmvliw.semantics tprog *)
+Theorem transf_program_correct_Asmblock: 
+  forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
 Proof.
   eapply forward_simulation_plus.
   - apply senv_preserved.
@@ -667,5 +667,24 @@ Proof.
   - apply transf_final_states.
   - apply transf_step_correct.
 Qed.
+
+(* TODO:
+Require Import Asmvliw.
+
+Theorem transf_program_correct: 
+  forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
+Proof.
+  eapply forward_simulation_one_one. (* FIXME *)
+Admitted.
+
+Theorem transf_program_correct: 
+  forward_simulation (Asmblock.semantics prog) (Asmvliw.semantics tprog).
+Proof.
+  eapply forward_simulation_compose. (* FIXME *)
+Admitted.
+
+*)
+
+
 
 End PRESERVATION.
