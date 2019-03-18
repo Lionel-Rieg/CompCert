@@ -148,6 +148,7 @@ Inductive instruction : Type :=
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
+  | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
 
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
   | Psubl               (rd rs1 rs2: ireg)          (**r sub long *)
@@ -163,6 +164,7 @@ Inductive instruction : Type :=
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
+  | Pmaddl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
 
   | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
   | Pfaddw              (rd rs1 rs2: ireg)          (**r Float addition word *)
@@ -187,6 +189,7 @@ Inductive instruction : Type :=
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
   | Proriw              (rd rs: ireg) (imm: int)    (**r rotate right imm word *) 
+  | Pmaddiw             (rd rs: ireg) (imm: int)    (**r multiply add imm word *)
   | Psllil              (rd rs: ireg) (imm: int)    (**r shift left logical immediate long *)
   | Psrlil              (rd rs: ireg) (imm: int)    (**r shift right logical immediate long *)
   | Psrail              (rd rs: ireg) (imm: int)    (**r shift right arithmetic immediate long *)
@@ -202,7 +205,8 @@ Inductive instruction : Type :=
   | Pnxoril             (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
   | Pandnil             (rd rs: ireg) (imm: int64)  (**r andn long *)
   | Pornil              (rd rs: ireg) (imm: int64)  (**r orn long *)
-  .
+  | Pmaddil             (rd rs: ireg) (imm: int64)  (**r multiply add imm long *)
+.
 
 (** Correspondance between Asmblock and Asm *)
 

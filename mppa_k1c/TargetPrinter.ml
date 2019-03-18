@@ -390,6 +390,8 @@ module Target (*: TARGET*) =
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psllw (rd, rs1, rs2) ->
          fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmaddw (rd, rs1, rs2) ->
+         fprintf oc "	maddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Paddl (rd, rs1, rs2) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -419,6 +421,8 @@ module Target (*: TARGET*) =
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psral   (rd, rs1, rs2) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmaddl (rd, rs1, rs2) ->
+         fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pfaddd (rd, rs1, rs2) ->
          fprintf oc "	faddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -462,6 +466,8 @@ module Target (*: TARGET*) =
          fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Proriw (rd, rs, imm) ->
          fprintf oc "	rorw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Pmaddiw (rd, rs, imm) ->
+         fprintf oc "	maddw	%a = %a, %a\n" ireg rd ireg rs coqint imm
 
       | Psllil (rd, rs, imm) ->
          fprintf oc "	slld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
@@ -488,9 +494,11 @@ module Target (*: TARGET*) =
       | Pnxoril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandnil (rd, rs, imm) -> 
-         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs coqint imm
+         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pornil (rd, rs, imm) -> 
-         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs coqint imm
+         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Pmaddil (rd, rs, imm) ->
+         fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     let get_section_names name =
       let (text, lit) =
