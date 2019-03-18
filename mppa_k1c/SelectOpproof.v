@@ -182,6 +182,8 @@ Proof.
        with (Val.add (Val.add x v1) (Vint n2)).
     apply eval_addimm. EvalOp.
     repeat rewrite Val.add_assoc. reflexivity.
+  - (* Omadd *)
+    subst. TrivialExists.
   - TrivialExists.
 Qed.
 

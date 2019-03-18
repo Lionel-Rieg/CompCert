@@ -413,6 +413,7 @@ type real_instruction =
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
+  | Maddw | Maddd
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -450,6 +451,7 @@ let ab_inst_to_real = function
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
   | "Proriw" -> Rorw
+  | "Pmaddw" -> Maddw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
@@ -459,6 +461,7 @@ let ab_inst_to_real = function
   | "Pnxorl" | "Pnxoril" -> Nxord
   | "Pandnl" | "Pandnil" -> Andnd
   | "Pornl" | "Pornil" -> Ornd
+  | "Pmaddl" -> Maddd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Psxwd" -> Sxwd
@@ -520,11 +523,13 @@ let rec_to_usage r =
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
-  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw | Nxorw | Andnw | Ornw -> 
+  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
+  | Nxorw | Andnw | Ornw | Maddw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
-  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord | Nxord | Andnd | Ornd -> 
+  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
+  | Nxord | Andnd | Ornd | Maddd -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -580,7 +585,7 @@ let real_inst_to_latency = function
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
-  | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
+  | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
   | Sb | Sh | Sw | Sd -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
