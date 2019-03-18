@@ -88,6 +88,11 @@ Inductive operation : Type :=
   | Oxorimm (n: int)         (**r [rd = r1 ^ n] *)
   | Onxor                    (**r [rd = ~(r1 ^ r2)] *)
   | Onxorimm (n: int)        (**r [rd = ~(r1 ^ n)] *)
+  | Onot                     (**r [rd = ~r1] *)
+  | Oandn                    (**r [rd = (~r1) ^ r2] *)
+  | Oandnimm (n: int)        (**r [rd = (~r1) ^ n] *)
+  | Oorn                     (**r [rd = (~r1) | r2] *)
+  | Oornimm (n: int)         (**r [rd = (~r1) | n] *)
   | Oshl                     (**r [rd = r1 << r2] *)
   | Oshlimm (n: int)         (**r [rd = r1 << n] *)
   | Oshr                     (**r [rd = r1 >> r2] (signed) *)
@@ -125,6 +130,11 @@ Inductive operation : Type :=
   | Oxorlimm (n: int64)      (**r [rd = r1 ^ n] *)
   | Onxorl                   (**r [rd = ~(r1 ^ r2)] *)
   | Onxorlimm (n: int64)     (**r [rd = ~(r1 ^ n)] *)
+  | Onotl                    (**r [rd = ~r1] *)
+  | Oandnl                   (**r [rd = (~r1) ^ r2] *)
+  | Oandnlimm (n: int64)     (**r [rd = (~r1) ^ n] *)
+  | Oornl                    (**r [rd = (~r1) | r2] *)
+  | Oornlimm (n: int64)      (**r [rd = (~r1) | n] *)
   | Oshll                    (**r [rd = r1 << r2] *)
   | Oshllimm (n: int)        (**r [rd = r1 << n] *)
   | Oshrl                    (**r [rd = r1 >> r2] (signed) *)
@@ -270,6 +280,11 @@ Definition eval_operation
   | Oxorimm n, v1 :: nil => Some (Val.xor v1 (Vint n))
   | Onxor, v1 :: v2 :: nil => Some (Val.notint (Val.xor v1 v2))
   | Onxorimm n, v1 :: nil => Some (Val.notint (Val.xor v1 (Vint n)))
+  | Onot, v1 :: nil => Some (Val.notint v1)
+  | Oandn, v1 :: v2 :: nil => Some (Val.and (Val.notint v1) v2)
+  | Oandnimm n, v1 :: nil => Some (Val.and (Val.notint v1) (Vint n))
+  | Oorn, v1 :: v2 :: nil => Some (Val.or (Val.notint v1) v2)
+  | Oornimm n, v1 :: nil => Some (Val.or (Val.notint v1) (Vint n))
   | Oshl, v1 :: v2 :: nil => Some (Val.shl v1 v2)
   | Oshlimm n, v1 :: nil => Some (Val.shl v1 (Vint n))
   | Oshr, v1 :: v2 :: nil => Some (Val.shr v1 v2)
@@ -306,6 +321,11 @@ Definition eval_operation
   | Oxorlimm n, v1::nil => Some (Val.xorl v1 (Vlong n))
   | Onxorl, v1::v2::nil => Some(Val.notl (Val.xorl v1 v2))
   | Onxorlimm n, v1::nil => Some(Val.notl (Val.xorl v1 (Vlong n)))
+  | Onotl, v1 :: nil => Some (Val.notl v1)
+  | Oandnl, v1 :: v2 :: nil => Some (Val.andl (Val.notl v1) v2)
+  | Oandnlimm n, v1 :: nil => Some (Val.andl (Val.notl v1) (Vlong n))
+  | Oornl, v1 :: v2 :: nil => Some (Val.orl (Val.notl v1) v2)
+  | Oornlimm n, v1 :: nil => Some (Val.orl (Val.notl v1) (Vlong n))
   | Oshll, v1::v2::nil => Some (Val.shll v1 v2)
   | Oshllimm n, v1::nil => Some (Val.shll v1 (Vint n))
   | Oshrl, v1::v2::nil => Some (Val.shrl v1 v2)
@@ -439,6 +459,11 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oxorimm _ => (Tint :: nil, Tint)
   | Onxor => (Tint :: Tint :: nil, Tint)
   | Onxorimm _ => (Tint :: nil, Tint)
+  | Onot => (Tint :: nil, Tint)
+  | Oandn => (Tint :: Tint :: nil, Tint)
+  | Oandnimm _ => (Tint :: nil, Tint)
+  | Oorn => (Tint :: Tint :: nil, Tint)
+  | Oornimm _ => (Tint :: nil, Tint)
   | Oshl => (Tint :: Tint :: nil, Tint)
   | Oshlimm _ => (Tint :: nil, Tint)
   | Oshr => (Tint :: Tint :: nil, Tint)
@@ -475,6 +500,11 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oxorlimm _ => (Tlong :: nil, Tlong)
   | Onxorl => (Tlong :: Tlong :: nil, Tlong)
   | Onxorlimm _ => (Tlong :: nil, Tlong)
+  | Onotl => (Tlong :: nil, Tlong)
+  | Oandnl => (Tlong :: Tlong :: nil, Tlong)
+  | Oandnlimm _ => (Tlong :: nil, Tlong)
+  | Oornl => (Tlong :: Tlong :: nil, Tlong)
+  | Oornlimm _ => (Tlong :: nil, Tlong)
   | Oshll => (Tlong :: Tint :: nil, Tlong)
   | Oshllimm _ => (Tlong :: nil, Tlong)
   | Oshrl => (Tlong :: Tint :: nil, Tlong)
@@ -603,6 +633,14 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* nxor, nxorimm *)
   - destruct v0; destruct v1...
   - destruct v0...
+  (* not *)
+  - destruct v0...
+  (* andn, andnimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* orn, ornimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
   (* shl, shlimm *)
   - destruct v0; destruct v1; simpl... destruct (Int.ltu i0 Int.iwordsize)...
   - destruct v0; simpl... destruct (Int.ltu n Int.iwordsize)...
@@ -661,6 +699,14 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1...
   - destruct v0...
   (* nxorl, nxorlimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* notl *)
+  - destruct v0...
+  (* andnl, andnlimm *)
+  - destruct v0; destruct v1...
+  - destruct v0...
+  (* ornl, ornlimm *)
   - destruct v0; destruct v1...
   - destruct v0...
   (* shll, shllimm *)
@@ -1085,6 +1131,14 @@ Proof.
   (* nxor, nxorimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
+  (* not *)
+  - inv H4; simpl; auto.
+  (* andn, andnimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* orn, ornimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
   (* shl, shlimm *)
   - inv H4; inv H2; simpl; auto. destruct (Int.ltu i0 Int.iwordsize); auto.
   - inv H4; simpl; auto. destruct (Int.ltu n Int.iwordsize); auto.
@@ -1146,6 +1200,14 @@ Proof.
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* nxorl, nxorlimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* notl *)
+  - inv H4; simpl; auto.
+  (* andnl, andnlimm *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
+  (* ornl, ornlimm *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
   (* shll, shllimm *)
