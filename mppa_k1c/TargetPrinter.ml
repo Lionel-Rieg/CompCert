@@ -488,9 +488,9 @@ module Target (*: TARGET*) =
       | Pnxoril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandnil (rd, rs, imm) -> 
-         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs coqint imm
+         fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pornil (rd, rs, imm) -> 
-         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs coqint imm
+         fprintf oc "	ornd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     let get_section_names name =
       let (text, lit) =
