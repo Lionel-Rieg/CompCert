@@ -90,6 +90,10 @@ Nondetfunction add (e1: expr) (e2: expr) :=
       Eop Omadd (t1:::t2:::t3:::Enil)
   | (Eop Omul (t2:::t3:::Enil)), t1 =>
       Eop Omadd (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omulimm n) (t2:::Enil)) =>
+      Eop (Omaddimm n) (t1:::t2:::Enil)
+  | (Eop (Omulimm n) (t2:::Enil)), t1 =>
+      Eop (Omaddimm n) (t1:::t2:::Enil)
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 

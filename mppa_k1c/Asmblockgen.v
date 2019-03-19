@@ -524,6 +524,11 @@ Definition transl_op
       do r2 <- ireg_of a2;
       do r3 <- ireg_of a3;
         OK (Pmaddw r1 r2 r3 ::i k)
+  | Omaddimm n, a1 :: a2 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+        OK (Pmaddiw r1 r2 n ::i k)
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
@@ -636,7 +641,19 @@ Definition transl_op
           Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
           Paddl RTMP rs RTMP ::i
           Psrail rd RTMP n ::i k)
-
+         (* FIXME
+  | Omaddl, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmaddl r1 r2 r3 ::i k)
+  | Omaddlimm n, a1 :: a2 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+        OK (Pmaddil r1 r2 n ::i k)
+*)
   | Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs ::i k)

@@ -453,7 +453,7 @@ let ab_inst_to_real = function
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
   | "Proriw" -> Rorw
-  | "Pmaddw" -> Maddw
+  | "Pmaddw" | "Pmaddiw" -> Maddw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw

@@ -184,7 +184,11 @@ Proof.
     repeat rewrite Val.add_assoc. reflexivity.
   - (* Omadd *)
     subst. TrivialExists.
-  - (* Omadd *)
+  - (* Omadd rev *)
+    subst. rewrite Val.add_commut. TrivialExists.
+  - (* Omaddimm *)
+    subst. TrivialExists.
+  - (* Omaddimm rev *)
     subst. rewrite Val.add_commut. TrivialExists.
   - TrivialExists.
 Qed.
