@@ -25,6 +25,7 @@ Require Import NeedDomain.
 
 Definition op1 (nv: nval) := nv :: nil.
 Definition op2 (nv: nval) := nv :: nv :: nil.
+Definition op3 (nv: nval) := nv :: nv :: nv :: nil.
 
 Definition needs_of_condition (cond: condition): list nval := nil.
 
@@ -44,6 +45,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oneg => op1 (modarith nv)
   | Osub => op2 (default nv)
   | Omul => op2 (modarith nv)
+  | Omulimm _ => op1 (modarith nv)
   | Omulhs | Omulhu | Odiv | Odivu | Omod | Omodu => op2 (default nv)
   | Oand => op2 (bitwise nv)
   | Oandimm n => op1 (andimm nv n)
@@ -68,6 +70,8 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ororimm n => op1 (ror nv n)
   | Oshruimm n => op1 (shruimm nv n)
   | Oshrximm n => op1 (default nv)
+  | Omadd => op3 (modarith nv)
+  | Omaddimm n => op2 (modarith nv)
   | Omakelong => op2 (default nv)
   | Olowlong | Ohighlong => op1 (default nv)
   | Ocast32signed => op1 (default nv)
@@ -77,6 +81,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Onegl => op1 (default nv)
   | Osubl => op2 (default nv)
   | Omull => op2 (default nv)
+  | Omullimm _ => op1 (default nv)
   | Omullhs | Omullhu | Odivl | Odivlu | Omodl | Omodlu => op2 (default nv)
   | Oandl => op2 (default nv)
   | Oandlimm n => op1 (default nv)
@@ -168,6 +173,7 @@ Proof.
 - apply add_sound; auto with na.
 - apply neg_sound; auto.
 - apply mul_sound; auto.
+- apply mul_sound; auto with na.
 - apply and_sound; auto.
 - apply andimm_sound; auto.
 - apply notint_sound; apply and_sound; auto.
@@ -189,6 +195,9 @@ Proof.
 - apply shrimm_sound; auto.
 - apply shruimm_sound; auto.
 - apply ror_sound; auto.
+  (* madd *)
+- apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
+- apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
 Qed.
 
 Lemma operation_is_redundant_sound:

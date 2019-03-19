@@ -83,6 +83,7 @@ Definition opimm32 (op: arith_name_rrr)
   end.
 
 Definition addimm32 := opimm32 Paddw Paddiw.
+Definition mulimm32 := opimm32 Pmulw Pmuliw.
 Definition andimm32 := opimm32 Pandw Pandiw.
 Definition nandimm32 := opimm32 Pnandw Pnandiw.
 Definition orimm32  := opimm32 Porw Poriw.
@@ -107,6 +108,7 @@ Definition opimm64 (op: arith_name_rrr)
 end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
+Definition mulimm64 := opimm64 Pmull Pmulil.
 Definition orimm64  := opimm64 Porl  Poril.
 Definition andimm64 := opimm64 Pandl Pandil.
 Definition xorimm64 := opimm64 Pxorl  Pxoril.
@@ -418,6 +420,9 @@ Definition transl_op
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 ::i k)
+  | Omulimm n, a1 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1;
+      OK (mulimm32 rd rs1 n ::i k)
   | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs") (* Normalement pas émis *)
   | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu") (* Normalement pas émis *)
   | Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
@@ -511,7 +516,17 @@ Definition transl_op
   | Ororimm n, a1 :: nil =>
     do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Proriw rd rs n ::i k)
-         
+  | Omadd, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmaddw r1 r2 r3 ::i k)
+  | Omaddimm n, a1 :: a2 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+        OK (Pmaddiw r1 r2 n ::i k)
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
@@ -539,6 +554,9 @@ Definition transl_op
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
+  | Omullimm n, a1 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1;
+      OK (mulimm64 rd rs1 n ::i k)
   | Omullhs, _ => Error (msg "Asmblockgen.transl_op: Omullhs") (* Normalement pas émis *)
   | Omullhu, _ => Error (msg "Asmblockgen.transl_op: Omullhu") (* Normalement pas émis *)
   | Odivl, _ => Error (msg "Asmblockgen.transl_op: Odivl") (* Géré par fonction externe *)
@@ -621,7 +639,19 @@ Definition transl_op
           Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
           Paddl RTMP rs RTMP ::i
           Psrail rd RTMP n ::i k)
-
+         (* FIXME
+  | Omaddl, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmaddl r1 r2 r3 ::i k)
+  | Omaddlimm n, a1 :: a2 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+        OK (Pmaddil r1 r2 n ::i k)
+*)
   | Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs ::i k)

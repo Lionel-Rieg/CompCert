@@ -210,7 +210,7 @@ Global Opaque
 
 Definition two_address_op (op: operation) : bool :=
   match op with
-  | Ocast32unsigned => true
+  | Ocast32unsigned | Omadd | Omaddimm _ => true
   | _ => false
   end.
 
