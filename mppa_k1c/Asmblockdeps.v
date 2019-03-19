@@ -286,6 +286,7 @@ Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   | OArithRRR n1, OArithRRR n2 => phys_eq n1 n2
   | OArithRRI32 n1 i1, OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
   | OArithRRI64 n1 i1, OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
+  | OArithARRR n1, OArithARRR n2 => phys_eq n1 n2
   | _, _ => RET false
   end.
 
@@ -381,13 +382,12 @@ Qed.
 
 (* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
 
-
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   wlp_simplify.
 Qed.
- *)
+*)
 
 End IMPPARAM.
 
