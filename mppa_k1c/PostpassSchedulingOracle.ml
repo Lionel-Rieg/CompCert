@@ -524,12 +524,12 @@ let rec_to_usage r =
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
-  | Nxorw | Andnw | Ornw | Maddw -> 
+  | Nxorw | Andnw | Ornw  -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
-  | Nxord | Andnd | Ornd | Maddd -> 
+  | Nxord | Andnd | Ornd -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -549,10 +549,10 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw -> (match encoding with None -> mau
+  | Mulw| Maddw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
