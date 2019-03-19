@@ -19,16 +19,13 @@ Require Import Integers.
 Require Import Mach Asm Asmblock Asmblockgen Machblockgen.
 Require Import PostpassScheduling.
 Require Import Errors.
-Require Import Compopts.
 
 Local Open Scope error_monad_scope.
 
 Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := Machblockgen.transf_program p in
   do abp <- Asmblockgen.transf_program mbp;
-    do abp' <- if Compopts.optim_postpass tt
-               then PostpassScheduling.transf_program abp
-               else OK abp;
+  do abp' <- PostpassScheduling.transf_program abp;
   OK (Asm.transf_program abp').
 
 Definition transf_function (f: Mach.function) : res Asm.function :=
