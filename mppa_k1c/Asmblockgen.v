@@ -960,7 +960,7 @@ Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instr
       | _ => {| header := hd; body := c; exit := None |} 
               :: {| header := nil; body := nil; exit := Some (PExpand (Pbuiltin ef args res)) |} :: nil
       end
-  | Some (PCtlFlow i) => {| header := hd; body := (c ++ extract_basic ctl); exit := Some (PCtlFlow i) |} :: nil
+  | Some ex => {| header := hd; body := (c ++ extract_basic ctl); exit := Some ex |} :: nil
   end
 .
 Next Obligation.
@@ -970,7 +970,7 @@ Next Obligation.
 Qed. Next Obligation.
   apply wf_bblock_refl. constructor.
     right. discriminate.
-    discriminate.
+    unfold builtin_alone. intros. pose (H ef args res). rewrite H0 in n. contradiction.
 Qed.
 
 Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) (ep: bool) : res (list bblock) :=

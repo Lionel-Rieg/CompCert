@@ -38,6 +38,8 @@ Inductive control_op :=
   | Oj_l (l: label)
   | Ocb (bt: btest) (l: label)
   | Ocbu (bt: btest) (l: label)
+  | Odiv
+  | Odivu
   | OError
   | OIncremPC (sz: Z)
 .
@@ -185,6 +187,16 @@ Definition control_eval (o: control_op) (l: list value) :=
     | (Some c, Long) => eval_branch_deps fn l vpc (Val_cmplu_bool c v (Vlong (Int64.repr 0)))
     | (None, _) => None
     end
+  | Odiv, [Val v1; Val v2] => 
+    match Val.divs v1 v2 with
+    | Some v => Some (Val v)
+    | None => None
+    end
+  | Odivu, [Val v1; Val v2] =>
+    match Val.divu v1 v2 with
+    | Some v => Some (Val v)
+    | None => None
+    end
   | OIncremPC sz, [Val vpc] => Some (Val (Val.offset_ptr vpc (Ptrofs.repr sz)))
   | OError, _ => None
   | _, _ => None
@@ -323,6 +335,8 @@ Definition control_op_eq (c1 c2: control_op): ?? bool :=
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
   | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
   | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | Odiv, Odiv => RET true
+  | Odivu, Odivu => RET true
   | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
   | OError, OError => RET true
   | _, _ => RET false
@@ -504,6 +518,8 @@ Definition trans_control (ctl: control) : macro :=
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
+  | Pdiv => [(#GPR0, Op (Control Odiv) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
+  | Pdivu => [(#GPR0, Op (Control Odivu) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
@@ -801,6 +817,22 @@ Proof.
   intros. destruct ex.
   - simpl in *. inv H1. destruct c; destruct i; try discriminate.
     all: try (inv H0; eexists; split; try split; [ simpl control_eval; pose (H3 PC); simpl in e; rewrite e; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
+    (* Pdiv *)
+    + destruct (Val.divs _ _) eqn:DIVS; try discriminate. inv H0. unfold nextblock in DIVS. repeat (rewrite Pregmap.gso in DIVS; try discriminate).
+      eexists; split; try split.
+      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
+        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVS.
+        Simpl.
+      * Simpl.
+      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
+    (* Pdivu *)
+    + destruct (Val.divu _ _) eqn:DIVU; try discriminate. inv H0. unfold nextblock in DIVU. repeat (rewrite Pregmap.gso in DIVU; try discriminate).
+      eexists; split; try split.
+      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
+        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVU.
+        Simpl.
+      * Simpl.
+      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
     (* Pj_l *)
     + unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock _ _ _) eqn:NB; try discriminate. inv H0.
       eexists; split; try split.
@@ -992,6 +1024,12 @@ Lemma exec_exit_none:
 Proof.
   intros. inv H0. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try reflexivity; try discriminate.
+(* Pdiv *)
+  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
+    destruct (Val.divs _ _); try discriminate; auto.
+(* Pdivu *)
+  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
+    destruct (Val.divu _ _); try discriminate; auto.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e in H1. clear e.
     unfold goto_label_deps in H1. unfold goto_label.
@@ -1103,6 +1141,11 @@ Lemma forward_simu_exit_stuck:
 Proof.
   intros. inv H1. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
+(* Pdiv *)
+  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
+    destruct (Val.divs _ _); try discriminate; auto.
+  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
+    destruct (Val.divu _ _); try discriminate; auto.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e. unfold goto_label_deps. unfold goto_label in H0.
     destruct (label_pos _ _ _); auto. clear e. destruct (rs PC); auto. discriminate.
@@ -1421,6 +1464,8 @@ Definition string_of_control (op: control_op) : pstring :=
   | Oj_l _ => "Oj_l"
   | Ocb _ _ => "Ocb"
   | Ocbu _ _ => "Ocbu"
+  | Odiv => "Odiv"
+  | Odivu => "Odivu"
   | OError => "OError"
   | OIncremPC _ => "OIncremPC"
   end.

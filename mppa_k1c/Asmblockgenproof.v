@@ -935,7 +935,8 @@ Proof.
   intros until tbb. intros Hnonil Hnobuiltin GENB. unfold gen_bblocks in GENB.
   destruct (extract_ctl tex) eqn:ECTL.
   - destruct c.
-    + destruct i. assert False. eapply Hnobuiltin. eauto. destruct H.
+    + destruct i; try (inv GENB; simpl; auto; fail).
+      assert False. eapply Hnobuiltin. eauto. destruct H.
     + inv GENB. simpl. auto.
   - inversion Hnonil.
     + destruct tbdy as [|bi tbdy]; try (contradict H; simpl; auto; fail). inv GENB. auto.

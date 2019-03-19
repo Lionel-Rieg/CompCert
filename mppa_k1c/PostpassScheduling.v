@@ -118,7 +118,7 @@ Proof.
   destruct hdb.
   - destruct exb.
     + destruct c.
-      * destruct i. monadInv H.
+      * destruct i; monadInv H; split; auto.
       * monadInv H. split; auto.
     + monadInv H. split; auto.
   - monadInv H.
@@ -131,7 +131,8 @@ Proof.
   destruct a as [hda bda exa WFa]; destruct b as [hdb bdb exb WFb]; destruct bb as [hd bdy ex WF]; simpl in *.
   destruct exa; monadInv H. destruct hdb; try (monadInv EQ2). destruct exb; try (monadInv EQ2).
   - destruct c.
-    + destruct i; try (monadInv EQ2).
+    + destruct i; monadInv EQ2;
+      unfold size; simpl; rewrite app_length; rewrite Nat.add_0_r; rewrite <- Nat2Z.inj_add; rewrite Nat.add_assoc; reflexivity.
     + monadInv EQ2. unfold size; simpl. rewrite app_length. rewrite Nat.add_0_r. rewrite <- Nat2Z.inj_add. rewrite Nat.add_assoc. reflexivity.
   - unfold size; simpl. rewrite app_length. repeat (rewrite Nat.add_0_r). rewrite <- Nat2Z.inj_add. reflexivity.
 Qed.
@@ -144,7 +145,7 @@ Proof.
   unfold concat2 in H. simpl in H. monadInv H.
   destruct ex; try discriminate. destruct hd'; try discriminate. destruct ex'.
   - destruct c.
-    + destruct i; discriminate.
+    + destruct i; try discriminate; congruence.
     + congruence.
   - congruence.
 Qed.
@@ -259,7 +260,7 @@ Proof.
   destruct bb as [hdr bdy ex COR]; destruct bb' as [hdr' bdy' ex' COR']; simpl in *.
   destruct ex; try discriminate. destruct hdr'; try discriminate. destruct ex'.
   - destruct c.
-    + destruct i. discriminate.
+    + destruct i; try discriminate; inv EQ2; unfold stick_header; simpl; reflexivity.
     + inv EQ2. unfold stick_header; simpl. reflexivity.
   - inv EQ2. unfold stick_header; simpl. reflexivity.
 Qed.
@@ -393,9 +394,9 @@ Definition verified_schedule (bb : bblock) : res (list bblock) :=
 Lemma verified_schedule_size:
   forall bb lbb, verified_schedule bb = OK lbb -> size bb = size_blocks lbb.
 Proof.
-  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (apply verified_schedule_nob_size; auto; fail).
-  destruct i. inv H. simpl. omega.
+  inv H. simpl. omega.
 Qed.
 
 Lemma verified_schedule_no_header_in_middle:
@@ -403,9 +404,9 @@ Lemma verified_schedule_no_header_in_middle:
   verified_schedule bb = OK lbb ->
      Forall (fun b => header b = nil) (tail lbb).
 Proof.
-  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_no_header_in_middle; eauto; fail).
-  destruct i. inv H. simpl. auto.
+  inv H. simpl. auto.
 Qed.
 
 Lemma verified_schedule_header:
@@ -414,9 +415,9 @@ Lemma verified_schedule_header:
      header bb = header tbb
   /\ Forall (fun b => header b = nil) lbb.
 Proof.
-  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_header; eauto; fail).
-  destruct i. inv H. split; simpl; auto.
+  inv H. split; simpl; auto.
 Qed.
 
 
@@ -443,9 +444,9 @@ Theorem verified_schedule_correct:
      concat_all lbb = OK tbb
   /\ bblock_equiv ge f bb tbb.
 Proof.
-  intros. unfold verified_schedule in H. destruct (exit bb). destruct c.
+  intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_correct; eauto; fail).
-  destruct i. inv H. eexists. split; simpl; auto. constructor; auto.
+  inv H. eexists. split; simpl; auto. constructor; auto.
 Qed.
 
 Lemma verified_schedule_builtin_idem:
