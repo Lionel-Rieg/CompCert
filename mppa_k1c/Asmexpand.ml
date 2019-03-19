@@ -409,6 +409,7 @@ let expand_instruction instr =
         expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
         emit Psemi;
         expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
+        emit Psemi;
         let va_ofs =
             sz in
           (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
@@ -418,6 +419,7 @@ let expand_instruction instr =
         expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
         emit Psemi;
         expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
+        emit Psemi;
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
