@@ -123,6 +123,8 @@ Nondetfunction add (e1: expr) (e2: expr) :=
       addimm n1 (Eop Oadd (t1:::t2:::Enil))
   | t1, Eop (Oaddimm n2) (t2:::Enil) =>
       addimm n2 (Eop Oadd (t1:::t2:::Enil))
+  | t1, (Eop Omul (t2:::t3:::Enil)) =>
+      Eop Omadd (t1:::t2:::t3:::Enil)
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 >>
@@ -136,6 +138,7 @@ Inductive add_cases: forall (e1: expr) (e2: expr), Type :=
   | add_case5: forall n1 n2 t2, add_cases (Eop (Oaddrstack n1) Enil) (Eop (Oaddimm n2) (t2:::Enil))
   | add_case6: forall n1 t1 t2, add_cases (Eop (Oaddimm n1) (t1:::Enil)) (t2)
   | add_case7: forall t1 n2 t2, add_cases (t1) (Eop (Oaddimm n2) (t2:::Enil))
+  | add_case8: forall t1 t2 t3, add_cases (t1) ((Eop Omul (t2:::t3:::Enil)))
   | add_default: forall (e1: expr) (e2: expr), add_cases e1 e2.
 
 Definition add_match (e1: expr) (e2: expr) :=
@@ -147,6 +150,7 @@ Definition add_match (e1: expr) (e2: expr) :=
   | Eop (Oaddrstack n1) Enil, Eop (Oaddimm n2) (t2:::Enil) => add_case5 n1 n2 t2
   | Eop (Oaddimm n1) (t1:::Enil), t2 => add_case6 n1 t1 t2
   | t1, Eop (Oaddimm n2) (t2:::Enil) => add_case7 t1 n2 t2
+  | t1, (Eop Omul (t2:::t3:::Enil)) => add_case8 t1 t2 t3
   | e1, e2 => add_default e1 e2
   end.
 
@@ -166,6 +170,8 @@ Definition add (e1: expr) (e2: expr) :=
       addimm n1 (Eop Oadd (t1:::t2:::Enil))
   | add_case7 t1 n2 t2 => (* t1, Eop (Oaddimm n2) (t2:::Enil) *) 
       addimm n2 (Eop Oadd (t1:::t2:::Enil))
+  | add_case8 t1 t2 t3 => (* t1, (Eop Omul (t2:::t3:::Enil)) *) 
+      Eop Omadd (t1:::t2:::t3:::Enil)
   | add_default e1 e2 =>
       Eop Oadd (e1:::e2:::Enil)
   end.
