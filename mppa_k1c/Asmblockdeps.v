@@ -276,17 +276,31 @@ Definition iandb (ib1 ib2: ?? bool): ?? bool :=
   RET (andb b1 b2).
 
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
-  match o1, o2 with
-  | OArithR n1, OArithR n2 => struct_eq n1 n2
-  | OArithRR n1, OArithRR n2 => phys_eq n1 n2
-  | OArithRI32 n1 i1, OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRI64 n1 i1, OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRF32 n1 i1, OArithRF32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRF64 n1 i1, OArithRF64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRRR n1, OArithRRR n2 => phys_eq n1 n2
-  | OArithRRI32 n1 i1, OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRRI64 n1 i1, OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | _, _ => RET false
+  match o1 with
+  | OArithR n1 =>
+     match o2 with OArithR n2 => struct_eq n1 n2 | _ => RET false end
+  | OArithRR n1 => 
+     match o2 with OArithRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithRI32 n1 i1 =>
+     match o2 with OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRI64 n1 i1 =>
+     match o2 with OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRF32 n1 i1 =>
+     match o2 with OArithRF32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRF64 n1 i1 =>
+     match o2 with OArithRF64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRRR n1 =>
+     match o2 with OArithRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithRRI32 n1 i1 =>
+     match o2 with OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRRI64 n1 i1 =>
+     match o2 with OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithARRR n1 =>
+     match o2 with OArithARRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithARRI32 n1 i1 =>
+     match o2 with OArithARRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithARRI64 n1 i1 =>
+     match o2 with OArithARRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   end.
 
 Lemma arith_op_eq_correct o1 o2:
@@ -323,7 +337,8 @@ Proof.
   apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
 Qed.
 
-
+(* TODO: rewrite control_op_eq in a robust style against the miss of a case
+   cf. arith_op_eq above *)
 Definition control_op_eq (c1 c2: control_op): ?? bool :=
   match c1, c2 with
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
@@ -345,6 +360,8 @@ Proof.
 Qed.
 
 
+(* TODO: rewrite op_eq in a robust style against the miss of a case
+   cf. arith_op_eq above *)
 Definition op_eq (o1 o2: op): ?? bool :=
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
@@ -381,13 +398,12 @@ Qed.
 
 (* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
 
-
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   wlp_simplify.
 Qed.
- *)
+*)
 
 End IMPPARAM.
 
