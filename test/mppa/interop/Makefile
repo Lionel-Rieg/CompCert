@@ -28,7 +28,7 @@ CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
 
-TESTNAMES=$(filter-out $(VAARG_COMMON),$(filter-out $(COMMON),$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))))
+TESTNAMES ?= $(filter-out $(VAARG_COMMON),$(filter-out $(COMMON),$(notdir $(subst .c,,$(wildcard $(DIR)/*.c)))))
 
 X86_GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .x86-gcc.out,$(TESTNAMES)))
 GCC_OUT=$(addprefix $(OUTDIR)/,$(addsuffix .gcc.out,$(TESTNAMES)))
