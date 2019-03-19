@@ -177,6 +177,7 @@ Inductive instruction : Type :=
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
+  | Pmuliw              (rd rs: ireg) (imm: int)    (**r mul imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
   | Pnandiw             (rd rs: ireg) (imm: int)    (**r nand imm word *)
   | Poriw               (rd rs: ireg) (imm: int)    (**r or imm word *)
@@ -197,6 +198,7 @@ Inductive instruction : Type :=
   (** Arith RRI64 *)
   | Pcompil (it: itest) (rd rs: ireg) (imm: int64)  (**r comparison imm long *)
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
+  | Pmulil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pnandil             (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Poril               (rd rs: ireg) (imm: int64)  (**r or immediate long *) 
@@ -319,6 +321,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RRI32 *)
   | PArithRRI32 (Asmblock.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
   | PArithRRI32 Asmblock.Paddiw rd rs imm       => Paddiw rd rs imm
+  | PArithRRI32 Asmblock.Pmuliw rd rs imm       => Pmuliw rd rs imm
   | PArithRRI32 Asmblock.Pandiw rd rs imm       => Pandiw rd rs imm
   | PArithRRI32 Asmblock.Pnandiw rd rs imm      => Pnandiw rd rs imm
   | PArithRRI32 Asmblock.Poriw rd rs imm        => Poriw rd rs imm
@@ -338,6 +341,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RRI64 *)
   | PArithRRI64 (Asmblock.Pcompil it) rd rs imm => Pcompil it rd rs imm
   | PArithRRI64 Asmblock.Paddil rd rs imm       => Paddil rd rs imm
+  | PArithRRI64 Asmblock.Pmulil rd rs imm       => Pmulil rd rs imm
   | PArithRRI64 Asmblock.Pandil rd rs imm       => Pandil rd rs imm
   | PArithRRI64 Asmblock.Pnandil rd rs imm      => Pnandil rd rs imm
   | PArithRRI64 Asmblock.Poril rd rs imm        => Poril rd rs imm

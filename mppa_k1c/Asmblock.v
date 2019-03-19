@@ -376,6 +376,7 @@ Inductive arith_name_rri32 : Type :=
   | Pcompiw (it: itest)                             (**r comparison imm word *)
 
   | Paddiw                                          (**r add imm word *)
+  | Pmuliw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
   | Pnandiw                                         (**r nand imm word *)
   | Poriw                                           (**r or imm word *)
@@ -396,6 +397,7 @@ Inductive arith_name_rri32 : Type :=
 Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
+  | Pmulil                                          (**r mul immediate long *) 
   | Pandil                                          (**r and immediate long *) 
   | Pnandil                                         (**r nand immediate long *) 
   | Poril                                           (**r or immediate long *) 
@@ -1168,6 +1170,7 @@ Definition arith_eval_rri32 n v i :=
   match n with
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
+  | Pmuliw  => Val.mul   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
   | Pnandiw => Val.notint (Val.and  v (Vint i))
   | Poriw   => Val.or    v (Vint i)
@@ -1189,6 +1192,7 @@ Definition arith_eval_rri64 n v i :=
   match n with
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
+  | Pmulil  => Val.mull v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
   | Pnandil  => Val.notl (Val.andl v (Vlong i))
   | Poril   => Val.orl  v (Vlong i)

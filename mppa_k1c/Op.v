@@ -70,6 +70,7 @@ Inductive operation : Type :=
   | Oneg                     (**r [rd = - r1]   *)                     
   | Osub                     (**r [rd = r1 - r2] *)
   | Omul                     (**r [rd = r1 * r2] *)
+  | Omulimm (n: int)         (**r [rd = r1 * n] *)
   | Omulhs                   (**r [rd = high part of r1 * r2, signed] *)
   | Omulhu                   (**r [rd = high part of r1 * r2, unsigned] *)
   | Odiv                     (**r [rd = r1 / r2] (signed) *)
@@ -268,6 +269,7 @@ Definition eval_operation
   | Oneg, v1 :: nil => Some (Val.neg v1)
   | Osub, v1 :: v2 :: nil => Some (Val.sub v1 v2)
   | Omul, v1 :: v2 :: nil => Some (Val.mul v1 v2)
+  | Omulimm n, v1 :: nil => Some (Val.mul v1 (Vint n))
   | Omulhs, v1::v2::nil => Some (Val.mulhs v1 v2)
   | Omulhu, v1::v2::nil => Some (Val.mulhu v1 v2)
   | Odiv, v1 :: v2 :: nil => Val.divs v1 v2
@@ -456,6 +458,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oneg => (Tint :: nil, Tint)
   | Osub => (Tint :: Tint :: nil, Tint)
   | Omul => (Tint :: Tint :: nil, Tint)
+  | Omulimm _ => (Tint :: nil, Tint)
   | Omulhs => (Tint :: Tint :: nil, Tint)
   | Omulhu => (Tint :: Tint :: nil, Tint)
   | Odiv => (Tint :: Tint :: nil, Tint)
@@ -623,8 +626,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* neg, sub *)
   - destruct v0...
   - unfold Val.sub. destruct v0; destruct v1... 
-  (* mul, mulhs, mulhu *)
+  (* mul, mulimm, mulhs, mulhu *)
   - destruct v0; destruct v1...
+  - destruct v0...
   - destruct v0; destruct v1...
   - destruct v0; destruct v1...
   (* div, divu *)
@@ -1124,8 +1128,9 @@ Proof.
   (* neg, sub *)
   - inv H4; simpl; auto.
   - apply Val.sub_inject; auto.
-  (* mul, mulhs, mulhu *)
+  (* mul, mulimm, mulhs, mulhu *)
   - inv H4; inv H2; simpl; auto.
+  - inv H4; simpl; auto.
   - inv H4; inv H2; simpl; auto.
   - inv H4; inv H2; simpl; auto.
   (* div, divu *)

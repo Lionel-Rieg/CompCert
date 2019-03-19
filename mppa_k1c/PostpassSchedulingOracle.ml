@@ -95,6 +95,7 @@ let arith_rrr_str = function
 let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
+  | Pmuliw -> "Pmuliw"
   | Pandiw -> "Pandiw"
   | Pnandiw -> "Pnandiw"
   | Poriw -> "Poriw"
@@ -114,6 +115,7 @@ let arith_rri32_str = function
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
+  | Pmulil -> "Pmulil"
   | Pandil -> "Pandil"
   | Pnandil -> "Pnandil"
   | Poril -> "Poril"
@@ -437,8 +439,8 @@ let ab_inst_to_real = function
   | "Pcompl" | "Pcompil" -> Compd
   | "Pfcompw" -> Fcompw
   | "Pfcompl" -> Fcompd
-  | "Pmulw" -> Mulw
-  | "Pmull" -> Muld
+  | "Pmulw" | "Pmuliw" -> Mulw
+  | "Pmull" | "Pmulil" -> Muld
   | "Porw" | "Poriw" -> Orw
   | "Pnorw" | "Pnoriw" -> Norw
   | "Porl" | "Poril" -> Ord

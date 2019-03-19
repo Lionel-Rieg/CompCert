@@ -1382,6 +1382,7 @@ Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   match n with
     Pcompiw _ => "Pcompiw"
   | Paddiw => "Paddiw"
+  | Pmuliw => "Pmuliw"
   | Pandiw => "Pandiw"
   | Pnandiw => "Pnandiw"
   | Poriw => "Poriw"
@@ -1403,6 +1404,7 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   match n with
     Pcompil _ => "Pcompil"
   | Paddil => "Paddil"
+  | Pmulil => "Pmulil"
   | Pandil => "Pandil"
   | Pnandil => "Pnandil"
   | Poril => "Poril"

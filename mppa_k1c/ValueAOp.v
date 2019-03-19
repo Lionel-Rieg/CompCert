@@ -57,6 +57,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Oneg, v1::nil => neg v1
   | Osub, v1::v2::nil => sub v1 v2
   | Omul, v1::v2::nil => mul v1 v2
+  | Omulimm n, v1::nil => mul v1 (I n)
   | Omulhs, v1::v2::nil => mulhs v1 v2
   | Omulhu, v1::v2::nil => mulhu v1 v2
   | Odiv, v1::v2::nil => divs v1 v2

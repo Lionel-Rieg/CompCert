@@ -45,6 +45,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oneg => op1 (modarith nv)
   | Osub => op2 (default nv)
   | Omul => op2 (modarith nv)
+  | Omulimm _ => op1 (modarith nv)
   | Omulhs | Omulhu | Odiv | Odivu | Omod | Omodu => op2 (default nv)
   | Oand => op2 (bitwise nv)
   | Oandimm n => op1 (andimm nv n)
@@ -171,6 +172,7 @@ Proof.
 - apply add_sound; auto with na.
 - apply neg_sound; auto.
 - apply mul_sound; auto.
+- apply mul_sound; auto with na.
 - apply and_sound; auto.
 - apply andimm_sound; auto.
 - apply notint_sound; apply and_sound; auto.
