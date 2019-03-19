@@ -301,7 +301,7 @@ Proof.
   generalize (Int.one_bits_decomp n).
   generalize (Int.one_bits_range n).
   destruct (Int.one_bits n).
-  - intros. auto.
+  - intros. TrivialExists.
   - destruct l.
     + intros. rewrite H1. simpl.
       rewrite Int.add_zero.
@@ -319,7 +319,7 @@ Proof.
       rewrite Val.mul_add_distr_r.
       repeat rewrite Val.shl_mul. eapply Val.lessdef_trans. 2: eauto. apply Val.add_lessdef; auto.
       simpl. repeat rewrite H0; auto with coqlib.
-      intros. auto.
+      intros. TrivialExists.
 Qed.
 
 Theorem eval_mulimm:

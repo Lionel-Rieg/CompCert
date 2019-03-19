@@ -101,6 +101,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Onegl, v1::nil => negl v1
   | Osubl, v1::v2::nil => subl v1 v2
   | Omull, v1::v2::nil => mull v1 v2
+  | Omullimm n, v1::nil => mull v1 (L n)
   | Omullhs, v1::v2::nil => mullhs v1 v2
   | Omullhu, v1::v2::nil => mullhu v1 v2
   | Odivl, v1::v2::nil => divls v1 v2

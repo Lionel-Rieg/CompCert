@@ -85,6 +85,7 @@ Definition opimm32 (op: arith_name_rrr)
   end.
 
 Definition addimm32 := opimm32 Paddw Paddiw.
+Definition mulimm32 := opimm32 Pmulw Pmuliw.
 Definition andimm32 := opimm32 Pandw Pandiw.
 Definition nandimm32 := opimm32 Pnandw Pnandiw.
 Definition orimm32  := opimm32 Porw Poriw.
@@ -109,6 +110,7 @@ Definition opimm64 (op: arith_name_rrr)
 end.
 
 Definition addimm64 := opimm64 Paddl Paddil.
+Definition mulimm64 := opimm64 Pmull Pmulil.
 Definition orimm64  := opimm64 Porl  Poril.
 Definition andimm64 := opimm64 Pandl Pandil.
 Definition xorimm64 := opimm64 Pxorl  Pxoril.
@@ -420,6 +422,9 @@ Definition transl_op
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 ::i k)
+  | Omulimm n, a1 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1;
+      OK (mulimm32 rd rs1 n ::i k)
   | Omulhs, _ => Error(msg "Asmblockgen.transl_op: Omulhs") (* Normalement pas émis *)
   | Omulhu, _ => Error(msg "Asmblockgen.transl_op: Omulhu") (* Normalement pas émis *)
   | Odiv, a1 :: a2 :: nil => Error(msg "Asmblockgen.transl_op: Odiv: 32-bits division not supported yet. Please use 64-bits.")
@@ -546,6 +551,9 @@ Definition transl_op
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
+  | Omullimm n, a1 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1;
+      OK (mulimm64 rd rs1 n ::i k)
   | Omullhs, _ => Error (msg "Asmblockgen.transl_op: Omullhs") (* Normalement pas émis *)
   | Omullhu, _ => Error (msg "Asmblockgen.transl_op: Omullhu") (* Normalement pas émis *)
   | Odivl, _ => Error (msg "Asmblockgen.transl_op: Odivl") (* Géré par fonction externe *)

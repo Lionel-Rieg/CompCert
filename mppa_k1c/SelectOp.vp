@@ -173,7 +173,7 @@ Definition mulimm_base (n1: int) (e2: expr) :=
   | i :: j :: nil =>
       Elet e2 (add (shlimm (Eletvar 0) i) (shlimm (Eletvar 0) j))
   | _ =>
-      Eop Omul (Eop (Ointconst n1) Enil ::: e2 ::: Enil)
+      Eop (Omulimm n1) (e2 ::: Enil)
   end.
 
 Nondetfunction mulimm (n1: int) (e2: expr) :=

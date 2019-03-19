@@ -81,6 +81,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Onegl => op1 (default nv)
   | Osubl => op2 (default nv)
   | Omull => op2 (default nv)
+  | Omullimm _ => op1 (default nv)
   | Omullhs | Omullhu | Odivl | Odivlu | Omodl | Omodlu => op2 (default nv)
   | Oandl => op2 (default nv)
   | Oandlimm n => op1 (default nv)
