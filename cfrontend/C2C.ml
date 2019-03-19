@@ -294,7 +294,23 @@ let builtins_generic = {
     "__compcert_i64_umulh",
         (TInt(IULongLong, []),
          [TInt(IULongLong, []); TInt(IULongLong, [])],
-         false)
+         false);
+    "__compcert_i32_sdiv",
+        (TInt(IInt, []),
+         [TInt(IInt, []); TInt(IInt, [])],
+         false);
+    "__compcert_i32_udiv",
+        (TInt(IUInt, []),
+         [TInt(IUInt, []); TInt(IUInt, [])],
+         false);
+    "__compcert_i32_smod",
+        (TInt(IInt, []),
+         [TInt(IInt, []); TInt(IInt, [])],
+         false);
+    "__compcert_i32_umod",
+        (TInt(IUInt, []),
+         [TInt(IUInt, []); TInt(IUInt, [])],
+         false);
   ]
 }
 

@@ -15,6 +15,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
+
 (** Instruction selection for operators *)
 
 (** The instruction selection pass recognizes opportunities for using
@@ -51,6 +52,48 @@ Require Import Op.
 Require Import CminorSel.
 
 Local Open Scope cminorsel_scope.
+
+Local Open Scope string_scope.
+Local Open Scope error_monad_scope.
+
+Section SELECT.
+(** Some operations on 64-bit integers are transformed into calls to
+  runtime library functions.  The following type class collects
+  the names of these functions. *)
+
+Definition sig_l_l := mksignature (Tlong :: nil) (Some Tlong) cc_default.
+Definition sig_l_f := mksignature (Tlong :: nil) (Some Tfloat) cc_default.
+Definition sig_l_s := mksignature (Tlong :: nil) (Some Tsingle) cc_default.
+Definition sig_f_l := mksignature (Tfloat :: nil) (Some Tlong) cc_default.
+Definition sig_ll_l := mksignature (Tlong :: Tlong :: nil) (Some Tlong) cc_default.
+Definition sig_li_l := mksignature (Tlong :: Tint :: nil) (Some Tlong) cc_default.
+Definition sig_ii_l := mksignature (Tint :: Tint :: nil) (Some Tlong) cc_default.
+
+Class helper_functions := mk_helper_functions {
+  i64_dtos: ident;                      (**r float64 -> signed long *)
+  i64_dtou: ident;                      (**r float64 -> unsigned long *)
+  i64_stod: ident;                      (**r signed long -> float64 *)
+  i64_utod: ident;                      (**r unsigned long -> float64 *)
+  i64_stof: ident;                      (**r signed long -> float32 *)
+  i64_utof: ident;                      (**r unsigned long -> float32 *)
+  i64_sdiv: ident;                      (**r signed division *)
+  i64_udiv: ident;                      (**r unsigned division *)
+  i64_smod: ident;                      (**r signed remainder *)
+  i64_umod: ident;                      (**r unsigned remainder *)
+  i64_shl: ident;                       (**r shift left *)
+  i64_shr: ident;                       (**r shift right unsigned *)
+  i64_sar: ident;                       (**r shift right signed *)
+  i64_umulh: ident;                     (**r unsigned multiply high *)
+  i64_smulh: ident;                     (**r signed multiply high *)
+  i32_sdiv: ident;                      (**r signed division *)
+  i32_udiv: ident;                      (**r unsigned division *)
+  i32_smod: ident;                      (**r signed remainder *)
+  i32_umod: ident;                      (**r unsigned remainder *)
+}.
+
+Context {hf: helper_functions}.
+
+Definition sig_ii_i := mksignature (Tint :: Tint :: nil) (Some Tint) cc_default.
 
 (** ** Constants **)
 
@@ -806,7 +849,9 @@ Definition notint (e: expr) :=
 
 (** ** Integer division and modulus *)
 
-Definition divs_base (e1: expr) (e2: expr) := Eop Odiv (e1:::e2:::Enil).
+Definition divs_base (e1: expr) (e2: expr) :=
+  Eexternal i32_sdiv sig_ii_i (e1 ::: e2 ::: Enil).
+  
 Definition mods_base (e1: expr) (e2: expr) := Eop Omod (e1:::e2:::Enil).
 Definition divu_base (e1: expr) (e2: expr) := Eop Odivu (e1:::e2:::Enil).
 Definition modu_base (e1: expr) (e2: expr) := Eop Omodu (e1:::e2:::Enil).
@@ -1321,3 +1366,5 @@ Definition builtin_arg (e: expr) :=
       BA e
   end.
 
+
+End SELECT.

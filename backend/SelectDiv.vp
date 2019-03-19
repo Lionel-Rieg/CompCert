@@ -19,6 +19,9 @@ Require Import Op CminorSel SelectOp SplitLong SelectLong.
 
 Local Open Scope cminorsel_scope.
 
+Section SELECT.
+Context {hf: helper_functions}.
+
 Definition is_intconst (e: expr) : option int :=
   match e with
   | Eop (Ointconst n) _ => Some n
@@ -221,10 +224,6 @@ Definition mods (e1: expr) (e2: expr) :=
 
 (** 64-bit integer divisions *)
 
-Section SELECT.
-
-Context {hf: helper_functions}.
-
 Definition modl_from_divl (equo: expr) (n: int64) :=
   subl (Eletvar O) (mullimm n equo).
 
@@ -311,8 +310,6 @@ Definition modls (e1 e2: expr) :=
   | _, _ => modls_base e1 e2
   end.
 
-End SELECT.
-
 (** Floating-point division by a constant can also be turned into a FP
     multiplication by the inverse constant, but only for powers of 2. *)
 
@@ -340,4 +337,4 @@ Nondetfunction divfs (e1: expr) (e2: expr) :=
   | _ => Eop Odivfs (e1 ::: e2 ::: Enil)
   end.
 
-
+End SELECT.
