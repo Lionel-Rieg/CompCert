@@ -311,6 +311,14 @@ let builtins_generic = {
         (TInt(IUInt, []),
          [TInt(IUInt, []); TInt(IUInt, [])],
          false);
+    "__compcert_f32_div",
+       (TFloat(FFloat,[]),
+        [TFloat(FFloat,[]); TFloat(FFloat,[])],
+        false);
+    "__compcert_f64_div",
+       (TFloat(FDouble,[]),
+        [TFloat(FDouble,[]); TFloat(FDouble,[])],
+        false);
   ]
 }
 
@@ -1214,7 +1222,10 @@ let convertFundef loc env fd =
 (** External function declaration *)
 
 let re_builtin = Str.regexp "__builtin_"
-let re_runtime = Str.regexp "__compcert_i"
+let re_runtime64 = Str.regexp "__compcert_i64"
+let re_runtime32 = Str.regexp "__compcert_i32"
+let re_runtimef32 = Str.regexp "__compcert_f32"
+let re_runtimef64 = Str.regexp "__compcert_f64"
 
 let convertFundecl env (sto, id, ty, optinit) =
   let (args, res, cconv) =
@@ -1227,7 +1238,10 @@ let convertFundecl env (sto, id, ty, optinit) =
   let ef =
     if id.name = "malloc" then AST.EF_malloc else
     if id.name = "free" then AST.EF_free else
-      if Str.string_match re_runtime id.name 0
+      if  Str.string_match re_runtime64 id.name 0
+       || Str.string_match re_runtime32 id.name 0
+       || Str.string_match re_runtimef64 id.name 0
+       || Str.string_match re_runtimef32 id.name 0
       then  AST.EF_runtime(id'', sg)
       else
     if Str.string_match re_builtin id.name 0

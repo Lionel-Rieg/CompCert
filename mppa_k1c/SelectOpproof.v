@@ -1070,4 +1070,20 @@ Proof.
 - constructor; auto.
 Qed.
 
+(* floating-point division *)
+Theorem eval_divf_base:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divf_base a b) v /\ Val.lessdef (Val.divf x y) v.
+Proof.
+Admitted.
+
+Theorem eval_divfs_base:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_base a b) v /\ Val.lessdef (Val.divfs x y) v.
+Proof.
+Admitted.
 End CMCONSTR.

@@ -395,12 +395,15 @@ Definition get_helpers (defmap: PTree.t globdef) : res helper_functions :=
   do i32_udiv <- lookup_helper globs "__compcert_i32_udiv" sig_ii_i ;
   do i32_smod <- lookup_helper globs "__compcert_i32_smod" sig_ii_i ;
   do i32_umod <- lookup_helper globs "__compcert_i32_umod" sig_ii_i ;
+  do f64_div <- lookup_helper globs "__compcert_f64_div" sig_ff_f ;
+  do f32_div <- lookup_helper globs "__compcert_f32_div" sig_ss_s ;
   OK (mk_helper_functions
      i64_dtos i64_dtou i64_stod i64_utod i64_stof i64_utof
      i64_sdiv i64_udiv i64_smod i64_umod
      i64_shl i64_shr i64_sar
      i64_umulh i64_smulh
-     i32_sdiv i32_udiv i32_smod i32_umod).
+     i32_sdiv i32_udiv i32_smod i32_umod
+     f64_div f32_div).
 
 (** Conversion of programs. *)
 

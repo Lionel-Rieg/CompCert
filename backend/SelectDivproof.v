@@ -949,8 +949,8 @@ Proof.
     EvalOp. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     simpl; eauto.
     destruct x; simpl; auto. erewrite Float.div_mul_inverse; eauto.
-  + TrivialExists.
-- TrivialExists.
+  + apply eval_divf_base; trivial.
+- apply eval_divf_base; trivial.
 Qed.
 
 Theorem eval_divfs:
@@ -965,8 +965,8 @@ Proof.
     EvalOp. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     simpl; eauto.
     destruct x; simpl; auto. erewrite Float32.div_mul_inverse; eauto.
-  + TrivialExists.
-- TrivialExists.
+  + apply eval_divfs_base; trivial.
+- apply eval_divfs_base; trivial.
 Qed.
 
 End CMCONSTRS.
