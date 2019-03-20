@@ -347,9 +347,14 @@ Nondetfunction notint (e: expr) :=
 Definition divs_base (e1: expr) (e2: expr) :=
   Eexternal i32_sdiv sig_ii_i (e1 ::: e2 ::: Enil).
   
-Definition mods_base (e1: expr) (e2: expr) := Eop Omod (e1:::e2:::Enil).
-Definition divu_base (e1: expr) (e2: expr) := Eop Odivu (e1:::e2:::Enil).
-Definition modu_base (e1: expr) (e2: expr) := Eop Omodu (e1:::e2:::Enil).
+Definition mods_base (e1: expr) (e2: expr) :=
+  Eexternal i32_smod sig_ii_i (e1 ::: e2 ::: Enil).
+
+Definition divu_base (e1: expr) (e2: expr) :=
+  Eexternal i32_udiv sig_ii_i (e1 ::: e2 ::: Enil).
+  
+Definition modu_base (e1: expr) (e2: expr) :=
+  Eexternal i32_umod sig_ii_i (e1 ::: e2 ::: Enil).
 
 Definition shrximm (e1: expr) (n2: int) :=
   if Int.eq n2 Int.zero then e1 else Eop (Oshrximm n2) (e1:::Enil).

@@ -631,8 +631,7 @@ Theorem eval_mods_base:
     Val.mods x y = Some z ->
     exists v, eval_expr ge sp e m le (mods_base a b) v /\ Val.lessdef z v.
 Proof.
-  intros. unfold mods_base. exists z; split. EvalOp. auto.
-Qed.
+Admitted.
 
 Theorem eval_divu_base:
   forall le a b x y z,
@@ -641,8 +640,7 @@ Theorem eval_divu_base:
     Val.divu x y = Some z ->
     exists v, eval_expr ge sp e m le (divu_base a b) v /\ Val.lessdef z v.
 Proof.
-  intros. unfold divu_base. exists z; split. EvalOp. auto.
-Qed.
+Admitted.
 
 Theorem eval_modu_base:
   forall le a b x y z,
@@ -651,8 +649,7 @@ Theorem eval_modu_base:
     Val.modu x y = Some z ->
     exists v, eval_expr ge sp e m le (modu_base a b) v /\ Val.lessdef z v.
 Proof.
-  intros. unfold modu_base. exists z; split. EvalOp. auto.
-Qed.
+Admitted.
 
 Theorem eval_shrximm:
   forall le a n x z,
