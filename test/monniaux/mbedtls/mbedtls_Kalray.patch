@@ -47,7 +47,7 @@ index 87015af0c..a2bad7b84 100644
      return( ret );
  }
  
-+#define INT_DIV(x,y) (((long)(x)) / (y))
++#define INT_DIV(x,y) ((x) / (y))
 +
  /*
   * Modulo: r = A mod b

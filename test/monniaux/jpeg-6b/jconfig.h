@@ -31,7 +31,7 @@
 #undef NO_SWITCH
 #define HAS_FLOAT 1
 
-#ifdef __COMPCERT__
+#if 0
 extern long long __compcert_i64_sdiv(long long a, long long b);
 extern long long __compcert_i64_smod(long long a, long long b);
 

@@ -60,8 +60,8 @@ from */
 
 #define TEST
 #define IDEA32
-#define INT_MOD(x,y) ((long)(x) % (y))
-#define INT_DIV(x,y) ((long)(x) / (y))
+#define INT_MOD(x,y) ((x) % (y))
+#define INT_DIV(x,y) ((x) / (y))
 
 #include <string.h>
 #include <stdlib.h>
