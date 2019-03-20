@@ -355,13 +355,12 @@ let interfere g n1 n2 =
 let recordInterf n1 n2 =
   match n2.color with
   | None | Some (R _) ->
-          (* FIXME - HACK K1C disabled the if *)
-      (* if n1.regclass = n2.regclass then *) begin
+      if n1.regclass = n2.regclass then begin
         n1.adjlist <- n2 :: n1.adjlist;
         n1.degree  <- 1 + n1.degree
-      end (* else begin
+      end else begin
         n1.extra_adj <- n2 :: n1.extra_adj
-      end *)
+      end
   | Some (S _) ->
       (*i printf "extra adj %s to %s\n" (name_of_node n1) (name_of_node n2); *)
       n1.extra_adj <- n2 :: n1.extra_adj
