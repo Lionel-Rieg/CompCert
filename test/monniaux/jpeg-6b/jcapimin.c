@@ -73,10 +73,8 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
 
   cinfo->script_space = NULL;
 
-#ifdef HAVE_FLOAT
   cinfo->input_gamma = 1.0;	/* in case application forgets */
-#endif
-  
+
   /* OK, I'm ready */
   cinfo->global_state = CSTATE_START;
 }

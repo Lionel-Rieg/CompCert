@@ -271,7 +271,7 @@ emit_header (gif_dest_ptr dinfo, int num_colors, JSAMPARRAY colormap)
 	}
       } else {
 	/* Create a gray-scale map of num_colors values, range 0..255 */
-	put_3bytes(dinfo, INT_DIV((i * 255 + (num_colors-1)/2), (num_colors-1)));
+	put_3bytes(dinfo, (i * 255 + (num_colors-1)/2) / (num_colors-1));
       }
     } else {
       /* fill out the map to a power of 2 */

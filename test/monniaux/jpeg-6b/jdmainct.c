@@ -175,9 +175,8 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    rgroup = INT_DIV((compptr->v_samp_factor * compptr->DCT_scaled_size),
-		     cinfo->min_DCT_scaled_size);
-    /* height of a row group of component */
+    rgroup = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
+      cinfo->min_DCT_scaled_size; /* height of a row group of component */
     /* Get space for pointer lists --- M+4 row groups in each list.
      * We alloc both pointer lists with one call to save a few cycles.
      */
@@ -209,9 +208,8 @@ make_funny_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    rgroup = INT_DIV((compptr->v_samp_factor * compptr->DCT_scaled_size),
-		     cinfo->min_DCT_scaled_size);
-    /* height of a row group of component */
+    rgroup = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
+      cinfo->min_DCT_scaled_size; /* height of a row group of component */
     xbuf0 = main->xbuffer[0][ci];
     xbuf1 = main->xbuffer[1][ci];
     /* First copy the workspace pointers as-is */
@@ -250,9 +248,8 @@ set_wraparound_pointers (j_decompress_ptr cinfo)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    rgroup = INT_DIV((compptr->v_samp_factor * compptr->DCT_scaled_size),
-		     cinfo->min_DCT_scaled_size);
-    /* height of a row group of component */
+    rgroup = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
+      cinfo->min_DCT_scaled_size; /* height of a row group of component */
     xbuf0 = main->xbuffer[0][ci];
     xbuf1 = main->xbuffer[1][ci];
     for (i = 0; i < rgroup; i++) {
@@ -281,15 +278,15 @@ set_bottom_pointers (j_decompress_ptr cinfo)
        ci++, compptr++) {
     /* Count sample rows in one iMCU row and in one row group */
     iMCUheight = compptr->v_samp_factor * compptr->DCT_scaled_size;
-    rgroup = INT_DIV(iMCUheight, cinfo->min_DCT_scaled_size);
+    rgroup = iMCUheight / cinfo->min_DCT_scaled_size;
     /* Count nondummy sample rows remaining for this component */
-    rows_left = (int) INT_MOD(compptr->downsampled_height, (JDIMENSION) iMCUheight);
+    rows_left = (int) (compptr->downsampled_height % (JDIMENSION) iMCUheight);
     if (rows_left == 0) rows_left = iMCUheight;
     /* Count nondummy row groups.  Should get same answer for each component,
      * so we need only do it once.
      */
     if (ci == 0) {
-      main->rowgroups_avail = (JDIMENSION) (INT_DIV((rows_left-1), rgroup) + 1);
+      main->rowgroups_avail = (JDIMENSION) ((rows_left-1) / rgroup + 1);
     }
     /* Duplicate the last real sample row rgroup*2 times; this pads out the
      * last partial rowgroup and ensures at least one full rowgroup of context.
@@ -505,9 +502,8 @@ jinit_d_main_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    rgroup = INT_DIV((compptr->v_samp_factor * compptr->DCT_scaled_size),
-		     cinfo->min_DCT_scaled_size);
-    /* height of a row group of component */
+    rgroup = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
+      cinfo->min_DCT_scaled_size; /* height of a row group of component */
     main->buffer[ci] = (*cinfo->mem->alloc_sarray)
 			((j_common_ptr) cinfo, JPOOL_IMAGE,
 			 compptr->width_in_blocks * compptr->DCT_scaled_size,

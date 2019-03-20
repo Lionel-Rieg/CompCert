@@ -29,25 +29,12 @@
 #define HAVE_PROTOTYPES
 
 #undef NO_SWITCH
-#define HAS_FLOAT 1
 
-#if 0
-extern long long __compcert_i64_sdiv(long long a, long long b);
-extern long long __compcert_i64_smod(long long a, long long b);
-
-#define INT_UMOD(a, b) __compcert_i64_smod(a, b)
-#define INT_MOD(a, b) __compcert_i64_smod(a, b)
-#define INT_UDIV(a, b) __compcert_i64_sdiv(a, b)
-#define INT_DIV(a, b) __compcert_i64_sdiv(a, b)
-#define LONG_DIV(a, b) __compcert_i64_sdiv(a, b)
-
-#else
 #define INT_UMOD(a, b) ((a) % (b))
 #define INT_MOD(a, b) ((a) % (b))
 #define INT_UDIV(a, b) ((a) / (b))
 #define INT_DIV(a, b) ((a) / (b))
 #define LONG_DIV(a, b) ((a) / (b))
-#endif
 
 /* Does your compiler support the declaration "unsigned char" ?
  * How about "unsigned short" ?
