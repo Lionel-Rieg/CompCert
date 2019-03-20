@@ -670,6 +670,9 @@ Qed.
 
 End PRESERVATION_ASMBLOCK.
 
+
+
+
 Require Import Asmvliw List.
 
 Section PRESERVATION_ASMVLIW.
@@ -679,16 +682,38 @@ Hypothesis TRANSL: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
+Lemma find_bblock_split lb1: forall ofs lb2 bundle, 
+  find_bblock ofs (lb1 ++ lb2) = Some bundle ->  
+  find_bblock ofs lb1 = Some bundle \/ (exists ofs', find_bblock ofs' lb2 = Some bundle).
+Proof.
+  induction lb1; simpl; eauto.
+  intros ofs lbd2 bundle H.
+  destruct (zlt ofs 0); eauto.
+  destruct (zeq ofs 0); eauto.
+Qed.
 
-Lemma transf_blocks_checks_all_bundles ofs lbb lb bundle:
-  transf_blocks lbb = OK lb ->
-  find_bblock (Ptrofs.unsigned ofs) lb = Some bundle -> verify_par_bblock bundle = OK tt.
+Lemma verified_schedule_checks_alls_bundles bb: forall ofs lb bundle,
+  verified_schedule bb = OK lb ->
+  find_bblock ofs lb = Some bundle ->
+  verify_par_bblock bundle = OK tt.
 Proof.
 Admitted.
 
+Lemma transf_blocks_checks_all_bundles lbb: forall ofs lb bundle,
+  transf_blocks lbb = OK lb ->
+  find_bblock ofs lb = Some bundle -> verify_par_bblock bundle = OK tt.
+Proof.
+  induction lbb; simpl.
+  - intros ofs lb bundle H; inversion_clear H. simpl; try congruence.
+  - intros ofs lb bundle H0.
+    monadInv H0.
+    intros H; destruct (find_bblock_split _ _ _ _ H) as [|(ofs' & Hofs')]; eauto.
+    eapply verified_schedule_checks_alls_bundles; eauto.
+Qed.
+
 Lemma all_bundles_are_checked b ofs f bundle:
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
-  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  find_bblock ofs (fn_blocks f) = Some bundle ->
   verify_par_bblock bundle = OK tt. 
 Proof.
   unfold match_prog, match_program in TRANSL.
@@ -700,21 +725,14 @@ Proof.
   destruct H as [ctx' f1 f2 H0|]; try congruence.
   inversion Heqf2 as [H2]. subst; clear Heqf2.
   unfold transf_fundef, transf_partial_fundef in H.
-  (* TODO: is there any way to simplify these reasonings in the monad ? *)
   destruct f1 as [f1|f1]; try congruence.
-  remember (transf_function f1) as tf1.
-  destruct tf1 as [f0|]; simpl in *|-; try congruence.
-  inversion H as [H1]. subst. clear H.
-  unfold transf_function in Heqtf1.
-  remember (transl_function f1) as tf0.
-  destruct tf0 as [f0|]; simpl in *|-; try congruence.
-  destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks f0))); simpl in *|-; try congruence.
-  inversion Heqtf1 as [H]. subst; clear Heqtf1.
-  unfold transl_function in Heqtf0.
-  remember (transf_blocks (fn_blocks f1)) as olb.
-  destruct olb as [lb|]; simpl in *|-; try congruence.
-  inversion Heqtf0 as [H]. subst; clear Heqtf0. simpl.
-  intros; exploit transf_blocks_checks_all_bundles; eauto.
+  monadInv H. unfold transf_function in EQ.
+  monadInv EQ.
+  destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks _))); simpl in *|-; try congruence.
+  injection EQ1; intros; subst.
+  unfold transl_function in EQ0.
+  monadInv EQ0. simpl in * |-.
+  exploit transf_blocks_checks_all_bundles; eauto.
 Qed.
 
 Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
@@ -761,6 +779,9 @@ Proof.
 Qed.
 
 End PRESERVATION_ASMVLIW.
+
+
+
 
 Section PRESERVATION.
 
