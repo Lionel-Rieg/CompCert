@@ -680,9 +680,9 @@ Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
 
-Lemma transf_blocks_checks_all_bundles lbb bundles:
-  transf_blocks (lbb : list bblock) = OK bundles ->
-  List.Forall (fun bb => verify_par_bblock bb = OK tt) bundles.
+Lemma transf_blocks_checks_all_bundles ofs lbb lb bundle:
+  transf_blocks lbb = OK lb ->
+  find_bblock (Ptrofs.unsigned ofs) lb = Some bundle -> verify_par_bblock bundle = OK tt.
 Proof.
 Admitted.
 
@@ -691,9 +691,31 @@ Lemma all_bundles_are_checked b ofs f bundle:
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
   verify_par_bblock bundle = OK tt. 
 Proof.
-  unfold match_prog, match_program, match_program_gen in TRANSL.
-  (* HOW CAN WE PROVE THIS FROM transf_blocks_checks_all_bundles ?? *)
-Admitted.
+  unfold match_prog, match_program in TRANSL.
+  unfold Genv.find_funct_ptr; simpl; intros X.
+  destruct (Genv.find_def_match_2 TRANSL b) as [|f0 y H]; try congruence.
+  destruct y as [tf0|]; try congruence.
+  inversion X as [H1]. subst. clear X.
+  remember (@Gfun fundef unit (Internal f)) as f2.
+  destruct H as [ctx' f1 f2 H0|]; try congruence.
+  inversion Heqf2 as [H2]. subst; clear Heqf2.
+  unfold transf_fundef, transf_partial_fundef in H.
+  (* TODO: is there any way to simplify these reasonings in the monad ? *)
+  destruct f1 as [f1|f1]; try congruence.
+  remember (transf_function f1) as tf1.
+  destruct tf1 as [f0|]; simpl in *|-; try congruence.
+  inversion H as [H1]. subst. clear H.
+  unfold transf_function in Heqtf1.
+  remember (transl_function f1) as tf0.
+  destruct tf0 as [f0|]; simpl in *|-; try congruence.
+  destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks f0))); simpl in *|-; try congruence.
+  inversion Heqtf1 as [H]. subst; clear Heqtf1.
+  unfold transl_function in Heqtf0.
+  remember (transf_blocks (fn_blocks f1)) as olb.
+  destruct olb as [lb|]; simpl in *|-; try congruence.
+  inversion Heqtf0 as [H]. subst; clear Heqtf0. simpl.
+  intros; exploit transf_blocks_checks_all_bundles; eauto.
+Qed.
 
 Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
