@@ -146,10 +146,8 @@ Inductive operation : Type :=
   | Oshrlu                   (**r [rd = r1 >> r2] (unsigned) *)
   | Oshrluimm (n: int)       (**r [rd = r1 >> n] (unsigned) *)
   | Oshrxlimm (n: int)       (**r [rd = r1 / 2^n] (signed) *)
-              (* FIXME
   | Omaddl                   (**r [rd = rd + r1 * r2] *)
   | Omaddlimm (n: int64)     (**r [rd = rd + r1 * imm] *)
-*)
 (*c Floating-point arithmetic: *)
   | Onegf                    (**r [rd = - r1] *)
   | Oabsf                    (**r [rd = abs(r1)] *)
@@ -346,11 +344,8 @@ Definition eval_operation
   | Oshrlu, v1::v2::nil => Some (Val.shrlu v1 v2)
   | Oshrluimm n, v1::nil => Some (Val.shrlu v1 (Vint n))
   | Oshrxlimm n, v1::nil => Val.shrxl v1 (Vint n)
-
-                                      (*
   | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
   | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
-                                       *)
                                       
   | Onegf, v1::nil => Some (Val.negf v1)
   | Oabsf, v1::nil => Some (Val.absf v1)
@@ -536,10 +531,9 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oshrlu => (Tlong :: Tint :: nil, Tlong)
   | Oshrluimm _ => (Tlong :: nil, Tlong)
   | Oshrxlimm _ => (Tlong :: nil, Tlong)
-                     (* FIXME
   | Omaddl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
   | Omaddlimm _ => (Tlong :: Tlong :: nil, Tlong)
-*)
+
   | Onegf => (Tfloat :: nil, Tfloat)
   | Oabsf => (Tfloat :: nil, Tfloat)
   | Oaddf => (Tfloat :: Tfloat :: nil, Tfloat)
@@ -753,10 +747,11 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl... destruct (Int.ltu n Int64.iwordsize')...
   (* shrxl *)
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 63)); inv H0...
-    (* FIXME
   (* maddl, maddlim *)
-  - destruct v0; destruct v1; destruct v2...
-  - destruct v0; destruct v1... *)
+  - destruct v0; destruct v1; destruct v2; simpl; trivial.
+    destruct Archi.ptr64; simpl; trivial.
+  - destruct v0; destruct v1; simpl; trivial.
+    destruct Archi.ptr64; simpl; trivial.
   (* negf, absf *)
   - destruct v0...
   - destruct v0...
@@ -1265,13 +1260,11 @@ Proof.
   - inv H4; simpl in H1; try discriminate. simpl.
     destruct (Int.ltu n (Int.repr 63)); inv H1. TrivialExists.
 
-  (*
-  (* maddl, maddlim *)
-  - inv H2; inv H3; inv H4; simpl; auto; simpl.
-    destruct Archi.ptr64; trivial.
-    s
-  - inv H2; inv H4; simpl; auto.
-   *)
+  (* maddl, maddlimm *)
+  - apply Val.addl_inject; auto.
+    inv H2; inv H3; inv H4; simpl; auto.
+  - apply Val.addl_inject; auto.
+    inv H4; inv H2; simpl; auto.
     
   (* negf, absf *)
   - inv H4; simpl; auto.
