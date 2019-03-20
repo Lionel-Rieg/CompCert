@@ -69,6 +69,8 @@ Axiom i64_helpers_correct :
  /\ (forall x y z, Val.divu x y = Some z -> external_implements "__compcert_i32_udiv" sig_ii_i (x::y::nil) z)
  /\ (forall x y z, Val.mods x y = Some z -> external_implements "__compcert_i32_smod" sig_ii_i (x::y::nil) z)
  /\ (forall x y z, Val.modu x y = Some z -> external_implements "__compcert_i32_umod" sig_ii_i (x::y::nil) z)
+ /\ (forall x y z, Val.divfs x y = z -> external_implements "__compcert_f32_div" sig_ss_s (x::y::nil) z)
+ /\ (forall x y z, Val.divf x y = z -> external_implements "__compcert_f64_div" sig_ff_f (x::y::nil) z)
 .
 
 Definition helper_declared {F V: Type} (p: AST.program (AST.fundef F) V) (id: ident) (name: string) (sg: signature) : Prop :=
@@ -93,7 +95,10 @@ Definition helper_functions_declared {F V: Type} (p: AST.program (AST.fundef F) 
   /\ helper_declared p i32_sdiv "__compcert_i32_sdiv" sig_ii_i
   /\ helper_declared p i32_udiv "__compcert_i32_udiv" sig_ii_i
   /\ helper_declared p i32_smod "__compcert_i32_smod" sig_ii_i
-  /\ helper_declared p i32_umod "__compcert_i32_umod" sig_ii_i.
+  /\ helper_declared p i32_umod "__compcert_i32_umod" sig_ii_i
+  /\ helper_declared p f32_div  "__compcert_f32_div"  sig_ss_s
+  /\ helper_declared p f64_div  "__compcert_f64_div"  sig_ff_f
+.
 
 (** * Useful lemmas and tactics *)
 
@@ -672,7 +677,9 @@ Theorem eval_mods_base:
     Val.mods x y = Some z ->
     exists v, eval_expr ge sp e m le (mods_base a b) v /\ Val.lessdef z v.
 Proof.
-Admitted.
+  intros; unfold mods_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
 
 Theorem eval_divu_base:
   forall le a b x y z,
@@ -681,7 +688,9 @@ Theorem eval_divu_base:
     Val.divu x y = Some z ->
     exists v, eval_expr ge sp e m le (divu_base a b) v /\ Val.lessdef z v.
 Proof.
-Admitted.
+  intros; unfold divu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
 
 Theorem eval_modu_base:
   forall le a b x y z,
@@ -690,7 +699,9 @@ Theorem eval_modu_base:
     Val.modu x y = Some z ->
     exists v, eval_expr ge sp e m le (modu_base a b) v /\ Val.lessdef z v.
 Proof.
-Admitted.
+  intros; unfold modu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
 
 Theorem eval_shrximm:
   forall le a n x z,
@@ -1077,7 +1088,9 @@ Theorem eval_divf_base:
   eval_expr ge sp e m le b y ->
   exists v, eval_expr ge sp e m le (divf_base a b) v /\ Val.lessdef (Val.divf x y) v.
 Proof.
-Admitted.
+  intros; unfold divf_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
 
 Theorem eval_divfs_base:
   forall le a b x y,
@@ -1085,5 +1098,7 @@ Theorem eval_divfs_base:
   eval_expr ge sp e m le b y ->
   exists v, eval_expr ge sp e m le (divfs_base a b) v /\ Val.lessdef (Val.divfs x y) v.
 Proof.
-Admitted.
+  intros; unfold divfs_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
 End CMCONSTR.
