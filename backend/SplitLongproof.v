@@ -313,7 +313,7 @@ Theorem eval_longofint: unary_constructor_sound longofint Val.longofint.
 Proof.
   red; intros. unfold longofint. destruct (longofint_match a).
 - InvEval. econstructor; split. apply eval_longconst. auto.
-- exploit (eval_shrimm ge sp e m (Int.repr 31) (x :: le) (Eletvar 0)). EvalOp.
+- exploit (eval_shrimm prog sp e m (Int.repr 31) (x :: le) (Eletvar 0)). EvalOp.
   intros [v1 [A B]].
   econstructor; split. EvalOp.
   destruct x; simpl; auto.
