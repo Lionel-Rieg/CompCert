@@ -309,20 +309,20 @@ Definition modls (e1 e2: expr) :=
       end
   | _, _ => modls_base e1 e2
   end.
-
+  
 (** Floating-point division by a constant can also be turned into a FP
     multiplication by the inverse constant, but only for powers of 2. *)
 
 Definition divfimm (e: expr) (n: float) :=
   match Float.exact_inverse n with
   | Some n' => Eop Omulf (e ::: Eop (Ofloatconst n') Enil ::: Enil)
-  | None    => Eop Odivf (e ::: Eop (Ofloatconst n) Enil ::: Enil)
+  | None    => divfbase e (Eop (Ofloatconst n) Enil)
   end.
 
 Nondetfunction divf (e1: expr) (e2: expr) :=
   match e2 with
   | Eop (Ofloatconst n2) Enil => divfimm e1 n2
-  | _ => Eop Odivf (e1 ::: e2 ::: Enil)
+  | _ => divfbase e1 e2
   end.
 
 Definition divfsimm (e: expr) (n: float32) :=
