@@ -88,6 +88,14 @@ Nondetfunction addl (e1: expr) (e2: expr) :=
       addlimm n1 (Eop Oaddl (t1:::t2:::Enil))
   | t1, Eop (Oaddlimm n2) (t2:::Enil) =>
       addlimm n2 (Eop Oaddl (t1:::t2:::Enil))
+  | t1, (Eop Omull (t2:::t3:::Enil)) =>
+      Eop Omaddl (t1:::t2:::t3:::Enil)
+  | (Eop Omull (t2:::t3:::Enil)), t1 =>
+      Eop Omaddl (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omullimm n) (t2:::Enil)) =>
+      Eop (Omaddlimm n) (t1:::t2:::Enil)
+  | (Eop (Omullimm n) (t2:::Enil)), t1 =>
+      Eop (Omaddlimm n) (t1:::t2:::Enil)
   | _, _ => Eop Oaddl (e1:::e2:::Enil)
   end.
 

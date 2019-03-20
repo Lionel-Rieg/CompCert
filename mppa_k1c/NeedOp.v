@@ -105,6 +105,8 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshrlimm n => op1 (default nv)
   | Oshrluimm n => op1 (default nv)
   | Oshrxlimm n => op1 (default nv)
+  | Omaddl => op3 (default nv)
+  | Omaddlimm n => op2 (default nv)
   | Onegf | Oabsf => op1 (default nv)
   | Oaddf | Osubf | Omulf | Odivf => op2 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
@@ -156,6 +158,39 @@ Proof.
   eapply default_needs_of_condition_sound; eauto.
 Qed.
 
+Lemma addl_sound:
+  forall v1 w1 v2 w2 x,
+  vagree v1 w1 (default x) -> vagree v2 w2 (default x) ->
+  vagree (Val.addl v1 v2) (Val.addl w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; simpl in *; trivial.
+  - unfold Val.addl.
+    destruct v1; destruct v2; trivial; destruct Archi.ptr64; trivial.
+  - apply Val.addl_lessdef; trivial.
+Qed.
+
+
+Lemma mull_sound:
+  forall v1 w1 v2 w2 x,
+  vagree v1 w1 (default x) -> vagree v2 w2 (default x) ->
+  vagree (Val.mull v1 v2) (Val.mull w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; simpl in *; trivial.
+  - unfold Val.mull.
+    destruct v1; destruct v2; trivial.
+  - unfold Val.mull.
+    destruct v1; destruct v2; trivial.
+    inv H. inv H0.
+    trivial.
+Qed.
+
+Remark default_idem: forall nv, default (default nv) = default nv.
+Proof.
+  destruct nv; simpl; trivial.
+Qed.
+
 Lemma needs_of_operation_sound:
   forall op args v nv args',
   eval_operation ge (Vptr sp Ptrofs.zero) op args m = Some v ->
@@ -198,6 +233,11 @@ Proof.
   (* madd *)
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
+  (* maddl *)
+- apply addl_sound; trivial.
+  apply mull_sound; trivial.
+  rewrite default_idem; trivial.
+  rewrite default_idem; trivial.
 Qed.
 
 Lemma operation_is_redundant_sound:
