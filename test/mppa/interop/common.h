@@ -21,7 +21,7 @@ long long ll_manyllargs(char a0, long long a1, char a2, long long a3, char a4, c
                 char a10, long long a11, char a12, long long a13, char a14, char a15, long long a16, long long a17, char a18, long long a19,
                 char a20, long long a21, char a22, long long a23, char a24, char a25, long long a26, long long a27, char a28, long long a29);
 
-long long stackhell(char a0, long long a1, char a2, long long a3, char a4, char a5, long long a6, long long a7, char a8, long long a9,
+double stackhell(char a0, long long a1, char a2, long long a3, char a4, char a5, long long a6, long long a7, char a8, long long a9,
                 char a10, long long a11, char a12, long long a13, char a14, char a15, long long a16, long long a17, char a18, long long a19,
                 char a20, long long a21, char a22, long long a23, char a24, char a25, long long a26, long long a27, char a28, long long a29);
 

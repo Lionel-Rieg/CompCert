@@ -38,6 +38,8 @@ Inductive control_op :=
   | Oj_l (l: label)
   | Ocb (bt: btest) (l: label)
   | Ocbu (bt: btest) (l: label)
+  | Odiv
+  | Odivu
   | OError
   | OIncremPC (sz: Z)
 .
@@ -52,6 +54,9 @@ Inductive arith_op :=
   | OArithRRR (n: arith_name_rrr)
   | OArithRRI32 (n: arith_name_rri32) (imm: int)
   | OArithRRI64 (n: arith_name_rri64) (imm: int64)
+  | OArithARRR (n: arith_name_arrr)
+  | OArithARRI32 (n: arith_name_arri32) (imm: int)
+  | OArithARRI64 (n: arith_name_arri64) (imm: int64)
 .
 
 Coercion OArithR: arith_name_r >-> arith_op.
@@ -109,9 +114,12 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | OArithRF64 n i, [] => Some (Val (arith_eval_rf64 n i))
 
   | OArithRRR n, [Val v1; Val v2] => Some (Val (arith_eval_rrr n v1 v2))
-
   | OArithRRI32 n i, [Val v] => Some (Val (arith_eval_rri32 n v i))
   | OArithRRI64 n i, [Val v] => Some (Val (arith_eval_rri64 n v i))
+
+  | OArithARRR n, [Val v1; Val v2; Val v3] => Some (Val (arith_eval_arrr n v1 v2 v3))
+  | OArithARRI32 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri32 n v1 v2 i))
+  | OArithARRI64 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri64 n v1 v2 i))
 
   | _, _ => None
   end.
@@ -184,6 +192,16 @@ Definition control_eval (o: control_op) (l: list value) :=
     | (Some c, Int) => eval_branch_deps fn l vpc (Val_cmpu_bool c v (Vint (Int.repr 0)))
     | (Some c, Long) => eval_branch_deps fn l vpc (Val_cmplu_bool c v (Vlong (Int64.repr 0)))
     | (None, _) => None
+    end
+  | Odiv, [Val v1; Val v2] => 
+    match Val.divs v1 v2 with
+    | Some v => Some (Val v)
+    | None => None
+    end
+  | Odivu, [Val v1; Val v2] =>
+    match Val.divu v1 v2 with
+    | Some v => Some (Val v)
+    | None => None
     end
   | OIncremPC sz, [Val vpc] => Some (Val (Val.offset_ptr vpc (Ptrofs.repr sz)))
   | OError, _ => None
@@ -270,17 +288,31 @@ Definition iandb (ib1 ib2: ?? bool): ?? bool :=
   RET (andb b1 b2).
 
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
-  match o1, o2 with
-  | OArithR n1, OArithR n2 => struct_eq n1 n2
-  | OArithRR n1, OArithRR n2 => phys_eq n1 n2
-  | OArithRI32 n1 i1, OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRI64 n1 i1, OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRF32 n1 i1, OArithRF32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRF64 n1 i1, OArithRF64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRRR n1, OArithRRR n2 => phys_eq n1 n2
-  | OArithRRI32 n1 i1, OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | OArithRRI64 n1 i1, OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2)
-  | _, _ => RET false
+  match o1 with
+  | OArithR n1 =>
+     match o2 with OArithR n2 => struct_eq n1 n2 | _ => RET false end
+  | OArithRR n1 => 
+     match o2 with OArithRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithRI32 n1 i1 =>
+     match o2 with OArithRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRI64 n1 i1 =>
+     match o2 with OArithRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRF32 n1 i1 =>
+     match o2 with OArithRF32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRF64 n1 i1 =>
+     match o2 with OArithRF64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRRR n1 =>
+     match o2 with OArithRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithRRI32 n1 i1 =>
+     match o2 with OArithRRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithRRI64 n1 i1 =>
+     match o2 with OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithARRR n1 =>
+     match o2 with OArithARRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithARRI32 n1 i1 =>
+     match o2 with OArithARRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
+  | OArithARRI64 n1 i1 =>
+     match o2 with OArithARRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   end.
 
 Lemma arith_op_eq_correct o1 o2:
@@ -317,12 +349,15 @@ Proof.
   apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
 Qed.
 
-
+(* TODO: rewrite control_op_eq in a robust style against the miss of a case
+   cf. arith_op_eq above *)
 Definition control_op_eq (c1 c2: control_op): ?? bool :=
   match c1, c2 with
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
   | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
   | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | Odiv, Odiv => RET true
+  | Odivu, Odivu => RET true
   | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
   | OError, OError => RET true
   | _, _ => RET false
@@ -339,6 +374,8 @@ Proof.
 Qed.
 
 
+(* TODO: rewrite op_eq in a robust style against the miss of a case
+   cf. arith_op_eq above *)
 Definition op_eq (o1 o2: op): ?? bool :=
   match o1, o2 with
   | Arith i1, Arith i2 => arith_op_eq i1 i2
@@ -375,13 +412,12 @@ Qed.
 
 (* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
 
-
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
   wlp_simplify.
 Qed.
- *)
+*)
 
 End IMPPARAM.
 
@@ -504,6 +540,8 @@ Definition trans_control (ctl: control) : macro :=
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
+  | Pdiv => [(#GPR0, Op (Control Odiv) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
+  | Pdivu => [(#GPR0, Op (Control Odivu) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
@@ -525,6 +563,9 @@ Definition trans_arith (ai: ar_instruction) : macro :=
   | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
   | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
   | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
+  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (Name(#d) @ Name (#s1) @ Name (#s2) @ Enil))]
+  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (Name(#d) @ Name (#s) @ Enil))]
+  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (Name(#d) @ Name (#s) @ Enil))]
   end.
 
 
@@ -711,6 +752,27 @@ Proof.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRR *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs1); rewrite e0. pose (H1 rs2); rewrite e1. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRI32 *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs0); rewrite e0. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARRI64 *)
+  - inv H; inv H0;
+    eexists; split; try split.
+    * simpl. pose (H1 rd); rewrite e. pose (H1 rs0); rewrite e0. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
 Qed.
 
 Lemma forward_simu_basic:
@@ -750,7 +812,7 @@ Proof.
       rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
     * Simpl.
     * intros rr; destruct rr; Simpl.
-      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g FP)]]; subst; Simpl.
 (* Freeframe *)
   - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rs GPR12) eqn:SPeq; try discriminate.
     destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv H0.
@@ -758,7 +820,7 @@ Proof.
     * simpl. pose (H1 GPR12); simpl in e; rewrite e. rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
       Simpl. rewrite e. rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
     * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g FP)]]; subst; Simpl.
 (* Pget *)
   - simpl in H. destruct rs0 eqn:rs0eq; try discriminate. inv H. inv H0.
     eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
@@ -801,6 +863,22 @@ Proof.
   intros. destruct ex.
   - simpl in *. inv H1. destruct c; destruct i; try discriminate.
     all: try (inv H0; eexists; split; try split; [ simpl control_eval; pose (H3 PC); simpl in e; rewrite e; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
+    (* Pdiv *)
+    + destruct (Val.divs _ _) eqn:DIVS; try discriminate. inv H0. unfold nextblock in DIVS. repeat (rewrite Pregmap.gso in DIVS; try discriminate).
+      eexists; split; try split.
+      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
+        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVS.
+        Simpl.
+      * Simpl.
+      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
+    (* Pdivu *)
+    + destruct (Val.divu _ _) eqn:DIVU; try discriminate. inv H0. unfold nextblock in DIVU. repeat (rewrite Pregmap.gso in DIVU; try discriminate).
+      eexists; split; try split.
+      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
+        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVU.
+        Simpl.
+      * Simpl.
+      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
     (* Pj_l *)
     + unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock _ _ _) eqn:NB; try discriminate. inv H0.
       eexists; split; try split.
@@ -992,6 +1070,12 @@ Lemma exec_exit_none:
 Proof.
   intros. inv H0. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try reflexivity; try discriminate.
+(* Pdiv *)
+  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
+    destruct (Val.divs _ _); try discriminate; auto.
+(* Pdivu *)
+  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
+    destruct (Val.divu _ _); try discriminate; auto.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e in H1. clear e.
     unfold goto_label_deps in H1. unfold goto_label.
@@ -1103,6 +1187,11 @@ Lemma forward_simu_exit_stuck:
 Proof.
   intros. inv H1. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
+(* Pdiv *)
+  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
+    destruct (Val.divs _ _); try discriminate; auto.
+  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
+    destruct (Val.divu _ _); try discriminate; auto.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e. unfold goto_label_deps. unfold goto_label in H0.
     destruct (label_pos _ _ _); auto. clear e. destruct (rs PC); auto. discriminate.
@@ -1336,6 +1425,7 @@ Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   match n with
     Pcompiw _ => "Pcompiw"
   | Paddiw => "Paddiw"
+  | Pmuliw => "Pmuliw"
   | Pandiw => "Pandiw"
   | Pnandiw => "Pnandiw"
   | Poriw => "Poriw"
@@ -1357,6 +1447,7 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   match n with
     Pcompil _ => "Pcompil"
   | Paddil => "Paddil"
+  | Pmulil => "Pmulil"
   | Pandil => "Pandil"
   | Pnandil => "Pnandil"
   | Poril => "Poril"
@@ -1365,6 +1456,22 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   | Pnxoril => "Pnxoril"
   | Pandnil => "Pandnil"
   | Pornil => "Pornil"
+  end.
+
+Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
+  match n with
+  | Pmaddw  => "Pmaddw"
+  | Pmaddl  => "Pmaddl"
+  end.
+
+Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
+  match n with
+  | Pmaddiw => "Pmaddw"
+  end.
+
+Definition string_of_name_arri64 (n: arith_name_arri64): pstring :=
+  match n with
+  | Pmaddil => "Pmaddl"
   end.
 
 Definition string_of_arith (op: arith_op): pstring :=
@@ -1378,6 +1485,9 @@ Definition string_of_arith (op: arith_op): pstring :=
   | OArithRRR n => string_of_name_rrr n
   | OArithRRI32 n _ => string_of_name_rri32 n
   | OArithRRI64 n _ => string_of_name_rri64 n
+  | OArithARRR n => string_of_name_arrr n
+  | OArithARRI32 n _ => string_of_name_arri32 n
+  | OArithARRI64 n _ => string_of_name_arri64 n
   end.
 
 Definition string_of_name_lrro (n: load_name_rro) : pstring :=
@@ -1421,6 +1531,8 @@ Definition string_of_control (op: control_op) : pstring :=
   | Oj_l _ => "Oj_l"
   | Ocb _ _ => "Ocb"
   | Ocbu _ _ => "Ocbu"
+  | Odiv => "Odiv"
+  | Odivu => "Odivu"
   | OError => "OError"
   | OIncremPC _ => "OIncremPC"
   end.

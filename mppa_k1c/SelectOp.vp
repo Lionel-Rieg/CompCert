@@ -128,6 +128,14 @@ Nondetfunction add (e1: expr) (e2: expr) :=
       addimm n1 (Eop Oadd (t1:::t2:::Enil))
   | t1, Eop (Oaddimm n2) (t2:::Enil) =>
       addimm n2 (Eop Oadd (t1:::t2:::Enil))
+  | t1, (Eop Omul (t2:::t3:::Enil)) =>
+      Eop Omadd (t1:::t2:::t3:::Enil)
+  | (Eop Omul (t2:::t3:::Enil)), t1 =>
+      Eop Omadd (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omulimm n) (t2:::Enil)) =>
+      Eop (Omaddimm n) (t1:::t2:::Enil)
+  | (Eop (Omulimm n) (t2:::Enil)), t1 =>
+      Eop (Omaddimm n) (t1:::t2:::Enil)
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 
@@ -211,7 +219,7 @@ Definition mulimm_base (n1: int) (e2: expr) :=
   | i :: j :: nil =>
       Elet e2 (add (shlimm (Eletvar 0) i) (shlimm (Eletvar 0) j))
   | _ =>
-      Eop Omul (Eop (Ointconst n1) Enil ::: e2 ::: Enil)
+      Eop (Omulimm n1) (e2 ::: Enil)
   end.
 
 Nondetfunction mulimm (n1: int) (e2: expr) :=

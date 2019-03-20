@@ -95,6 +95,7 @@ let arith_rrr_str = function
 let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
+  | Pmuliw -> "Pmuliw"
   | Pandiw -> "Pandiw"
   | Pnandiw -> "Pnandiw"
   | Poriw -> "Poriw"
@@ -114,6 +115,7 @@ let arith_rri32_str = function
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
+  | Pmulil -> "Pmulil"
   | Pandil -> "Pandil"
   | Pnandil -> "Pnandil"
   | Poril -> "Poril"
@@ -123,6 +125,10 @@ let arith_rri64_str = function
   | Pandnil -> "Pandnil"
   | Pornil -> "Pornil"
 
+let arith_arrr_str = function
+  | Pmaddw -> "Pmaddw"
+  | Pmaddl -> "Pmaddl"
+            
 let arith_ri32_str = "Pmake"
 
 let arith_ri64_str = "Pmakel"
@@ -162,6 +168,12 @@ let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Re
 
 let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
+let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+
+let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+
+let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
+
 let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
 
 let arith_r_rec i rd = match i with
@@ -173,6 +185,10 @@ let arith_rec i =
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
+  (* Seems like single constant constructor types are elided *)
+  | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
+  | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
+  | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
   | PArithRF32 (rd, f) -> { inst = arith_rf32_str; write_locs = [Reg (IR rd)]; read_locs = [];
@@ -206,6 +222,7 @@ let basic_rec i =
   | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None ; is_control = false}
 
 let expand_rec = function
+  | Pdiv | Pdivu -> { inst = "Pdiv"; write_locs = [Reg (IR GPR0)]; read_locs = [Reg (IR GPR0); Reg (IR GPR1)]; imm = None; is_control = true }
   | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
@@ -399,6 +416,7 @@ type real_instruction =
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
+  | Maddw | Maddd
   | Make | Nop  | Sxwd  | Zxwd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
@@ -422,8 +440,8 @@ let ab_inst_to_real = function
   | "Pcompl" | "Pcompil" -> Compd
   | "Pfcompw" -> Fcompw
   | "Pfcompl" -> Fcompd
-  | "Pmulw" -> Mulw
-  | "Pmull" -> Muld
+  | "Pmulw" | "Pmuliw" -> Mulw
+  | "Pmull" | "Pmulil" -> Muld
   | "Porw" | "Poriw" -> Orw
   | "Pnorw" | "Pnoriw" -> Norw
   | "Porl" | "Poril" -> Ord
@@ -436,6 +454,7 @@ let ab_inst_to_real = function
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
   | "Proriw" -> Rorw
+  | "Pmaddw" | "Pmaddiw" -> Maddw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
@@ -445,6 +464,7 @@ let ab_inst_to_real = function
   | "Pnxorl" | "Pnxoril" -> Nxord
   | "Pandnl" | "Pandnil" -> Andnd
   | "Pornl" | "Pornil" -> Ornd
+  | "Pmaddl" -> Maddd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Psxwd" -> Sxwd
@@ -477,7 +497,7 @@ let ab_inst_to_real = function
   | "Psd" | "Psd_a" | "Pfsd" -> Sd
 
   | "Pcb" | "Pcbu" -> Cb
-  | "Pcall" -> Call
+  | "Pcall" | "Pdiv" | "Pdivu" -> Call
   | "Picall" -> Icall
   | "Pgoto" | "Pj_l" -> Goto
   | "Pigoto" -> Igoto
@@ -506,11 +526,13 @@ let rec_to_usage r =
                                   (* I do not know yet in which context Ofslow can be used by CompCert *)
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
-  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw | Nxorw | Andnw | Ornw -> 
+  | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
+  | Nxorw | Andnw | Ornw  -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
-  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord | Nxord | Andnd | Ornd -> 
+  | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
+  | Nxord | Andnd | Ornd -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -530,10 +552,10 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw -> (match encoding with None -> mau
+  | Mulw| Maddw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
@@ -566,7 +588,7 @@ let real_inst_to_latency = function
   | Sxwd | Zxwd | Fcompw | Fcompd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
-  | Mulw | Muld -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
+  | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
   | Sb | Sh | Sw | Sd -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1

@@ -85,7 +85,8 @@ Module Pregmap := EMap(PregEq).
 (** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
-Notation "'FP'" := GPR14 (only parsing) : asm.
+Notation "'FP'" := GPR17 (only parsing) : asm.
+Notation "'MFP'" := R17 (only parsing) : asm.
 Notation "'GPRA'" := GPR16 (only parsing) : asm.
 Notation "'RTMP'" := GPR32 (only parsing) : asm.
 
@@ -178,6 +179,8 @@ Inductive ex_instruction : Type :=
 
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
+  | Pdiv                                              (**r 32 bits integer division, call to __divdi3 *)
+  | Pdivu                                             (**r 32 bits integer division, call to __udivdi3 *)
 .
 
 (** FIXME: comment not up to date !
@@ -376,6 +379,7 @@ Inductive arith_name_rri32 : Type :=
   | Pcompiw (it: itest)                             (**r comparison imm word *)
 
   | Paddiw                                          (**r add imm word *)
+  | Pmuliw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
   | Pnandiw                                         (**r nand imm word *)
   | Poriw                                           (**r or imm word *)
@@ -396,6 +400,7 @@ Inductive arith_name_rri32 : Type :=
 Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
+  | Pmulil                                          (**r mul immediate long *) 
   | Pandil                                          (**r and immediate long *) 
   | Pnandil                                         (**r nand immediate long *) 
   | Poril                                           (**r or immediate long *) 
@@ -404,6 +409,19 @@ Inductive arith_name_rri64 : Type :=
   | Pnxoril                                         (**r nxor immediate long *) 
   | Pandnil                                         (**r andn immediate long *)
   | Pornil                                          (**r orn immediate long *)
+.
+
+Inductive arith_name_arrr : Type :=
+  | Pmaddw                                           (**r multiply add word *)
+  | Pmaddl                                           (**r multiply add long *)
+.
+
+Inductive arith_name_arri32 : Type :=
+  | Pmaddiw                                           (**r multiply add word *)
+.
+
+Inductive arith_name_arri64 : Type :=
+  | Pmaddil                                           (**r multiply add long *)
 .
 
 Inductive ar_instruction : Type :=
@@ -416,6 +434,9 @@ Inductive ar_instruction : Type :=
   | PArithRRR   (i: arith_name_rrr)   (rd rs1 rs2: ireg)
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
+  | PArithARRR   (i: arith_name_arrr)   (rd rs1 rs2: ireg)
+  | PArithARRI32 (i: arith_name_arri32) (rd rs: ireg) (imm: int)
+  | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
 
 Coercion PArithR:       arith_name_r        >-> Funclass.
@@ -427,6 +448,9 @@ Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
+Coercion PArithARRR:     arith_name_arrr      >-> Funclass.
+Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
+Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
 
 Inductive basic : Type :=
   | PArith          (i: ar_instruction)
@@ -522,9 +546,8 @@ Proof.
     assert (b :: body = nil). eapply H; eauto. discriminate.
   - destruct body; destruct exit.
     all: simpl; auto; try constructor.
-    + exploreInst.
+    + exploreInst; try discriminate.
         simpl. contradiction.
-        discriminate.
     + intros. discriminate.
 Qed.
 
@@ -1149,6 +1172,7 @@ Definition arith_eval_rri32 n v i :=
   match n with
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
+  | Pmuliw  => Val.mul   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
   | Pnandiw => Val.notint (Val.and  v (Vint i))
   | Poriw   => Val.or    v (Vint i)
@@ -1170,6 +1194,7 @@ Definition arith_eval_rri64 n v i :=
   match n with
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
+  | Pmulil  => Val.mull v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
   | Pnandil  => Val.notl (Val.andl v (Vlong i))
   | Poril   => Val.orl  v (Vlong i)
@@ -1179,6 +1204,22 @@ Definition arith_eval_rri64 n v i :=
   | Pandnil => Val.andl (Val.notl v) (Vlong i)
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
   end.
+
+Definition arith_eval_arrr n v1 v2 v3 :=
+  match n with
+  | Pmaddw => Val.add v1 (Val.mul v2 v3)
+  | Pmaddl => Val.addl v1 (Val.mull v2 v3)
+  end.                    
+
+Definition arith_eval_arri32 n v1 v2 v3 :=
+  match n with
+  | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
+  end.                    
+
+Definition arith_eval_arri64 n v1 v2 v3 :=
+  match n with
+  | Pmaddil => Val.addl v1 (Val.mull v2 (Vlong v3))
+  end.                    
 
 Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   match ai with
@@ -1196,6 +1237,12 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
   | PArithRRI32 n d s i => rs#d <- (arith_eval_rri32 n rs#s i)
 
   | PArithRRI64 n d s i => rs#d <- (arith_eval_rri64 n rs#s i)
+
+  | PArithARRR n d s1 s2 => rs#d <- (arith_eval_arrr n rs#d rs#s1 rs#s2)
+
+  | PArithARRI32 n d s i => rs#d <- (arith_eval_arri32 n rs#d rs#s i)
+
+  | PArithARRI64 n d s i => rs#d <- (arith_eval_arri64 n rs#d rs#s i)
   end.
 
 (** * load/store *)
@@ -1436,10 +1483,20 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       | (None, _) => Stuck
       end
 
-
 (** Pseudo-instructions *)
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
+  | Pdiv =>
+      match Val.divs (rs GPR0) (rs GPR1) with
+      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
+      | None => Stuck
+      end
+
+  | Pdivu =>
+      match Val.divu (rs GPR0) (rs GPR1) with
+      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
+      | None => Stuck
+      end
   end
   | None => Next rs m
 end.
@@ -1461,7 +1518,7 @@ Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
   | R5  => GPR5  | R6  => GPR6  | R7  => GPR7  | R8  => GPR8  | R9  => GPR9
-  | R10 => GPR10 | R11 => GPR11 (* | R12 => GPR12 | R13 => GPR13 | *) | R14  => GPR14
+  | R10 => GPR10 | R11 => GPR11 (* | R12 => GPR12 | R13 => GPR13 | R14  => GPR14 *)
   | R15 => GPR15 (* | R16 => GPR16 *) | R17 => GPR17 | R18 => GPR18 | R19  => GPR19
   | R20 => GPR20 | R21 => GPR21 | R22 => GPR22 | R23 => GPR23 | R24  => GPR24
   | R25 => GPR25 | R26 => GPR26 | R27 => GPR27 | R28 => GPR28 | R29  => GPR29

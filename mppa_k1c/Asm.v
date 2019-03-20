@@ -50,6 +50,9 @@ Inductive instruction : Type :=
   | Psemi                                           (**r semi colon separating bundles *)
   | Pnop                                            (**r instruction that does nothing *)
 
+  | Pdiv                                            (**r 32 bits integer division *)
+  | Pdivu                                           (**r 32 bits integer division *)
+
   (** builtins *)
   | Pclzll (rd rs: ireg)
   | Pstsud (rd rs1 rs2: ireg)
@@ -148,6 +151,7 @@ Inductive instruction : Type :=
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
+  | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
 
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
   | Psubl               (rd rs1 rs2: ireg)          (**r sub long *)
@@ -163,6 +167,7 @@ Inductive instruction : Type :=
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
+  | Pmaddl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
 
   | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
   | Pfaddw              (rd rs1 rs2: ireg)          (**r Float addition word *)
@@ -175,6 +180,7 @@ Inductive instruction : Type :=
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
+  | Pmuliw              (rd rs: ireg) (imm: int)    (**r mul imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
   | Pnandiw             (rd rs: ireg) (imm: int)    (**r nand imm word *)
   | Poriw               (rd rs: ireg) (imm: int)    (**r or imm word *)
@@ -187,6 +193,7 @@ Inductive instruction : Type :=
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
   | Proriw              (rd rs: ireg) (imm: int)    (**r rotate right imm word *) 
+  | Pmaddiw             (rd rs: ireg) (imm: int)    (**r multiply add imm word *)
   | Psllil              (rd rs: ireg) (imm: int)    (**r shift left logical immediate long *)
   | Psrlil              (rd rs: ireg) (imm: int)    (**r shift right logical immediate long *)
   | Psrail              (rd rs: ireg) (imm: int)    (**r shift right arithmetic immediate long *)
@@ -194,6 +201,7 @@ Inductive instruction : Type :=
   (** Arith RRI64 *)
   | Pcompil (it: itest) (rd rs: ireg) (imm: int64)  (**r comparison imm long *)
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
+  | Pmulil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pnandil             (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Poril               (rd rs: ireg) (imm: int64)  (**r or immediate long *) 
@@ -202,13 +210,16 @@ Inductive instruction : Type :=
   | Pnxoril             (rd rs: ireg) (imm: int64)  (**r xor immediate long *)
   | Pandnil             (rd rs: ireg) (imm: int64)  (**r andn long *)
   | Pornil              (rd rs: ireg) (imm: int64)  (**r orn long *)
-  .
+  | Pmaddil             (rd rs: ireg) (imm: int64)  (**r multiply add imm long *)
+.
 
 (** Correspondance between Asmblock and Asm *)
 
 Definition control_to_instruction (c: control) :=
   match c with
   | PExpand (Asmblock.Pbuiltin ef args res) => Pbuiltin ef args res
+  | PExpand (Asmblock.Pdiv)                 => Pdiv
+  | PExpand (Asmblock.Pdivu)                => Pdivu
   | PCtlFlow Asmblock.Pret                  => Pret
   | PCtlFlow (Asmblock.Pcall l)             => Pcall l
   | PCtlFlow (Asmblock.Picall r)            => Picall r
@@ -315,6 +326,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RRI32 *)
   | PArithRRI32 (Asmblock.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
   | PArithRRI32 Asmblock.Paddiw rd rs imm       => Paddiw rd rs imm
+  | PArithRRI32 Asmblock.Pmuliw rd rs imm       => Pmuliw rd rs imm
   | PArithRRI32 Asmblock.Pandiw rd rs imm       => Pandiw rd rs imm
   | PArithRRI32 Asmblock.Pnandiw rd rs imm      => Pnandiw rd rs imm
   | PArithRRI32 Asmblock.Poriw rd rs imm        => Poriw rd rs imm
@@ -334,6 +346,7 @@ Definition basic_to_instruction (b: basic) :=
   (* RRI64 *)
   | PArithRRI64 (Asmblock.Pcompil it) rd rs imm => Pcompil it rd rs imm
   | PArithRRI64 Asmblock.Paddil rd rs imm       => Paddil rd rs imm
+  | PArithRRI64 Asmblock.Pmulil rd rs imm       => Pmulil rd rs imm
   | PArithRRI64 Asmblock.Pandil rd rs imm       => Pandil rd rs imm
   | PArithRRI64 Asmblock.Pnandil rd rs imm      => Pnandil rd rs imm
   | PArithRRI64 Asmblock.Poril rd rs imm        => Poril rd rs imm
@@ -343,6 +356,16 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI64 Asmblock.Pandnil rd rs imm      => Pandnil rd rs imm
   | PArithRRI64 Asmblock.Pornil rd rs imm       => Pornil rd rs imm
 
+  (** ARRR *)
+  | PArithARRR Asmblock.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
+  | PArithARRR Asmblock.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
+
+  (** ARRI32 *)
+  | PArithARRI32 Asmblock.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
+
+  (** ARRI64 *)
+  | PArithARRI64 Asmblock.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
+                                                          
   (** Load *)
   | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra ofs
   | PLoadRRO Asmblock.Plbu rd ra ofs  => Plbu rd ra ofs

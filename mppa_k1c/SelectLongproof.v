@@ -185,6 +185,10 @@ Proof.
        with (Val.addl (Val.addl x v1) (Vlong n2)).
     apply eval_addlimm. EvalOp.
     repeat rewrite Val.addl_assoc. reflexivity.
+  - subst. TrivialExists.
+  - subst. rewrite Val.addl_commut. TrivialExists.
+  - subst. TrivialExists.
+  - subst. rewrite Val.addl_commut. TrivialExists.
   - TrivialExists.
 Qed.
 

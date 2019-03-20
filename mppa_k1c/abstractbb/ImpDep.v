@@ -386,7 +386,7 @@ Variable print_error_end: hdeps -> hdeps -> ?? unit.
 Variable print_error: pstring -> ?? unit.
 
 Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
-  DO r <~ (TRY 
+  DO r <~ (TRY
     DO d1 <~ hbblock_deps (hC hco_tree) (hC hco_list) dbg1 log1 p1 ;;
     DO d2 <~ hbblock_deps (hC_known hco_tree) (hC_known hco_list) dbg2 log2 p2 ;;
     DO b <~ Dict.eq_test d1 d2 ;;
@@ -395,7 +395,7 @@ Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
       print_error_end d1 d2 ;;
       RET false
     )
-  CATCH_FAIL s, _ => 
+  CATCH_FAIL s, _ =>
     print_error s;;
     RET false
   ENSURE (fun b => b=true -> forall ge, bblock_equiv ge p1 p2));;
@@ -633,7 +633,7 @@ Definition print_witness ext exl cr msg :=
      println(r);;
      println("=> encoded on " +; msg +; " graph as: ");;
      print_raw_hlist pl
-  | _ => FAILWITH "No witness info"
+  | _ => println "Unexpected failure: no witness info (hint: hash-consing bug ?)"
   end.
 
 

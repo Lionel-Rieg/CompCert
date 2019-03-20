@@ -401,15 +401,14 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
+      emit (Pmv (Asmblock.GPR17, stack_pointer));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
-        let full_sz = Z.add sz (Z.of_uint extra_sz) in begin
-          expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
-          emit Psemi;
-          expand_storeind_ptr Asmblock.GPR14 stack_pointer ofs;
-          expand_addptrofs Asmblock.GPR14 stack_pointer (Ptrofs.repr full_sz)
-        end;
+        let full_sz = Z.add sz (Z.of_uint extra_sz) in
+        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
+        emit Psemi;
+        expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
             sz in
@@ -419,8 +418,7 @@ let expand_instruction instr =
       end else begin
         expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
         emit Psemi;
-        expand_storeind_ptr Asmblock.GPR14 stack_pointer ofs;
-        expand_addptrofs Asmblock.GPR14 stack_pointer (Ptrofs.repr sz);
+        expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
         emit Psemi;
         vararg_start_ofs := None
       end
@@ -431,7 +429,6 @@ let expand_instruction instr =
         let n = arguments_size sg in
         if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize)
       end else 0 in
-     expand_loadind_ptr Asmblock.GPR14 stack_pointer ofs;
      expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
 (*| Pseqw(rd, rs1, rs2) ->

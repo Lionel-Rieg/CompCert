@@ -758,9 +758,9 @@ Qed. *)
   the unwanted behaviour. *)
 
 
-Remark preg_of_not_FP: forall r, negb (mreg_eq r R14) = true -> IR FP <> preg_of r.
+Remark preg_of_not_FP: forall r, negb (mreg_eq r MFP) = true -> IR FP <> preg_of r.
 Proof.
-  intros. change (IR FP) with (preg_of R14). red; intros.
+  intros. change (IR FP) with (preg_of MFP). red; intros.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
 Qed.
 
@@ -935,7 +935,8 @@ Proof.
   intros until tbb. intros Hnonil Hnobuiltin GENB. unfold gen_bblocks in GENB.
   destruct (extract_ctl tex) eqn:ECTL.
   - destruct c.
-    + destruct i. assert False. eapply Hnobuiltin. eauto. destruct H.
+    + destruct i; try (inv GENB; simpl; auto; fail).
+      assert False. eapply Hnobuiltin. eauto. destruct H.
     + inv GENB. simpl. auto.
   - inversion Hnonil.
     + destruct tbdy as [|bi tbdy]; try (contradict H; simpl; auto; fail). inv GENB. auto.
