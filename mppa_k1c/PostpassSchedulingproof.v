@@ -237,7 +237,7 @@ Proof.
   rewrite <- Zplus_mod. auto.
 Qed.
 
-Section PRESERVATION.
+Section PRESERVATION_ASMBLOCK.
 
 Variables prog tprog: program.
 Hypothesis TRANSL: match_prog prog tprog.
@@ -668,23 +668,37 @@ Proof.
   - apply transf_step_correct.
 Qed.
 
-(* TODO:
+End PRESERVATION_ASMBLOCK.
+
 Require Import Asmvliw.
 
-Theorem transf_program_correct: 
+Section PRESERVATION_ASMVLIW.
+
+Variables prog tprog: program.
+Hypothesis TRANSL: match_prog prog tprog.
+Let ge := Genv.globalenv prog.
+Let tge := Genv.globalenv tprog.
+
+Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
 Proof.
-  eapply forward_simulation_one_one. (* FIXME *)
 Admitted.
+
+End PRESERVATION_ASMVLIW.
+
+Section PRESERVATION.
+
+Variables prog tprog: program.
+Hypothesis TRANSL: match_prog prog tprog.
+Let ge := Genv.globalenv prog.
+Let tge := Genv.globalenv tprog.
 
 Theorem transf_program_correct: 
   forward_simulation (Asmblock.semantics prog) (Asmvliw.semantics tprog).
 Proof.
-  eapply forward_simulation_compose. (* FIXME *)
-Admitted.
-
-*)
-
-
+  eapply compose_forward_simulations.
+  eapply transf_program_correct_Asmblock; eauto.
+  eapply transf_program_correct_Asmvliw; eauto.
+Qed.
 
 End PRESERVATION.

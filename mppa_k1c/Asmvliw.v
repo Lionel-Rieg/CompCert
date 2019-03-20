@@ -31,7 +31,8 @@ Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
 Require Import Errors.
-Require Import Asmblock.
+Require Export Asmblock.
+Require Import Sorting.Permutation.
 
 Local Open Scope asm.
 
@@ -235,8 +236,6 @@ Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rs: regset) (m: 
 
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
   parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs m.
-
-Require Import Sorting.Permutation.
 
 Definition parexec_bblock (f: function) (b: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
    exists bdy1 bdy2, Permutation (bdy1++bdy2) (body b) /\ 
