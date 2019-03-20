@@ -1215,6 +1215,7 @@ let convertFundef loc env fd =
 
 let re_builtin = Str.regexp "__builtin_"
 let re_runtime = Str.regexp "__compcert_i64_"
+let re_runtime32 = Str.regexp "__compcert_i32_"
 
 let convertFundecl env (sto, id, ty, optinit) =
   let (args, res, cconv) =
@@ -1228,6 +1229,7 @@ let convertFundecl env (sto, id, ty, optinit) =
     if id.name = "malloc" then AST.EF_malloc else
     if id.name = "free" then AST.EF_free else
     if Str.string_match re_runtime id.name 0 then  AST.EF_runtime(id'', sg) else
+    if Str.string_match re_runtime32 id.name 0 then  AST.EF_runtime(id'', sg) else
     if Str.string_match re_builtin id.name 0
     && List.mem_assoc id.name builtins.Builtins.functions
     then AST.EF_builtin(id'', sg)
