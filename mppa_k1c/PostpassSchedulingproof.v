@@ -670,7 +670,7 @@ Qed.
 
 End PRESERVATION_ASMBLOCK.
 
-Require Import Asmvliw.
+Require Import Asmvliw List.
 
 Section PRESERVATION_ASMVLIW.
 
@@ -679,10 +679,64 @@ Hypothesis TRANSL: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
+
+Lemma transf_blocks_checks_all_bundles lbb bundles:
+  transf_blocks (lbb : list bblock) = OK bundles ->
+  List.Forall (fun bb => verify_par_bblock bb = OK tt) bundles.
+Proof.
+Admitted.
+
+Lemma all_bundles_are_checked b ofs f bundle:
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  verify_par_bblock bundle = OK tt. 
+Proof.
+  unfold match_prog, match_program, match_program_gen in TRANSL.
+  (* HOW CAN WE PROVE THIS FROM transf_blocks_checks_all_bundles ?? *)
+Admitted.
+
+Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  verify_par_bblock bundle = OK tt ->
+  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+Proof.
+Admitted.
+
+Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
+  (* rs PC = Vptr b ofs -> *) (* needed somewhere ? *)
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+Proof.
+  intros; eapply checked_bundles_are_parexec_equiv; eauto.
+  eapply all_bundles_are_checked; eauto.
+Qed.
+
+Lemma seqexec_parexec_wio b ofs f bundle rs rs' m m':
+  (* rs PC = Vptr b ofs -> *) (* needed somewhere ? *)
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  parexec_wio_bblock (globalenv (semantics tprog)) f bundle rs m = Next rs' m'.
+Proof.
+  intros; erewrite <- seqexec_parexec_equiv; eauto.
+  eapply parexec_bblock_write_in_order.
+Qed.
+
+
 Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
 Proof.
-Admitted.
+  eapply forward_simulation_step with (match_states:=fun (s1:Asmblock.state) s2 => s1=s2); eauto.
+  - intros; subst; auto.
+  - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
+    + eapply exec_step_internal; eauto.
+      eapply seqexec_parexec_wio; eauto.
+      intros; eapply seqexec_parexec_equiv; eauto.
+    + eapply exec_step_builtin; eauto.
+    + eapply exec_step_external; eauto.
+Qed.
 
 End PRESERVATION_ASMVLIW.
 
