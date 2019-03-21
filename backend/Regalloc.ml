@@ -1067,7 +1067,7 @@ let make_parmove srcs dsts itmp ftmp k =
     | Locations.S(sl, ofs, ty), R rd ->
         code := LTL.Lgetstack(sl, ofs, ty, rd) :: !code
     | Locations.S(sls, ofss, tys), Locations.S(sld, ofsd, tyd) ->
-        let tmp = temp_for (class_of_type tys) in
+        let tmp = temp_for (Machregsaux.class_of_type tys) in
         (* code will be reversed at the end *)
         code := LTL.Lsetstack(tmp, sld, ofsd, tyd) ::
                 LTL.Lgetstack(sls, ofss, tys, tmp) :: !code
