@@ -673,7 +673,76 @@ End PRESERVATION_ASMBLOCK.
 
 
 
-Require Import Asmvliw List.
+Require Import Asmvliw.
+
+
+Lemma verified_par_checks_alls_bundles lb x: forall bundle,
+  verify_par lb = OK x ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  induction lb; simpl; try tauto.
+  intros bundle H; monadInv H.
+  destruct 1; subst; eauto.
+  destruct x0; auto.
+Qed.
+
+
+Lemma verified_schedule_nob_checks_alls_bundles bb lb bundle:
+  verified_schedule_nob bb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  unfold verified_schedule_nob. intros H;
+  monadInv H. destruct x3. 
+  intros; eapply verified_par_checks_alls_bundles; eauto.
+Qed.
+
+Lemma verify_par_bblock_PExpand bb i:
+  exit bb = Some (PExpand i) -> verify_par_bblock bb = OK tt.
+Proof.
+  destruct bb as [h bdy ext H]; simpl.
+  intros; subst. destruct i.
+  generalize H.
+  rewrite <- AB.wf_bblock_refl in H.
+  destruct H as [H H0].
+  unfold AB.builtin_alone in H0. erewrite H0; eauto.
+Qed.
+
+Local Hint Resolve verified_schedule_nob_checks_alls_bundles.
+
+Lemma verified_schedule_checks_alls_bundles bb lb bundle:
+  verified_schedule bb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  unfold verified_schedule. remember (exit bb) as exb.
+  destruct exb as [c|]; eauto.
+  destruct c as [i|]; eauto.
+  destruct i; intros H. inversion_clear H; simpl.
+  intuition subst.
+  intros; eapply verify_par_bblock_PExpand; eauto.
+Qed.
+
+Lemma transf_blocks_checks_all_bundles lbb: forall lb bundle,
+  transf_blocks lbb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  induction lbb; simpl.
+  - intros lb bundle H; inversion_clear H. simpl; try tauto.
+  - intros lb bundle H0.
+    monadInv H0.
+    rewrite in_app. destruct 1; eauto.
+    eapply verified_schedule_checks_alls_bundles; eauto.
+Qed.
+
+Lemma find_bblock_forall_inv lb P: 
+  (forall b, List.In b lb -> P b) ->
+  forall ofs b, find_bblock ofs lb = Some b -> P b.
+Proof.
+  induction lb; simpl; try congruence.
+  intros H ofs b.
+  destruct (zlt ofs 0); try congruence.
+  destruct (zeq ofs 0); eauto.
+  intros X; inversion X; eauto.
+Qed.
 
 Section PRESERVATION_ASMVLIW.
 
@@ -681,35 +750,6 @@ Variables prog tprog: program.
 Hypothesis TRANSL: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
-
-Lemma find_bblock_split lb1: forall ofs lb2 bundle, 
-  find_bblock ofs (lb1 ++ lb2) = Some bundle ->  
-  find_bblock ofs lb1 = Some bundle \/ (exists ofs', find_bblock ofs' lb2 = Some bundle).
-Proof.
-  induction lb1; simpl; eauto.
-  intros ofs lbd2 bundle H.
-  destruct (zlt ofs 0); eauto.
-  destruct (zeq ofs 0); eauto.
-Qed.
-
-Lemma verified_schedule_checks_alls_bundles bb: forall ofs lb bundle,
-  verified_schedule bb = OK lb ->
-  find_bblock ofs lb = Some bundle ->
-  verify_par_bblock bundle = OK tt.
-Proof.
-Admitted.
-
-Lemma transf_blocks_checks_all_bundles lbb: forall ofs lb bundle,
-  transf_blocks lbb = OK lb ->
-  find_bblock ofs lb = Some bundle -> verify_par_bblock bundle = OK tt.
-Proof.
-  induction lbb; simpl.
-  - intros ofs lb bundle H; inversion_clear H. simpl; try congruence.
-  - intros ofs lb bundle H0.
-    monadInv H0.
-    intros H; destruct (find_bblock_split _ _ _ _ H) as [|(ofs' & Hofs')]; eauto.
-    eapply verified_schedule_checks_alls_bundles; eauto.
-Qed.
 
 Lemma all_bundles_are_checked b ofs f bundle:
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
@@ -726,13 +766,13 @@ Proof.
   inversion Heqf2 as [H2]. subst; clear Heqf2.
   unfold transf_fundef, transf_partial_fundef in H.
   destruct f1 as [f1|f1]; try congruence.
-  monadInv H. unfold transf_function in EQ.
-  monadInv EQ.
+  unfold transf_function, transl_function in H.
+  monadInv H. monadInv EQ.
   destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks _))); simpl in *|-; try congruence.
   injection EQ1; intros; subst.
-  unfold transl_function in EQ0.
   monadInv EQ0. simpl in * |-.
-  exploit transf_blocks_checks_all_bundles; eauto.
+  intros; pattern bundle; eapply find_bblock_forall_inv; eauto.
+  intros; exploit transf_blocks_checks_all_bundles; eauto.
 Qed.
 
 Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
