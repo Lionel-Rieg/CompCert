@@ -42,6 +42,7 @@ Inductive control_op :=
   | Odivu
   | OError
   | OIncremPC (sz: Z)
+  | Ojumptable (l: list label)
 .
 
 Inductive arith_op :=
@@ -180,6 +181,15 @@ Definition eval_branch_deps (f: function) (l: label) (vpc: val) (res: option boo
 Definition control_eval (o: control_op) (l: list value) :=
   let (ge, fn) := Ge in
   match o, l with
+  | (Ojumptable tbl), [Val index; Val vpc] =>
+    match index with
+    | Vint n => 
+      match list_nth_z tbl (Int.unsigned n) with
+      | None => None
+      | Some lbl => goto_label_deps fn lbl vpc
+      end
+    | _ => None
+    end
   | Oj_l l, [Val vpc] => goto_label_deps fn l vpc
   | Ocb bt l, [Val v; Val vpc] =>
     match cmp_for_btest bt with
@@ -540,6 +550,7 @@ Definition trans_control (ctl: control) : macro :=
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
+  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil)) ]
   | Pdiv => [(#GPR0, Op (Control Odiv) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pdivu => [(#GPR0, Op (Control Odivu) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
@@ -879,8 +890,37 @@ Proof.
         Simpl.
       * Simpl.
       * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
+    (* Pjumptable *)
+    + unfold goto_label in *.
+      destruct (nextblock b rs r) eqn:NB_r in *; try discriminate.
+      destruct (list_nth_z _ _) eqn:LI in *; try discriminate.
+      destruct (label_pos _ _ _) eqn:LPOS in *; try discriminate.
+      rewrite Pregmap.gso in H0; try discriminate.
+      rewrite Pregmap.gso in H0; try discriminate.
+      eexists; split; try split.
+      * simpl control_eval.
+        rewrite (H3 PC).
+        simpl.
+        unfold goto_label_deps.
+        Simpl.
+        rewrite H3.
+        destruct (rs r); try discriminate.
+      ++ 
+      destruct (nextblock b rs PC) eqn:NB_PC in *; try discriminate.
+      inv H0.
+      
+      destruct (s (# PC)) eqn:sPC in *; try discriminate.
+      rewrite Pregmap.gso; try discriminate.
+      destruct (nextblock b rs r) eqn:NB_r in *; try discriminate.
+      destruct (list_nth_z _ _) eqn:LI in *; try discriminate.
+      destruct (label_pos _ _ _) eqn:LPOS in *; try discriminate.
+      destruct (nextblock b rs PC) eqn:NB_PC in *; try discriminate.
+      inv H1; try discriminate.
+      assumption.
     (* Pj_l *)
-    + unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock _ _ _) eqn:NB; try discriminate. inv H0.
+    + unfold goto_label in H0.
+      destruct (label_pos _ _ _) eqn:LPOS; try discriminate.
+      destruct (nextblock _ _ _) eqn:NB; try discriminate. inv H0.
       eexists; split; try split.
       * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl. unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB.
         rewrite NB. reflexivity.
