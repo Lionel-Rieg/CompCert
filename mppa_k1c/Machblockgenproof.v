@@ -270,6 +270,22 @@ Qed.
 
 Axiom TODO: False. (* A ELIMINER *)
 
+Lemma find_label_is_end_block_is_label i l c bl:
+      is_end_block (trans_inst i) bl ->
+      is_trans_code c bl ->
+      i <> Mlabel l -> find_label l (add_to_new_bblock (trans_inst i) :: bl) = find_label l bl.  
+Admitted.
+
+
+(*
+Lemma find_label_is_end_block_is_label2 i bl:
+  forall bl',
+    (exists l, i=Mlabel l) ->
+    bl = add_to_new_bblock (trans_inst i) :: bl' ->
+    bl' = nil.
+Admitted.
+ *)
+
 Lemma find_label_transcode_preserved:
   forall l c c',
   Mach.find_label l c = Some c' ->
@@ -277,9 +293,63 @@ Lemma find_label_transcode_preserved:
 Proof.
   intros l c. remember (trans_code _) as bl.
   rewrite <- is_trans_code_inv in * |-.
-  induction Heqbl;
-  elim TODO. (* A FAIRE *)
-Qed.
+  induction Heqbl.
+  + intros.
+    exists (l::nil).
+    split.
+    apply in_eq.
+    simpl.
+    discriminate.
+  + intros.
+    exploit Mach_find_label_split; eauto.
+    clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
+    - subst. simpl.
+      unfold add_label, is_label; simpl.
+      destruct (in_dec l (l::nil)) as [H0|H0].
+      * inversion H as [mbi H1 H2| | ].
+        subst bl.
+        inversion Heqbl.
+        subst c. simpl. eauto.
+      * destruct H0. simpl; auto.
+    - exploit IHHeqbl; eauto.
+      destruct 1 as (h & H3 & H4).
+      exists h.
+      split; auto.
+      rewrite (find_label_is_end_block_is_label i l c bl);auto.
+  + intros.
+    exploit Mach_find_label_split; eauto.
+    clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
+    - subst. simpl.
+      inversion H0 as [H1].
+      clear H0.
+      unfold add_label, is_label; simpl.
+      apply is_trans_code_inv in Heqbl.
+      rewrite <- Heqbl.
+      destruct (in_dec l (l :: header bh)) as [H0|H0].
+      * unfold concat.
+        exists (l :: nil).
+        split; simpl; eauto.
+      * destruct H0. simpl; eauto.
+    - exploit IHHeqbl; eauto.
+      destruct 1 as (h & H3 & H4).
+      simpl.
+      destruct (is_label l (add_label l0 bh)) eqn:H5.
+      (*
+      exists (l0::h).
+      ...*)
+      (* exists (l0::h).
+        split; simpl; eauto.
+        cut (is_label l bh = true). intros.
+        unfold find_label in H4. rewrite H1 in H4.
+        unfold add_label, concat; simpl.
+        destruct (trans_code c'). *)
+        
+      (*
+      exists h.
+      ...*)
+        
+Admitted.
+      
 
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
  induction c, (trans_code c) using trans_code_ind.
