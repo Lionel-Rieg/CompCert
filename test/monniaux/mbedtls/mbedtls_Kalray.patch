@@ -55,3 +55,16 @@ index 1255ff4be..103abe9a8 100644
  #endif
  
  /* Type for Hex parameters */
+diff --git a/tests/scripts/run-test-suites.pl b/tests/scripts/run-test-suites.pl
+index d0d4046..00cff26 100755
+--- a/tests/scripts/run-test-suites.pl
++++ b/tests/scripts/run-test-suites.pl
+@@ -59,7 +59,7 @@ for my $suite (@suites)
+     if( $verbose ) {
+         $command .= ' -v';
+     }
+-    my $result = `$command`;
++    my $result = `k1-cluster -- $command`;
+ 
+     $suite_cases_passed = () = $result =~ /.. PASS/g;
+     $suite_cases_failed = () = $result =~ /.. FAILED/g;
