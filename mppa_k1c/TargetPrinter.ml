@@ -498,7 +498,7 @@ module Target (*: TARGET*) =
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pnandil (rd, rs, imm) -> assert Archi.ptr64;
-         fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+         fprintf oc "	nandd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Poril (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	ord	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pnoril (rd, rs, imm) -> assert Archi.ptr64;
