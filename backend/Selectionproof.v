@@ -16,6 +16,7 @@ Require Import FunInd.
 Require Import Coqlib Maps.
 Require Import AST Linking Errors Integers Values Memory Events Globalenvs Smallstep.
 Require Import Switch Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectDiv SplitLong SelectLong Selection.
 Require Import SelectOpproof SelectDivproof SplitLongproof SelectLongproof.
 
