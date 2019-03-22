@@ -31,3 +31,8 @@ let register_by_name s =
   Machregs.register_by_name (coqstring_uppercase_ascii_of_camlstring s)
 
 let can_reserve_register r = Conventions1.is_callee_save r
+                                              
+let class_of_type = function
+  | AST.Tint | AST.Tlong -> 0
+  | AST.Tfloat | AST.Tsingle -> 1
+  | AST.Tany32 | AST.Tany64 -> assert false
