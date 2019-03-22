@@ -555,8 +555,6 @@ Definition trans_control (ctl: control) : macro :=
   | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil));
                             (#GPR62, Op (Constant Vundef) Enil);
                             (#GPR63, Op (Constant Vundef) Enil) ]
-  | Pdiv => [(#GPR0, Op (Control Odiv) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
-  | Pdivu => [(#GPR0, Op (Control Odivu) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
@@ -878,22 +876,6 @@ Proof.
   intros. destruct ex.
   - simpl in *. inv H1. destruct c; destruct i; try discriminate.
     all: try (inv H0; eexists; split; try split; [ simpl control_eval; pose (H3 PC); simpl in e; rewrite e; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
-    (* Pdiv *)
-    + destruct (Val.divs _ _) eqn:DIVS; try discriminate. inv H0. unfold nextblock in DIVS. repeat (rewrite Pregmap.gso in DIVS; try discriminate).
-      eexists; split; try split.
-      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
-        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVS.
-        Simpl.
-      * Simpl.
-      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
-    (* Pdivu *)
-    + destruct (Val.divu _ _) eqn:DIVU; try discriminate. inv H0. unfold nextblock in DIVU. repeat (rewrite Pregmap.gso in DIVU; try discriminate).
-      eexists; split; try split.
-      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e; clear e. simpl.
-        Simpl. pose (H3 GPR0); rewrite e; clear e. pose (H3 GPR1); rewrite e; clear e. rewrite DIVU.
-        Simpl.
-      * Simpl.
-      * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
     (* Pjumptable *)
     + unfold goto_label in *.
       repeat (rewrite Pregmap.gso in H0; try discriminate).
@@ -1104,12 +1086,6 @@ Lemma exec_exit_none:
 Proof.
   intros. inv H0. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try reflexivity; try discriminate.
-(* Pdiv *)
-  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
-    destruct (Val.divs _ _); try discriminate; auto.
-(* Pdivu *)
-  - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
-    destruct (Val.divu _ _); try discriminate; auto.
 (* Pjumptable *)
   - simpl in *. repeat (rewrite H3 in H1).
     destruct (rs r); try discriminate; auto. destruct (list_nth_z _ _); try discriminate; auto.
@@ -1226,11 +1202,7 @@ Lemma forward_simu_exit_stuck:
 Proof.
   intros. inv H1. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
-(* Pdiv *)
-  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
-    destruct (Val.divs _ _); try discriminate; auto.
-  - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
-    destruct (Val.divu _ _); try discriminate; auto.
+  (* Pjumptable *)
   - simpl in *. repeat (rewrite H3). destruct (rs r); try discriminate; auto. destruct (list_nth_z _ _); try discriminate; auto.
     unfold goto_label_deps. unfold goto_label in H0.
     destruct (label_pos _ _ _); auto. repeat (rewrite Pregmap.gso in H0; try discriminate). destruct (rs PC); auto. discriminate.

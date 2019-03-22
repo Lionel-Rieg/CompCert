@@ -16,6 +16,7 @@ Require Import FunInd.
 Require Import Coqlib Maps.
 Require Import AST Linking Errors Integers Values Memory Events Globalenvs Smallstep.
 Require Import Switch Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectDiv SplitLong SelectLong Selection.
 Require Import SelectOpproof SelectDivproof SplitLongproof SelectLongproof.
 
@@ -86,7 +87,7 @@ Lemma get_helpers_correct:
   forall p hf,
   get_helpers (prog_defmap p) = OK hf -> helper_functions_declared p hf.
 Proof.
-  intros. monadInv H. red; simpl. auto 20 using lookup_helper_correct.
+  intros. monadInv H. red; simpl. auto 22 using lookup_helper_correct.
 Qed.
 
 Theorem transf_program_match:
@@ -106,7 +107,7 @@ Proof.
   { unfold helper_declared; intros.
     destruct (prog_defmap_linkorder _ _ _ _ H0 H1) as (gd & P & Q).
     inv Q. inv H3. auto. }
-  red in H. decompose [Logic.and] H; clear H. red; auto 20.
+  red in H. decompose [Logic.and] H; clear H. red; auto 22.
 Qed.
 
 (** * Correctness of the instruction selection functions for expressions *)
@@ -164,7 +165,7 @@ Proof.
     generalize (match_program_defmap _ _ _ _ _ TRANSF id).
     unfold Cminor.fundef; rewrite H; intros R; inv R. inv H2.
     destruct H4 as (cu & A & B). monadInv B. auto. }
-  unfold helper_functions_declared; intros. decompose [Logic.and] H; clear H. auto 20.
+  unfold helper_functions_declared; intros. decompose [Logic.and] H; clear H. auto 22.
 Qed.
 
 Section CMCONSTR.

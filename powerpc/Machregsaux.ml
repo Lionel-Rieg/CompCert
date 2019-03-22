@@ -33,3 +33,8 @@ let register_by_name s =
 let can_reserve_register r =
   List.mem r Conventions1.int_callee_save_regs
   || List.mem r Conventions1.float_callee_save_regs
+                                              
+let class_of_type = function
+  | AST.Tint | AST.Tlong -> 0
+  | AST.Tfloat | AST.Tsingle -> 1
+  | AST.Tany32 | AST.Tany64 -> assert false

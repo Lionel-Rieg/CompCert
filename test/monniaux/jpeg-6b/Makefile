@@ -113,60 +113,6 @@ all: libjpeg.a cjpeg djpeg jpegtran rdjpgcom wrjpgcom
 %.i : %.c
 	$(CC) $(CFLAGS) -E $< -o $@
 
-# wrjpgcom.o : wrjpgcom.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdjpgcom.o : rdjpgcom.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdswitch.o : rdswitch.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdgif.o : rdgif.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# jmemmgr.o : jmemmgr.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# jerror.o : jerror.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# example.o : example.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# cjpeg.o : cjpeg.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# cdjpeg.o : cdjpeg.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# djpeg.o : djpeg.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdppm.o : rdppm.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdbmp.o : rdbmp.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdtarga.o : rdtarga.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# wrgif.o : wrgif.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# wrbmp.o : wrbmp.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# wrtarga.o : wrtarga.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# rdcolmap.o : rdcolmap.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
-# jpegtran.o : jpegtran.c
-# 	$(GCC) $(CFLAGS) -c $< -o $@
-
 libjpeg.a: $(LIBOBJECTS)
 	$(RM) libjpeg.a
 	$(AR) libjpeg.a  $(LIBOBJECTS)

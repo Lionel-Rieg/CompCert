@@ -12,8 +12,10 @@
 #define BUNZIP2 "bzcat %s"
 #define GZIP "gzip -c -f > %s"
 
+#if 0
 FILE * popen (const char *, const char*);
 int pclose (FILE *);
+#endif
 
 static PicoSAT * picosat;
 
@@ -49,7 +51,7 @@ parse (PicoSAT * picosat, int force)
   int ch, sign, lit, vars, clauses;
 
   lineno = 1;
-  inputid = fileno (input);
+  /* DM inputid = fileno (input); */
 
 SKIP_COMMENTS:
   ch = next ();
@@ -359,9 +361,11 @@ write_to_file (PicoSAT * picosat,
 
       writer (picosat, file);
 
+#ifndef NZIP
       if (pclose_file)
 	pclose (file);
       else
+#endif
 	fclose (file);
     }
   else
@@ -652,7 +656,7 @@ picosat_main (int argc, char **argv)
 	      err = 1;
 	    }
 	  else
-	    propagation_limit = atoll (argv[i]);
+	    propagation_limit = atol /* DM */ (argv[i]);
 	}
       else if (!strcmp (argv[i], "-i"))
 	{

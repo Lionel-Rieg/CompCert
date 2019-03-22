@@ -278,22 +278,6 @@ process_SOFn (int marker)
   image_width = read_2_bytes();
   num_components = read_1_byte();
 
-#ifdef NO_SWITCH
-  if (marker==M_SOF0)	process = "Baseline";
-  else if (marker==M_SOF1)	process = "Extended sequential";
-  else if (marker==M_SOF2)	process = "Progressive";
-  else if (marker==M_SOF3)	process = "Lossless";
-  else if (marker==M_SOF5)	process = "Differential sequential";
-  else if (marker==M_SOF6)	process = "Differential progressive";
-  else if (marker==M_SOF7)	process = "Differential lossless";
-  else if (marker==M_SOF9)	process = "Extended sequential, arithmetic coding";
-  else if (marker==M_SOF10)	process = "Progressive, arithmetic coding";
-  else if (marker==M_SOF11)	process = "Lossless, arithmetic coding";
-  else if (marker==M_SOF13)	process = "Differential sequential, arithmetic coding";
-  else if (marker==M_SOF14)	process = "Differential progressive, arithmetic coding";
-  else if (marker==M_SOF15)	process = "Differential lossless, arithmetic coding";
-  else process = "Unknown";
-#else
   switch (marker) {
   case M_SOF0:	process = "Baseline";  break;
   case M_SOF1:	process = "Extended sequential";  break;
@@ -310,8 +294,7 @@ process_SOFn (int marker)
   case M_SOF15:	process = "Differential lossless, arithmetic coding";  break;
   default:	process = "Unknown";  break;
   }
-#endif
-  
+
   printf("JPEG image is %uw * %uh, %d color components, %d bits per sample\n",
 	 image_width, image_height, num_components, data_precision);
   printf("JPEG process: %s\n", process);

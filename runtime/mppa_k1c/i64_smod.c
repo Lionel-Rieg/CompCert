@@ -1,3 +1,4 @@
+#if COMPLIQUE
 unsigned long long
 udivmoddi4(unsigned long long num, unsigned long long den, int modwanted);
 
@@ -23,3 +24,17 @@ i64_smod (long long a, long long b)
 
   return res;
 }
+
+#else
+extern long __moddi3 (long a, long b);
+
+long i64_smod (long a, long b)
+{
+  return __moddi3 (a, b);
+}
+
+int i32_smod (int a, int b)
+{
+  return __moddi3 (a, b);
+}
+#endif

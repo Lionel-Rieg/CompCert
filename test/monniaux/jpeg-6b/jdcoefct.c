@@ -349,7 +349,7 @@ decompress_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
       block_rows = compptr->v_samp_factor;
     else {
       /* NB: can't use last_row_height here; it is input-side-dependent! */
-      block_rows = (int) INT_MOD(compptr->height_in_blocks, compptr->v_samp_factor);
+      block_rows = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
       if (block_rows == 0) block_rows = compptr->v_samp_factor;
     }
     inverse_DCT = cinfo->idct->inverse_DCT[ci];
@@ -508,7 +508,7 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
       last_row = FALSE;
     } else {
       /* NB: can't use last_row_height here; it is input-side-dependent! */
-      block_rows = (int) INT_MOD(compptr->height_in_blocks, compptr->v_samp_factor);
+      block_rows = (int) (compptr->height_in_blocks % compptr->v_samp_factor);
       if (block_rows == 0) block_rows = compptr->v_samp_factor;
       access_rows = block_rows; /* this iMCU row only */
       last_row = TRUE;
@@ -575,11 +575,11 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	if ((Al=coef_bits[1]) != 0 && workspace[1] == 0) {
 	  num = 36 * Q00 * (DC4 - DC6);
 	  if (num >= 0) {
-	    pred = (int) INT_DIV(((Q01<<7) + num), (Q01<<8));
+	    pred = (int) (((Q01<<7) + num) / (Q01<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	  } else {
-	    pred = (int) INT_DIV(((Q01<<7) - num), (Q01<<8));
+	    pred = (int) (((Q01<<7) - num) / (Q01<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	    pred = -pred;
@@ -590,11 +590,11 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	if ((Al=coef_bits[2]) != 0 && workspace[8] == 0) {
 	  num = 36 * Q00 * (DC2 - DC8);
 	  if (num >= 0) {
-	    pred = (int) INT_DIV(((Q10<<7) + num), (Q10<<8));
+	    pred = (int) (((Q10<<7) + num) / (Q10<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	  } else {
-	    pred = (int) INT_DIV(((Q10<<7) - num), (Q10<<8));
+	    pred = (int) (((Q10<<7) - num) / (Q10<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	    pred = -pred;
@@ -605,11 +605,11 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	if ((Al=coef_bits[3]) != 0 && workspace[16] == 0) {
 	  num = 9 * Q00 * (DC2 + DC8 - 2*DC5);
 	  if (num >= 0) {
-	    pred = (int) INT_DIV(((Q20<<7) + num), (Q20<<8));
+	    pred = (int) (((Q20<<7) + num) / (Q20<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	  } else {
-	    pred = (int) INT_DIV(((Q20<<7) - num), (Q20<<8));
+	    pred = (int) (((Q20<<7) - num) / (Q20<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	    pred = -pred;
@@ -620,11 +620,11 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	if ((Al=coef_bits[4]) != 0 && workspace[9] == 0) {
 	  num = 5 * Q00 * (DC1 - DC3 - DC7 + DC9);
 	  if (num >= 0) {
-	    pred = (int) INT_DIV(((Q11<<7) + num), (Q11<<8));
+	    pred = (int) (((Q11<<7) + num) / (Q11<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	  } else {
-	    pred = (int) INT_DIV(((Q11<<7) - num), (Q11<<8));
+	    pred = (int) (((Q11<<7) - num) / (Q11<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	    pred = -pred;
@@ -635,11 +635,11 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	if ((Al=coef_bits[5]) != 0 && workspace[2] == 0) {
 	  num = 9 * Q00 * (DC4 + DC6 - 2*DC5);
 	  if (num >= 0) {
-	    pred = (int) INT_DIV(((Q02<<7) + num), (Q02<<8));
+	    pred = (int) (((Q02<<7) + num) / (Q02<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	  } else {
-	    pred = (int) INT_DIV(((Q02<<7) - num), (Q02<<8));
+	    pred = (int) (((Q02<<7) - num) / (Q02<<8));
 	    if (Al > 0 && pred >= (1<<Al))
 	      pred = (1<<Al)-1;
 	    pred = -pred;

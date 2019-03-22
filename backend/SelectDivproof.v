@@ -15,6 +15,7 @@
 Require Import Zquot Coqlib.
 Require Import AST Integers Floats Values Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof SelectLong SelectLongproof SelectDiv.
 
 Local Open Scope cminorsel_scope.
@@ -702,7 +703,7 @@ Proof.
             || Int.eq i (Int.repr Int.min_signed) && Int.eq n2 Int.mone) eqn:Z2; inv DIV.
   destruct (Int.is_power2 n2) as [l | ] eqn:P2.
 - destruct (Int.ltu l (Int.repr 31)) eqn:LT31.
-  + exploit (eval_shrximm ge sp e m (Vint i :: le) (Eletvar O)).
+  + exploit (eval_shrximm prog sp e m (Vint i :: le) (Eletvar O)).
     constructor. simpl; eauto. eapply Val.divs_pow2; eauto.
     intros [v1 [X LD]]. inv LD.
     econstructor; split. econstructor. eauto.
@@ -949,8 +950,8 @@ Proof.
     EvalOp. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     simpl; eauto.
     destruct x; simpl; auto. erewrite Float.div_mul_inverse; eauto.
-  + TrivialExists.
-- TrivialExists.
+  + apply eval_divf_base; trivial.
+- apply eval_divf_base; trivial.
 Qed.
 
 Theorem eval_divfs:
@@ -965,8 +966,8 @@ Proof.
     EvalOp. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     simpl; eauto.
     destruct x; simpl; auto. erewrite Float32.div_mul_inverse; eauto.
-  + TrivialExists.
-- TrivialExists.
+  + apply eval_divfs_base; trivial.
+- apply eval_divfs_base; trivial.
 Qed.
 
 End CMCONSTRS.

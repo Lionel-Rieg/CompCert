@@ -50,9 +50,6 @@ Inductive instruction : Type :=
   | Psemi                                           (**r semi colon separating bundles *)
   | Pnop                                            (**r instruction that does nothing *)
 
-  | Pdiv                                            (**r 32 bits integer division *)
-  | Pdivu                                           (**r 32 bits integer division *)
-
   (** builtins *)
   | Pclzll (rd rs: ireg)
   | Pstsud (rd rs1 rs2: ireg)
@@ -219,8 +216,6 @@ Inductive instruction : Type :=
 Definition control_to_instruction (c: control) :=
   match c with
   | PExpand (Asmblock.Pbuiltin ef args res) => Pbuiltin ef args res
-  | PExpand (Asmblock.Pdiv)                 => Pdiv
-  | PExpand (Asmblock.Pdivu)                => Pdivu
   | PCtlFlow Asmblock.Pret                  => Pret
   | PCtlFlow (Asmblock.Pcall l)             => Pcall l
   | PCtlFlow (Asmblock.Picall r)            => Picall r

@@ -124,9 +124,6 @@ let expand_annot_val kind txt targ args res = assert false
 
 (* Handling of memcpy *)
 
-let offset_in_range ofs =
-  let ofs = Z.to_int64 ofs in -2048L <= ofs && ofs < 2048L
-
 let emit_move dst r =
   if dst <> r
   then emit (Paddil(dst, r, Z.zero));;
@@ -175,7 +172,7 @@ let expand_builtin_memcpy  sz al args =
   | _ -> assert false;;
 
 (* Handling of volatile reads and writes *)
-
+(* FIXME probably need to check for size of displacement *)
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
   | Mint8unsigned, BR(Asmblock.IR res) ->
@@ -211,21 +208,9 @@ let expand_builtin_vload chunk args res =
   | [BA(Asmblock.IR addr)] ->
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
-      if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vload_common chunk stack_pointer ofs res
-      else begin
-        assert false (* FIXME
-        expand_addptrofs Asmblock.GPR32 stack_pointer ofs; (* X31 <- sp + ofs *)
-        expand_builtin_vload_common chunk GPR32 _0 res *)
-      end
+     expand_builtin_vload_common chunk stack_pointer ofs res
   | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs))] ->
-      if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vload_common chunk addr ofs res
-      else begin
-          assert false (* FIXME
-        expand_addptrofs Asmblock.GPR32 addr ofs; (* X31 <- addr + ofs *)
-        expand_builtin_vload_common chunk Asmblock.GPR32 _0 res *)
-      end
+     expand_builtin_vload_common chunk addr ofs res
   | _ ->
       assert false
 
@@ -256,19 +241,9 @@ let expand_builtin_vstore chunk args =
   | [BA(Asmblock.IR addr); src] ->
       expand_builtin_vstore_common chunk addr _0 src
   | [BA_addrstack ofs; src] ->
-      if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vstore_common chunk stack_pointer ofs src
-      else begin (* FIXME 
-        expand_addptrofs X31 X2 ofs; (* X31 <- sp + ofs *)
-        expand_builtin_vstore_common chunk X31 _0 src *)
-      end
+     expand_builtin_vstore_common chunk stack_pointer ofs src
   | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs)); src] ->
-      if offset_in_range (Z.add ofs (Memdata.size_chunk chunk)) then
-        expand_builtin_vstore_common chunk addr ofs src
-      else begin (* FIXME
-        expand_addptrofs X31 addr ofs; (* X31 <- addr + ofs *)
-        expand_builtin_vstore_common chunk X31 _0 src *)
-      end
+     expand_builtin_vstore_common chunk addr ofs src
   | _ ->
       assert false
 

@@ -16,6 +16,6 @@ Require Import Coqlib.
 Require Import Compopts.
 Require Import AST Integers Floats.
 Require Import Op CminorSel.
-Require Import SelectOp SplitLong.
+Require Import OpHelpers SelectOp SplitLong.
 
 (** This file is empty because we use the default implementation provided in [SplitLong]. *)

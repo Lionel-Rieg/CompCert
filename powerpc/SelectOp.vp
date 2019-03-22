@@ -43,6 +43,7 @@ Require Import Integers.
 Require Import Floats.
 Require Import Op.
 Require Import CminorSel.
+Require Import OpHelpers.
 
 Local Open Scope cminorsel_scope.
 
@@ -552,3 +553,10 @@ Nondetfunction builtin_arg (e: expr) :=
   | Eop Oadd (e1:::e2:::Enil) => BA_addptr (BA e1) (BA e2)
   | _ => BA e
   end.
+
+(* floats *)
+Definition divf_base (e1: expr) (e2: expr) :=
+  Eop Odivf (e1 ::: e2 ::: Enil).
+
+Definition divfs_base (e1: expr) (e2: expr) :=
+  Eop Odivfs (e1 ::: e2 ::: Enil).

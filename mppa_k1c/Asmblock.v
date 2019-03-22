@@ -178,10 +178,7 @@ Inductive ex_instruction : Type :=
   | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
 
   | Pbuiltin: external_function -> list (builtin_arg preg)
-              -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
-  | Pdiv                                              (**r 32 bits integer division, call to __divdi3 *)
-  | Pdivu                                             (**r 32 bits integer division, call to __udivdi3 *)
-.
+              -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *).
 
 (** FIXME: comment not up to date !
 
@@ -1497,17 +1494,6 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
 (** Pseudo-instructions *)
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
-  | Pdiv =>
-      match Val.divs (rs GPR0) (rs GPR1) with
-      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
-      | None => Stuck
-      end
-
-  | Pdivu =>
-      match Val.divu (rs GPR0) (rs GPR1) with
-      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
-      | None => Stuck
-      end
   end
   | None => Next rs m
 end.

@@ -15,9 +15,12 @@
 Require Import Coqlib.
 Require Import Compopts.
 Require Import AST Integers Floats.
-Require Import Op CminorSel SelectOp SplitLong SelectLong.
+Require Import Op CminorSel OpHelpers SelectOp SplitLong SelectLong.
 
 Local Open Scope cminorsel_scope.
+
+Section SELECT.
+Context {hf: helper_functions}.
 
 Definition is_intconst (e: expr) : option int :=
   match e with
@@ -221,10 +224,6 @@ Definition mods (e1: expr) (e2: expr) :=
 
 (** 64-bit integer divisions *)
 
-Section SELECT.
-
-Context {hf: helper_functions}.
-
 Definition modl_from_divl (equo: expr) (n: int64) :=
   subl (Eletvar O) (mullimm n equo).
 
@@ -310,34 +309,32 @@ Definition modls (e1 e2: expr) :=
       end
   | _, _ => modls_base e1 e2
   end.
-
-End SELECT.
-
+  
 (** Floating-point division by a constant can also be turned into a FP
     multiplication by the inverse constant, but only for powers of 2. *)
 
 Definition divfimm (e: expr) (n: float) :=
   match Float.exact_inverse n with
   | Some n' => Eop Omulf (e ::: Eop (Ofloatconst n') Enil ::: Enil)
-  | None    => Eop Odivf (e ::: Eop (Ofloatconst n) Enil ::: Enil)
+  | None    => divf_base e (Eop (Ofloatconst n) Enil)
   end.
 
 Nondetfunction divf (e1: expr) (e2: expr) :=
   match e2 with
   | Eop (Ofloatconst n2) Enil => divfimm e1 n2
-  | _ => Eop Odivf (e1 ::: e2 ::: Enil)
+  | _ => divf_base e1 e2
   end.
 
 Definition divfsimm (e: expr) (n: float32) :=
   match Float32.exact_inverse n with
   | Some n' => Eop Omulfs (e ::: Eop (Osingleconst n') Enil ::: Enil)
-  | None    => Eop Odivfs (e ::: Eop (Osingleconst n) Enil ::: Enil)
+  | None    => divfs_base e (Eop (Osingleconst n) Enil)
   end.
 
 Nondetfunction divfs (e1: expr) (e2: expr) :=
   match e2 with
   | Eop (Osingleconst n2) Enil => divfsimm e1 n2
-  | _ => Eop Odivfs (e1 ::: e2 ::: Enil)
+  | _ => divfs_base e1 e2
   end.
 
-
+End SELECT.
