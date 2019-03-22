@@ -2,6 +2,6 @@
 
 BEGIN_TEST(unsigned int)
 {
-    c = (long long) a;
+    c = a/b;
 }
 END_TEST32()

@@ -1,5 +1,5 @@
 #include "framework.h"
 
 BEGIN_TEST(float)
-    c = ((float)a + (float)b);
+  c = a / b;
 END_TESTF32()

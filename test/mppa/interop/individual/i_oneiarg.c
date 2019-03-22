@@ -3,4 +3,4 @@
 
 BEGIN_TEST(int)
   c = i_oneiarg(a);
-END_TEST()
+END_TEST32()
