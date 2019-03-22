@@ -883,11 +883,16 @@ Proof.
   intros until x2. intros Hbuiltin TIC.
   destruct ex.
   - destruct c.
+    (* MBcall *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBtailcall *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBbuiltin *)
     + assert (H: Some (MBbuiltin e l b) <>  Some (MBbuiltin e l b)).
         apply Hbuiltin. contradict H; auto.
+    (* MBgoto *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBcond *)
     + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; simpl; eauto.
       * unfold transl_opt_compuimm. exploreInst; simpl; eauto.
       * unfold transl_opt_compluimm. exploreInst; simpl; eauto.
@@ -895,7 +900,9 @@ Proof.
       * unfold transl_comp_notfloat64. exploreInst; simpl; eauto.
       * unfold transl_comp_float32. exploreInst; simpl; eauto.
       * unfold transl_comp_notfloat32. exploreInst; simpl; eauto.
-    + simpl in TIC. inv TIC.
+    (* MBjumptable *)
+    + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBreturn *)
     + simpl in TIC. monadInv TIC. simpl. eauto.
   - monadInv TIC. simpl; auto.
 Qed.
