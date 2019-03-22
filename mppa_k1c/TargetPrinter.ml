@@ -268,7 +268,17 @@ module Target (*: TARGET*) =
          fprintf oc "	cb.%a	%a? %a\n" bcond bt ireg r print_label lbl
       | Ploopdo (r, lbl) ->
          fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl        
-
+      | Pjumptable (idx_reg, tbl) ->
+         let lbl = new_label() in
+         jumptables := (lbl, tbl) :: !jumptables;
+         let base_reg = if idx_reg=Asmblock.GPR63 then Asmblock.GPR62 else Asmblock.GPR63 in
+         fprintf oc "%s jumptable [ " comment;
+         List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
+         fprintf oc "]\n";
+         fprintf oc "    make    %a = %a\n    ;;\n" ireg base_reg label lbl; 
+         fprintf oc "    lwz.xs  %a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
+         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg
+         
       (* Load/Store instructions *)
       | Plb(rd, ra, ofs) ->
          fprintf oc "	lbs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
@@ -522,8 +532,8 @@ module Target (*: TARGET*) =
       let print_tbl oc (lbl, tbl) =
         fprintf oc "%a:\n" label lbl;
         List.iter
-          (fun l -> fprintf oc "	.long	%a - %a\n"
-                               print_label l label lbl)
+          (fun l -> fprintf oc "	.4byte	%a\n"
+                               print_label l)
           tbl in
       if !jumptables <> [] then
         begin
