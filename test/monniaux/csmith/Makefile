@@ -1,5 +1,5 @@
 CSMITH=csmith
-MAX=100
+MAX=1000
 
 include ../rules.mk
 K1C_CCOMPFLAGS+=-I/usr/include/csmith -fstruct-passing -fbitfields
