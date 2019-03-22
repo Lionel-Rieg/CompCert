@@ -26,7 +26,7 @@ Require String.
 Require Import Coqlib Maps.
 Require Import AST Errors Integers Globalenvs Switch.
 Require Cminor.
-Require Import Op CminorSel.
+Require Import Op CminorSel OpHelpers.
 Require Import SelectOp SplitLong SelectLong SelectDiv.
 Require Machregs.
 

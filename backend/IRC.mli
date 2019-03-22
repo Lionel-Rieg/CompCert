@@ -43,5 +43,4 @@ val coloring: graph -> (var -> loc)
 val reserved_registers: mreg list ref
 
 (* Auxiliaries to deal with register classes *)
-val class_of_type: AST.typ -> int
 val class_of_loc: loc -> int

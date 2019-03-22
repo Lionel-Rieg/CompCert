@@ -15,6 +15,7 @@
 Require Import Zquot Coqlib.
 Require Import AST Integers Floats Values Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof SelectLong SelectLongproof SelectDiv.
 
 Local Open Scope cminorsel_scope.

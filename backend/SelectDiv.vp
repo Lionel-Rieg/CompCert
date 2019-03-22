@@ -15,7 +15,7 @@
 Require Import Coqlib.
 Require Import Compopts.
 Require Import AST Integers Floats.
-Require Import Op CminorSel SelectOp SplitLong SelectLong.
+Require Import Op CminorSel OpHelpers SelectOp SplitLong SelectLong.
 
 Local Open Scope cminorsel_scope.
 

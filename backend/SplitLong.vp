@@ -16,6 +16,7 @@ Require String.
 Require Import Coqlib.
 Require Import AST Integers Floats.
 Require Import Op CminorSel.
+Require Import OpHelpers.
 Require Import SelectOp.
 
 Local Open Scope cminorsel_scope.

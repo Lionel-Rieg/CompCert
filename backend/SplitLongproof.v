@@ -16,6 +16,7 @@ Require Import String.
 Require Import Coqlib Maps.
 Require Import AST Errors Integers Floats.
 Require Import Values Memory Globalenvs Events Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong.
 
 Local Open Scope cminorsel_scope.
@@ -33,7 +34,7 @@ Variable sp: val.
 Variable e: env.
 Variable m: mem.
 
-Ltac UseHelper := decompose [Logic.and] i64_helpers_correct; eauto.
+Ltac UseHelper := decompose [Logic.and] arith_helpers_correct; eauto.
 Ltac DeclHelper := red in HELPERS; decompose [Logic.and] HELPERS; eauto.
 
 Lemma eval_helper:
