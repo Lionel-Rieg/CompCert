@@ -30,6 +30,8 @@ Require Import Op.
 Require Import CminorSel.
 Require Import SelectOp.
 Require Import Events.
+Require Import OpHelpers.
+Require Import OpHelpersproof.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -93,7 +95,7 @@ Variable m: mem.
 
 (* Helper lemmas - from SplitLongproof.v *)
 
-Ltac UseHelper := decompose [Logic.and] i64_helpers_correct; eauto.
+Ltac UseHelper := decompose [Logic.and] arith_helpers_correct; eauto.
 Ltac DeclHelper := red in HELPERS; decompose [Logic.and] HELPERS; eauto.
 
 Lemma eval_helper:
