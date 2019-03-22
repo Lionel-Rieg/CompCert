@@ -258,10 +258,6 @@ module Target (*: TARGET*) =
          fprintf oc "	goto	%a\n" symbol s
       | Pigoto(rs) ->
          fprintf oc "	igoto	%a\n" ireg rs
-      | Pdiv ->
-         fprintf oc "	call	__divdi3\n"
-      | Pdivu ->
-         fprintf oc "	call	__udivdi3\n"
       | Pj_l(s) ->
          fprintf oc "	goto	%a\n" print_label s
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
