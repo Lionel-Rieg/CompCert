@@ -1,5 +1,5 @@
 YARPGEN=yarpgen
-MAX=10
+MAX=300
 PREFIX=ran%06.f
 include ../rules.mk
 
@@ -21,8 +21,9 @@ TARGETS_CCOMP_K1C_OUT=$(shell seq --format $(PREFIX)/example.ccomp.k1c.out 0 $(M
 TARGETS_GCC_K1C_OUT=$(shell seq --format $(PREFIX)/example.gcc.k1c.out 0 $(MAX))
 TARGETS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 0 $(MAX))
 TARGETS_CCOMP_HOST_OUT=$(shell seq --format $(PREFIX)/example.ccomp.host.out 0 $(MAX))
+TARGETS_CMP=$(shell seq --format $(PREFIX)/example.k1c.cmp 0 $(MAX))
 
-all:	$(TARGETS_CCOMP_K1C_OUT) $(TARGETS_GCC_K1C_OUT) $(TARGETS_GCC_HOST_OUT) $(TARGETS_CCOMP_HOST_OUT) $(TARGETS_CCOMP_K1C_S) $(TARGETS_GCC_K1C_S) $(TARGETS_GCC_HOST_S) $(TARGETS_CCOMP_HOST_S) 
+all:	$(TARGETS_CCOMP_K1C_OUT) $(TARGETS_GCC_K1C_OUT) $(TARGETS_GCC_HOST_OUT) $(TARGETS_CCOMP_HOST_OUT) $(TARGETS_CCOMP_K1C_S) $(TARGETS_GCC_K1C_S) $(TARGETS_GCC_HOST_S) $(TARGETS_CCOMP_HOST_S) $(TARGETS_CMP) $(TARGETS_C)
 
 ran%/func.ccomp.k1c.s ran%/func.gcc.k1c.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
 
@@ -41,6 +42,9 @@ ran%/example.ccomp.host: ran%/func.ccomp.host.o ran%/driver.ccomp.host.o
 ran%/driver.c ran%/func.c ran%/init.h:
 	-mkdir ran$*
 	$(YARPGEN) --seed=$* --out-dir=ran$*/ --std=c99
+
+ran%/example.k1c.cmp : ran%/example.gcc.k1c.out ran%/example.ccomp.k1c.out
+	cmp $+ > $@
 
 .PHONY: all clean
 
