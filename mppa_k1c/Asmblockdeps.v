@@ -1460,12 +1460,47 @@ Module PChk := ParallelChecks L PosResourceSet.
 Definition bblock_para_check (p: Asmblock.bblock) : bool :=
   PChk.is_parallelizable (trans_block p).
 
-Require Import Asmvliw.
+Require Import Asmvliw Permutation.
 Import PChk.
 
 Section SECT_PAR.
 
 Variable Ge: genv.
+
+Theorem forward_simu_par_wio:
+  forall ge fn rs1 m1 s1' bdy1 bdy2 b rs m rs2 m2 rs3 m3,
+  Ge = Genv ge fn ->
+  match_states (State rs m) s1' ->
+  Permutation (bdy1 ++ bdy2) (body b) ->
+  parexec_wio_body ge bdy1 rs rs m m = Next rs1 m1 ->
+  parexec_control ge fn (exit b) rs (par_nextblock (Ptrofs.repr (size b)) rs rs1) m1 = Next rs2 m2 ->
+  parexec_wio_body ge bdy2 rs rs2 m m2 = Next rs3 m3 ->
+  exists s2',
+     res_eq (Some s2') (prun_iw Ge (trans_block b) s1' s1')
+  /\ match_states (State rs3 m3) s2'.
+Proof.
+Admitted.
+
+Lemma forward_simu_par_wio_stuck_bdy1:
+  forall ge fn rs m s1' bdy1 bdy2 b,
+  Ge = Genv ge fn ->
+  match_states (State rs m) s1' ->
+  Permutation (bdy1 ++ bdy2) (body b) ->
+  parexec_wio_bblock_aux ge fn bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Stuck ->
+  res_eq None (prun_iw Ge (trans_block b) s1' s1').
+Proof.
+Admitted.
+
+Lemma forward_simu_par_wio_stuck_bdy2:
+  forall ge fn rs m s1' bdy1 bdy2 b m' rs',
+  Ge = Genv ge fn ->
+  match_states (State rs m) s1' ->
+  Permutation (bdy1 ++ bdy2) (body b) ->
+  parexec_wio_bblock_aux ge fn bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Next rs' m' ->
+  parexec_wio_body ge bdy2 rs rs' m m' = Stuck ->
+  res_eq None (prun_iw Ge (trans_block b) s1' s1').
+Proof.
+Admitted.
 
 Theorem forward_simu_par:
   forall rs1 m1 s1' b ge fn rs2 m2,
@@ -1476,7 +1511,15 @@ Theorem forward_simu_par:
      prun Ge (trans_block b) s1' (Some s2')
   /\ match_states (State rs2 m2) s2'.
 Proof.
-Admitted.
+  intros until m2. intros GENV PAREXEC MS.
+  inversion PAREXEC as (bdy1 & bdy2 & PERM & WIO).
+  destruct (parexec_wio_bblock_aux _ _ _ _ _ _ _) eqn:WIOEXIT; try discriminate.
+  unfold parexec_wio_bblock_aux in WIOEXIT. destruct (parexec_wio_body _ _ _ _ _ _) eqn:WIOBODY; try discriminate.
+  exploit forward_simu_par_wio; eauto. intros (s2' & PIW & MS').
+  eexists. split.
+  econstructor; eauto.
+  eassumption.
+Qed.
 
 Theorem forward_simu_par_stuck:
   forall rs1 m1 s1' b ge fn,
@@ -1485,7 +1528,12 @@ Theorem forward_simu_par_stuck:
   match_states (State rs1 m1) s1' -> 
   prun Ge (trans_block b) s1' None.
 Proof.
-Admitted.
+  intros until fn. intros GENV PAREXEC MS.
+  inversion PAREXEC as (bdy1 & bdy2 & PERM & WIO).
+  destruct (parexec_wio_bblock_aux _ _ _ _ _ _ _) eqn:WIOEXIT.
+  - econstructor; eauto. split. eapply forward_simu_par_wio_stuck_bdy2; eauto. auto.
+  - clear WIO. econstructor; eauto. split. eapply forward_simu_par_wio_stuck_bdy1; eauto. auto.
+Qed.
 
 Theorem forward_simu_par_alt:
   forall rs1 m1 s1' b ge fn o2,
