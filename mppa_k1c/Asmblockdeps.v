@@ -1463,7 +1463,8 @@ Definition bblock_para_check (p: Asmblock.bblock) : bool :=
 Require Import Asmvliw.
 Import PChk.
 
-Section SECT.
+Section SECT_PAR.
+
 Variable Ge: genv.
 
 Theorem forward_simu_par:
@@ -1526,4 +1527,4 @@ Proof.
     + clear MO. unfold exec in EXEC. rewrite EXEC in PRUN. discriminate.
 Qed.
 
-End SECT.
+End SECT_PAR.

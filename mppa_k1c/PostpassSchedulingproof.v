@@ -786,7 +786,6 @@ Proof.
 Qed.
 
 Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
-  (* rs PC = Vptr b ofs -> *) (* needed somewhere ? *)
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
@@ -797,7 +796,6 @@ Proof.
 Qed.
 
 Lemma seqexec_parexec_wio b ofs f bundle rs rs' m m':
-  (* rs PC = Vptr b ofs -> *) (* needed somewhere ? *)
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
