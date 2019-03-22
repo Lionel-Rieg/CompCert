@@ -366,6 +366,7 @@ Definition control_op_eq (c1 c2: control_op): ?? bool :=
   | Oj_l l1, Oj_l l2 => phys_eq l1 l2
   | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
   | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
+  | Ojumptable tbl1, Ojumptable tbl2 => phys_eq tbl1 tbl2
   | Odiv, Odiv => RET true
   | Odivu, Odivu => RET true
   | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
@@ -381,6 +382,7 @@ Proof.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
   - rewrite Z.eqb_eq in * |-. congruence.
+  - congruence.
 Qed.
 
 
@@ -550,7 +552,9 @@ Definition trans_control (ctl: control) : macro :=
   | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
   | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
   | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil)) ]
+  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil));
+                            (#GPR62, Op (Constant Vundef) Enil);
+                            (#GPR63, Op (Constant Vundef) Enil) ]
   | Pdiv => [(#GPR0, Op (Control Odiv) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pdivu => [(#GPR0, Op (Control Odivu) (Name (#GPR0) @ Name (#GPR1) @ Enil)); (#RA, Name (#RA))]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
@@ -892,31 +896,21 @@ Proof.
       * intros rr; destruct rr; Simpl. destruct (preg_eq GPR0 g); Simpl. rewrite e. Simpl.
     (* Pjumptable *)
     + unfold goto_label in *.
-      destruct (nextblock b rs r) eqn:NB_r in *; try discriminate.
-      destruct (list_nth_z _ _) eqn:LI in *; try discriminate.
-      destruct (label_pos _ _ _) eqn:LPOS in *; try discriminate.
-      rewrite Pregmap.gso in H0; try discriminate.
-      rewrite Pregmap.gso in H0; try discriminate.
+      repeat (rewrite Pregmap.gso in H0; try discriminate).
+      destruct (nextblock _ _ _) eqn:NB; try discriminate.
+      destruct (list_nth_z _ _) eqn:LI; try discriminate.
+      destruct (label_pos _ _ _) eqn:LPOS; try discriminate.
+      destruct (nextblock b rs PC) eqn:MB2; try discriminate. inv H0.
       eexists; split; try split.
-      * simpl control_eval.
-        rewrite (H3 PC).
-        simpl.
-        unfold goto_label_deps.
-        Simpl.
-        rewrite H3.
-        destruct (rs r); try discriminate.
-      ++ 
-      destruct (nextblock b rs PC) eqn:NB_PC in *; try discriminate.
-      inv H0.
-      
-      destruct (s (# PC)) eqn:sPC in *; try discriminate.
-      rewrite Pregmap.gso; try discriminate.
-      destruct (nextblock b rs r) eqn:NB_r in *; try discriminate.
-      destruct (list_nth_z _ _) eqn:LI in *; try discriminate.
-      destruct (label_pos _ _ _) eqn:LPOS in *; try discriminate.
-      destruct (nextblock b rs PC) eqn:NB_PC in *; try discriminate.
-      inv H1; try discriminate.
-      assumption.
+      * simpl control_eval. rewrite (H3 PC). simpl. Simpl.
+        rewrite H3. unfold nextblock in NB. rewrite Pregmap.gso in NB; try discriminate. rewrite NB.
+        rewrite LI. unfold goto_label_deps. rewrite LPOS.
+        unfold nextblock in MB2. rewrite Pregmap.gss in MB2. rewrite MB2.
+        reflexivity.
+      * Simpl.
+      * intros rr; destruct rr; Simpl.
+        destruct (preg_eq GPR62 g); Simpl. rewrite e. Simpl.
+        destruct (preg_eq GPR63 g); Simpl. rewrite e. Simpl.
     (* Pj_l *)
     + unfold goto_label in H0.
       destruct (label_pos _ _ _) eqn:LPOS; try discriminate.
@@ -1116,6 +1110,11 @@ Proof.
 (* Pdivu *)
   - simpl in *. pose (H3 GPR0); rewrite e in H1; clear e. pose (H3 GPR1); rewrite e in H1; clear e.
     destruct (Val.divu _ _); try discriminate; auto.
+(* Pjumptable *)
+  - simpl in *. repeat (rewrite H3 in H1).
+    destruct (rs r); try discriminate; auto. destruct (list_nth_z _ _); try discriminate; auto.
+    unfold goto_label_deps in H1. unfold goto_label. Simpl.
+    destruct (label_pos _ _ _); auto. destruct (rs PC); auto. discriminate.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e in H1. clear e.
     unfold goto_label_deps in H1. unfold goto_label.
@@ -1232,6 +1231,9 @@ Proof.
     destruct (Val.divs _ _); try discriminate; auto.
   - simpl in *. pose (H3 GPR0); simpl in e; rewrite e; clear e. pose (H3 GPR1); simpl in e; rewrite e; clear e.
     destruct (Val.divu _ _); try discriminate; auto.
+  - simpl in *. repeat (rewrite H3). destruct (rs r); try discriminate; auto. destruct (list_nth_z _ _); try discriminate; auto.
+    unfold goto_label_deps. unfold goto_label in H0.
+    destruct (label_pos _ _ _); auto. repeat (rewrite Pregmap.gso in H0; try discriminate). destruct (rs PC); auto. discriminate.
 (* Pj_l *)
   - simpl in *. pose (H3 PC); simpl in e; rewrite e. unfold goto_label_deps. unfold goto_label in H0.
     destruct (label_pos _ _ _); auto. clear e. destruct (rs PC); auto. discriminate.
@@ -1573,6 +1575,7 @@ Definition string_of_control (op: control_op) : pstring :=
   | Ocbu _ _ => "Ocbu"
   | Odiv => "Odiv"
   | Odivu => "Odivu"
+  | Ojumptable _ => "Ojumptable"
   | OError => "OError"
   | OIncremPC _ => "OIncremPC"
   end.
