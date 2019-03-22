@@ -39,56 +39,6 @@ index f89bf9604..9f8a4faeb 100644
  
  /**
   * \def MBEDTLS_VERSION_C
-diff --git a/library/bignum.c b/library/bignum.c
-index 87015af0c..a2bad7b84 100644
---- a/library/bignum.c
-+++ b/library/bignum.c
-@@ -1696,6 +1696,8 @@ cleanup:
-     return( ret );
- }
- 
-+#define INT_DIV(x,y) ((x) / (y))
-+
- /*
-  * Modulo: r = A mod b
-  */
-@@ -1734,12 +1736,12 @@ int mbedtls_mpi_mod_int( mbedtls_mpi_uint *r, const mbedtls_mpi *A, mbedtls_mpi_
-     {
-         x  = A->p[i - 1];
-         y  = ( y << biH ) | ( x >> biH );
--        z  = y / b;
-+        z  = INT_DIV(y, b);
-         y -= z * b;
- 
-         x <<= biH;
-         y  = ( y << biH ) | ( x >> biH );
--        z  = y / b;
-+        z  = INT_DIV(y, b);
-         y -= z * b;
-     }
- 
-diff --git a/library/ssl_tls.c b/library/ssl_tls.c
-index 8710a5076..e47c859fe 100644
---- a/library/ssl_tls.c
-+++ b/library/ssl_tls.c
-@@ -2482,6 +2482,8 @@ static int ssl_decompress_buf( mbedtls_ssl_context *ssl )
- }
- #endif /* MBEDTLS_ZLIB_SUPPORT */
- 
-+#define INT_DIV(x, y)  (((long)(x))/(y))
-+
- #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_RENEGOTIATION)
- static int ssl_write_hello_request( mbedtls_ssl_context *ssl );
- 
-@@ -2492,7 +2494,7 @@ static int ssl_resend_hello_request( mbedtls_ssl_context *ssl )
-      * timeout if we were using the usual handshake doubling scheme */
-     if( ssl->conf->renego_max_records < 0 )
-     {
--        uint32_t ratio = ssl->conf->hs_timeout_max / ssl->conf->hs_timeout_min + 1;
-+      uint32_t ratio = INT_DIV(ssl->conf->hs_timeout_max, ssl->conf->hs_timeout_min + 1);
-         unsigned char doublings = 1;
- 
-         while( ratio != 0 )
 diff --git a/tests/suites/helpers.function b/tests/suites/helpers.function
 index 1255ff4be..103abe9a8 100644
 --- a/tests/suites/helpers.function
