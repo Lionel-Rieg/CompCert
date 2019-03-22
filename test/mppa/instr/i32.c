@@ -1,0 +1,87 @@
+#include "framework.h"
+
+int sum(int a, int b){
+    return a+b;
+}
+
+int make(int a){
+    return a;
+}
+
+int tailsum(int a, int b){
+    return make(a+b);
+}
+
+float int2float(int v){
+  return v;
+}
+
+BEGIN_TEST(int)
+    c = a+b;
+    c += a&b;
+
+    if ((a & 0x1) == 1)
+        c += 1;
+    else
+        c += 2;
+
+    if (a & 0x1 == 0)
+        c += 4;
+    else
+        c += 8;
+
+    b = !(a & 0x01);
+    if (!b)
+        c += 16;
+    else
+        c += 32;
+
+    c += sum(make(a), make(b));
+    c += (long long) a;
+
+    if (0 > (a & 0x1) - 1)
+        c += 64;
+    else
+        c += 128;
+
+    if (0 >= (a & 0x1))
+        c += 256;
+    else
+        c += 512;
+
+    if ((a & 0x1) > 0)
+        c += 1024;
+    else
+        c += 2048;
+
+    if ((a & 0x1) - 1 >= 0)
+        c += 4096;
+    else
+        c += 8192;
+
+    c += ((a & 0x1) == (b & 0x1));
+    c += (a > b);
+    c += (a <= b);
+    c += (a < b);
+    c += (a + b) / 2;
+    c += (int) int2float(a) + (int) int2float(b) + (int) int2float(42.3);
+
+    int j;
+    for (j = 0 ; j < 10 ; j++)
+        c += a;
+    int k;
+    for (k = 0 ; k < (b & 0x8) ; k++)
+        c += a;
+
+    char s[] = "Tome and Cherry at the playa\n";
+    c += s[(a & (sizeof(s)-1))];
+
+    unsigned char s2[] = "Tim is sorry at the playa\n";
+    c += s2[a & (sizeof(s) - 1)];
+
+    c += a*b;
+    c += a-b;
+    c += a << (b & 0x8);
+
+    c += sum(a, b);
+END_TEST32()
