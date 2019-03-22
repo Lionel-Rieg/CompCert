@@ -1459,3 +1459,71 @@ Module PChk := ParallelChecks L PosResourceSet.
 
 Definition bblock_para_check (p: Asmblock.bblock) : bool :=
   PChk.is_parallelizable (trans_block p).
+
+Require Import Asmvliw.
+Import PChk.
+
+Section SECT.
+Variable Ge: genv.
+
+Theorem forward_simu_par:
+  forall rs1 m1 s1' b ge fn rs2 m2,
+  Ge = Genv ge fn ->
+  parexec_bblock ge fn b rs1 m1 (Next rs2 m2) ->
+  match_states (State rs1 m1) s1' -> 
+  exists s2',
+     prun Ge (trans_block b) s1' (Some s2')
+  /\ match_states (State rs2 m2) s2'.
+Proof.
+Admitted.
+
+Theorem forward_simu_par_stuck:
+  forall rs1 m1 s1' b ge fn,
+  Ge = Genv ge fn ->
+  parexec_bblock ge fn b rs1 m1 Stuck ->
+  match_states (State rs1 m1) s1' -> 
+  prun Ge (trans_block b) s1' None.
+Proof.
+Admitted.
+
+Theorem forward_simu_par_alt:
+  forall rs1 m1 s1' b ge fn o2,
+    Ge = Genv ge fn ->
+    match_states (State rs1 m1) s1' -> 
+    parexec_bblock ge fn b rs1 m1 o2 ->
+  exists o2',
+     prun Ge (trans_block b) s1' o2'
+  /\ match_outcome o2 o2'.
+Proof.
+  intros until o2. intros GENV MS PAREXEC. destruct o2 eqn:O2.
+  - exploit forward_simu_par; eauto. intros (s2' & PRUN & MS'). eexists. split. eassumption.
+    unfold match_outcome. eexists; split; auto.
+  - exploit forward_simu_par_stuck; eauto. intros. eexists; split; eauto.
+    constructor; auto.
+Qed.
+
+Lemma bblock_para_check_correct:
+  forall ge fn bb rs m rs' m' o,
+  Ge = Genv ge fn ->
+  exec_bblock ge fn bb rs m = Next rs' m' ->
+  bblock_para_check bb = true ->
+  parexec_bblock ge fn bb rs m o ->
+  o = Next rs' m'.
+Proof.
+  intros. unfold bblock_para_check in H1.
+  exploit forward_simu; eauto. eapply trans_state_match.
+  intros (s2' & EXEC & MS).
+  exploit forward_simu_par_alt. 2: apply (trans_state_match (State rs m)). all: eauto.
+  intros (o2' & PRUN & MO).
+  exploit parallelizable_correct. apply is_para_correct_aux. eassumption.
+  intro. eapply H3 in PRUN. clear H3. destruct o2'.
+  - inv PRUN. inv H3. unfold exec in EXEC. assert (x = s2') by congruence. subst. clear H.
+    assert (m0 = s2') by (apply functional_extensionality; auto). subst. clear H4.
+    destruct o; try discriminate. inv MO. inv H. assert (s2' = x) by congruence. subst.
+    exploit state_equiv. split. eapply MS. eapply H4. intros. inv H. reflexivity.
+  - unfold match_outcome in MO. destruct o.
+    + inv MO. inv H3. discriminate.
+    + clear MO. unfold exec in EXEC. rewrite EXEC in PRUN. discriminate.
+Qed.
+
+End SECT.

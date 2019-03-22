@@ -780,7 +780,10 @@ Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
   verify_par_bblock bundle = OK tt ->
   parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
 Proof.
-Admitted.
+  intros. unfold verify_par_bblock in H0. destruct (Asmblockdeps.bblock_para_check _) eqn:BPC; try discriminate. clear H0.
+  simpl in H. simpl in H1.
+  eapply Asmblockdeps.bblock_para_check_correct; eauto.
+Qed.
 
 Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
   (* rs PC = Vptr b ofs -> *) (* needed somewhere ? *)
