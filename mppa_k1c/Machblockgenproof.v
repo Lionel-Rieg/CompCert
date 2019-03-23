@@ -276,15 +276,17 @@ Lemma find_label_is_end_block_is_label i l c bl:
       i <> Mlabel l -> find_label l (add_to_new_bblock (trans_inst i) :: bl) = find_label l bl.  
 Admitted.
 
+Lemma find_label_at_begin l bh bl:
+  In l (header bh)
+  -> find_label l (bh :: bl) = Some (bh::bl).
+Proof.
+  intro H; unfold find_label. destruct (is_label l bh) eqn:H0; auto.
+  rewrite <- is_label_correct_false in H0. tauto.
+Qed.
 
-(*
-Lemma find_label_is_end_block_is_label2 i bl:
-  forall bl',
-    (exists l, i=Mlabel l) ->
-    bl = add_to_new_bblock (trans_inst i) :: bl' ->
-    bl' = nil.
-Admitted.
- *)
+
+
+
 
 Lemma find_label_transcode_preserved:
   forall l c c',
@@ -293,14 +295,16 @@ Lemma find_label_transcode_preserved:
 Proof.
   intros l c. remember (trans_code _) as bl.
   rewrite <- is_trans_code_inv in * |-.
-  induction Heqbl.
-  + intros.
+  induction Heqbl. 
+  + (* Tr_nil *) 
+    intros.
     exists (l::nil).
     split.
     apply in_eq.
     simpl.
     discriminate.
-  + intros.
+  + (* Tr_end_block *)
+    intros.
     exploit Mach_find_label_split; eauto.
     clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
     - subst. simpl.
@@ -316,7 +320,8 @@ Proof.
       exists h.
       split; auto.
       rewrite (find_label_is_end_block_is_label i l c bl);auto.
-  + intros.
+  + (* Tr_add_label *)
+    intros.
     exploit Mach_find_label_split; eauto.
     clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
     - subst. simpl.
@@ -330,24 +335,18 @@ Proof.
         exists (l :: nil).
         split; simpl; eauto.
       * destruct H0. simpl; eauto.
-    - exploit IHHeqbl; eauto.
+    - subst; assert (H: l0 <> l); try congruence; clear H0.
+      exploit IHHeqbl; eauto.
+      clear IHHeqbl Heqbl.
       destruct 1 as (h & H3 & H4).
-      simpl.
-      destruct (is_label l (add_label l0 bh)) eqn:H5.
-      (*
-      exists (l0::h).
-      ...*)
-      (* exists (l0::h).
-        split; simpl; eauto.
-        cut (is_label l bh = true). intros.
-        unfold find_label in H4. rewrite H1 in H4.
-        unfold add_label, concat; simpl.
-        destruct (trans_code c'). *)
-        
-      (*
-      exists h.
-      ...*)
-        
+      simpl; unfold is_label, add_label; simpl.
+      destruct (in_dec l (l0::header bh)) as [H5|H5]; simpl in H5.
+      * destruct H5; try congruence.
+        exists (l0::h); simpl; intuition.
+        rewrite find_label_at_begin in H4.
+        apply f_equal. inversion H4 as [H5]. clear H4.
+        (* A FINIR *)
+      
 Admitted.
       
 
