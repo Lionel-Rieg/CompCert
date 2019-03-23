@@ -733,12 +733,11 @@ Proof.
     eapply verified_schedule_checks_alls_bundles; eauto.
 Qed.
 
-Lemma find_bblock_forall_inv lb P: 
-  (forall b, List.In b lb -> P b) ->
-  forall ofs b, find_bblock ofs lb = Some b -> P b.
+Lemma find_bblock_Some_in lb: 
+  forall ofs b, find_bblock ofs lb = Some b -> List.In b lb.
 Proof.
   induction lb; simpl; try congruence.
-  intros H ofs b.
+  intros ofs b.
   destruct (zlt ofs 0); try congruence.
   destruct (zeq ofs 0); eauto.
   intros X; inversion X; eauto.
@@ -771,8 +770,8 @@ Proof.
   destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks _))); simpl in *|-; try congruence.
   injection EQ1; intros; subst.
   monadInv EQ0. simpl in * |-.
-  intros; pattern bundle; eapply find_bblock_forall_inv; eauto.
   intros; exploit transf_blocks_checks_all_bundles; eauto.
+  intros; eapply find_bblock_Some_in; eauto.
 Qed.
 
 Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
