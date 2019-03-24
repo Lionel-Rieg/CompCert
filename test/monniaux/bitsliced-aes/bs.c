@@ -14,6 +14,11 @@
 #error "endianness not supported"
 #endif
 
+#if 1
+#define TERNARY_XY0(t, x) ((-((t) != 0)) & (x))
+#else
+#define TERNARY_XY0(t, x) (((t) != 0) ? (x) : (0))
+#endif	    
 
 void bs_addroundkey(word_t * B, word_t * rk)
 {
@@ -391,11 +396,6 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
 	    /* DM experiments */
 	    /* The normal ternary operator costs us a lot!
                from 10145951 to 7995063 */
-#if 1
-#define TERNARY_XY0(t, x) ((-((t) != 0)) & (x))
-#else
-#define TERNARY_XY0(t, x) (((t) != 0) ? (x) : (0))
-#endif	    
             int j;
             for(j=0; j < WORD_SIZE; j++)
             {
@@ -496,7 +496,7 @@ void bs_transpose_rev(word_t * blocks)
         int j;
         for(j=0; j < WORD_SIZE; j++)
         {
-            word_t bit = (w & (ONE << j)) ? (ONE << (k % WORD_SIZE)) : 0;
+	  word_t bit = TERNARY_XY0((w & (ONE << j)), (ONE << (k % WORD_SIZE)));
             transpose[j * WORDS_PER_BLOCK + (offset)] |= bit;
         }
 #else
