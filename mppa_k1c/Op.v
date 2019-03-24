@@ -181,7 +181,9 @@ Inductive operation : Type :=
   | Osingleoflong            (**r [rd = float32_of_signed_long(r1)] *)
   | Osingleoflongu           (**r [rd = float32_of_unsigned_int(r1)] *)
 (*c Boolean tests: *)
-  | Ocmp (cond: condition).  (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Ocmp (cond: condition)   (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Oselect                  (**r [rd = if r3 then r2 else r1] *)
+  | Oselectl.                (**r [rd = if r3 then r2 else r1] *)
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -248,6 +250,40 @@ Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool
   | Ccompfs c, v1 :: v2 :: nil => Val.cmpfs_bool c v1 v2
   | Cnotcompfs c, v1 :: v2 :: nil => option_map negb (Val.cmpfs_bool c v1 v2)
   | _, _ => None
+  end.
+
+Definition select (v0 : val) (v1 : val) (vselect : val) : option val :=
+  match v0 with
+  | Vint i0 =>
+    match v1 with
+    | Vint i1 =>
+      match vselect with
+      | Vint iselect =>
+        Some (Vint (if Int.cmp Ceq Int.zero iselect
+                    then i0
+                    else i1))
+      | _ => None
+      end
+    | _ => None
+    end
+  | _ => None
+  end.
+
+Definition selectl (v0 : val) (v1 : val) (vselect : val) : option val :=
+  match v0 with
+  | Vlong i0 =>
+    match v1 with
+    | Vlong i1 =>
+      match vselect with
+      | Vint iselect =>
+        Some (Vlong (if Int.cmp Ceq Int.zero iselect
+                     then i0
+                     else i1))
+      | _ => None
+      end
+    | _ => None
+    end
+  | _ => None
   end.
 
 Definition eval_operation
@@ -378,6 +414,8 @@ Definition eval_operation
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
+  | Oselect, v0::v1::vselect::nil => select v0 v1 vselect
+  | Oselectl, v0::v1::vselect::nil => selectl v0 v1 vselect
   | _, _ => None
   end.
 
@@ -565,6 +603,9 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Osingleoflong => (Tlong :: nil, Tsingle)
   | Osingleoflongu => (Tlong :: nil, Tsingle)
   | Ocmp c => (type_of_condition c, Tint)
+                
+  | Oselect  => (Tint :: Tint :: Tint :: nil, Tint)
+  | Oselectl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -799,6 +840,12 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl in H0; inv H0...
   (* cmp *)
   - destruct (eval_condition cond vl m)... destruct b...
+  (* select *)
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate.
+    inv H0...
+  (* selectl *)
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate.
+    inv H0...
 Qed.
 
 End SOUNDNESS.
