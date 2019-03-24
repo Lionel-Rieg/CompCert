@@ -448,3 +448,10 @@ Nondetfunction builtin_arg (e: expr) :=
       if Archi.ptr64 then BA_addptr (BA e1) (BA_long n) else BA e
   | _ => BA e
   end.
+
+(* floats *)
+Definition divf_base (e1: expr) (e2: expr) :=
+  Eop Odivf (e1 ::: e2 ::: Enil).
+
+Definition divfs_base (e1: expr) (e2: expr) :=
+  Eop Odivfs (e1 ::: e2 ::: Enil).

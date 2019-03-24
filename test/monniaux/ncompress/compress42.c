@@ -132,7 +132,7 @@
  */
 
 /* FIXME DMonniaux */
-#define INT_MOD(x, y) ((long) (x) % (y))
+#define INT_MOD(x, y) ((x) % (y))
 #include "../clock.h"
 
 /* DMonniaux for utime and strdup */

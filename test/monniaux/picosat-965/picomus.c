@@ -253,7 +253,7 @@ int main (int argc, char ** argv) {
     exit (1);
   }
   if (fclose_input) fclose (input_file);
-#ifdef NZIP
+#ifndef NZIP
   if (pclose_input) pclose (input_file);
 #endif
   ps = picosat_init ();

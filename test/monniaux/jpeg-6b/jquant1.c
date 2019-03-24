@@ -227,7 +227,7 @@ select_ncolors (j_decompress_ptr cinfo, int Ncolors[])
     for (i = 0; i < nc; i++) {
       j = (cinfo->out_color_space == JCS_RGB ? RGB_order[i] : i);
       /* calculate new total_colors if Ncolors[j] is incremented */
-      temp = INT_DIV(total_colors, Ncolors[j]);
+      temp = total_colors / Ncolors[j];
       temp *= Ncolors[j]+1;	/* done in long arith to avoid oflo */
       if (temp > (long) max_colors)
 	break;			/* won't fit, done with this pass */
@@ -251,7 +251,7 @@ output_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
    * (Forcing the upper and lower values to the limits ensures that
    * dithering can't produce a color outside the selected gamut.)
    */
-  return (int) INT_DIV(((INT32) j * MAXJSAMPLE + maxj/2), maxj);
+  return (int) (((INT32) j * MAXJSAMPLE + maxj/2) / maxj);
 }
 
 
@@ -261,7 +261,7 @@ largest_input_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
 /* Must have largest(j=0) >= 0, and largest(j=maxj) >= MAXJSAMPLE */
 {
   /* Breakpoints are halfway between values returned by output_value */
-  return (int) INT_DIV(((INT32) (2*j + 1) * MAXJSAMPLE + maxj), (2*maxj));
+  return (int) (((INT32) (2*j + 1) * MAXJSAMPLE + maxj) / (2*maxj));
 }
 
 
@@ -303,7 +303,7 @@ create_colormap (j_decompress_ptr cinfo)
   for (i = 0; i < cinfo->out_color_components; i++) {
     /* fill in colormap entries for i'th color component */
     nci = cquantize->Ncolors[i]; /* # of distinct values for this color */
-    blksize = INT_DIV(blkdist, nci);
+    blksize = blkdist / nci;
     for (j = 0; j < nci; j++) {
       /* Compute j'th output value (out of nci) for component */
       val = output_value(cinfo, i, j, nci-1);
@@ -360,7 +360,7 @@ create_colorindex (j_decompress_ptr cinfo)
   for (i = 0; i < cinfo->out_color_components; i++) {
     /* fill in colorindex entries for i'th color component */
     nci = cquantize->Ncolors[i]; /* # of distinct values for this color */
-    blksize = INT_DIV(blksize, nci);
+    blksize = blksize / nci;
 
     /* adjust colorindex pointers to provide padding at negative indexes. */
     if (pad)
@@ -415,7 +415,7 @@ make_odither_array (j_decompress_ptr cinfo, int ncolors)
       /* Ensure round towards zero despite C's lack of consistency
        * about rounding negative values in integer division...
        */
-      odither[j][k] = (int) (num<0 ? -INT_DIV((-num),den) : INT_DIV(num,den));
+      odither[j][k] = (int) (num<0 ? -((-num)/den) : num/den);
     }
   }
   return odither;

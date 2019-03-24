@@ -428,10 +428,10 @@ jinit_upsampler (j_decompress_ptr cinfo)
     /* Compute size of an "input group" after IDCT scaling.  This many samples
      * are to be converted to max_h_samp_factor * max_v_samp_factor pixels.
      */
-    h_in_group = INT_DIV((compptr->h_samp_factor * compptr->DCT_scaled_size),
-			 cinfo->min_DCT_scaled_size);
-    v_in_group = INT_DIV((compptr->v_samp_factor * compptr->DCT_scaled_size),
-			 cinfo->min_DCT_scaled_size);
+    h_in_group = (compptr->h_samp_factor * compptr->DCT_scaled_size) /
+		 cinfo->min_DCT_scaled_size;
+    v_in_group = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
+		 cinfo->min_DCT_scaled_size;
     h_out_group = cinfo->max_h_samp_factor;
     v_out_group = cinfo->max_v_samp_factor;
     upsample->rowgroup_height[ci] = v_in_group; /* save for use later */
@@ -459,12 +459,12 @@ jinit_upsampler (j_decompress_ptr cinfo)
 	upsample->pub.need_context_rows = TRUE;
       } else
 	upsample->methods[ci] = h2v2_upsample;
-    } else if (INT_MOD(h_out_group, h_in_group) == 0 &&
-	       INT_MOD(v_out_group, v_in_group) == 0) {
+    } else if ((h_out_group % h_in_group) == 0 &&
+	       (v_out_group % v_in_group) == 0) {
       /* Generic integral-factors upsampling method */
       upsample->methods[ci] = int_upsample;
-      upsample->h_expand[ci] = (UINT8) INT_DIV(h_out_group, h_in_group);
-      upsample->v_expand[ci] = (UINT8) INT_DIV(v_out_group, v_in_group);
+      upsample->h_expand[ci] = (UINT8) (h_out_group / h_in_group);
+      upsample->v_expand[ci] = (UINT8) (v_out_group / v_in_group);
     } else
       ERREXIT(cinfo, JERR_FRACT_SAMPLE_NOTIMPL);
     if (need_buffer) {

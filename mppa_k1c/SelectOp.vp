@@ -15,6 +15,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
+
 (** Instruction selection for operators *)
 
 (** The instruction selection pass recognizes opportunities for using
@@ -49,8 +50,16 @@ Require Import Integers.
 Require Import Floats.
 Require Import Op.
 Require Import CminorSel.
+Require Import OpHelpers.
 
 Local Open Scope cminorsel_scope.
+
+Local Open Scope string_scope.
+Local Open Scope error_monad_scope.
+
+Section SELECT.
+
+Context {hf: helper_functions}.
 
 (** ** Constants **)
 
@@ -302,10 +311,17 @@ Nondetfunction notint (e: expr) :=
 
 (** ** Integer division and modulus *)
 
-Definition divs_base (e1: expr) (e2: expr) := Eop Odiv (e1:::e2:::Enil).
-Definition mods_base (e1: expr) (e2: expr) := Eop Omod (e1:::e2:::Enil).
-Definition divu_base (e1: expr) (e2: expr) := Eop Odivu (e1:::e2:::Enil).
-Definition modu_base (e1: expr) (e2: expr) := Eop Omodu (e1:::e2:::Enil).
+Definition divs_base (e1: expr) (e2: expr) :=
+  Eexternal i32_sdiv sig_ii_i (e1 ::: e2 ::: Enil).
+  
+Definition mods_base (e1: expr) (e2: expr) :=
+  Eexternal i32_smod sig_ii_i (e1 ::: e2 ::: Enil).
+
+Definition divu_base (e1: expr) (e2: expr) :=
+  Eexternal i32_udiv sig_ii_i (e1 ::: e2 ::: Enil).
+  
+Definition modu_base (e1: expr) (e2: expr) :=
+  Eexternal i32_umod sig_ii_i (e1 ::: e2 ::: Enil).
 
 Definition shrximm (e1: expr) (n2: int) :=
   if Int.eq n2 Int.zero then e1 else Eop (Oshrximm n2) (e1:::Enil).
@@ -485,3 +501,14 @@ Nondetfunction builtin_arg (e: expr) :=
       if Archi.ptr64 then BA_addptr (BA e1) (BA_long n) else BA e
   | _ => BA e
   end.
+
+(* float division *)
+
+Definition divf_base (e1: expr) (e2: expr) :=
+  (* Eop Odivf (e1 ::: e2 ::: Enil). *)
+  Eexternal f64_div sig_ff_f (e1 ::: e2 ::: Enil).
+
+Definition divfs_base (e1: expr) (e2: expr) :=
+  (* Eop Odivf (e1 ::: e2 ::: Enil). *)
+  Eexternal f32_div sig_ss_s (e1 ::: e2 ::: Enil).
+End SELECT.

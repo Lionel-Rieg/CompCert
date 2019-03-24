@@ -1248,16 +1248,15 @@ $(OBJDIR)$Pencode_rsa_rawder$O: src$Px509$Pencode_rsa_rawder.c $(HEADERSPRIV)
 $(OBJDIR)$Pskey_decoder$O: src$Px509$Pskey_decoder.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pskey_decoder$O src$Px509$Pskey_decoder.c
 
-# Omod: 32-bits modulo not supported yet. Please use 64-bits.
 $(OBJDIR)$Px509_decoder$O: src$Px509$Px509_decoder.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_decoder$O src$Px509$Px509_decoder.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_decoder$O src$Px509$Px509_decoder.c
 
 $(OBJDIR)$Px509_knownkey$O: src$Px509$Px509_knownkey.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_knownkey$O src$Px509$Px509_knownkey.c
 
 # nsl_op: Omod: 32-bits modulo not supported yet. Please use 64-bits.
 $(OBJDIR)$Px509_minimal$O: src$Px509$Px509_minimal.c $(HEADERSPRIV)
-	$(GCC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_minimal$O src$Px509$Px509_minimal.c
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_minimal$O src$Px509$Px509_minimal.c
 
 $(OBJDIR)$Px509_minimal_full$O: src$Px509$Px509_minimal_full.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Px509_minimal_full$O src$Px509$Px509_minimal_full.c

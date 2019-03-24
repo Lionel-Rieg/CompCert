@@ -222,7 +222,6 @@ let basic_rec i =
   | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None ; is_control = false}
 
 let expand_rec = function
-  | Pdiv | Pdivu -> { inst = "Pdiv"; write_locs = [Reg (IR GPR0)]; read_locs = [Reg (IR GPR0); Reg (IR GPR1)]; imm = None; is_control = true }
   | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
