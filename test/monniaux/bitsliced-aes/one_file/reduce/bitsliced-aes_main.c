@@ -1,4 +1,4 @@
-#include "../../../clock.h"
+#include "/home/monniaux/work/Kalray/CompCert/test/monniaux/clock.h"
 
 void aes_ecb_test(void);
 void aes_ctr_test(void);

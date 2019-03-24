@@ -388,11 +388,14 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             int offset = i << MUL_SHIFT;
 
 #ifndef UNROLL_TRANSPOSE
+	    /* DM experiments */
+#define TERNARY_XY0(t, x) (((t) != 0) ? (x) : (0))
+	    
             int j;
             for(j=0; j < WORD_SIZE; j++)
             {
                 // TODO make const time
-                transpose[offset + j] |= (w & (ONE << j)) ? bitpos : 0;
+	      transpose[offset + j] |= TERNARY_XY0(w & (ONE << j), bitpos);
             }
 #else
 
