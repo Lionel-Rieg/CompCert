@@ -187,6 +187,46 @@ Proof.
     trivial.
 Qed.
 
+Lemma select_sound:
+  forall v0 w0 v1 w1 v2 w2 x,
+    vagree v0 w0 (default x) ->
+    vagree v1 w1 (default x) ->
+    vagree v2 w2 (default x) ->
+    vagree (select v0 v1 v2) (select w0 w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+    inv H. inv H0. inv H1. simpl.
+    constructor.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+    inv H. inv H0. inv H1. simpl.
+    constructor.
+Qed.
+
+Lemma selectl_sound:
+  forall v0 w0 v1 w1 v2 w2 x,
+    vagree v0 w0 (default x) ->
+    vagree v1 w1 (default x) ->
+    vagree v2 w2 (default x) ->
+    vagree (selectl v0 v1 v2) (selectl w0 w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+    inv H. inv H0. inv H1. simpl.
+    constructor.
+Qed.
+
 Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
@@ -240,6 +280,9 @@ Proof.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
   (* select *)
+- apply select_sound; trivial.
+  (* selectl *)
+- apply selectl_sound; trivial.
 Qed.
 
 Lemma operation_is_redundant_sound:
