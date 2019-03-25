@@ -1210,9 +1210,17 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   | Pcmove bt =>
     match cmp_for_btest bt with
     | (Some c, Int)  =>
-      if (Val.cmp_bool c v2 (Vint Int.zero)) then v3 else v1
+      match Val.cmp_bool c v2 (Vint Int.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
     | (Some c, Long) =>
-      if (Val.cmpl_bool c v2 (Vlong Int64.zero)) then v3 else v1
+      match Val.cmpl_bool c v2 (Vlong Int64.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
     | (None, _) => Vundef
     end
   end.                    

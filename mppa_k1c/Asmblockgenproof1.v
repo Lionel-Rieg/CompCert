@@ -1558,6 +1558,16 @@ Ltac TranslOpSimpl :=
   [ apply exec_straight_one; reflexivity
   | split; [ apply Val.lessdef_same; simpl; Simpl; fail | intros; simpl; Simpl; fail ] ].
 
+Lemma int_eq_comm:
+  forall (x y: int),
+  (Int.eq x y) = (Int.eq y x).
+Proof.
+  intros.
+  unfold Int.eq.
+  unfold zeq.
+  destruct (Z.eq_dec _ _); destruct (Z.eq_dec _ _); congruence.
+Qed.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1645,69 +1655,20 @@ Opaque Int.eq.
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
-(*
-- (* intconst *)
-  exploit loadimm32_correct; eauto. intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* longconst *)
-  exploit loadimm64_correct; eauto. intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* floatconst *)
-  destruct (Float.eq_dec n Float.zero).
-+ subst n. econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split; intros; Simpl. 
-+ econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split; intros; Simpl. 
-- (* singleconst *)
-  destruct (Float32.eq_dec n Float32.zero).
-+ subst n. econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split; intros; Simpl. 
-+ econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split; intros; Simpl. 
-- (* stackoffset *)
-  exploit addptrofs_correct. instantiate (1 := X2); auto with asmgen. intros (rs' & A & B & C).
-  exists rs'; split; eauto. auto with asmgen.
-- (* addimm *)
-  exploit (opimm32_correct Paddw Paddiw Val.add); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen. 
-- (* andimm *)
-  exploit (opimm32_correct Pandw Pandiw Val.and); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* orimm *)
-  exploit (opimm32_correct Porw Poriw Val.or); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* xorimm *)
-  exploit (opimm32_correct Pxorw Pxoriw Val.xor); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-
-
-
-- (* addlimm *)
-  exploit (opimm64_correct Paddl Paddil Val.addl); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-
-- (* andimm *)
-  exploit (opimm64_correct Pandl Pandil Val.andl); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* orimm *)
-  exploit (opimm64_correct Porl Poril Val.orl); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-- (* xorimm *)
-  exploit (opimm64_correct Pxorl Pxoril Val.xorl); auto. instantiate (1 := x0); eauto with asmgen.
-  intros (rs' & A & B & C).
-  exists rs'; split; eauto. rewrite B; auto with asmgen.
-*)
+- (* Oselect *)
+  econstructor; split.
+  + eapply exec_straight_one.
+    simpl; reflexivity.
+  + split.
+    * unfold select.
+      destruct (rs x1) eqn:eqX1; try constructor.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      simpl.
+      rewrite int_eq_comm.
+      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
 Qed.
 
 (** Memory accesses *)

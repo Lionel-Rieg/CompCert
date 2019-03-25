@@ -729,6 +729,13 @@ Definition transl_op
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
 
+  | Oselect, a0 :: a1 :: aS :: nil =>
+    assertion (mreg_eq a0 res);
+      do r0 <- ireg_of a0;
+      do r1 <- ireg_of a1;
+      do rS <- ireg_of aS;
+        OK (Pcmove BTwnez r0 rS r1 ::i k)
+
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.
