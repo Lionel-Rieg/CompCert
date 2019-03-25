@@ -252,38 +252,38 @@ Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool
   | _, _ => None
   end.
 
-Definition select (v0 : val) (v1 : val) (vselect : val) : option val :=
+Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
     | Vint i0 =>
       match v1 with
       | Vint i1 =>
-        Some (Vint (if Int.cmp Ceq Int.zero iselect
-                    then i0
-                    else i1))
-      | _ => None
+        Vint (if Int.cmp Ceq Int.zero iselect
+              then i0
+              else i1)
+      | _ => Vundef
       end
-    | _ => None
+    | _ => Vundef
     end
-  | _ => None
+  | _ => Vundef
   end.
 
-Definition selectl (v0 : val) (v1 : val) (vselect : val) : option val :=
+Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
     | Vlong i0 =>
       match v1 with
       | Vlong i1 =>
-        Some (Vlong (if Int.cmp Ceq Int.zero iselect
-                     then i0
-                     else i1))
-      | _ => None
+        Vlong (if Int.cmp Ceq Int.zero iselect
+               then i0
+               else i1)
+      | _ => Vundef
       end
-    | _ => None
+    | _ => Vundef
     end
-  | _ => None
+  | _ => Vundef
   end.
 
 Definition eval_operation
@@ -414,8 +414,8 @@ Definition eval_operation
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
-  | Oselect, v0::v1::vselect::nil => select v0 v1 vselect
-  | Oselectl, v0::v1::vselect::nil => selectl v0 v1 vselect
+  | Oselect, v0::v1::vselect::nil => Some (select v0 v1 vselect)
+  | Oselectl, v0::v1::vselect::nil => Some (selectl v0 v1 vselect)
   | _, _ => None
   end.
 
@@ -841,11 +841,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* cmp *)
   - destruct (eval_condition cond vl m)... destruct b...
   (* select *)
-  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate.
-    inv H0...
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
   (* selectl *)
-  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate.
-    inv H0...
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
 Qed.
 
 End SOUNDNESS.
@@ -1372,19 +1370,13 @@ Proof.
     destruct b; simpl; constructor.
     simpl; constructor.
   (* select *)
-  - inv H5; simpl in H1; try discriminate.
-    inv H4; simpl in H1; try discriminate.
-    inv H3; simpl in H1; try discriminate.
-    simpl.
-    injection H1; clear H1; intro H1.
-    destruct (Int.eq _ _); rewrite <- H1; simpl; TrivialExists.
+  - inv H3; simpl; try constructor.
+    inv H4; simpl; try constructor.
+    inv H2; simpl; constructor.
   (* selectl *)
-  - inv H5; simpl in H1; try discriminate.
-    inv H4; simpl in H1; try discriminate.
-    inv H3; simpl in H1; try discriminate.
-    simpl.
-    injection H1; clear H1; intro H1.
-    destruct (Int.eq _ _); rewrite <- H1; simpl; TrivialExists.
+  - inv H3; simpl; try constructor.
+    inv H4; simpl; try constructor.
+    inv H2; simpl; constructor.
 Qed.
 
 Lemma eval_addressing_inj:
