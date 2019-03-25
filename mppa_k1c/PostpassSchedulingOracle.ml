@@ -128,6 +128,7 @@ let arith_rri64_str = function
 let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
   | Pmaddl -> "Pmaddl"
+  | Pcmove _ -> "Pcmove"
             
 let arith_ri32_str = "Pmake"
 

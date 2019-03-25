@@ -208,6 +208,7 @@ Inductive instruction : Type :=
   | Pandnil             (rd rs: ireg) (imm: int64)  (**r andn long *)
   | Pornil              (rd rs: ireg) (imm: int64)  (**r orn long *)
   | Pmaddil             (rd rs: ireg) (imm: int64)  (**r multiply add imm long *)
+  | Pcmove (bt: btest) (rcond rd rs : ireg) (** conditional move *) 
 .
 
 (** Correspondance between Asmblock and Asm *)
@@ -354,6 +355,7 @@ Definition basic_to_instruction (b: basic) :=
   (** ARRR *)
   | PArithARRR Asmblock.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
   | PArithARRR Asmblock.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
+  | PArithARRR (Asmblock.Pcmove cond) rd rs1 rs2=> Pcmove cond rd rs1 rs2
 
   (** ARRI32 *)
   | PArithARRI32 Asmblock.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm

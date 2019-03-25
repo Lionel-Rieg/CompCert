@@ -370,9 +370,6 @@ Inductive arith_name_rrr : Type :=
   | Pfsbfw                                          (**r float sub word *)
   | Pfmuld                                          (**r float multiply double *)
   | Pfmulw                                          (**r float multiply word *)
-(*
-  | Pcmove (it: itest)                              (**r conditional move *)
- *)
 .
 
 Inductive arith_name_rri32 : Type :=
@@ -414,6 +411,7 @@ Inductive arith_name_rri64 : Type :=
 Inductive arith_name_arrr : Type :=
   | Pmaddw                                           (**r multiply add word *)
   | Pmaddl                                           (**r multiply add long *)
+  | Pcmove (bt: btest)                               (**r conditional move *)
 .
 
 Inductive arith_name_arri32 : Type :=
@@ -1209,6 +1207,14 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
+  | Pcmove bt =>
+    match cmp_for_btest bt with
+    | (Some c, Int)  =>
+      if (Val.cmp_bool c v2 (Vint Int.zero)) then v3 else v1
+    | (Some c, Long) =>
+      if (Val.cmpl_bool c v2 (Vlong Int64.zero)) then v3 else v1
+    | (None, _) => Vundef
+    end
   end.                    
 
 Definition arith_eval_arri32 n v1 v2 v3 :=
