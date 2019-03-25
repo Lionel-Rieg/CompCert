@@ -239,6 +239,7 @@ Proof.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
+  (* select *)
 Qed.
 
 Lemma operation_is_redundant_sound:

@@ -41,6 +41,15 @@ Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
   | _, _ => Vbot
   end.
 
+Definition select (v0 v1 vselect : aval) : aval :=
+  match vselect with
+  | I iselect =>
+    if Int.eq iselect Int.zero
+    then v0
+    else v1
+  | _ => Vbot
+  end.
+  
 Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   match op, vl with
   | Omove, v1::nil => v1
@@ -165,6 +174,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Osingleoflong, v1::nil => singleoflong v1
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
+  | Oselect, v0::v1::vselect::nil => select v0 v1 vselect
+  | Oselectl, v0::v1::vselect::nil => select v0 v1 vselect               
   | _, _ => Vbot
   end.
 
