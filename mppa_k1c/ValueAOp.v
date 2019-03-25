@@ -44,10 +44,19 @@ Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
 Definition select (v0 v1 vselect : aval) : aval :=
   match vselect with
   | I iselect =>
-    if Int.eq iselect Int.zero
-    then v0
-    else v1
-  | _ => Vbot
+    if Int.eq Int.zero iselect
+    then binop_int (fun x0 x1 => x0) v0 v1
+    else binop_int (fun x0 x1 => x1) v0 v1
+  | _ => Vtop
+  end.
+
+Definition selectl (v0 v1 vselect : aval) : aval :=
+  match vselect with
+  | I iselect =>
+    if Int.eq Int.zero iselect
+    then binop_long (fun x0 x1 => x0) v0 v1
+    else binop_long (fun x0 x1 => x1) v0 v1
+  | _ => Vtop
   end.
   
 Definition eval_static_operation (op: operation) (vl: list aval): aval :=
@@ -175,7 +184,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
   | Oselect, v0::v1::vselect::nil => select v0 v1 vselect
-  | Oselectl, v0::v1::vselect::nil => select v0 v1 vselect               
+  | Oselectl, v0::v1::vselect::nil => selectl v0 v1 vselect               
   | _, _ => Vbot
   end.
 
@@ -252,6 +261,24 @@ Proof.
   destruct (propagate_float_constants tt); constructor.
   rewrite Ptrofs.add_zero_l; eauto with va.
   apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
+  (* select *)
+  - inv H2; simpl; try constructor.
+    + destruct (Int.eq _ _); apply binop_int_sound; trivial.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
+  (* selectl *)
+  - inv H2; simpl; try constructor.
+    + destruct (Int.eq _ _); apply binop_long_sound; trivial.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _);
+      destruct a1; destruct a0; eauto; constructor.
 Qed.
 
 End SOUNDNESS.
