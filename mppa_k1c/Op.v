@@ -253,12 +253,12 @@ Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool
   end.
 
 Definition select (v0 : val) (v1 : val) (vselect : val) : option val :=
-  match v0 with
-  | Vint i0 =>
-    match v1 with
-    | Vint i1 =>
-      match vselect with
-      | Vint iselect =>
+  match vselect with
+  | Vint iselect =>
+    match v0 with
+    | Vint i0 =>
+      match v1 with
+      | Vint i1 =>
         Some (Vint (if Int.cmp Ceq Int.zero iselect
                     then i0
                     else i1))
@@ -270,12 +270,12 @@ Definition select (v0 : val) (v1 : val) (vselect : val) : option val :=
   end.
 
 Definition selectl (v0 : val) (v1 : val) (vselect : val) : option val :=
-  match v0 with
-  | Vlong i0 =>
-    match v1 with
-    | Vlong i1 =>
-      match vselect with
-      | Vint iselect =>
+  match vselect with
+  | Vint iselect =>
+    match v0 with
+    | Vlong i0 =>
+      match v1 with
+      | Vlong i1 =>
         Some (Vlong (if Int.cmp Ceq Int.zero iselect
                      then i0
                      else i1))
@@ -1371,6 +1371,20 @@ Proof.
     exploit eval_condition_inj; eauto. intros EQ; rewrite EQ.
     destruct b; simpl; constructor.
     simpl; constructor.
+  (* select *)
+  - inv H5; simpl in H1; try discriminate.
+    inv H4; simpl in H1; try discriminate.
+    inv H3; simpl in H1; try discriminate.
+    simpl.
+    injection H1; clear H1; intro H1.
+    destruct (Int.eq _ _); rewrite <- H1; simpl; TrivialExists.
+  (* selectl *)
+  - inv H5; simpl in H1; try discriminate.
+    inv H4; simpl in H1; try discriminate.
+    inv H3; simpl in H1; try discriminate.
+    simpl.
+    injection H1; clear H1; intro H1.
+    destruct (Int.eq _ _); rewrite <- H1; simpl; TrivialExists.
 Qed.
 
 Lemma eval_addressing_inj:
