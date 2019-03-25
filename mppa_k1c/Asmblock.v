@@ -370,6 +370,9 @@ Inductive arith_name_rrr : Type :=
   | Pfsbfw                                          (**r float sub word *)
   | Pfmuld                                          (**r float multiply double *)
   | Pfmulw                                          (**r float multiply word *)
+(*
+  | Pcmove (it: itest)                              (**r conditional move *)
+ *)
 .
 
 Inductive arith_name_rri32 : Type :=
