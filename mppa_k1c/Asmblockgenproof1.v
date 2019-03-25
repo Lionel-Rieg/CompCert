@@ -1669,6 +1669,20 @@ Opaque Int.eq.
       destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
+- (* Oselectl *)
+  econstructor; split.
+  + eapply exec_straight_one.
+    simpl; reflexivity.
+  + split.
+    * unfold select.
+      destruct (rs x1) eqn:eqX1; try constructor.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      simpl.
+      rewrite int_eq_comm.
+      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
 Qed.
 
 (** Memory accesses *)
