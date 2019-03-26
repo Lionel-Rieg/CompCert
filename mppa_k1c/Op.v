@@ -271,12 +271,12 @@ Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
 
 Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
-  | Vint iselect =>
+  | Vlong iselect =>
     match v0 with
     | Vlong i0 =>
       match v1 with
       | Vlong i1 =>
-        Vlong (if Int.cmp Ceq Int.zero iselect
+        Vlong (if Int64.cmp Ceq Int64.zero iselect
                then i0
                else i1)
       | _ => Vundef

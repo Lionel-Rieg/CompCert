@@ -1568,6 +1568,16 @@ Proof.
   destruct (Z.eq_dec _ _); destruct (Z.eq_dec _ _); congruence.
 Qed.
 
+Lemma int64_eq_comm:
+  forall (x y: int64),
+  (Int64.eq x y) = (Int64.eq y x).
+Proof.
+  intros.
+  unfold Int64.eq.
+  unfold zeq.
+  destruct (Z.eq_dec _ _); destruct (Z.eq_dec _ _); congruence.
+Qed.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1674,13 +1684,13 @@ Opaque Int.eq.
   + eapply exec_straight_one.
     simpl; reflexivity.
   + split.
-    * unfold select.
+    * unfold selectl.
       destruct (rs x1) eqn:eqX1; try constructor.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
       simpl.
-      rewrite int_eq_comm.
-      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
+      rewrite int64_eq_comm.
+      destruct (Int64.eq i Int64.zero); simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
 Qed.
