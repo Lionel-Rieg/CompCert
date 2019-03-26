@@ -78,6 +78,17 @@ Definition parexec_load (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
   | _ => Stuck
   end.
 
+Definition parexec_store (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
+                      (s: ireg) (a: ireg) (ofs: offset) :=
+  match (eval_offset ge ofs) with
+  | OK ptr => 
+    match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
+    | None => Stuck
+    | Some m' => Next rsw m'
+    end
+  | _ => Stuck
+  end.
+
 (* rem: parexec_store = exec_store *)
 
 (** * basic instructions *)
@@ -89,7 +100,7 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
 
   | PLoadRRO n d a ofs => parexec_load (load_chunk n) rsr rsw mr mw d a ofs
 
-  | PStoreRRO n s a ofs => exec_store ge (store_chunk n) rsr mr s a ofs
+  | PStoreRRO n s a ofs => parexec_store (store_chunk n) rsr rsw mr mw s a ofs
 
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in
@@ -163,7 +174,7 @@ Warning: in m PC is assumed to be already pointing on the next instruction !
 Definition par_eval_branch (f: function) (l: label) (rsr rsw: regset) (mw: mem) (res: option bool) :=
   match res with
     | Some true  => par_goto_label f l rsr rsw mw
-    | Some false => Next rsw mw
+    | Some false => Next (rsw # PC <- (rsr PC)) mw
     | None => Stuck
   end.
 

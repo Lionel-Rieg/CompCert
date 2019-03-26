@@ -1465,7 +1465,280 @@ Import PChk.
 
 Section SECT_PAR.
 
+Ltac Simplif :=
+  ((rewrite nextblock_inv by eauto with asmgen)
+  || (rewrite nextblock_inv1 by eauto with asmgen)
+  || (rewrite Pregmap.gss)
+  || (rewrite nextblock_pc)
+  || (rewrite Pregmap.gso by eauto with asmgen)
+  || (rewrite assign_diff by (auto; try discriminate; try (apply ppos_discr; try discriminate; congruence); try (apply ppos_pmem_discr); 
+                                    try (apply not_eq_sym; apply ppos_discr; try discriminate; congruence); try (apply not_eq_sym; apply ppos_pmem_discr); auto))
+  || (rewrite assign_eq)
+  ); auto with asmgen.
+
+Ltac Simpl := repeat Simplif.
+
+Arguments Pos.add: simpl never.
+Arguments ppos: simpl never.
+
 Variable Ge: genv.
+
+Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' mw' i:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_arith_instr ge i rsr rsw = rsw' -> mw = mw' ->
+  exists sw',
+     macro_prun Ge (trans_arith i) sw sr sr = Some sw'
+  /\ match_states (State rsw' mw') sw'.
+Proof.
+  intros GENV MSR MSW PARARITH MWEQ. subst. inv MSR. inv MSW.
+  unfold parexec_arith_instr. destruct i.
+(* Ploadsymbol *)
+  - destruct i. eexists; split; [| split].
+    * simpl. reflexivity.
+    * Simpl.
+    * simpl. intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRR *)
+  - eexists; split; [| split].
+    * simpl. rewrite (H0 rs). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRI32 *)
+  - eexists; split; [|split].
+    * simpl. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRI64 *)
+  - eexists; split; [|split].
+    * simpl. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRF32 *)
+  - eexists; split; [|split].
+    * simpl. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRF64 *)
+  - eexists; split; [|split].
+    * simpl. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRRR *)
+  - eexists; split; [|split].
+    * simpl. rewrite (H0 rs1). rewrite (H0 rs2). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRRI32 *)
+  - eexists; split; [|split].
+    * simpl. rewrite (H0 rs). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+(* PArithRRI64 *)
+  - eexists; split; [|split].
+    * simpl. rewrite (H0 rs). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.
+Qed.
+
+Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi rsw' mw':
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_basic_instr ge bi rsr rsw mr mw = Next rsw' mw' ->
+  exists sw',
+     macro_prun Ge (trans_basic bi) sw sr sr = Some sw'
+  /\ match_states (State rsw' mw') sw'.
+Proof.
+  intros GENV MSR MSW H.
+  destruct bi.
+(* Arith *)
+  - simpl in H. inversion H. subst rsw' mw'. simpl macro_prun. eapply trans_arith_par_correct; eauto.
+(* Load *)
+  - simpl in H. destruct i.
+    unfold parexec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+    destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H. inv MSR; inv MSW;
+    eexists; split; try split;
+    [ simpl; rewrite EVALOFF; rewrite H; pose (H0 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
+     Simpl|
+     intros rr; destruct rr; Simpl;
+      destruct (ireg_eq g rd); [
+       subst; Simpl|
+       Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
+(* Store *)
+  - simpl in H. destruct i.
+    unfold parexec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate.
+    destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate. inv H; inv MSR; inv MSW.
+    eexists; split; try split.
+    * simpl. rewrite EVALOFF. rewrite H. rewrite (H0 ra). rewrite (H0 rs). rewrite MEML. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+(* Allocframe *)
+  - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
+    inv H. inv MSR. inv MSW. eexists. split; try split.
+    * simpl. Simpl. rewrite (H0 GPR12). rewrite H. rewrite MEMAL. rewrite MEMS. Simpl.
+      rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+(* Freeframe *)
+  - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rsr GPR12) eqn:SPeq; try discriminate.
+    destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv MSR. inv MSW.
+    eexists. split; try split.
+    * simpl. rewrite (H0 GPR12). rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
+      Simpl. rewrite (H0 GPR12). rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR14)]]; subst; Simpl.
+(* Pget *)
+  - simpl in H. destruct rs eqn:rseq; try discriminate. inv H. inv MSR. inv MSW.
+    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
+    destruct (ireg_eq g rd); subst; Simpl.
+(* Pset *)
+  - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv MSR; inv MSW.
+    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
+(* Pnop *)
+  - simpl in H. inv H. inv MSR. inv MSW. eexists. split; try split. assumption. assumption.
+Qed.
+
+Theorem forward_simu_par_body:
+  forall bdy ge fn rsr mr sr rsw mw sw rs' m',
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_wio_body ge bdy rsr rsw mr mw = Next rs' m' ->
+  exists s',
+     prun_iw Ge (trans_body bdy) sw sr = Some s'
+  /\ match_states (State rs' m') s'.
+Proof.
+  induction bdy.
+  - intros until m'. intros GENV MSR MSW WIO.
+    simpl in WIO. inv WIO. inv MSR. inv MSW.
+    eexists. split; [| split].
+    * simpl. reflexivity.
+    * assumption.
+    * assumption.
+  - intros until m'. intros GENV MSR MSW WIO.
+    simpl in WIO. destruct (parexec_basic_instr _ _ _ _ _ _) eqn:PARBASIC; try discriminate.
+    exploit forward_simu_par_wio_basic. 4: eapply PARBASIC. all: eauto.
+    intros (sw' & MPRUN & MS'). simpl prun_iw. rewrite MPRUN.
+    eapply IHbdy; eauto.
+Qed.
+
+Theorem forward_simu_par_control ctl rsr mr sr rsw mw sw ge fn rs' m':
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_control ge fn (Some ctl) rsr rsw mw = Next rs' m' ->
+  exists s',
+     macro_prun Ge (trans_control ctl) sw sr sr = Some s'
+  /\ match_states (State rs' m') s'.
+Proof.
+  intros GENV MSR MSW H0.
+  simpl in *. destruct ctl; destruct i; try discriminate.
+  all: try (inv H0; inv MSR; inv MSW; eexists; split; [| split]; [ simpl; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
+  (* Pj_l *)
+  + unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate. inv H0.
+    inv MSR; inv MSW.
+    eexists; split; try split.
+    * simpl. rewrite (H0 PC). unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+  (* Pcb *)
+  + destruct (cmp_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
+      ++ unfold par_eval_branch in H0. destruct (Val.cmp_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+            inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+      ++ unfold par_eval_branch in H0. destruct (Val.cmpl_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+            inv H0; inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. Simpl. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+    (* Pcbu *)
+  + destruct (cmpu_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
+      ++ unfold par_eval_branch in H0. destruct (Val_cmpu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+            inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+      ++ unfold par_eval_branch in H0. destruct (Val_cmplu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+            inv H0; inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+            * simpl. rewrite (H0 PC).
+              rewrite CFB. Simpl. rewrite (H0 r).
+              unfold eval_branch_deps. rewrite VALCMP.
+              reflexivity.
+            * Simpl.
+            * intros rr; destruct rr; Simpl.
+Qed.
+
+Theorem forward_simu_par_wio_bblock ge fn rsr mr sr rsw mw sw bdy ex sz rs' m':
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_wio_bblock_aux ge fn bdy ex (Ptrofs.repr sz) rsr mr = Next rs' m' ->
+  exists s',
+     prun_iw Ge ((trans_body bdy) ++ trans_pcincr sz (trans_exit ex)) sr sw = Some s'
+  /\ match_states (State rs' m') s'.
+Proof.
+  intros. unfold parexec_wio_bblock_aux in H2.
+  destruct (parexec_wio_body _ _ _ _ _ _) eqn:WIOB; try discriminate.
+  exploit forward_simu_par_body. 4: eapply WIOB. all: eauto.
+  intros (s' & RUNB & MS').
+  destruct ex.
+  - exploit forward_simu_par_control. 4: eapply H2. all: eauto.
+Admitted.
+
 
 Theorem forward_simu_par_wio:
   forall ge fn rs1 m1 s1' bdy1 bdy2 b rs m rs2 m2 rs3 m3,
@@ -1491,8 +1764,7 @@ Lemma forward_simu_par_wio_stuck_bdy1:
 Proof.
 Admitted.
 
-Lemma forward_simu_par_wio_stuck_bdy2:
-  forall ge fn rs m s1' bdy1 bdy2 b m' rs',
+Lemma forward_simu_par_wio_stuck_bdy2 ge fn rs m s1' bdy1 bdy2 b m' rs':
   Ge = Genv ge fn ->
   match_states (State rs m) s1' ->
   Permutation (bdy1 ++ bdy2) (body b) ->
