@@ -600,6 +600,44 @@ Proof.
       rewrite Int.and_zero.
       rewrite Int.or_zero.
       reflexivity.
+  - (* select unsigned *)
+    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
+    TrivialExists.
+    simpl in *.
+    unfold select.
+    f_equal.
+    inv H6.
+    inv H7.
+    inv H9.
+    inv H11.
+    unfold same_expr_pure in PURE.
+    destruct y0; try congruence.
+    destruct y1; try congruence.
+    destruct (ident_eq i i0); try congruence.
+    rewrite <- e0 in *. clear e0. clear PURE.
+    inv H2. inv H5.
+    replace v8 with v4 in * by congruence.
+    rename v4 into vselect.
+    destruct vselect; simpl; trivial.
+    rewrite (Val.and_commut _ v5).
+    destruct v5; simpl; trivial.
+    rewrite (Val.and_commut _ v9).
+    rewrite Val.or_commut.
+    destruct v9; simpl; trivial.
+    rewrite int_eq_commut.
+    destruct (Int.eq i1 Int.zero); simpl.
+    + rewrite Int.and_zero.
+      rewrite Int.or_commut.
+      rewrite Int.or_zero.
+      rewrite Int.and_mone.
+      reflexivity.
+    + rewrite Int.and_mone.
+      rewrite Int.neg_zero.
+      rewrite Int.and_zero.
+      rewrite Int.or_zero.
+      reflexivity.
   - apply DEFAULT.
 Qed.
 

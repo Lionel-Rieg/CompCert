@@ -285,6 +285,15 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      && Int.eq zero1 Int.zero                 
      then Eop Oselect (v0:::v1:::y0:::Enil)
      else Eop Oor (e1:::e2:::Enil)
+  |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Ceq zero0))
+        (y0:::Enil)):::Enil)):::v0:::Enil)),
+     (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Cne zero1))
+        (y1:::Enil)):::Enil)):::v1:::Enil)) =>
+     if same_expr_pure y0 y1
+     && Int.eq zero0 Int.zero
+     && Int.eq zero1 Int.zero                 
+     then Eop Oselect (v0:::v1:::y0:::Enil)
+     else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
 
