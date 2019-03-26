@@ -61,30 +61,6 @@ Section SELECT.
 
 Context {hf: helper_functions}.
 
-(** Stuff for select *)
-Definition is_zero (vt : expr) : expr :=
-  Eop (Ocmp (Ccomp Ceq))
-      (vt:::(Eop (Ointconst Int.zero) Enil):::Enil).
-
-Definition is_nonzero (vt : expr) : expr :=
-  Eop (Ocmp (Ccomp Cne))
-      (vt:::(Eop (Ointconst Int.zero) Enil):::Enil).
-
-Definition bool_to_bitmask (et : expr) : expr :=
-  Eop Oneg (et:::Enil).
-
-Definition not_bool_to_bitmask (et : expr) : expr :=
-  Eop Osub (et:::(Eop (Ointconst Int.one) Enil):::Enil).
-
-Definition ternary_expand (e0 e1 et : expr) : expr :=
-  Eop Oor
-    ((Eop Oand ((not_bool_to_bitmask et):::e1:::Enil)):::
-     (Eop Oand ((bool_to_bitmask et):::e0:::Enil)):::
-     Enil).
-                     
-Definition select_or_expand (e0 e1 et: expr) : expr :=
-  ternary_expand e0 e1 (is_zero et).
-
 (** ** Constants **)
 
 Definition addrsymbol (id: ident) (ofs: ptrofs) :=

@@ -162,149 +162,6 @@ Definition binary_constructor_sound (cstr: expr -> expr -> expr) (sem: val -> va
   eval_expr ge sp e m le a x ->
   eval_expr ge sp e m le b y ->
   exists v, eval_expr ge sp e m le (cstr a b) v /\ Val.lessdef (sem x y) v.
-
-Definition is_zero_sem (vt : val) : val :=
-  match vt with
-  | Vint x => Vint (if Int.eq x Int.zero then Int.one else Int.zero)
-  | _ => Vundef
-  end.
-
-Theorem eval_is_zero: unary_constructor_sound is_zero is_zero_sem.
-Proof.
-  red; intros.
-  unfold is_zero_sem, is_zero; simpl.
-  TrivialExists.
-  - constructor.
-    + exact H.
-    + constructor; econstructor; constructor.
-  - simpl.
-    destruct x; simpl; try congruence.
-    unfold Vtrue, Vfalse.
-    predSpec Int.eq Int.eq_spec i Int.zero; reflexivity.
-Qed.
-
-Definition is_nonzero_sem (vt : val) : val :=
-  match vt with
-  | Vint x => Vint (if Int.eq x Int.zero then Int.zero else Int.one)
-  | _ => Vundef
-  end.
-
-Theorem eval_is_nonzero: unary_constructor_sound is_nonzero is_nonzero_sem.
-Proof.
-  red; intros.
-  unfold is_zero_sem, is_zero; simpl.
-  TrivialExists.
-  - constructor.
-    + exact H.
-    + constructor; econstructor; constructor.
-  - simpl.
-    destruct x; simpl; try congruence.
-    unfold Vtrue, Vfalse.
-    predSpec Int.eq Int.eq_spec i Int.zero; reflexivity.
-Qed.
-
-
-Definition ternary_constructor_sound (cstr: expr -> expr -> expr -> expr) (sem: val -> val -> val -> val) : Prop :=
-  forall le a x b y c z,
-  eval_expr ge sp e m le a x ->
-  eval_expr ge sp e m le b y ->
-  eval_expr ge sp e m le c z ->
-  exists v, eval_expr ge sp e m le (cstr a b c) v /\ Val.lessdef (sem x y z) v.
-
-Lemma int_eq_commut : forall x y,
-    Int.eq x y = Int.eq y x.
-Proof.
-  unfold Int.eq.
-  intros.
-  unfold zeq.
-  destruct (Z.eq_dec _ _);  destruct (Z.eq_dec _ _); congruence.
-Qed.
-
-Theorem eval_select_or_expand : ternary_constructor_sound select_or_expand select.
-Proof.
-  unfold ternary_constructor_sound, ternary_expand.
-  intros.
-  TrivialExists.
-  constructor.
-  - econstructor.
-    constructor.
-    econstructor.
-    constructor.
-    unfold is_zero.
-    econstructor.
-    constructor.
-    eassumption.
-    constructor.
-    econstructor.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    econstructor.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    eassumption.
-    constructor.
-    simpl.
-    reflexivity.
-  - constructor.
-    econstructor.
-    constructor.
-    econstructor.
-    constructor.
-    unfold is_zero.
-    econstructor.
-    constructor.
-    eassumption.
-    constructor.
-    econstructor.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-    eassumption.
-    constructor.
-    simpl.
-    reflexivity.
-    constructor.
-  - simpl.
-    unfold select.
-    destruct z; simpl; trivial.
-    destruct x; simpl; trivial; try (destruct (Int.eq i Int.zero); simpl; rewrite <- (Val.or_commut Vundef); simpl; reflexivity).
-    destruct y; simpl; trivial;
-    try (destruct (Int.eq i Int.zero); simpl; reflexivity).
-    rewrite int_eq_commut. predSpec Int.eq Int.eq_spec Int.zero i.
-    * simpl.
-      rewrite Int.sub_idem.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_commut.
-      rewrite Int.or_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      reflexivity.
-    * simpl.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_zero.
-      reflexivity.
-Qed.
        
 Theorem eval_addrsymbol:
   forall le id ofs,
@@ -667,6 +524,15 @@ Proof.
   case (ident_eq i i0); intros.
   subst i0. inversion H0. inversion H1. split. auto. congruence.
   discriminate.
+Qed.
+
+Lemma int_eq_commut: forall x y : int,
+    (Int.eq x y) = (Int.eq y x).
+Proof.
+  intros.
+  predSpec Int.eq Int.eq_spec x y;
+    predSpec Int.eq Int.eq_spec y x;
+    congruence.
 Qed.
 
 Theorem eval_or: binary_constructor_sound or Val.or.
