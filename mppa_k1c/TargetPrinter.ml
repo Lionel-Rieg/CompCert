@@ -505,8 +505,8 @@ module Target (*: TARGET*) =
          fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
       | Pcmove (bt, rd, rcond, rs) ->
-         fprintf oc "   cmove.%a %a? %a = %a\n"
-           bcond bt ireg rd ireg rcond ireg rs
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd ireg rs
         
     let get_section_names name =
       let (text, lit) =
