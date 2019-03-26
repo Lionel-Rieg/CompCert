@@ -300,13 +300,13 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       else Eop Oor (e1:::e2:::Enil)
   | (Eop Onot (t1:::Enil)), t2 => Eop Oorn (t1:::t2:::Enil) 
   | t1, (Eop Onot (t2:::Enil))  => Eop Oorn (t2:::t1:::Enil)
-  |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccomp Ceq))
-        (y0:::(Eop (Ointconst zero0) Enil):::Enil)):::Enil)):::v0:::Enil)),
-     (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccomp Cne))
-        (y1:::(Eop (Ointconst zero1) Enil):::Enil)):::Enil)):::v1:::Enil)) =>
+  |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompimm Ceq zero0))
+        (y0:::Enil)):::Enil)):::v0:::Enil)),
+     (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompimm Cne zero1))
+        (y1:::Enil)):::Enil)):::v1:::Enil)) =>
      if same_expr_pure y0 y1
      && Int.eq zero0 Int.zero
-     && Int.eq zero1 Int.zero
+     && Int.eq zero1 Int.zero                 
      then Eop Oselect (v0:::v1:::y0:::Enil)
      else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)

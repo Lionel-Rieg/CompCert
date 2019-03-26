@@ -696,7 +696,7 @@ Proof.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
   - (*orn*) TrivialExists; simpl; congruence.
   - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
-  - (* select *) Show.
+  - (* select *)
     destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
     predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
     predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
@@ -708,22 +708,20 @@ Proof.
     inv H7.
     inv H9.
     inv H11.
-    inv H12.
-    inv H15.
     unfold same_expr_pure in PURE.
     destruct y0; try congruence.
     destruct y1; try congruence.
     destruct (ident_eq i i0); try congruence.
     rewrite <- e0 in *. clear e0. clear PURE.
     inv H2. inv H5.
-    replace v9 with v4 in * by congruence.
+    replace v8 with v4 in * by congruence.
     rename v4 into vselect.
     destruct vselect; simpl; trivial.
-    rewrite (Val.and_commut _ v6).
-    destruct v6; simpl; trivial.
-    rewrite (Val.and_commut _ v11).
+    rewrite (Val.and_commut _ v5).
+    destruct v5; simpl; trivial.
+    rewrite (Val.and_commut _ v9).
     rewrite Val.or_commut.
-    destruct v11; simpl; trivial.
+    destruct v9; simpl; trivial.
     rewrite int_eq_commut.
     destruct (Int.eq i1 Int.zero); simpl.
     + rewrite Int.and_zero.
