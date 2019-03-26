@@ -2,6 +2,17 @@
 #include <string.h>
 #include "bs.h"
 
+word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
+  return (((-(x==0)) & v0) | ((-(x!=0)) & v1));
+}
+
+/* Original 
+   #define TERNARY0(cmp,v1) ((cmp) ? (v1) : 0) */
+#define TERNARY0(cmp,v1) (-(cmp != 0) & (v1))
+/*
+#define TERNARY0(cmp,v1) compcert_ternary(cmp, 0, v1)
+*/
+
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
 #define bs2le(x) (x)
@@ -392,7 +403,7 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             for(j=0; j < WORD_SIZE; j++)
             {
                 // TODO make const time
-                transpose[offset + j] |= (w & (ONE << j)) ? bitpos : 0;
+	      transpose[offset + j] |= TERNARY0((w & (ONE << j)), bitpos);
             }
 #else
 
