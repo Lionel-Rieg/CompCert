@@ -11,21 +11,11 @@ static inline word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
   return compcert_ternary_signedl(x, v0, v1);
 }
 
-/* Original 
-   #define TERNARY0(cmp,v1) ((cmp) ? (v1) : 0) */
-/* with bitmask
-#define TERNARY0(cmp,v1) (-(cmp != 0) & (v1))
-*/
-/* with function call to ternary 
-#define TERNARY0(cmp,v1) compcert_ternary(cmp, 0, v1)
-*/
-/*
-#define TERNARY0(x, v1) ((unsigned long) ((long) (-(((long) (x))!=0)) & (v1)))
-#define TERNARY(x, v0, v1) \
-  (((long) (-(((long) (x))==0)) & ((long) (v0))) |	\
-   ((long) (-(((long) (x))!=0)) & ((long) (v1))))
-*/
+#if defined(__COMPCERT__)
 #define TERNARY(x, v0, v1) compcert_ternary((x), (v0), (v1))
+#else
+#define TERNARY(x, v0, v1) ((x) ? (v1) : (v0))
+#endif
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
