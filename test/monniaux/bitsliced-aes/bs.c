@@ -19,8 +19,13 @@ static inline word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
 /* with function call to ternary 
 #define TERNARY0(cmp,v1) compcert_ternary(cmp, 0, v1)
 */
-
+/*
 #define TERNARY0(x, v1) ((unsigned long) ((long) (-(((long) (x))!=0)) & (v1)))
+#define TERNARY(x, v0, v1) \
+  (((long) (-(((long) (x))==0)) & ((long) (v0))) |	\
+   ((long) (-(((long) (x))!=0)) & ((long) (v1))))
+*/
+#define TERNARY(x, v0, v1) compcert_ternary((x), (v0), (v1))
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
@@ -415,7 +420,9 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             for(j=0; j < WORD_SIZE; j++)
             {
                 // TODO make const time
-	      *(transptr++) |= TERNARY0((w & bitmask), bitpos);
+	      word_t old = *transptr;
+	      /* *(transptr++) = old | TERNARY0((w & bitmask), bitpos); */
+	      *(transptr++) = TERNARY(w & bitmask, old, old|bitpos);
 	      bitmask <<= 1;
             }
 #else
@@ -514,8 +521,8 @@ void bs_transpose_rev(word_t * blocks)
 	word_t bitmask = ONE;
         for(j=0; j < WORD_SIZE; j++)
         {
-	  word_t bit = TERNARY0(w & bitmask, bitpos);
-	  *transptr |= bit;
+	  word_t old = *transptr;
+	  *transptr = TERNARY(w & bitmask, old, old | bitpos);
 	  transptr += WORDS_PER_BLOCK;
 	  bitmask <<= 1;
         }

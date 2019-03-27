@@ -259,14 +259,16 @@ Nondetfunction andl (e1: expr) (e2: expr) :=
   | t1, Eop (Olongconst n2) Enil => andlimm n2 t1
   | (Eop Onotl (t1:::Enil)), t2 => Eop Oandnl (t1:::t2:::Enil) 
   | t1, (Eop Onotl (t2:::Enil)) => Eop Oandnl (t2:::t1:::Enil)
+  | _, _ => Eop Oandl (e1:::e2:::Enil)
+  end.
+(*
   | (Eop Ocast32signed
          ((Eop Oneg ((Eop (Ocmp (Ccomplimm Cne zero1))
         (y1:::Enil)):::Enil)):::Enil)), v1 =>
      	if Int64.eq zero1 Int64.zero                 
 	then Eop Oselectl ((Eop (Olongconst Int64.zero) Enil):::v1:::y1:::Enil)
 	else Eop Oandl (e1:::e2:::Enil)
-  | _, _ => Eop Oandl (e1:::e2:::Enil)
-  end.
+*)
 
 Nondetfunction orlimm (n1: int64) (e2: expr) :=
   if Int64.eq n1 Int64.zero then e2 else
@@ -295,22 +297,9 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
      && Int64.eq zero1 Int64.zero                 
      then Eop Oselectl (v0:::v1:::y0:::Enil)
      else Eop Oorl (e1:::e2:::Enil)
-     
   | _, _ => Eop Oorl (e1:::e2:::Enil)
   end.
-
-(*
-  |  (Eop Oandl ((Eop Ocast32signed
-         ((Eop Oneg ((Eop (Ocmp (Ccompluimm Ceq zero0))
-        (y0:::Enil)):::Enil)):::Enil)):::v0:::Enil)),
-     (Eop Oandl ((Eop Ocast32signed
-         ((Eop Oneg ((Eop (Ocmp (Ccompluimm Cne zero1))
-        (y1:::Enil)):::Enil)):::Enil)):::v1:::Enil)) =>
-     if same_expr_pure y0 y1
-     && Int64.eq zero0 Int64.zero
-     && Int64.eq zero1 Int64.zero                 
-     then Eop Oselectl (v0:::v1:::y0:::Enil)
-     else Eop Oorl (e1:::e2:::Enil) *)
+     
 
 Nondetfunction xorlimm (n1: int64) (e2: expr) :=
   if Int64.eq n1 Int64.zero then e2 else
