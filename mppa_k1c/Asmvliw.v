@@ -233,25 +233,25 @@ Definition parexec_control (f: function) (oc: option control) (rsr rsw: regset) 
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
   end
-  | None => Next rsw mw
+  | None => Next (rsw#PC <- (rsr#PC)) mw
 end.
 
 
-Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rs: regset) (m: mem): outcome :=
-  match parexec_wio_body bdy rs rs m m with
+Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rsr rsw: regset) (mr mw: mem): outcome :=
+  match parexec_wio_body bdy rsr rsw mr mw with
   | Next rsw mw =>
-    let rs := par_nextblock size_b rs in 
+    let rsr := par_nextblock size_b rsr in 
     let rsw := par_nextblock size_b rsw in 
-    parexec_control f ext rs rsw mw
+    parexec_control f ext rsr rsw mw
   | Stuck => Stuck
   end.
 
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
-  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs m.
+  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
 
 Definition parexec_bblock (f: function) (b: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
    exists bdy1 bdy2, Permutation (bdy1++bdy2) (body b) /\ 
-      o=match parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs m with
+      o=match parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs rs m m with
       | Next rsw mw => parexec_wio_body bdy2 rs rsw m mw
       | Stuck => Stuck
       end.
