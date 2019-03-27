@@ -403,18 +403,23 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             int offset = i << MUL_SHIFT;
 
 #ifndef UNROLL_TRANSPOSE
-            int j;
-	    /* DM use autoincrement */
+	    int j;
+#ifdef __COMPCERT__
 	    word_t *transptr = transpose+offset;
 	    word_t bitmask = ONE;
             for(j=0; j < WORD_SIZE; j++)
             {
-                // TODO make const time
-	      word_t old = *transptr;
-	      /* *(transptr++) = old | TERNARY0((w & bitmask), bitpos); */
+ 	      word_t old = *transptr;
 	      *(transptr++) = TERNARY(w & bitmask, old, old|bitpos);
 	      bitmask <<= 1;
             }
+#else
+            for(j=0; j < WORD_SIZE; j++)
+            {
+                // TODO make const time
+	      transpose[offset + j] |= (w & (ONE << j)) ? bitpos : 0;
+            }
+#endif
 #else
 
             transpose[(offset)+ 0 ] |= (w & (ONE << 0 )) ? (bitpos) : 0;
@@ -507,6 +512,7 @@ void bs_transpose_rev(word_t * blocks)
         word_t offset = k / WORD_SIZE;
 #ifndef UNROLL_TRANSPOSE
         int j;
+#ifdef __COMPCERT__
 	word_t *transptr = transpose + offset;
 	word_t bitmask = ONE;
         for(j=0; j < WORD_SIZE; j++)
@@ -516,6 +522,13 @@ void bs_transpose_rev(word_t * blocks)
 	  transptr += WORDS_PER_BLOCK;
 	  bitmask <<= 1;
         }
+#else
+        for(j=0; j < WORD_SIZE; j++)
+        {
+	  word_t bit = (w & (ONE << j)) ? (ONE << (k % WORD_SIZE)) : 0;
+            transpose[j * WORDS_PER_BLOCK + (offset)] |= bit;
+        }
+#endif
 #else
         transpose[0  * WORDS_PER_BLOCK + (offset )] |= (w & (ONE << 0 )) ? bitpos : 0;
         transpose[1  * WORDS_PER_BLOCK + (offset )] |= (w & (ONE << 1 )) ? bitpos : 0;
