@@ -23,3 +23,16 @@ cycles: 1858263
 
 ==> test.gcc.k1c.out <==
 cycles: 5255763
+
+* cmove mais mauvais scheduling de registres
+==> test.ccomp.host.out <==
+cycles: 4363682
+
+==> test.ccomp.k1c.out <==
+cycles: 7208629
+
+==> test.gcc.host.out <==
+cycles: 2916854
+
+==> test.gcc.k1c.out <==
+cycles: 5646730

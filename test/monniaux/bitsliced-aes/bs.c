@@ -2,15 +2,25 @@
 #include <string.h>
 #include "bs.h"
 
-word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
-  return (((-(x==0)) & v0) | ((-(x!=0)) & v1));
+
+static inline long compcert_ternary_signedl(long x, long v0, long v1) {
+  return ((-(x==0)) & v0) | ((-(x!=0)) & v1);
+}
+
+static inline word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
+  return compcert_ternary_signedl(x, v0, v1);
 }
 
 /* Original 
    #define TERNARY0(cmp,v1) ((cmp) ? (v1) : 0) */
+/* with bitmask
 #define TERNARY0(cmp,v1) (-(cmp != 0) & (v1))
-/*
+*/
+/* with function call to ternary */
 #define TERNARY0(cmp,v1) compcert_ternary(cmp, 0, v1)
+
+/*
+#define TERNARY0(x, v1) ((unsigned long) (((-(((long) (x))==0)) & (0)) | ((-(((long) (x))!=0)) & (v1))))
 */
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
