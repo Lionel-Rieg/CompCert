@@ -36,3 +36,16 @@ cycles: 2916854
 
 ==> test.gcc.k1c.out <==
 cycles: 5646730
+
+* cmove via match du and
+==> test.ccomp.host.out <==
+cycles: 2553732
+
+==> test.ccomp.k1c.out <==
+cycles: 7208629
+
+==> test.gcc.host.out <==
+cycles: 1849125
+
+==> test.gcc.k1c.out <==
+cycles: 5255763

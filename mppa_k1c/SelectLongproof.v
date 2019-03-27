@@ -390,6 +390,15 @@ Proof.
 - TrivialExists.
 Qed.
 
+Lemma int64_eq_commut: forall x y : int64,
+    (Int64.eq x y) = (Int64.eq y x).
+Proof.
+  intros.
+  predSpec Int64.eq Int64.eq_spec x y;
+    predSpec Int64.eq Int64.eq_spec y x;
+    congruence.
+Qed.
+
 Theorem eval_andl: binary_constructor_sound andl Val.andl.
 Proof.
   unfold andl; destruct Archi.splitlong. apply SplitLongproof.eval_andl.
@@ -398,6 +407,24 @@ Proof.
 - InvEval. apply eval_andlimm; auto.
 - (*andn*) InvEval. TrivialExists. simpl. congruence.
 - (*andn reverse*) InvEval. rewrite Val.andl_commut. TrivialExists; simpl. congruence.
+- (* selectl *)
+  InvEval.
+  predSpec Int64.eq Int64.eq_spec zero1 Int64.zero; simpl; TrivialExists.
+  + constructor. econstructor; constructor.
+  constructor; try constructor; try constructor; try eassumption.
+  + simpl in *. f_equal. inv H6.
+    unfold selectl.
+    simpl.
+    destruct v3; simpl; trivial.
+    rewrite int64_eq_commut.
+    destruct (Int64.eq i Int64.zero); simpl.
+    * replace (Int64.repr (Int.signed (Int.neg Int.zero))) with Int64.zero by Int64.bit_solve.
+      destruct y; simpl; trivial.
+    * replace (Int64.repr (Int.signed (Int.neg Int.one))) with Int64.mone by Int64.bit_solve.
+      destruct y; simpl; trivial.
+      rewrite Int64.and_commut. rewrite Int64.and_mone. reflexivity.
+  + constructor. econstructor. constructor. econstructor. constructor. econstructor. constructor. eassumption. constructor. simpl. f_equal. constructor. simpl. f_equal. constructor. simpl. f_equal. constructor. eassumption. constructor.
+  + simpl in *. congruence.
 - TrivialExists.
 Qed.
 
@@ -414,15 +441,6 @@ Proof.
 - TrivialExists.
 Qed.
 
-
-Lemma int64_eq_commut: forall x y : int64,
-    (Int64.eq x y) = (Int64.eq y x).
-Proof.
-  intros.
-  predSpec Int64.eq Int64.eq_spec x y;
-    predSpec Int64.eq Int64.eq_spec y x;
-    congruence.
-Qed.
 
 Theorem eval_orl: binary_constructor_sound orl Val.orl.
 Proof.
