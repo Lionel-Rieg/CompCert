@@ -49,3 +49,6 @@ cycles: 1849125
 
 ==> test.gcc.k1c.out <==
 cycles: 5255763
+
+* hand optimized loads
+cycles: 6027072
