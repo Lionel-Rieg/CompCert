@@ -555,10 +555,10 @@ Fixpoint trans_body (b: list basic) : list L.macro :=
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-Definition trans_pcincr (sz: Z) (k: L.macro) := [(#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k].
+Definition trans_pcincr (sz: Z) (k: L.macro) := (#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k.
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
-  trans_body (body b) ++ trans_pcincr (size b) (trans_exit (exit b)).
+  trans_body (body b) ++ (trans_pcincr (size b) (trans_exit (exit b)) :: nil).
 
 Theorem trans_block_noheader_inv: forall bb, trans_block (no_header bb) = trans_block bb.
 Proof.
@@ -795,7 +795,7 @@ Lemma forward_simu_control:
   exec_control ge fn ex (nextblock b rs) m = Next rs2 m2 ->
   match_states (State rs m) s ->
   exists s',
-     exec Ge (trans_pcincr (size b) (trans_exit ex)) s = Some s'
+     exec Ge (trans_pcincr (size b) (trans_exit ex) :: nil) s = Some s'
   /\ match_states (State rs2 m2) s'.
 Proof.
   intros. destruct ex.
@@ -972,7 +972,7 @@ Lemma exec_trans_pcincr_exec:
   forall rs m s b,
   match_states (State rs m) s ->
   exists s',
-     exec Ge (trans_pcincr (size b) (trans_exit (exit b))) s = exec Ge [trans_exit (exit b)] s'
+     exec Ge (trans_pcincr (size b) (trans_exit (exit b)) :: nil) s = exec Ge [trans_exit (exit b)] s'
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros.
@@ -1633,96 +1633,110 @@ Proof.
     eapply IHbdy; eauto.
 Qed.
 
-Theorem forward_simu_par_control ctl rsr mr sr rsw mw sw ge fn rs' m':
+Theorem forward_simu_par_control ge fn rsr rsw mr mw sr sw sz rs' ex m':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn (Some ctl) rsr rsw mw = Next rs' m' ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Next rs' m' ->
   exists s',
-     macro_prun Ge (trans_control ctl) sw sr sr = Some s'
+     macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
   intros GENV MSR MSW H0.
-  simpl in *. destruct ctl; destruct i; try discriminate.
-  all: try (inv H0; inv MSR; inv MSW; eexists; split; [| split]; [ simpl; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
-  (* Pj_l *)
-  + unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate. inv H0.
-    inv MSR; inv MSW.
-    eexists; split; try split.
-    * simpl. rewrite (H0 PC). unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl.
-  (* Pcb *)
-  + destruct (cmp_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
-      ++ unfold par_eval_branch in H0. destruct (Val.cmp_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
-        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
-            inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-      ++ unfold par_eval_branch in H0. destruct (Val.cmpl_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
-        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
-            inv H0; inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. Simpl. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-    (* Pcbu *)
-  + destruct (cmpu_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
-      ++ unfold par_eval_branch in H0. destruct (Val_cmpu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
-        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
-            inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-      ++ unfold par_eval_branch in H0. destruct (Val_cmplu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
-        +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
-            inv H0; inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
-            * simpl. rewrite (H0 PC).
-              rewrite CFB. Simpl. rewrite (H0 r).
-              unfold eval_branch_deps. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-Qed.
+  simpl in *.
+  destruct ex.
+  - destruct c; destruct i; try discriminate.
+    all: try (inv H0; inv MSR; inv MSW; eexists; split; [| split]; [simpl; rewrite (H0 PC); reflexivity | Simpl | intros rr; destruct rr; unfold par_nextblock; Simpl]).
 
-Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ trans_pcincr sz (trans_exit ex).
+    (* Pj_l *)
+    + simpl in H0. unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (par_nextblock _ _ _) eqn:NB; try discriminate. inv H0.
+      inv MSR; inv MSW.
+      eexists; split; try split.
+      * simpl. rewrite (H0 PC). unfold goto_label_deps. rewrite LPOS. Simpl.
+        unfold par_nextblock in NB. rewrite Pregmap.gss in NB. rewrite NB. reflexivity.
+      * Simpl.
+      * intros rr; destruct rr; unfold par_nextblock; Simpl.
+    (* Pcb *)
+    + simpl in H0. destruct (cmp_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
+        ++ unfold par_eval_branch in H0. destruct (Val.cmp_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+          +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (par_nextblock _ _ _) eqn:NB; try discriminate.
+              inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. Simpl. rewrite (H0 r).
+                unfold eval_branch_deps. Admitted. (* rewrite VALCMP.
+                unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+          +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+        ++ unfold par_eval_branch in H0. destruct (Val.cmpl_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+          +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+              inv H0; inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+          +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. Simpl. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+      (* Pcbu *)
+    + destruct (cmpu_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
+        ++ unfold par_eval_branch in H0. destruct (Val_cmpu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+          +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+              inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+          +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+        ++ unfold par_eval_branch in H0. destruct (Val_cmplu_bool _ _ _) eqn:VALCMP; try discriminate. destruct b.
+          +++ unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (rsr PC) eqn:NB; try discriminate.
+              inv H0; inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                unfold goto_label_deps. rewrite LPOS. rewrite NB. reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+          +++ inv H0. inv MSR; inv MSW. eexists; split; try split.
+              * simpl. rewrite (H0 PC).
+                rewrite CFB. Simpl. rewrite (H0 r).
+                unfold eval_branch_deps. rewrite VALCMP.
+                reflexivity.
+              * Simpl.
+              * intros rr; destruct rr; Simpl.
+Qed. *)
+(* 
+Theorem forward_simu_par_nextblockge ge fn rsr rsw mr mw sr sw sz rs' ex rs'' m'':
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  par_nextblock (Ptrofs.repr sz) rsr rsw = rs' ->
+  parexec_control ge fn ex rsr rs' mw = Next rs'' m'' ->
+  exists s'',
+     macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s''
+  /\ match_states (State rs'' m'') s''. *)
+
+Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ (trans_pcincr sz (trans_exit ex) :: nil).
 
 Theorem forward_simu_par_wio_bblock_aux ge fn rsr mr sr rsw mw sw bdy ex sz rs' m':
   Ge = Genv ge fn ->
@@ -1741,6 +1755,7 @@ Proof.
   - exploit forward_simu_par_control. 4: eapply H2. all: eauto.
 Admitted.
 
+
 Theorem forward_simu_par_wio_bblock ge fn rsr mr sr rsw mw sw bdy1 bdy2 ex sz rs' m' rs2 m2:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -1752,8 +1767,14 @@ Theorem forward_simu_par_wio_bblock ge fn rsr mr sr rsw mw sw bdy1 bdy2 ex sz rs
   /\ match_states (State rs2 m2) s2'.
 Admitted.
 
-Theorem trans_block_perserves_permutation ge fn bdy1 bdy2 b:
-  Ge = Genv ge fn ->
+Lemma trans_body_perserves_permutation bdy1 bdy2:
+  Permutation bdy1 bdy2 ->
+  Permutation (trans_body bdy1) (trans_body bdy2).
+Proof.
+  induction 1; simpl; econstructor; eauto.
+Qed.
+
+Theorem trans_block_perserves_permutation bdy1 bdy2 b:
   Permutation (bdy1 ++ bdy2) (body b) ->
   Permutation (trans_block b) ((trans_block_aux bdy1 (size b) (exit b))++(trans_body bdy2)).
 Admitted.

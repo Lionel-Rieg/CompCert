@@ -151,8 +151,8 @@ Fixpoint parexec_wio_body (body: list basic) (rsr rsw: regset) (mr mw: mem) :=
   instruction ([nextblock]) or branching to a label ([goto_label]). *)
 
 (* TODO: factoriser ? *)
-Definition par_nextblock size_b (rsr rsw: regset) :=
-  rsw#PC <- (Val.offset_ptr rsr#PC size_b).
+Definition par_nextblock size_b (rs: regset) :=
+  rs#PC <- (Val.offset_ptr rs#PC size_b).
 
 (* TODO: factoriser ? *)
 Definition par_goto_label (f: function) (lbl: label) (rsr rsw: regset) (mw: mem) :=
@@ -240,7 +240,8 @@ end.
 Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rs: regset) (m: mem): outcome :=
   match parexec_wio_body bdy rs rs m m with
   | Next rsw mw =>
-    let rsw := par_nextblock size_b rs rsw in 
+    let rs := par_nextblock size_b rs in 
+    let rsw := par_nextblock size_b rsw in 
     parexec_control f ext rs rsw mw
   | Stuck => Stuck
   end.
