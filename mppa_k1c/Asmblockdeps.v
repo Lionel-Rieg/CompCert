@@ -1756,16 +1756,22 @@ Proof.
 Admitted.
 
 
-Theorem forward_simu_par_wio_bblock ge fn rsr mr sr rsw mw sw bdy1 bdy2 ex sz rs' m' rs2 m2:
+Theorem forward_simu_par_wio_bblock ge fn rsr mr sr bdy1 bdy2 ex sz rs' m' rs2 m2:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
-  match_states (State rsw mw) sw ->
   parexec_wio_bblock_aux ge fn bdy1 ex (Ptrofs.repr sz) rsr mr = Next rs' m' ->
   parexec_wio_body ge bdy2 rsr rs' mr m' = Next rs2 m2 ->
   exists s2',
-     res_eq (Some s2') (prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sr sr)
+     prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sr sr = Some s2'
   /\ match_states (State rs2 m2) s2'.
-Admitted.
+Proof.
+  intros; exploit forward_simu_par_wio_bblock_aux. 4: eauto. all: eauto.
+  intros (s1' & X1 & X2).
+  exploit (forward_simu_par_body bdy2). 4: eauto. all: eauto.
+  intros (s2' & X3 & X4).
+  eexists; split; eauto.
+  erewrite prun_iw_app_Some; eauto.
+Qed.
 
 Lemma trans_body_perserves_permutation bdy1 bdy2:
   Permutation bdy1 bdy2 ->
@@ -1774,46 +1780,89 @@ Proof.
   induction 1; simpl; econstructor; eauto.
 Qed.
 
+Lemma trans_body_app bdy1: forall bdy2,
+   trans_body (bdy1++bdy2) = (trans_body bdy1) ++ (trans_body bdy2).
+Proof.
+  induction bdy1; simpl; congruence.
+Qed.
+
 Theorem trans_block_perserves_permutation bdy1 bdy2 b:
   Permutation (bdy1 ++ bdy2) (body b) ->
   Permutation (trans_block b) ((trans_block_aux bdy1 (size b) (exit b))++(trans_body bdy2)).
-Admitted.
-
-(* replaced by forward_simu_par_wio_bblock
-Theorem forward_simu_par_wio:
-  forall ge fn rs1 m1 s1' bdy1 bdy2 b rs m rs2 m2 rs3 m3,
-  Ge = Genv ge fn ->
-  match_states (State rs m) s1' ->
-  Permutation (bdy1 ++ bdy2) (body b) ->
-  parexec_wio_body ge bdy1 rs rs m m = Next rs1 m1 ->
-  parexec_control ge fn (exit b) rs (par_nextblock (Ptrofs.repr (size b)) rs rs1) m1 = Next rs2 m2 ->
-  parexec_wio_body ge bdy2 rs rs2 m m2 = Next rs3 m3 ->
-  exists s2',
-     res_eq (Some s2') (prun_iw Ge (trans_block b) s1' s1')
-  /\ match_states (State rs3 m3) s2'.
 Proof.
-Admitted.
-*)
+  intro H; unfold trans_block, trans_block_aux.
+  eapply perm_trans.
+  - eapply Permutation_app_tail. 
+    apply trans_body_perserves_permutation.
+    apply Permutation_sym; eapply H.
+  - rewrite trans_body_app. rewrite <-! app_assoc.
+    apply Permutation_app_head.
+    apply Permutation_app_comm.
+Qed.
 
-Lemma forward_simu_par_wio_stuck_bdy1:
-  forall ge fn rs m s1' bdy1 bdy2 b,
+Lemma forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
-  match_states (State rs m) s1' ->
-  Permutation (bdy1 ++ bdy2) (body b) ->
-  parexec_wio_bblock_aux ge fn bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Stuck ->
-  res_eq None (prun_iw Ge (trans_block b) s1' s1').
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
+  macro_prun Ge (trans_basic bi) sw sr sr = None.
+Admitted.
+
+Lemma forward_simu_par_body_Stuck bdy: forall ge fn rsr mr sr rsw mw sw,
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_wio_body ge bdy rsr rsw mr mw = Stuck ->
+  prun_iw Ge (trans_body bdy) sw sr = None.
 Proof.
+  induction bdy.
+  - intros until sw. intros GENV MSR MSW WIO.
+    simpl in WIO. inv WIO.
+  - intros until sw. intros GENV MSR MSW WIO.
+    simpl in WIO. destruct (parexec_basic_instr _ _ _ _ _ _) eqn:PARBASIC.
+    * exploit forward_simu_par_wio_basic. 4: eapply PARBASIC. all: eauto.
+      intros (sw' & MPRUN & MS'). simpl prun_iw. rewrite MPRUN.
+      eapply IHbdy; eauto.
+    * exploit forward_simu_par_wio_basic_Stuck. 4: eapply PARBASIC. all: eauto.
+      intros X; simpl; rewrite X; auto.
+Qed.
+
+Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Stuck ->
+  macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Admitted.
 
-Lemma forward_simu_par_wio_stuck_bdy2 ge fn rs m s1' bdy1 bdy2 b m' rs':
+Lemma forward_simu_par_wio_stuck_bdy1 ge fn rs m s1' bdy1 sz ex:
   Ge = Genv ge fn ->
   match_states (State rs m) s1' ->
-  Permutation (bdy1 ++ bdy2) (body b) ->
-  parexec_wio_bblock_aux ge fn bdy1 (exit b) (Ptrofs.repr (size b)) rs m = Next rs' m' ->
+  parexec_wio_bblock_aux ge fn bdy1 ex (Ptrofs.repr sz) rs m = Stuck ->
+  prun_iw Ge ((trans_block_aux bdy1 sz ex)) s1' s1' = None.
+Proof.
+  unfold parexec_wio_bblock_aux, trans_block_aux; intros.
+  destruct (parexec_wio_body _ _ _ _ _ _) eqn:WIOB.
+  * exploit forward_simu_par_body. 4: eapply WIOB. all: eauto.
+    intros (s' & RUNB & MS').
+    erewrite prun_iw_app_Some; eauto.
+    exploit forward_simu_par_control_Stuck. 4: eauto. all: eauto.
+    simpl. intros X; rewrite X. auto.
+  * apply prun_iw_app_None. eapply forward_simu_par_body_Stuck. 4: eauto. all: eauto.
+Qed.
+
+Lemma forward_simu_par_wio_stuck_bdy2 ge fn rs m s1' bdy1 bdy2 sz ex m' rs':
+  Ge = Genv ge fn ->
+  match_states (State rs m) s1' ->
+  parexec_wio_bblock_aux ge fn bdy1 ex (Ptrofs.repr sz) rs m = Next rs' m' ->
   parexec_wio_body ge bdy2 rs rs' m m' = Stuck ->
-  res_eq None (prun_iw Ge (trans_block b) s1' s1').
+  prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) s1' s1'=None.
 Proof.
-Admitted.
+  intros; exploit forward_simu_par_wio_bblock_aux. 4: eauto. all: eauto.
+  intros (s2' & X1 & X2).
+  erewrite prun_iw_app_Some; eauto.
+  eapply forward_simu_par_body_Stuck. 4: eauto. all: eauto.
+Qed.
 
 Theorem forward_simu_par:
   forall rs1 m1 s1' b ge fn rs2 m2,
@@ -1831,7 +1880,7 @@ Proof.
   remember (parexec_wio_bblock_aux _ _ _ _ _ _ _) as pwb.
   destruct pwb; try congruence.
   exploit forward_simu_par_wio_bblock; eauto. intros (s2' & PIW & MS').
-  unfold prun; eexists; split; eauto.
+  unfold prun; simpl; eexists; split; eauto.
 Qed.
 
 Theorem forward_simu_par_stuck:
@@ -1843,9 +1892,13 @@ Theorem forward_simu_par_stuck:
 Proof.
   intros until fn. intros GENV PAREXEC MS.
   inversion PAREXEC as (bdy1 & bdy2 & PERM & WIO).
+  exploit trans_block_perserves_permutation; eauto.
+  intros Perm.
   destruct (parexec_wio_bblock_aux _ _ _ _ _ _ _) eqn:WIOEXIT.
   - econstructor; eauto. split. eapply forward_simu_par_wio_stuck_bdy2; eauto. auto.
-  - clear WIO. econstructor; eauto. split. eapply forward_simu_par_wio_stuck_bdy1; eauto. auto.
+  - clear WIO. econstructor; eauto. split; eauto.
+    simpl; apply prun_iw_app_None; auto.
+    eapply forward_simu_par_wio_stuck_bdy1; eauto.
 Qed.
 
 Theorem forward_simu_par_alt:
