@@ -11,7 +11,7 @@ static inline word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
   return compcert_ternary_signedl(x, v0, v1);
 }
 
-#if defined(__COMPCERT__)
+#if defined(__K1C__)
 #define TERNARY(x, v0, v1) compcert_ternary((x), (v0), (v1))
 #else
 #define TERNARY(x, v0, v1) ((x) ? (v1) : (v0))
