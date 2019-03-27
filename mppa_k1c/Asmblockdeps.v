@@ -1773,9 +1773,16 @@ Theorem forward_simu_par_wio_bblock ge fn rsr mr sr rsw mw sw bdy1 bdy2 ex sz rs
   parexec_wio_bblock_aux ge fn bdy1 ex (Ptrofs.repr sz) rsr rsw mr mw = Next rs' m' ->
   parexec_wio_body ge bdy2 rsr rs' mr m' = Next rs2 m2 ->
   exists s2',
-     res_eq (Some s2') (prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sw sr)
+     prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sw sr = Some s2'
   /\ match_states (State rs2 m2) s2'.
-Admitted.
+Proof.
+  intros. exploit forward_simu_par_wio_bblock_aux. 4: eapply H2. all: eauto.
+  intros (s' & RUNAUX & MS').
+  exploit forward_simu_par_body. 4: eapply H3. all: eauto.
+  intros (s'' & RUNBDY2 & MS'').
+  eexists. split.
+  eapply prun_iw_app_some. eassumption. eassumption. eassumption.
+Qed.
 
 Lemma trans_body_perserves_permutation bdy1 bdy2:
   Permutation bdy1 bdy2 ->
@@ -1841,7 +1848,7 @@ Proof.
   remember (parexec_wio_bblock_aux _ _ _ _ _ _ _ _ _) as pwb.
   destruct pwb; try congruence.
   exploit forward_simu_par_wio_bblock; eauto. intros (s2' & PIW & MS').
-  unfold prun; eexists; split; eauto.
+  unfold prun. unfold res_eq. eexists; split; eauto.
 Qed.
 
 Theorem forward_simu_par_stuck:
