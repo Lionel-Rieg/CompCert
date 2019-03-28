@@ -274,7 +274,17 @@ Lemma find_label_is_end_block_is_label i l c bl:
       is_end_block (trans_inst i) bl ->
       is_trans_code c bl ->
       i <> Mlabel l -> find_label l (add_to_new_bblock (trans_inst i) :: bl) = find_label l bl.  
-Admitted.
+Proof.
+  intros H H0 H1.
+  unfold find_label.
+  remember (is_label l _) as b.
+  cutrewrite (b = false); auto.
+  subst; unfold is_label.
+  destruct i; simpl in * |- *; try (destruct (in_dec l nil); intuition).
+  inversion H.
+  destruct (in_dec l (l0::nil)) as [H6|H6]; auto.
+  simpl in H6; intuition try congruence.
+Qed.
 
 Lemma find_label_at_begin l bh bl:
   In l (header bh)
@@ -286,6 +296,13 @@ Qed.
 
 
 
+Lemma find_label_add_label_diff l bh bl:
+      ~(In l (header bh)) -> 
+      find_label l bl = find_label l (bh::bl).
+Proof.
+  intros. unfold find_label. destruct (is_label l bh) eqn:H0; auto.
+  rewrite <- is_label_correct_true in H0. tauto.
+Qed.
 
 
 Lemma find_label_transcode_preserved:
@@ -343,10 +360,36 @@ Proof.
       destruct (in_dec l (l0::header bh)) as [H5|H5]; simpl in H5.
       * destruct H5; try congruence.
         exists (l0::h); simpl; intuition.
-        rewrite find_label_at_begin in H4.
+        rewrite find_label_at_begin in H4; auto.
         apply f_equal. inversion H4 as [H5]. clear H4.
-        (* A FINIR *)
-      
+        unfold concat in * |- *.
+        destruct (trans_code c'); simpl in * |- *;
+        inversion H5; subst; simpl; auto.
+      * exists h.
+        split; eauto.
+        rewrite (find_label_add_label_diff l bh bl); eauto.
+  + (* Tr_add_basic *)
+    intros.
+    exploit Mach_find_label_split; eauto.
+    destruct 1 as [(H2&H3)|(H2&H3)].
+    rewrite H2 in H. unfold  trans_inst in H. congruence.
+    exploit IHHeqbl; eauto.
+    clear IHHeqbl Heqbl.
+    destruct 1 as (h & H4 & H5).
+    simpl; unfold is_label.
+    assert ((header (add_basic bi bh))=(header bh)) as H6. auto. 
+    rewrite H6. 
+    destruct (in_dec l (header bh))  as [H7|H7]; simpl in H6.
+    * rewrite <- H6 in H7; simpl in H7; destruct H7.
+    * exists h.
+      split; eauto.
+      rewrite (find_label_add_label_diff l bh bl); eauto.
+Qed.
+    
+
+Lemma find_label_add_basic l bh bl:
+      ~(In l (header bh)) -> 
+      forall bi, find_label l (add_basic bi bh :: bl) = find_label l (bh::bl).  
 Admitted.
       
 
