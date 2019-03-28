@@ -13,6 +13,7 @@
 /*                                                                        */
 /**************************************************************************/
 
+#define VERIMAG_MEASUREMENTS
 #define CAML_INTERNALS
 
 /* Main entry point (can be overridden by a user-provided main()
@@ -24,6 +25,10 @@
 #include "caml/osdeps.h"
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+#ifdef VERIMAG_MEASUREMENTS
+#include "../../clock.h"
 #endif
 
 CAMLextern void caml_main (char_os **);
@@ -41,7 +46,15 @@ int main(int argc, char **argv)
   caml_expand_command_line(&argc, &argv);
 #endif
 
+#ifdef VERIMAG_MEASUREMENTS
+  clock_prepare();
+  clock_start();
+#endif
   caml_main(argv);
+#ifdef VERIMAG_MEASUREMENTS
+  clock_stop();
+  print_total_clock();
+#endif
   caml_sys_exit(Val_int(0));
   return 0; /* not reached */
 }
