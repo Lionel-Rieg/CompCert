@@ -71,7 +71,7 @@ Lemma next_eq:
   forall (rs rs': regset) m m',
   rs = rs' -> m = m' -> Next rs m = Next rs' m'.
 Proof.
-  intros. congruence.
+  intros; apply f_equal2; auto.
 Qed.
 
 Lemma regset_double_set:
@@ -238,7 +238,7 @@ Proof.
   rewrite <- Zplus_mod. auto.
 Qed.
 
-Section PRESERVATION.
+Section PRESERVATION_ASMBLOCK.
 
 Variables prog tprog: program.
 Hypothesis TRANSL: match_prog prog tprog.
@@ -659,7 +659,7 @@ Proof.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
 Qed.
 
-Theorem transf_program_correct:
+Theorem transf_program_correct_Asmblock: 
   forward_simulation (Asmblock.semantics prog) (Asmblock.semantics tprog).
 Proof.
   eapply forward_simulation_plus.
@@ -667,6 +667,176 @@ Proof.
   - apply transf_initial_states.
   - apply transf_final_states.
   - apply transf_step_correct.
+Qed.
+
+End PRESERVATION_ASMBLOCK.
+
+
+
+
+Require Import Asmvliw.
+
+
+Lemma verified_par_checks_alls_bundles lb x: forall bundle,
+  verify_par lb = OK x ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  induction lb; simpl; try tauto.
+  intros bundle H; monadInv H.
+  destruct 1; subst; eauto.
+  destruct x0; auto.
+Qed.
+
+
+Lemma verified_schedule_nob_checks_alls_bundles bb lb bundle:
+  verified_schedule_nob bb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  unfold verified_schedule_nob. intros H;
+  monadInv H. destruct x3. 
+  intros; eapply verified_par_checks_alls_bundles; eauto.
+Qed.
+
+Lemma verify_par_bblock_PExpand bb i:
+  exit bb = Some (PExpand i) -> verify_par_bblock bb = OK tt.
+Proof.
+  destruct bb as [h bdy ext H]; simpl.
+  intros; subst. destruct i.
+  generalize H.
+  rewrite <- AB.wf_bblock_refl in H.
+  destruct H as [H H0].
+  unfold AB.builtin_alone in H0. erewrite H0; eauto.
+Qed.
+
+Local Hint Resolve verified_schedule_nob_checks_alls_bundles.
+
+Lemma verified_schedule_checks_alls_bundles bb lb bundle:
+  verified_schedule bb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  unfold verified_schedule. remember (exit bb) as exb.
+  destruct exb as [c|]; eauto.
+  destruct c as [i|]; eauto.
+  destruct i; intros H. inversion_clear H; simpl.
+  intuition subst.
+  intros; eapply verify_par_bblock_PExpand; eauto.
+Qed.
+
+Lemma transf_blocks_checks_all_bundles lbb: forall lb bundle,
+  transf_blocks lbb = OK lb ->
+  List.In bundle lb -> verify_par_bblock bundle = OK tt.
+Proof.
+  induction lbb; simpl.
+  - intros lb bundle H; inversion_clear H. simpl; try tauto.
+  - intros lb bundle H0.
+    monadInv H0.
+    rewrite in_app. destruct 1; eauto.
+    eapply verified_schedule_checks_alls_bundles; eauto.
+Qed.
+
+Lemma find_bblock_Some_in lb: 
+  forall ofs b, find_bblock ofs lb = Some b -> List.In b lb.
+Proof.
+  induction lb; simpl; try congruence.
+  intros ofs b.
+  destruct (zlt ofs 0); try congruence.
+  destruct (zeq ofs 0); eauto.
+  intros X; inversion X; eauto.
+Qed.
+
+Section PRESERVATION_ASMVLIW.
+
+Variables prog tprog: program.
+Hypothesis TRANSL: match_prog prog tprog.
+Let ge := Genv.globalenv prog.
+Let tge := Genv.globalenv tprog.
+
+Lemma all_bundles_are_checked b ofs f bundle:
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock ofs (fn_blocks f) = Some bundle ->
+  verify_par_bblock bundle = OK tt. 
+Proof.
+  unfold match_prog, match_program in TRANSL.
+  unfold Genv.find_funct_ptr; simpl; intros X.
+  destruct (Genv.find_def_match_2 TRANSL b) as [|f0 y H]; try congruence.
+  destruct y as [tf0|]; try congruence.
+  inversion X as [H1]. subst. clear X.
+  remember (@Gfun fundef unit (Internal f)) as f2.
+  destruct H as [ctx' f1 f2 H0|]; try congruence.
+  inversion Heqf2 as [H2]. subst; clear Heqf2.
+  unfold transf_fundef, transf_partial_fundef in H.
+  destruct f1 as [f1|f1]; try congruence.
+  unfold transf_function, transl_function in H.
+  monadInv H. monadInv EQ.
+  destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks _))); simpl in *|-; try congruence.
+  injection EQ1; intros; subst.
+  monadInv EQ0. simpl in * |-.
+  intros; exploit transf_blocks_checks_all_bundles; eauto.
+  intros; eapply find_bblock_Some_in; eauto.
+Qed.
+
+Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  verify_par_bblock bundle = OK tt ->
+  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+Proof.
+  intros. unfold verify_par_bblock in H0. destruct (Asmblockdeps.bblock_para_check _) eqn:BPC; try discriminate. clear H0.
+  simpl in H. simpl in H1.
+  eapply Asmblockdeps.bblock_para_check_correct; eauto.
+Qed.
+
+Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+Proof.
+  intros; eapply checked_bundles_are_parexec_equiv; eauto.
+  eapply all_bundles_are_checked; eauto.
+Qed.
+
+Lemma seqexec_parexec_wio b ofs f bundle rs rs' m m':
+  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
+  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
+  parexec_wio_bblock (globalenv (semantics tprog)) f bundle rs m = Next rs' m'.
+Proof.
+  intros; erewrite <- seqexec_parexec_equiv; eauto.
+  eapply parexec_bblock_write_in_order.
+Qed.
+
+
+Theorem transf_program_correct_Asmvliw: 
+  forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
+Proof.
+  eapply forward_simulation_step with (match_states:=fun (s1:Asmblock.state) s2 => s1=s2); eauto.
+  - intros; subst; auto.
+  - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
+    + eapply exec_step_internal; eauto.
+      eapply seqexec_parexec_wio; eauto.
+      intros; eapply seqexec_parexec_equiv; eauto.
+    + eapply exec_step_builtin; eauto.
+    + eapply exec_step_external; eauto.
+Qed.
+
+End PRESERVATION_ASMVLIW.
+
+
+
+
+Section PRESERVATION.
+
+Variables prog tprog: program.
+Hypothesis TRANSL: match_prog prog tprog.
+Let ge := Genv.globalenv prog.
+Let tge := Genv.globalenv tprog.
+
+Theorem transf_program_correct: 
+  forward_simulation (Asmblock.semantics prog) (Asmvliw.semantics tprog).
+Proof.
+  eapply compose_forward_simulations.
+  eapply transf_program_correct_Asmblock; eauto.
+  eapply transf_program_correct_Asmvliw; eauto.
 Qed.
 
 End PRESERVATION.

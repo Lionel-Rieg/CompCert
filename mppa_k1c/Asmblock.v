@@ -179,8 +179,6 @@ Inductive ex_instruction : Type :=
 
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
-  | Pdiv                                              (**r 32 bits integer division, call to __divdi3 *)
-  | Pdivu                                             (**r 32 bits integer division, call to __udivdi3 *)
 .
 
 (** FIXME: comment not up to date !
@@ -844,10 +842,10 @@ Section RELSEM.
   set and memory state after execution of the instruction at [rs#PC],
   or [Stuck] if the processor is stuck. *)
 
-Inductive outcome {rgset}: Type :=
-  | Next (rs:rgset) (m:mem)
+Inductive outcome: Type :=
+  | Next (rs:regset) (m:mem)
   | Stuck.
-Arguments outcome: clear implicits.
+(* Arguments outcome: clear implicits. *)
 
 
 (** ** Arithmetic Expressions (including comparisons) *)
@@ -1309,7 +1307,7 @@ Definition store_chunk n :=
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :=
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome :=
   match bi with
   | PArith ai => Next (exec_arith_instr ai rs) m
 
@@ -1351,7 +1349,7 @@ Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome regset :
   | Pnop => Next rs m
 end.
 
-Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome regset :=
+Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
   match body with
   | nil => Next rs m
   | bi::body' => 
@@ -1411,7 +1409,7 @@ Fixpoint label_pos (lbl: label) (pos: Z) (lb: bblocks) {struct lb} : option Z :=
   | b :: lb' => if is_label lbl b then Some pos else label_pos lbl (pos + (size b)) lb'
   end.
 
-Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome regset :=
+Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => Stuck
   | Some pos =>
@@ -1426,7 +1424,7 @@ Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome
 Warning: in m PC is assumed to be already pointing on the next instruction !
 
 *)
-Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome regset :=
+Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome :=
   match res with
     | Some true  => goto_label f l rs m
     | Some false => Next rs m
@@ -1450,7 +1448,7 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
     we generate cannot use those registers to hold values that must
     survive the execution of the pseudo-instruction. *)
 
-Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome regset :=
+Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome :=
   match oc with
   | Some ic =>
 (** Get/Set system registers *)
@@ -1486,22 +1484,11 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
 (** Pseudo-instructions *)
   | Pbuiltin ef args res =>
       Stuck (**r treated specially below *)
-  | Pdiv =>
-      match Val.divs (rs GPR0) (rs GPR1) with
-      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
-      | None => Stuck
-      end
-
-  | Pdivu =>
-      match Val.divu (rs GPR0) (rs GPR1) with
-      | Some v => Next (rs # GPR0 <- v # RA <- (rs RA)) m
-      | None => Stuck
-      end
   end
   | None => Next rs m
 end.
 
-Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome regset :=
+Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome :=
   match exec_body (body b) rs0 m with
   | Next rs' m' =>
     let rs1 := nextblock b rs' in exec_control f (exit b) rs1 m'
