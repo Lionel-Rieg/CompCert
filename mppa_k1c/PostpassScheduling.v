@@ -352,8 +352,9 @@ Definition verified_schedule_nob (bb : bblock) : res (list bblock) :=
   do tbb <- concat_all lbb;
   do sizecheck <- verify_size bb lbb;
   do schedcheck <- verify_schedule bb' tbb;
-  do parcheck <- verify_par lbb;
-  stick_header_code (header bb) lbb.
+  do res <- stick_header_code (header bb) lbb;
+  do parcheck <- verify_par res;
+  OK res.
 
 Lemma verified_schedule_nob_size:
   forall bb lbb, verified_schedule_nob bb = OK lbb -> size bb = size_blocks lbb.
@@ -379,7 +380,7 @@ Lemma verified_schedule_nob_header:
   /\ Forall (fun b => header b = nil) lbb.
 Proof.
   intros. split.
-  - monadInv H. unfold stick_header_code in EQ4. destruct (hd_error _); try discriminate. inv EQ4.
+  - monadInv H. unfold stick_header_code in EQ2. destruct (hd_error _); try discriminate. inv EQ2.
     simpl. reflexivity.
   - apply verified_schedule_nob_no_header_in_middle in H. assumption.
 Qed.
