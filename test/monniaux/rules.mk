@@ -10,6 +10,7 @@ K1C_CCOMP = ../../../ccomp
 K1C_CCOMPFLAGS=-O3 -Wall -Wno-c11-extensions -fno-unprototyped # -fpostpass-ilp
 
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
+EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 %.gcc.host.o : %.gcc.host.s
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -48,7 +49,7 @@ EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
 
 %.k1c.out : %.k1c
-	k1-cluster --cycle-based -- $< |tee $@
+	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) |tee $@
 
 %.host.out : %.host
-	./$< |tee $@
+	./$< $(EXECUTE_ARGS) |tee $@

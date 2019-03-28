@@ -4553,7 +4553,7 @@ force (PS * ps, Cls * c)
   assign_forced (ps, forced, reason);
 }
 
-static void
+static INLINE void
 inc_lreduce (PS * ps)
 {
 #ifdef STATS
@@ -4813,7 +4813,7 @@ collect_clauses (PS * ps)
   return res;
 }
 
-static int
+static INLINE int
 need_to_reduce (PS * ps)
 {
   return ps->nlclauses >= reduce_limit_on_lclauses (ps);
@@ -4977,7 +4977,7 @@ assign_decision (PS * ps, Lit * lit)
 
 #ifndef NFL
 
-static int
+static INLINE int
 lit_has_binary_clauses (PS * ps, Lit * lit)
 {
 #ifdef NO_BINARY_CLAUSES
@@ -5000,7 +5000,7 @@ flbcp (PS * ps)
 #endif
 }
 
-inline static int
+inline static INLINE int
 cmp_inverse_rnk (PS * ps, Rnk * a, Rnk * b)
 {
   (void) ps;
@@ -5637,7 +5637,7 @@ init_reduce (PS * ps)
 	     ps->prefix, ps->prefix, ps->lreduce, ps->prefix);
 }
 
-static unsigned
+static INLINE unsigned
 rng (PS * ps)
 {
   unsigned res = ps->srng;
@@ -6431,25 +6431,25 @@ reset_assumptions (PS * ps)
   ps->adecidelevel = 0;
 }
 
-static void
+static INLINE void
 check_ready (PS * ps)
 {
   ABORTIF (!ps || ps->state == RESET, "API usage: uninitialized");
 }
 
-static void
+static INLINE void
 check_sat_state (PS * ps)
 {
   ABORTIF (ps->state != SAT, "API usage: expected to be in SAT state");
 }
 
-static void
+static INLINE void
 check_unsat_state (PS * ps)
 {
   ABORTIF (ps->state != UNSAT, "API usage: expected to be in UNSAT state");
 }
 
-static void
+static INLINE void
 check_sat_or_unsat_or_unknown_state (PS * ps)
 {
   ABORTIF (ps->state != SAT && ps->state != UNSAT && ps->state != UNKNOWN,
@@ -6527,7 +6527,7 @@ enter (PS * ps)
   ps->entered = picosat_time_stamp ();
 }
 
-static void
+static INLINE void
 leave (PS * ps)
 {
   assert (ps->nentered);
