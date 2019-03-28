@@ -12,7 +12,7 @@
 #define BUNZIP2 "bzcat %s"
 #define GZIP "gzip -c -f > %s"
 
-#if 0
+#ifndef NZIP
 FILE * popen (const char *, const char*);
 int pclose (FILE *);
 #endif
@@ -542,7 +542,7 @@ picosat_main (int argc, char **argv)
   unsigned seed;
   FILE *file;
   int trace;
-
+  
   start_time = picosat_time_stamp ();
 
   sargc = argc;
