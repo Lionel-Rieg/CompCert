@@ -30,7 +30,7 @@ Require Import Smallstep.
 Require Import Locations.
 Require Stacklayout.
 Require Import Conventions.
-Require Import Asmblock.
+Require Import Asmvliw.
 Require Import Linking.
 Require Import Errors.
 
@@ -477,7 +477,7 @@ Definition program_proj (p: program) : Asmblock.program :=
 
 End RELSEM.
 
-Definition semantics (p: program) := Asmblock.semantics (program_proj p).
+Definition semantics (p: program) := Asmvliw.semantics (program_proj p).
 
 (** Determinacy of the [Asm] semantics. *)
 
@@ -608,7 +608,7 @@ Proof (Genv.senv_match TRANSF).
 
 
 Theorem transf_program_correct:
-  forward_simulation (Asmblock.semantics prog) (semantics tprog).
+  forward_simulation (Asmvliw.semantics prog) (semantics tprog).
 Proof.
   pose proof (match_program_transf prog tprog TRANSF) as TR.
   subst. unfold semantics. rewrite transf_program_proj.
