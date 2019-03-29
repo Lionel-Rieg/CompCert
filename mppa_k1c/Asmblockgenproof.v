@@ -1383,7 +1383,10 @@ Proof.
         rewrite H7. simpl extract_ctl. simpl. Simpl. rewrite <- H1. unfold Mach.label in H14. unfold label. rewrite H14. eapply A.
       econstructor; eauto.
         eapply agree_undef_regs; eauto. intros. rewrite C; auto with asmgen.
-        { admit. }
+        { assert (destroyed_by_jumptable = R62 :: R63 :: nil) by auto. rewrite H2 in H0. simpl in H0. inv H0.
+          destruct (preg_eq r' GPR63). subst. contradiction.
+          destruct (preg_eq r' GPR62). subst. contradiction.
+          destruct r'; Simpl. }
         discriminate.
     + (* MBreturn *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
@@ -1419,7 +1422,7 @@ Proof.
       generalize (code_tail_next_int _ _ _ _ NOOV TAIL). intro CT1. eauto.
     eapply agree_exten; eauto. intros. Simpl.
     discriminate.
-Admitted.
+Qed.
 
 Definition mb_remove_first (bb: MB.bblock) := 
   {| MB.header := MB.header bb; MB.body := tail (MB.body bb); MB.exit := MB.exit bb |}.
