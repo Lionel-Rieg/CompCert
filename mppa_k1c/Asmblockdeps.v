@@ -1845,6 +1845,17 @@ Proof.
   - destruct c; destruct i; try discriminate.
     all: try (inv H0; inv MSR; inv MSW; eexists; split; [| split]; [simpl; rewrite (H0 PC); reflexivity | Simpl | intros rr; destruct rr; unfold par_nextblock; Simpl]).
 
+    (* Pjumptable *)
+    + simpl in H0. destruct (par_nextblock _ _ _) eqn:PNEXT; try discriminate.
+      destruct (list_nth_z _ _) eqn:LISTS; try discriminate. unfold par_goto_label in H0.
+      destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (par_nextblock _ rsr PC) eqn:NB; try discriminate. inv H0.
+      inv MSR; inv MSW. eexists; split; try split.
+      * simpl. rewrite (H0 PC). Simpl. rewrite (H0 r). unfold par_nextblock in PNEXT. rewrite Pregmap.gso in PNEXT; try discriminate. rewrite PNEXT.
+        rewrite LISTS. unfold goto_label_deps. rewrite LPOS. unfold par_nextblock in NB. rewrite Pregmap.gss in NB. rewrite NB. reflexivity.
+      * Simpl.
+      * intros rr; destruct rr; unfold par_nextblock; Simpl.
+        destruct (preg_eq g GPR62). rewrite e. Simpl.
+        destruct (preg_eq g GPR63). rewrite e. Simpl. Simpl.
     (* Pj_l *)
     + simpl in H0. unfold par_goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (par_nextblock _ _ _) eqn:NB; try discriminate. inv H0.
       inv MSR; inv MSW.
@@ -1942,6 +1953,10 @@ Proof.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
 (* Pbuiltin *)
   - simpl in *. rewrite (H1 PC). reflexivity.
+(* Pjumptable *)
+  - simpl in *. rewrite (H1 PC). Simpl. rewrite (H1 r). unfold par_nextblock in H0. rewrite Pregmap.gso in H0; try discriminate.
+    destruct (rsr r); auto. destruct (list_nth_z _ _); auto. unfold par_goto_label in H0. unfold goto_label_deps.
+    destruct (label_pos _ _ _); auto. rewrite Pregmap.gss in H0. destruct (Val.offset_ptr _ _); try discriminate; auto.
 (* Pj_l *)
   - simpl in *. rewrite (H1 PC). unfold goto_label_deps. unfold par_goto_label in H0.
     destruct (label_pos _ _ _); auto. simpl in *. unfold par_nextblock in H0. rewrite Pregmap.gss in H0. 
