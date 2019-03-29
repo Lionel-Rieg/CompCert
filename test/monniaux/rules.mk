@@ -35,17 +35,17 @@ EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 %.ccomp.k1c.o: %.ccomp.k1c.s
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
 
-%.gcc.k1c : %.gcc.k1c.o
-	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
+# %.gcc.k1c : %.gcc.k1c.o
+# 	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
 
-%.ccomp.k1c : %.ccomp.k1c.o
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
+# %.ccomp.k1c : %.ccomp.k1c.o
+# 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
 
-%.gcc.host : %.gcc.host.o
-	$(CC) $(CFLAGS) $+ -o $@
+# %.gcc.host : %.gcc.host.o
+# 	$(CC) $(CFLAGS) $+ -o $@
 
-%.ccomp.host : %.ccomp.host.o
-	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
+# %.ccomp.host : %.ccomp.host.o
+# 	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
 
 %.k1c.out : %.k1c
 	k1-cluster --cycle-based -- $< |tee $@
