@@ -231,6 +231,7 @@ Inductive cf_instruction : Type :=
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
   | Picall  (r: ireg)                               (**r function call on register value *)
+  | Pjumptable (r: ireg) (labels: list label) (**r N-way branch through a jump table (pseudo) *)
 
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
@@ -1468,6 +1469,16 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       Next (rs#PC <- (rs#r)) m
   | Pj_l l =>
       goto_label f l rs m
+  | Pjumptable r tbl =>
+      match rs#r with
+      | Vint n =>
+          match list_nth_z tbl (Int.unsigned n) with
+          | None => Stuck
+          | Some lbl => goto_label f lbl (rs #GPR62 <- Vundef #GPR63 <- Vundef) m
+          end
+      | _ => Stuck
+      end
+      
   | Pcb bt r l =>
       match cmp_for_btest bt with
       | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs#r (Vint (Int.repr 0)))

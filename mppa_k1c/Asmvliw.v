@@ -211,6 +211,15 @@ Definition parexec_control (f: function) (oc: option control) (rsr rsw: regset) 
       Next (rsw#RA <- (rsr#PC) #PC <- (Genv.symbol_address ge s Ptrofs.zero)) mw
   | Picall r =>
       Next (rsw#RA <- (rsr#PC) #PC <- (rsr#r)) mw
+  | Pjumptable r tbl =>
+      match rsr#r with
+      | Vint n =>
+          match list_nth_z tbl (Int.unsigned n) with
+          | None => Stuck
+          | Some lbl => par_goto_label f lbl rsr (rsw #GPR62 <- Vundef #GPR63 <- Vundef) mw
+          end
+      | _ => Stuck
+      end
   | Pgoto s =>
       Next (rsw#PC <- (Genv.symbol_address ge s Ptrofs.zero)) mw
   | Pigoto r =>
@@ -229,7 +238,6 @@ Definition parexec_control (f: function) (oc: option control) (rsr rsw: regset) 
       | (Some c, Long) => par_eval_branch f l rsr rsw mw (Val_cmplu_bool c rsr#r (Vlong (Int64.repr 0)))
       | (None, _) => Stuck
       end
-
 
 (** Pseudo-instructions *)
   | Pbuiltin ef args res =>

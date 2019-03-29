@@ -233,6 +233,7 @@ let ctl_flow_rec = function
   | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None ; is_control = true}
   | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
   | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
+  | Pjumptable (r, _) -> { inst = "Pjumptable"; write_locs = [Reg (IR GPR62); Reg (IR GPR63)]; read_locs = [Reg (IR r)]; imm = None ; is_control = true}
 
 let control_rec i =
   match i with

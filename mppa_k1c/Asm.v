@@ -66,6 +66,7 @@ Inductive instruction : Type :=
   | Pj_l    (l: label)                              (**r jump to label *)
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
   | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
+  | Pjumptable (r: ireg) (labels: list label)
   | Ploopdo (count: ireg) (loopend: label)
 
   (** Loads **)
@@ -223,6 +224,7 @@ Definition control_to_instruction (c: control) :=
   | PCtlFlow (Asmblock.Pj_l l)              => Pj_l l
   | PCtlFlow (Asmblock.Pcb bt r l)          => Pcb bt r l
   | PCtlFlow (Asmblock.Pcbu bt r l)         => Pcbu bt r l
+  | PCtlFlow (Asmblock.Pjumptable r label)  => Pjumptable r label
   end.
 
 Definition basic_to_instruction (b: basic) :=
