@@ -86,7 +86,7 @@ void encrypt(parallel_blocks_t v, const parallel_keys_t k, unsigned int r)
         * in the expansion of multiples of 32/golden-ratio, 
         * or 32/(1+sqrt(5)/2
         */
-       ai = (sum & (1<<i)) ? VECTOR_AT_ONE : VECTOR_AT_ZERO;
+       ai = TERNARY((sum & (1<<i)), VECTOR_AT_ONE, VECTOR_AT_ZERO);
        bi = v[offset_v1 + i];
        aandb = ai & bi;
        axorb = ai ^ bi;
@@ -147,7 +147,7 @@ void encrypt(parallel_blocks_t v, const parallel_keys_t k, unsigned int r)
      carry = 0;
      for (i = 0;i < 32;++i) {
        /* VECTOR_AT_ONE where the ith bit of the sum is set */
-       ai = (sum & (1<<i)) ? VECTOR_AT_ONE : VECTOR_AT_ZERO;
+       ai = TERNARY((sum & (1<<i)), VECTOR_AT_ONE, VECTOR_AT_ZERO);
        bi = v[offset_v0 + i];
        aandb = ai & bi;
        axorb = ai ^ bi;
@@ -261,7 +261,7 @@ void decrypt(parallel_blocks_t v, const parallel_keys_t k, unsigned int r)
      carry = 0;
      for (i = 0;i < 32;++i) {
        /* VECTOR_AT_ONE where the ith bit of the sum is set */
-       ai = (sum & (1<<i)) ? VECTOR_AT_ONE : VECTOR_AT_ZERO;
+       ai = TERNARY((sum & (1<<i)), VECTOR_AT_ONE, VECTOR_AT_ZERO);
        bi = v[offset_v0 + i];
        aandb = ai & bi;
        axorb = ai ^ bi;
@@ -323,7 +323,7 @@ void decrypt(parallel_blocks_t v, const parallel_keys_t k, unsigned int r)
      carry = 0;
      for (i = 0;i < 32;++i) {
        /* VECTOR_AT_ONE where the ith bit of the sum is set */
-       ai = (sum & (1<<i)) ? VECTOR_AT_ONE : VECTOR_AT_ZERO;
+       ai = TERNARY((sum & (1<<i)), VECTOR_AT_ONE, VECTOR_AT_ZERO);
        bi = v[offset_v1 + i];
        aandb = ai & bi;
        axorb = ai ^ bi;
