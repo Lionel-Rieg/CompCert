@@ -1731,6 +1731,37 @@ Proof.
   - simpl in H. inv H. inv MSR. inv MSW. eexists. split; try split. assumption. assumption.
 Qed.
 
+Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
+  macro_prun Ge (trans_basic bi) sw sr sr = None.
+Proof.
+  intros GENV MSR MSW H0. inv MSR; inv MSW.
+  unfold parexec_basic_instr in H0. destruct bi; try discriminate.
+(* PLoad *)
+  - destruct i; destruct i.
+    all: simpl; rewrite H; rewrite (H1 ra); unfold parexec_load in H0;
+    destruct (eval_offset _ _); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
+(* PStore *)
+  - destruct i; destruct i;
+    simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs);
+    unfold parexec_store in H0; destruct (eval_offset _ _); auto; destruct (Mem.storev _ _ _); auto; discriminate.
+(* Pallocframe *)
+  - simpl. Simpl. rewrite (H1 SP). rewrite H. destruct (Mem.alloc _ _ _). simpl in H0.
+    destruct (Mem.store _ _ _ _); try discriminate. reflexivity.
+(* Pfreeframe *)
+  - simpl. Simpl. rewrite (H1 SP). rewrite H.
+    destruct (Mem.loadv _ _ _); auto. destruct (rsr GPR12); auto. destruct (Mem.free _ _ _ _); auto.
+    discriminate.
+(* Pget *)
+  - simpl. destruct rs; subst; try discriminate.
+    all: simpl; auto.
+  - simpl. destruct rd; subst; try discriminate.
+    all: simpl; auto.
+Qed.
+
 Theorem forward_simu_par_body:
   forall bdy ge fn rsr mr sr rsw mw sw rs' m',
   Ge = Genv ge fn ->
@@ -1856,20 +1887,52 @@ Proof.
     intros rr. destruct rr; unfold par_nextblock; Simpl.
 Qed.
 
-Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ (trans_pcincr sz (trans_exit ex) :: nil).
-
-(* Lemma put in Parallelizability. 
-Lemma prun_iw_app_some:
-  forall c c' sr sw s' s'',
-  prun_iw Ge c sw sr = Some s' ->
-  prun_iw Ge c' s' sr = Some s'' ->
-  prun_iw Ge (c ++ c') sw sr = Some s''.
+Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Stuck ->
+  macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Proof.
-  induction c.
-  - simpl. intros. congruence.
-  - intros. simpl in *. destruct (macro_prun _ _ _ _); auto. eapply IHc; eauto. discriminate.
+  intros GENV MSR MSW H0. inv MSR; inv MSW. destruct ex as [ctl|]; try discriminate.
+  destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
+(* Pbuiltin *)
+  - simpl in *. rewrite (H1 PC). reflexivity.
+(* Pj_l *)
+  - simpl in *. rewrite (H1 PC). unfold goto_label_deps. unfold par_goto_label in H0.
+    destruct (label_pos _ _ _); auto. simpl in *. unfold par_nextblock in H0. rewrite Pregmap.gss in H0. 
+    destruct (Val.offset_ptr _ _); try discriminate; auto.
+(* Pcb *)
+  - simpl in *. destruct (cmp_for_btest bt). destruct i.
+    -- destruct o.
+      + unfold par_eval_branch in H0; unfold eval_branch_deps.
+        rewrite (H1 PC). Simpl. rewrite (H1 r). unfold par_nextblock in H0. rewrite Pregmap.gso in H0; try discriminate.
+        destruct (Val.cmp_bool _ _ _); auto. destruct b; try discriminate. unfold goto_label_deps; unfold par_goto_label in H0.
+        destruct (label_pos _ _ _); auto. rewrite Pregmap.gss in H0. destruct (Val.offset_ptr _ _); auto. discriminate.
+      + rewrite (H1 PC). Simpl. rewrite (H1 r). reflexivity.
+    -- destruct o.
+      + unfold par_eval_branch in H0; unfold eval_branch_deps.
+        rewrite (H1 PC). Simpl. rewrite (H1 r). unfold par_nextblock in H0. rewrite Pregmap.gso in H0; try discriminate.
+        destruct (Val.cmpl_bool _ _ _); auto. destruct b; try discriminate. unfold goto_label_deps; unfold par_goto_label in H0.
+        destruct (label_pos _ _ _); auto. rewrite Pregmap.gss in H0. destruct (Val.offset_ptr _ _); auto. discriminate.
+      + rewrite (H1 PC). Simpl. rewrite (H1 r). reflexivity.
+(* Pcbu *)
+  - simpl in *. destruct (cmpu_for_btest bt). destruct i.
+    -- destruct o.
+      + unfold par_eval_branch in H0; unfold eval_branch_deps.
+        rewrite (H1 PC). Simpl. rewrite (H1 r). unfold par_nextblock in H0. rewrite Pregmap.gso in H0; try discriminate.
+        destruct (Val_cmpu_bool _ _ _); auto. destruct b; try discriminate. unfold goto_label_deps; unfold par_goto_label in H0.
+        destruct (label_pos _ _ _); auto. rewrite Pregmap.gss in H0. destruct (Val.offset_ptr _ _); auto. discriminate.
+      + rewrite (H1 PC). Simpl. rewrite (H1 r). reflexivity.
+    -- destruct o.
+      + unfold par_eval_branch in H0; unfold eval_branch_deps.
+        rewrite (H1 PC). Simpl. rewrite (H1 r). unfold par_nextblock in H0. rewrite Pregmap.gso in H0; try discriminate.
+        destruct (Val_cmplu_bool _ _ _); auto. destruct b; try discriminate. unfold goto_label_deps; unfold par_goto_label in H0.
+        destruct (label_pos _ _ _); auto. rewrite Pregmap.gss in H0. destruct (Val.offset_ptr _ _); auto. discriminate.
+      + rewrite (H1 PC). Simpl. rewrite (H1 r). reflexivity.
 Qed.
-*)
+
+Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ (trans_pcincr sz (trans_exit ex) :: nil).
 
 Theorem forward_simu_par_wio_bblock_aux ge fn rsr mr sr rsw mw sw bdy ex sz rs' m':
   Ge = Genv ge fn ->
@@ -1908,41 +1971,6 @@ Proof.
   erewrite prun_iw_app_Some; eauto. eassumption.
 Qed.
 
-Lemma trans_body_perserves_permutation bdy1 bdy2:
-  Permutation bdy1 bdy2 ->
-  Permutation (trans_body bdy1) (trans_body bdy2).
-Proof.
-  induction 1; simpl; econstructor; eauto.
-Qed.
-
-Lemma trans_body_app bdy1: forall bdy2,
-   trans_body (bdy1++bdy2) = (trans_body bdy1) ++ (trans_body bdy2).
-Proof.
-  induction bdy1; simpl; congruence.
-Qed.
-
-Theorem trans_block_perserves_permutation bdy1 bdy2 b:
-  Permutation (bdy1 ++ bdy2) (body b) ->
-  Permutation (trans_block b) ((trans_block_aux bdy1 (size b) (exit b))++(trans_body bdy2)).
-Proof.
-  intro H; unfold trans_block, trans_block_aux.
-  eapply perm_trans.
-  - eapply Permutation_app_tail. 
-    apply trans_body_perserves_permutation.
-    apply Permutation_sym; eapply H.
-  - rewrite trans_body_app. rewrite <-! app_assoc.
-    apply Permutation_app_head.
-    apply Permutation_app_comm.
-Qed.
-
-Lemma forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
-  Ge = Genv ge fn ->
-  match_states (State rsr mr) sr ->
-  match_states (State rsw mw) sw ->
-  parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
-  macro_prun Ge (trans_basic bi) sw sr sr = None.
-Admitted.
-
 Lemma forward_simu_par_body_Stuck bdy: forall ge fn rsr mr sr rsw mw sw,
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -1961,14 +1989,6 @@ Proof.
     * exploit forward_simu_par_wio_basic_Stuck. 4: eapply PARBASIC. all: eauto.
       intros X; simpl; rewrite X; auto.
 Qed.
-
-Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
-  Ge = Genv ge fn ->
-  match_states (State rsr mr) sr ->
-  match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Stuck ->
-  macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
-Admitted.
 
 Lemma forward_simu_par_wio_stuck_bdy1 ge fn rs m s1' bdy1 sz ex:
   Ge = Genv ge fn ->
@@ -1997,6 +2017,33 @@ Proof.
   intros (s2' & X1 & X2).
   erewrite prun_iw_app_Some; eauto.
   eapply forward_simu_par_body_Stuck. 4: eauto. all: eauto.
+Qed.
+
+Lemma trans_body_perserves_permutation bdy1 bdy2:
+  Permutation bdy1 bdy2 ->
+  Permutation (trans_body bdy1) (trans_body bdy2).
+Proof.
+  induction 1; simpl; econstructor; eauto.
+Qed.
+
+Lemma trans_body_app bdy1: forall bdy2,
+   trans_body (bdy1++bdy2) = (trans_body bdy1) ++ (trans_body bdy2).
+Proof.
+  induction bdy1; simpl; congruence.
+Qed.
+
+Theorem trans_block_perserves_permutation bdy1 bdy2 b:
+  Permutation (bdy1 ++ bdy2) (body b) ->
+  Permutation (trans_block b) ((trans_block_aux bdy1 (size b) (exit b))++(trans_body bdy2)).
+Proof.
+  intro H; unfold trans_block, trans_block_aux.
+  eapply perm_trans.
+  - eapply Permutation_app_tail. 
+    apply trans_body_perserves_permutation.
+    apply Permutation_sym; eapply H.
+  - rewrite trans_body_app. rewrite <-! app_assoc.
+    apply Permutation_app_head.
+    apply Permutation_app_comm.
 Qed.
 
 Theorem forward_simu_par:
