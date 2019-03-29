@@ -1364,7 +1364,27 @@ Proof.
             all: rewrite <- C; try discriminate; unfold nextblock; Simpl. }
         intros. discriminate.
     + (* MBjumptable *)
-      admit.
+      destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
+      inv TBC. inv TIC. inv H0.
+
+      assert (f0 = f) by congruence. subst f0.
+      monadInv H1.
+      generalize (transf_function_no_overflow _ _ TRANSF0); intro NOOV.
+      assert (f1 = f) by congruence. subst f1.
+      exploit find_label_goto_label. 4: eapply H16. 1-2: eauto. instantiate (2 := (nextblock tbb rs2) # GPR62 <- Vundef # GPR63 <- Vundef).
+        unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. reflexivity.
+      exploit functions_transl. eapply FIND0. eapply TRANSF0. intros FIND3. assert (fn = tf) by congruence. subst fn.
+
+      intros [tc' [rs' [A [B C]]]].
+      exploit ireg_val; eauto. rewrite H13. intros LD; inv LD.
+      
+      repeat eexists.
+        rewrite H6. simpl extract_basic. simpl. eauto.
+        rewrite H7. simpl extract_ctl. simpl. Simpl. rewrite <- H1. unfold Mach.label in H14. unfold label. rewrite H14. eapply A.
+      econstructor; eauto.
+        eapply agree_undef_regs; eauto. intros. rewrite C; auto with asmgen.
+        { admit. }
+        discriminate.
     + (* MBreturn *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.
