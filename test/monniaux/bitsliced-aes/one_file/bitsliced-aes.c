@@ -1,6 +1,315 @@
-
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include "bs.h"
+#include <stdio.h>
+#include "/home/monniaux/work/Kalray/CompCert/test/monniaux/clock.h"
+
+#define EXIT1
+
+void aes_ecb_encrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key);
+void aes_ecb_decrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key);
+
+void aes_ctr_encrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key, uint8_t * iv);
+#define aes_ctr_decrypt(outputb,inputb,size,key,iv) aes_ctr_encrypt(outputb,inputb,size,key,iv)
+
+#define BLOCK_SIZE          128
+#define KEY_SCHEDULE_SIZE   176
+#define WORD_SIZE           64
+#define BS_BLOCK_SIZE       (BLOCK_SIZE * WORD_SIZE / 8)
+#define WORDS_PER_BLOCK     (BLOCK_SIZE / WORD_SIZE)
+
+#if (WORD_SIZE==64)
+    typedef uint64_t    word_t;
+    #define ONE         1ULL
+    #define MUL_SHIFT   6
+    #define WFMT        "lx"
+    #define WPAD        "016"
+    #define __builtin_bswap_wordsize(x) __builtin_bswap64(x)
+#elif (WORD_SIZE==32)
+    typedef uint32_t    word_t;
+    #define ONE         1UL
+    #define MUL_SHIFT   5
+    #define WFMT        "x"
+    #define WPAD        "08"
+    #define __builtin_bswap_wordsize(x) __builtin_bswap32(x)
+#elif (WORD_SIZE==16)
+    typedef uint16_t    word_t;
+    #define ONE         1
+    #define MUL_SHIFT   4
+    #define WFMT        "hx"
+    #define WPAD        "04"
+    #define __builtin_bswap_wordsize(x) __builtin_bswap16(x)
+#elif (WORD_SIZE==8)
+    typedef uint8_t     word_t;
+    #define ONE         1
+    #define MUL_SHIFT   3
+    #define WFMT        "hhx"
+    #define WPAD        "02"
+    #define __builtin_bswap_wordsize(x) (x)
+#else
+#error "invalid word size"
+#endif
+
+void bs_transpose(word_t * blocks);
+void bs_transpose_rev(word_t * blocks);
+void bs_transpose_dst(word_t * transpose, word_t * blocks);
+
+void bs_sbox(word_t U[8]);
+void bs_sbox_rev(word_t U[8]);
+
+void bs_shiftrows(word_t * B);
+void bs_shiftrows_rev(word_t * B);
+
+void bs_mixcolumns(word_t * B);
+void bs_mixcolumns_rev(word_t * B);
+
+void bs_shiftmix(word_t * B);
+
+void bs_addroundkey(word_t * B, word_t * rk);
+void bs_apply_sbox(word_t * input);
+void bs_apply_sbox_rev(word_t * input);
+
+
+void expand_key(unsigned char *in);
+void bs_expand_key(word_t (* rk)[BLOCK_SIZE], uint8_t * key);
+
+void bs_cipher(word_t state[BLOCK_SIZE], word_t (* rk)[BLOCK_SIZE]);
+void bs_cipher_rev(word_t state[BLOCK_SIZE], word_t (* rk)[BLOCK_SIZE]);
+
+
+void dump_hex(uint8_t * h, int len);
+void dump_word(word_t * h, int len);
+void dump_block(word_t * h, int len);
+
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+
+void aes_ecb_encrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key)
+{
+    word_t input_space[BLOCK_SIZE];
+    word_t rk[11][BLOCK_SIZE];
+
+    memset(outputb,0,size);
+    word_t * state = (word_t *)outputb;
+
+    bs_expand_key(rk, key);
+
+    while (size > 0)
+    {
+        if (size < BS_BLOCK_SIZE)
+        {
+            memset(input_space,0,BS_BLOCK_SIZE);
+            memmove(input_space, inputb, size);
+            bs_cipher(input_space,rk);
+            memmove(outputb, input_space, size);
+            size = 0;
+            state += size;
+        }
+        else
+        {
+            memmove(state,inputb,BS_BLOCK_SIZE);
+            bs_cipher(state,rk);
+            size -= BS_BLOCK_SIZE;
+            state += BS_BLOCK_SIZE;
+        }
+
+    }
+}
+
+void aes_ecb_decrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key)
+{
+    word_t input_space[BLOCK_SIZE];
+    word_t rk[11][BLOCK_SIZE];
+
+    memset(outputb,0,size);
+    word_t * state = (word_t *)outputb;
+    
+    bs_expand_key(rk, key);
+
+    while (size > 0)
+    {
+        if (size < BS_BLOCK_SIZE)
+        {
+            memset(input_space,0,BS_BLOCK_SIZE);
+            memmove(input_space, inputb, size);
+            bs_cipher_rev(input_space,rk);
+            memmove(outputb, input_space, size);
+            size = 0;
+            state += size;
+        }
+        else
+        {
+            memmove(state,inputb,BS_BLOCK_SIZE);
+            bs_cipher_rev(state,rk);
+            size -= BS_BLOCK_SIZE;
+            state += BS_BLOCK_SIZE;
+        }
+
+    }
+}
+
+static void INC_CTR(uint8_t * ctr, uint8_t i)
+{
+    ctr += BLOCK_SIZE/8 - 1;
+    uint8_t n = *(ctr);
+    *ctr += i;
+    while(*ctr < n)
+    {
+        ctr--;
+        n = *ctr;
+        (*ctr)++;
+    }
+}
+
+void aes_ctr_encrypt(uint8_t * outputb, uint8_t * inputb, size_t size, uint8_t * key, uint8_t * iv)
+{
+    word_t rk[11][BLOCK_SIZE];
+    word_t ctr[BLOCK_SIZE];
+    uint8_t iv_copy[BLOCK_SIZE/8];
+    
+    memset(outputb,0,size);
+    memset(ctr,0,sizeof(ctr));
+    memmove(iv_copy,iv,BLOCK_SIZE/8);
+
+    word_t * state = (word_t *)outputb;
+    bs_expand_key(rk, key);
+
+    do
+    {
+        int chunk = MIN(size, BS_BLOCK_SIZE);
+        int blocks = chunk / (BLOCK_SIZE/8);
+        if (chunk % (BLOCK_SIZE/8))
+        {
+            blocks++;
+        }
+
+        int i;
+        for (i = 0; i < blocks; i++)
+        {
+            memmove(ctr + (i * WORDS_PER_BLOCK), iv_copy, BLOCK_SIZE/8);
+            INC_CTR(iv_copy,1);
+        }
+
+        bs_cipher(ctr, rk);
+        size -= chunk;
+
+        uint8_t * ctr_p = (uint8_t *) ctr;
+        while(chunk--)
+        {
+            *outputb++ = *ctr_p++ ^ *inputb++;
+        }
+
+    }
+    while(size);
+
+}
+
+void dump_hex(uint8_t * h, int len)
+{
+    while(len--)
+        printf("%02hhx",*h++);
+    printf("\n");
+}
+
+void dump_word(word_t * h, int len)
+{
+    while(len--)
+        if ((len+1) % 8) printf("%" WPAD WFMT "\n",*h++);
+        else printf("%d:\n%" WPAD WFMT "\n",128-len-1,*h++);
+
+    printf("\n");
+}
+
+void dump_block(word_t * h, int len)
+{
+    while(len-=2 >= 0)
+        printf("%" WPAD WFMT"%" WPAD WFMT  "\n",*h++,*h++);
+    printf("\n");
+}
+
+static const uint8_t sbox[256] =   {
+  //0     1    2      3     4    5     6     7      8    9     A      B    C     D     E     F
+  0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
+  0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
+  0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
+  0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
+  0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
+  0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
+  0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
+  0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
+  0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
+  0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
+  0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
+  0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
+  0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
+  0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
+  0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
+  0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
+
+static void rotate(unsigned char *in) {
+    unsigned char a,c;
+    a = in[0];
+    for(c=0;c<3;c++) 
+        in[c] = in[c + 1];
+    in[3] = a;
+    return;
+}
+
+/* Calculate the rcon used in key expansion */
+static unsigned char rcon(unsigned char in) {
+    unsigned char c=1;
+    if(in == 0)  
+        return 0; 
+    while(in != 1) {
+        unsigned char b;
+        b = c & 0x80;
+        c <<= 1;
+        if(b == 0x80) {
+            c ^= 0x1b;
+        }
+        in--;
+    }
+    return c;
+}
+
+/* This is the core key expansion, which, given a 4-byte value,
+ * does some scrambling */
+static void schedule_core(unsigned char *in, unsigned char i) {
+    char a;
+    /* Rotate the input 8 bits to the left */
+    rotate(in);
+    /* Apply Rijndael's s-box on all 4 bytes */
+    for(a = 0; a < 4; a++) 
+        in[a] = sbox[in[a]];
+    /* On just the first byte, add 2^i to the byte */
+    in[0] ^= rcon(i);
+}
+
+void expand_key(unsigned char *in) {
+    unsigned char t[4];
+    /* c is 16 because the first sub-key is the user-supplied key */
+    unsigned char c = 16;
+    unsigned char i = 1;
+    unsigned char a;
+
+    /* We need 11 sets of sixteen bytes each for 128-bit mode */
+    while(c < 176) {
+        /* Copy the temporary variable over from the last 4-byte
+         * block */
+        for(a = 0; a < 4; a++) 
+            t[a] = in[a + c - 4];
+        /* Every four blocks (of four bytes), 
+         * do a complex calculation */
+        if(c % 16 == 0) {
+            schedule_core(t,i);
+            i++;
+        }
+        for(a = 0; a < 4; a++) {
+            in[c] = in[c - 16] ^ t[a];
+            c++;
+        }
+    }
+}
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
@@ -14,11 +323,6 @@
 #error "endianness not supported"
 #endif
 
-#if 1
-#define TERNARY_XY0(t, x) ((-((t) != 0)) & (x))
-#else
-#define TERNARY_XY0(t, x) (((t) != 0) ? (x) : (0))
-#endif	    
 
 void bs_addroundkey(word_t * B, word_t * rk)
 {
@@ -393,14 +697,11 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             int offset = i << MUL_SHIFT;
 
 #ifndef UNROLL_TRANSPOSE
-	    /* DM experiments */
-	    /* The normal ternary operator costs us a lot!
-               from 10145951 to 7995063 */
             int j;
             for(j=0; j < WORD_SIZE; j++)
             {
                 // TODO make const time
-	      transpose[offset + j] |= TERNARY_XY0(w & (ONE << j), bitpos);
+                transpose[offset + j] |= (w & (ONE << j)) ? bitpos : 0;
             }
 #else
 
@@ -496,7 +797,7 @@ void bs_transpose_rev(word_t * blocks)
         int j;
         for(j=0; j < WORD_SIZE; j++)
         {
-	  word_t bit = TERNARY_XY0((w & (ONE << j)), (ONE << (k % WORD_SIZE)));
+            word_t bit = (w & (ONE << j)) ? (ONE << (k % WORD_SIZE)) : 0;
             transpose[j * WORDS_PER_BLOCK + (offset)] |= bit;
         }
 #else
@@ -1129,5 +1430,113 @@ void bs_cipher_rev(word_t state[BLOCK_SIZE], word_t (* rk)[BLOCK_SIZE])
     bs_transpose_rev(state);
 }
 
+void aes_ecb_test()
+{
+    uint8_t key_vector[16] = "\x2b\x7e\x15\x16\x28\xae\xd2\xa6\xab\xf7\x15\x88\x09\xcf\x4f\x3c";
+    uint8_t pt_vector[16] =  "\x6b\xc1\xbe\xe2\x2e\x40\x9f\x96\xe9\x3d\x7e\x11\x73\x93\x17\x2a";
+    uint8_t ct_vector[16] =  "\x3a\xd7\x7b\xb4\x0d\x7a\x36\x60\xa8\x9e\xca\xf3\x24\x66\xef\x97";
+    uint8_t output[16];
+    uint8_t input[16];
+    
+    printf("AES ECB\n");
+
+    aes_ecb_encrypt(output, pt_vector,16,key_vector);
 
 
+    printf("cipher text: \n");
+    dump_hex(output, 16);
+
+    aes_ecb_decrypt(input, output, 16, key_vector);
+
+    printf("plain text: \n");
+    dump_hex((uint8_t * )input,16);
+
+    if (memcmp(pt_vector, input, 16) != 0)
+    {
+        fprintf(stderr,"error: decrypted ciphertext is not the same as the input plaintext\n");
+        EXIT1;
+    }
+    else if (memcmp(ct_vector, output, 16) != 0)
+    {
+        fprintf(stderr,"error: ciphertext is not the same as the test vector\n");
+        EXIT1;
+    }
+    else
+    {
+        printf("ECB passes test vector\n\n");
+    }
+}
+
+void aes_ctr_test()
+{
+// Test vector from NIST for 4 input blocks
+#define AES_CTR_TESTS_BYTES 64
+
+    uint8_t key_vector[16] =
+        "\x2b\x7e\x15\x16\x28\xae\xd2\xa6\xab\xf7\x15\x88\x09\xcf\x4f\x3c";
+
+    uint8_t iv_vector[16]  =
+        "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff";
+
+    uint8_t pt_vector[AES_CTR_TESTS_BYTES] =
+        "\x6b\xc1\xbe\xe2\x2e\x40\x9f\x96\xe9\x3d\x7e\x11\x73\x93\x17\x2a"
+        "\xae\x2d\x8a\x57\x1e\x03\xac\x9c\x9e\xb7\x6f\xac\x45\xaf\x8e\x51"
+        "\x30\xc8\x1c\x46\xa3\x5c\xe4\x11\xe5\xfb\xc1\x19\x1a\x0a\x52\xef"
+        "\xf6\x9f\x24\x45\xdf\x4f\x9b\x17\xad\x2b\x41\x7b\xe6\x6c\x37\x10"
+        ;
+
+    uint8_t ct_vector[AES_CTR_TESTS_BYTES] =
+        "\x87\x4d\x61\x91\xb6\x20\xe3\x26\x1b\xef\x68\x64\x99\x0d\xb6\xce"
+        "\x98\x06\xf6\x6b\x79\x70\xfd\xff\x86\x17\x18\x7b\xb9\xff\xfd\xff"
+        "\x5a\xe4\xdf\x3e\xdb\xd5\xd3\x5e\x5b\x4f\x09\x02\x0d\xb0\x3e\xab"
+        "\x1e\x03\x1d\xda\x2f\xbe\x03\xd1\x79\x21\x70\xa0\xf3\x00\x9c\xee"
+        ;
+
+    uint8_t output[AES_CTR_TESTS_BYTES];
+    uint8_t input[AES_CTR_TESTS_BYTES];
+
+    printf("AES CTR\n");
+
+    aes_ctr_encrypt(output,pt_vector,AES_CTR_TESTS_BYTES,key_vector, iv_vector);
+
+    printf("cipher text: \n");
+    dump_hex(output,AES_CTR_TESTS_BYTES);
+    
+    aes_ctr_decrypt(input,output,AES_CTR_TESTS_BYTES,key_vector, iv_vector);
+
+    printf("plain text: \n");
+    dump_hex(input,AES_CTR_TESTS_BYTES);
+					  
+    if (memcmp(pt_vector, input, AES_CTR_TESTS_BYTES) != 0)
+    {
+        fprintf(stderr,"error: decrypted ciphertext is not the same as the input plaintext\n");
+        EXIT1;
+    }
+    else if (memcmp(ct_vector, output, AES_CTR_TESTS_BYTES) != 0)
+    {
+        fprintf(stderr,"error: ciphertext is not the same as the test vector\n");
+        EXIT1;
+    }
+    else
+    {
+        printf("CTR passes test vector\n\n");
+    }
+
+}
+
+
+int main(int argc, char * argv[])
+{
+  clock_prepare();
+  
+    clock_start();
+  
+    aes_ecb_test();
+    aes_ctr_test();
+
+
+    clock_stop();
+    print_total_clock();
+    
+    return 0;
+}

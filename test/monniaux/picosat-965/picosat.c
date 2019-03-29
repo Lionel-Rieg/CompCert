@@ -31,6 +31,8 @@ IN THE SOFTWARE.
 
 #include "picosat.h"
 
+#define INLINE inline
+
 /* By default code for 'all different constraints' is disabled, since 'NADC'
  * is defined.
  */
@@ -730,7 +732,7 @@ struct PicoSAT
 
 typedef PicoSAT PS;
 
-static Flt
+static INLINE Flt
 packflt (unsigned m, int e)
 {
   Flt res;
@@ -942,13 +944,13 @@ flt2double (Flt f)
 
 #endif
 
-static int
+static INLINE int
 log2flt (Flt a)
 {
   return FLTEXPONENT (a) + 24;
 }
 
-static int
+static INLINE int
 cmpflt (Flt a, Flt b)
 {
   if (a < b)
@@ -1058,19 +1060,19 @@ resize (PS * ps, void *void_ptr, size_t old_size, size_t new_size)
   return b->data;
 }
 
-static unsigned
+static INLINE unsigned
 int2unsigned (int l)
 {
   return (l < 0) ? 1 + 2 * -l : 2 * l;
 }
 
-static Lit *
+static INLINE Lit *
 int2lit (PS * ps, int l)
 {
   return ps->lits + int2unsigned (l);
 }
 
-static Lit **
+static INLINE Lit **
 end_of_lits (Cls * c)
 {
   return (Lit**)c->lits + c->size;
@@ -1153,7 +1155,7 @@ dumpcnf (PS * ps)
 
 #endif
 
-static void
+static INLINE void
 delete_prefix (PS * ps)
 {
   if (!ps->prefix)
@@ -1437,7 +1439,7 @@ lrelease (PS * ps, Ltk * stk)
 
 #ifndef NADC
 
-static unsigned
+static INLINE unsigned
 llength (Lit ** a)
 {
   Lit ** p;
@@ -1446,7 +1448,7 @@ llength (Lit ** a)
   return p - a;
 }
 
-static void
+static INLINE void
 resetadoconflict (PS * ps)
 {
   assert (ps->adoconflict);
@@ -1454,7 +1456,7 @@ resetadoconflict (PS * ps)
   ps->adoconflict = 0;
 }
 
-static void
+static INLINE void
 reset_ados (PS * ps)
 {
   Lit *** p;
@@ -1565,7 +1567,7 @@ tpush (PS * ps, Lit * lit)
   *ps->thead++ = lit;
 }
 
-static void
+static INLINE void
 assign_reason (PS * ps, Var * v, Cls * reason)
 {
 #if defined(NO_BINARY_CLAUSES) && !defined(NDEBUG)
@@ -1665,7 +1667,7 @@ cmp_added (PS * ps, Lit * k, Lit * l)
   return u - v;			/* smaller index first */
 }
 
-static void
+static INLINE void
 sorttwolits (Lit ** v)
 {
   Lit * a = v[0], * b = v[1];
@@ -1689,7 +1691,7 @@ sortlits (PS * ps, Lit ** v, unsigned size)
 }
 
 #ifdef NO_BINARY_CLAUSES
-static Cls *
+static INLINE Cls *
 setimpl (PS * ps, Lit * a, Lit * b)
 {
   assert (!ps->implvalid);
@@ -1704,7 +1706,7 @@ setimpl (PS * ps, Lit * a, Lit * b)
   return &ps->impl;
 }
 
-static void
+static INLINE void
 resetimpl (PS * ps)
 {
   ps->implvalid = 0;
@@ -1725,7 +1727,7 @@ setcimpl (PS * ps, Lit * a, Lit * b)
   return &ps->cimpl;
 }
 
-static void
+static INLINE void
 resetcimpl (PS * ps)
 {
   assert (ps->cimplvalid);
@@ -1734,7 +1736,7 @@ resetcimpl (PS * ps)
 
 #endif
 
-static int
+static INLINE int
 cmp_ptr (PS * ps, void *l, void *k)
 {
   (void) ps;
@@ -1831,7 +1833,7 @@ add_antecedent (PS * ps, Cls * c)
 
 #endif /* TRACE */
 
-static void
+static INLINE void
 add_lit (PS * ps, Lit * lit)
 {
   assert (lit);
@@ -1842,7 +1844,7 @@ add_lit (PS * ps, Lit * lit)
   *ps->ahead++ = lit;
 }
 
-static void
+static INLINE void
 push_var_as_marked (PS * ps, Var * v)
 {
   if (ps->mhead == ps->eom)
@@ -1851,7 +1853,7 @@ push_var_as_marked (PS * ps, Var * v)
   *ps->mhead++ = v;
 }
 
-static void
+static INLINE void
 mark_var (PS * ps, Var * v)
 {
   assert (!v->mark);
@@ -1960,7 +1962,7 @@ fixvar (PS * ps, Var * v)
   hup (ps, r);
 }
 
-static void
+static INLINE void
 use_var (PS * ps, Var * v)
 {
   if (v->used)
@@ -2104,7 +2106,7 @@ zpush (PS * ps, Zhn * zhain)
   *ps->zhead++ = zhain;
 }
 
-static int
+static INLINE int
 cmp_resolved (PS * ps, Cls * c, Cls * d)
 {
 #ifndef NDEBUG
@@ -2115,7 +2117,7 @@ cmp_resolved (PS * ps, Cls * c, Cls * d)
   return CLS2IDX (c) - CLS2IDX (d);
 }
 
-static void
+static INLINE void
 bpushc (PS * ps, unsigned char ch)
 {
   if (ps->bhead == ps->eob)
@@ -2124,7 +2126,7 @@ bpushc (PS * ps, unsigned char ch)
   *ps->bhead++ = ch;
 }
 
-static void
+static INLINE void
 bpushu (PS * ps, unsigned u)
 {
   while (u & ~0x7f)
@@ -2136,7 +2138,7 @@ bpushu (PS * ps, unsigned u)
   bpushc (ps, u);
 }
 
-static void
+static INLINE void
 bpushd (PS * ps, unsigned prev, unsigned this)
 {
   unsigned delta;
@@ -2802,7 +2804,7 @@ hpush (PS * ps, Rnk * r)
   hup (ps, r);
 }
 
-static void
+static INLINE void
 fix_trail_lits (PS * ps, long delta)
 {
   Lit **p;
@@ -2847,7 +2849,7 @@ fix_clause_lits (PS * ps, long delta)
     }
 }
 
-static void
+static INLINE void
 fix_added_lits (PS * ps, long delta)
 {
   Lit **p;
@@ -2855,7 +2857,7 @@ fix_added_lits (PS * ps, long delta)
     *p += delta;
 }
 
-static void
+static INLINE void
 fix_assumed_lits (PS * ps, long delta)
 {
   Lit **p;
@@ -2863,7 +2865,7 @@ fix_assumed_lits (PS * ps, long delta)
     *p += delta;
 }
 
-static void
+static INLINE void
 fix_cls_lits (PS * ps, long delta)
 {
   Lit **p;
@@ -2871,7 +2873,7 @@ fix_cls_lits (PS * ps, long delta)
     *p += delta;
 }
 
-static void
+static INLINE void
 fix_heap_rnks (PS * ps, long delta)
 {
   Rnk **p;
@@ -2882,7 +2884,7 @@ fix_heap_rnks (PS * ps, long delta)
 
 #ifndef NADC
 
-static void
+static INLINE void
 fix_ado (long delta, Lit ** ado)
 {
   Lit ** p;
@@ -2890,7 +2892,7 @@ fix_ado (long delta, Lit ** ado)
     *p += delta;
 }
 
-static void
+static INLINE void
 fix_ados (PS * ps, long delta)
 {
   Lit *** p;
@@ -3051,7 +3053,7 @@ var2reason (PS * ps, Var * var)
   return res;
 }
 
-static void
+static INLINE void
 mark_clause_to_be_collected (Cls * c)
 {
   assert (!c->collect);
@@ -3171,7 +3173,7 @@ mb (PS * ps)
   return ps->current_bytes / (double) (1 << 20);
 }
 
-static double
+static INLINE double
 avglevel (PS * ps)
 {
   return ps->decisions ? ps->levelsum / ps->decisions : 0.0;
@@ -3497,13 +3499,13 @@ inc_activity (PS * ps, Cls * c)
   *p = addflt (*p, ps->cinc);
 }
 
-static unsigned
+static INLINE unsigned
 hashlevel (unsigned l)
 {
   return 1u << (l & 31);
 }
 
-static void
+static INLINE void
 push (PS * ps, Var * v)
 {
   if (ps->dhead == ps->eod)
@@ -3512,7 +3514,7 @@ push (PS * ps, Var * v)
   *ps->dhead++ = v;
 }
 
-static Var * 
+static INLINE Var * 
 pop (PS * ps)
 {
   assert (ps->dfs < ps->dhead);
@@ -4551,7 +4553,7 @@ force (PS * ps, Cls * c)
   assign_forced (ps, forced, reason);
 }
 
-static void
+static INLINE void
 inc_lreduce (PS * ps)
 {
 #ifdef STATS
@@ -4811,7 +4813,7 @@ collect_clauses (PS * ps)
   return res;
 }
 
-static int
+static INLINE int
 need_to_reduce (PS * ps)
 {
   return ps->nlclauses >= reduce_limit_on_lclauses (ps);
@@ -4975,7 +4977,7 @@ assign_decision (PS * ps, Lit * lit)
 
 #ifndef NFL
 
-static int
+static INLINE int
 lit_has_binary_clauses (PS * ps, Lit * lit)
 {
 #ifdef NO_BINARY_CLAUSES
@@ -4998,7 +5000,7 @@ flbcp (PS * ps)
 #endif
 }
 
-inline static int
+inline static INLINE int
 cmp_inverse_rnk (PS * ps, Rnk * a, Rnk * b)
 {
   (void) ps;
@@ -5635,7 +5637,7 @@ init_reduce (PS * ps)
 	     ps->prefix, ps->prefix, ps->lreduce, ps->prefix);
 }
 
-static unsigned
+static INLINE unsigned
 rng (PS * ps)
 {
   unsigned res = ps->srng;
@@ -6429,25 +6431,25 @@ reset_assumptions (PS * ps)
   ps->adecidelevel = 0;
 }
 
-static void
+static INLINE void
 check_ready (PS * ps)
 {
   ABORTIF (!ps || ps->state == RESET, "API usage: uninitialized");
 }
 
-static void
+static INLINE void
 check_sat_state (PS * ps)
 {
   ABORTIF (ps->state != SAT, "API usage: expected to be in SAT state");
 }
 
-static void
+static INLINE void
 check_unsat_state (PS * ps)
 {
   ABORTIF (ps->state != UNSAT, "API usage: expected to be in UNSAT state");
 }
 
-static void
+static INLINE void
 check_sat_or_unsat_or_unknown_state (PS * ps)
 {
   ABORTIF (ps->state != SAT && ps->state != UNSAT && ps->state != UNKNOWN,
@@ -6525,7 +6527,7 @@ enter (PS * ps)
   ps->entered = picosat_time_stamp ();
 }
 
-static void
+static INLINE void
 leave (PS * ps)
 {
   assert (ps->nentered);
