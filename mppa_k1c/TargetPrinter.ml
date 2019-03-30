@@ -99,6 +99,14 @@ module Target (*: TARGET*) =
 
 (* Associate labels to floating-point constants and to symbols. *)
 
+    let print_tbl oc (lbl, tbl) =
+      fprintf oc "	.balign 4\n";
+      fprintf oc "%a:\n" label lbl;
+      List.iter
+        (fun l -> fprintf oc "	.4byte	%a\n"
+                    print_label l)
+        tbl
+
     let emit_constants oc lit =
       if exists_constants () then begin
          section oc lit;
@@ -266,15 +274,18 @@ module Target (*: TARGET*) =
          fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl        
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
-         jumptables := (lbl, tbl) :: !jumptables;
+         (* jumptables := (lbl, tbl) :: !jumptables; *)
          let base_reg = if idx_reg=Asmblock.GPR63 then Asmblock.GPR62 else Asmblock.GPR63 in
          fprintf oc "%s jumptable [ " comment;
          List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
          fprintf oc "]\n";
          fprintf oc "    make    %a = %a\n    ;;\n" ireg base_reg label lbl; 
          fprintf oc "    lwz.xs  %a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
-         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg
-         
+         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg;
+         section oc Section_jumptable;
+         print_tbl oc (lbl, tbl);
+         section oc Section_text
+
       (* Load/Store instructions *)
       | Plb(rd, ra, ofs) ->
          fprintf oc "	lbs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
@@ -523,21 +534,14 @@ module Target (*: TARGET*) =
 
     let print_align oc alignment =
       fprintf oc "	.balign %d\n" alignment
-
-    let print_jumptable oc jmptbl =
-      let print_tbl oc (lbl, tbl) =
-        fprintf oc "%a:\n" label lbl;
-        List.iter
-          (fun l -> fprintf oc "	.4byte	%a\n"
-                               print_label l)
-          tbl in
-      if !jumptables <> [] then
+      
+    let print_jumptable oc jmptbl = () 
+      (* if !jumptables <> [] then
         begin
           section oc jmptbl;
-          fprintf oc "	.balign 4\n";
           List.iter (print_tbl oc) !jumptables;
           jumptables := []
-        end
+        end *)
 
     let print_fun_info = elf_print_fun_info
 
