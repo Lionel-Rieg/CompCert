@@ -55,18 +55,18 @@ Definition assign (m: mem) (x:R.t) (v: value): mem
   := fun y => if R.eq_dec x y then v else m y.
 
 Inductive exp :=
-  | Name (x:R.t)
+  | PReg (x:R.t)
   | Op (o:op) (le: list_exp)
   | Old (e: exp)
 with list_exp :=
   | Enil
   | Econs (e:exp) (le:list_exp)
   | LOld (le: list_exp)
-  .
+.
 
 Fixpoint exp_eval (e: exp) (m old: mem): option value :=
   match e with
-  | Name x => Some (m x)
+  | PReg x => Some (m x)
   | Op o le => 
      match list_exp_eval le m old with
      | Some lv => op_eval ge o lv

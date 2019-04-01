@@ -544,15 +544,15 @@ Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
 Definition trans_control (ctl: control) : inst :=
   match ctl with
-  | Pret => [(#PC, Name (#RA))]
-  | Pcall s => [(#RA, Name (#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
-  | Picall r => [(#RA, Name (#PC)); (#PC, Name (#r))]
+  | Pret => [(#PC, PReg(#RA))]
+  | Pcall s => [(#RA, PReg(#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
+  | Picall r => [(#RA, PReg(#PC)); (#PC, PReg(#r))]
   | Pgoto s => [(#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
-  | Pigoto r => [(#PC, Name (#r))]
-  | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
-  | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil));
+  | Pigoto r => [(#PC, PReg(#r))]
+  | Pj_l l => [(#PC, Op (Control (Oj_l l)) (PReg(#PC) @ Enil))]
+  | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (PReg(#r) @ PReg(#PC) @ Enil))]
+  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (PReg(#r) @ PReg(#PC) @ Enil))]
+  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (PReg(#r) @ PReg(#PC) @ Enil));
                             (#GPR62, Op (Constant Vundef) Enil);
                             (#GPR63, Op (Constant Vundef) Enil) ]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
@@ -568,36 +568,36 @@ Definition trans_exit (ex: option control) : L.inst :=
 Definition trans_arith (ai: ar_instruction) : inst :=
   match ai with
   | PArithR n d => [(#d, Op (Arith (OArithR n)) Enil)]
-  | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (Name (#s) @ Enil))]
+  | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (PReg(#s) @ Enil))]
   | PArithRI32 n d i => [(#d, Op (Arith (OArithRI32 n i)) Enil)]
   | PArithRI64 n d i => [(#d, Op (Arith (OArithRI64 n i)) Enil)]
   | PArithRF32 n d i => [(#d, Op (Arith (OArithRF32 n i)) Enil)]
   | PArithRF64 n d i => [(#d, Op (Arith (OArithRF64 n i)) Enil)]
-  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
-  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
-  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
-  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (Name(#d) @ Name (#s1) @ Name (#s2) @ Enil))]
-  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (Name(#d) @ Name (#s) @ Enil))]
-  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (Name(#d) @ Name (#s) @ Enil))]
+  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (PReg(#s) @ Enil))]
+  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (PReg(#s) @ Enil))]
+  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (PReg(#d) @ PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
+  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   end.
 
 
 Definition trans_basic (b: basic) : inst :=
   match b with
   | PArith ai => trans_arith ai
-  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
-  | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
-  | Pallocframe sz pos => [(#FP, Name (#SP)); (#SP, Op (Allocframe2 sz pos) (Name (#SP) @ Name pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
-                           (pmem, Op (Allocframe sz pos) (Old (Name (#SP)) @ Name pmem @ Enil))]
-  | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
-                          (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Old (Name pmem) @ Enil));
+  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg(#a) @ PReg pmem @ Enil))]
+  | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg(#s) @ PReg(#a) @ PReg pmem @ Enil))]
+  | Pallocframe sz pos => [(#FP, PReg(#SP)); (#SP, Op (Allocframe2 sz pos) (PReg(#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
+                           (pmem, Op (Allocframe sz pos) (Old (PReg(#SP)) @ PReg pmem @ Enil))]
+  | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg(#SP) @ PReg pmem @ Enil));
+                          (#SP, Op (Freeframe2 sz pos) (PReg(#SP) @ Old (PReg pmem) @ Enil));
                           (#RTMP, Op (Constant Vundef) Enil)]
   | Pget rd ra => match ra with
-                  | RA => [(#rd, Name (#ra))]
+                  | RA => [(#rd, PReg(#ra))]
                   | _ => [(#rd, Op Fail Enil)]
                   end
   | Pset ra rd => match ra with
-                  | RA => [(#ra, Name (#rd))]
+                  | RA => [(#ra, PReg(#rd))]
                   | _ => [(#rd, Op Fail Enil)]
                   end
   | Pnop => []
@@ -609,7 +609,7 @@ Fixpoint trans_body (b: list basic) : list L.inst :=
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-Definition trans_pcincr (sz: Z) (k: L.inst) := (#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k.
+Definition trans_pcincr (sz: Z) (k: L.inst) := (#PC, Op (Control (OIncremPC sz)) (PReg(#PC) @ Enil)) :: k.
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ (trans_pcincr (size b) (trans_exit (exit b)) :: nil).
@@ -1044,7 +1044,7 @@ Lemma exec_trans_pcincr_exec_instrun:
   forall rs m s b k,
   match_states (State rs m) s ->
   exists s',
-     inst_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = inst_run Ge k s' s
+     inst_run Ge ((# PC, Op (OIncremPC (size b)) (PReg(# PC) @ Enil)) :: k) s s = inst_run Ge k s' s
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros. inv H. eexists. split. simpl. pose (H1 PC); simpl in e; rewrite e. destruct Ge. simpl. eapply eq_refl.

@@ -455,7 +455,7 @@ Qed.
 
 Fixpoint exp_frame (e: exp): list R.t :=
   match e with
-  | Name x => x::nil
+  | PReg x => x::nil
   | Op o le => list_exp_frame le
   | Old e => exp_frame e
   end
@@ -637,7 +637,7 @@ Qed.
 
 Fixpoint exp_sframe (e: exp): S.t :=
   match e with
-  | Name x => S.add x S.empty
+  | PReg x => S.add x S.empty
   | Op o le => list_exp_sframe le
   | Old e => exp_sframe e
   end

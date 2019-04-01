@@ -115,7 +115,7 @@ Hint Rewrite set_spec_eq empty_spec: dict_rw.
 
 Fixpoint exp_tree (e: exp) (d old: deps): tree :=
   match e with
-  | Name x => deps_get d x
+  | PReg x => deps_get d x
   | Op o le => Top o (list_exp_tree le d old)
   | Old e => exp_tree e old old
   end

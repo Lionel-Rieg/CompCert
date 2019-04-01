@@ -171,7 +171,7 @@ Hint Resolve hdeps_get_correct: wlp.
 
 Fixpoint hexp_tree (e: exp) (d od: hdeps) (dbg: option pstring) : ?? hashV tree :=
   match e with
-  | Name x => hdeps_get d x dbg
+  | PReg x => hdeps_get d x dbg
   | Op o le =>
      DO lt <~ hlist_exp_tree le d od;; 
      hTop o lt dbg
