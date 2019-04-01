@@ -291,12 +291,6 @@ Proof.
   destruct o; simpl; try congruence.
 Qed.
 
-
-Definition iandb (ib1 ib2: ?? bool): ?? bool :=
-  DO b1 <~ ib1;;
-  DO b2 <~ ib2;;
-  RET (andb b1 b2).
-
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   match o1 with
   | OArithR n1 =>
@@ -325,14 +319,15 @@ Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
      match o2 with OArithARRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   end.
 
+Ltac my_wlp_simplify := wlp_xsimplify ltac:(intros; subst; simpl in * |- *; congruence || intuition eauto with wlp).
+
 Lemma arith_op_eq_correct o1 o2:
   WHEN arith_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  all: try congruence.
-  all: apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; my_wlp_simplify; try congruence.
 Qed.
-
+Hint Resolve arith_op_eq_correct: wlp.
+Opaque arith_op_eq_correct.
 
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
   match o1, o2 with
@@ -342,9 +337,10 @@ Definition load_op_eq (o1 o2: load_op): ?? bool :=
 Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify.
-  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; wlp_simplify; try congruence.
 Qed.
+Hint Resolve load_op_eq_correct: wlp.
+Opaque load_op_eq_correct.
 
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
@@ -355,9 +351,10 @@ Definition store_op_eq (o1 o2: store_op): ?? bool :=
 Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify.
-  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; wlp_simplify; try congruence.
 Qed.
+Hint Resolve store_op_eq_correct: wlp.
+Opaque store_op_eq_correct.
 
 (* TODO: rewrite control_op_eq in a robust style against the miss of a case
    cf. arith_op_eq above *)
@@ -377,13 +374,10 @@ Definition control_op_eq (c1 c2: control_op): ?? bool :=
 Lemma control_op_eq_correct c1 c2:
   WHEN control_op_eq c1 c2 ~> b THEN b = true -> c1 = c2.
 Proof.
-  destruct c1, c2; wlp_simplify; try discriminate.
-  - congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - rewrite Z.eqb_eq in * |-. congruence.
-  - congruence.
+  destruct c1, c2; wlp_simplify; try rewrite Z.eqb_eq in * |-; try congruence.
 Qed.
+Hint Resolve control_op_eq_correct: wlp.
+Opaque control_op_eq_correct.
 
 
 (* TODO: rewrite op_eq in a robust style against the miss of a case
@@ -403,21 +397,13 @@ Definition op_eq (o1 o2: op): ?? bool :=
   | _, _ => RET false
   end.
 
-
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - congruence.
+  destruct o1, o2; wlp_simplify; try rewrite Z.eqb_eq in * |- ; try congruence.
 Qed.
+Hint Resolve op_eq_correct: wlp.
+Global Opaque op_eq_correct.
 
 
 (* QUICK FIX WITH struct_eq *)
