@@ -256,12 +256,14 @@ Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rsr rsw: regset)
   | Stuck => Stuck
   end.
 
+(** parallel in-order writes execution of bundles *)
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
   parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
 
-Definition parexec_bblock (f: function) (b: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
-   exists bdy1 bdy2, Permutation (bdy1++bdy2) (body b) /\ 
-      o=match parexec_wio_bblock_aux f bdy1 (exit b) (Ptrofs.repr (size b)) rs rs m m with
+(** non-deterministic (out-of-order writes) parallel execution of bundles *)
+Definition parexec_bblock (f: function) (bundle: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
+   exists bdy1 bdy2, Permutation (bdy1++bdy2) (body bundle) /\ 
+      o=match parexec_wio_bblock_aux f bdy1 (exit bundle) (Ptrofs.repr (size bundle)) rs rs m m with
       | Next rsw mw => parexec_wio_body bdy2 rs rsw m mw
       | Stuck => Stuck
       end.
@@ -276,14 +278,26 @@ Proof.
      destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
 Qed.
 
+(** deterministic parallel (out-of-order writes) execution of bundles *)
+Definition det_parexec (f: function) (bundle: bblock) (rs: regset) (m: mem) rs' m': Prop :=
+   forall o, parexec_bblock f bundle rs m o -> o = Next rs' m'.
+
+
+Local Hint Resolve parexec_bblock_write_in_order.
+
+Lemma det_parexec_write_in_order f b rs m rs' m':
+   det_parexec f b rs m rs' m' -> parexec_wio_bblock f b rs m = Next rs' m'.
+Proof.
+   unfold det_parexec; auto.
+Qed.
+
 Inductive step: state -> trace -> state -> Prop :=
   | exec_step_internal:
-      forall b ofs f bi rs m rs' m',
+      forall b ofs f bundle rs m rs' m',
       rs PC = Vptr b ofs ->
       Genv.find_funct_ptr ge b = Some (Internal f) ->
-      find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bi ->
-      parexec_wio_bblock f bi rs m = Next rs' m' ->
-      (forall o, parexec_bblock f bi rs m o -> o=(Next rs' m')) ->
+      find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
+      det_parexec f bundle rs m rs' m' ->
       step (State rs m) E0 (State rs' m')
   | exec_step_builtin:
       forall b ofs f ef args res rs m vargs t vres rs' m' bi,
@@ -315,7 +329,29 @@ End RELSEM.
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
 
-Lemma semantics_determinate: forall p, determinate (semantics p).
+Remark extcall_arguments_determ:
+  forall rs m sg args1 args2,
+  extcall_arguments rs m sg args1 -> extcall_arguments rs m sg args2 -> args1 = args2.
+Proof.
+  intros until m.
+  assert (A: forall l v1 v2,
+             extcall_arg rs m l v1 -> extcall_arg rs m l v2 -> v1 = v2).
+  { intros. inv H; inv H0; congruence. }
+  assert (B: forall p v1 v2,
+             extcall_arg_pair rs m p v1 -> extcall_arg_pair rs m p v2 -> v1 = v2).
+  { intros. inv H; inv H0. 
+    eapply A; eauto.
+    f_equal; eapply A; eauto. }
+  assert (C: forall ll vl1, list_forall2 (extcall_arg_pair rs m) ll vl1 ->
+             forall vl2, list_forall2 (extcall_arg_pair rs m) ll vl2 -> vl1 = vl2).
+  {
+    induction 1; intros vl2 EA; inv EA.
+    auto.
+    f_equal; eauto. }
+  intros. eapply C; eauto.
+Qed.
+
+Lemma semantics_determinate p: determinate (semantics p).
 Proof.
 Ltac Equalities :=
   match goal with
@@ -323,14 +359,20 @@ Ltac Equalities :=
       rewrite H1 in H2; inv H2; Equalities
   | _ => idtac
   end.
-  intros; constructor; simpl; intros.
-- (* determ *)
-  inv H; inv H0; Equalities.
+Ltac Det_WIO X :=
+  match goal with
+  | [ H: det_parexec _ _ _ _ _ _ _ |- _ ] =>
+      exploit det_parexec_write_in_order; [ eapply H | idtac]; clear H; intro X
+  | _ => idtac
+  end.
+  intros; constructor; simpl.
+- (* determ *) intros s t1 s1 t2 s2 H H0. inv H; Det_WIO X1;
+  inv H0; Det_WIO X2; Equalities.
   + split. constructor. auto. 
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in H4. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
-    rewrite H10 in H4. discriminate.
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in H11. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
-    rewrite H4 in H11. discriminate.
+  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X1. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+    rewrite H8 in X1. discriminate.
+  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X2. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+    rewrite H4 in X2. discriminate.
   + assert (vargs0 = vargs) by (eapply eval_builtin_args_determ; eauto). subst vargs0.
     exploit external_call_determ. eexact H6. eexact H13. intros [A B].
     split. auto. intros. destruct B; auto. subst. auto.
@@ -343,12 +385,12 @@ Ltac Equalities :=
   eapply external_call_trace_length; eauto.
   eapply external_call_trace_length; eauto.
 - (* initial states *)
-  inv H; inv H0. f_equal. congruence.
+  intros s1 s2 H H0; inv H; inv H0; f_equal; congruence.
 - (* final no step *)
-  assert (NOTNULL: forall b ofs, Vnullptr <> Vptr b ofs).
+  intros s r H; assert (NOTNULL: forall b ofs, Vnullptr <> Vptr b ofs).
   { intros; unfold Vnullptr; destruct Archi.ptr64; congruence. }
-  inv H. unfold Vzero in H0. red; intros; red; intros.
+  inv H. red; intros; red; intros.
   inv H; rewrite H0 in *; eelim NOTNULL; eauto.
 - (* final states *)
-  inv H; inv H0. congruence.
+  intros s r1 r2 H H0; inv H; inv H0. congruence.
 Qed.

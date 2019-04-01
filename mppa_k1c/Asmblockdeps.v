@@ -2158,15 +2158,13 @@ Proof.
     constructor; auto.
 Qed.
 
-Lemma bblock_para_check_correct:
-  forall ge fn bb rs m rs' m' o,
+Lemma bblock_para_check_correct ge fn bb rs m rs' m':
   Ge = Genv ge fn ->
   exec_bblock ge fn bb rs m = Next rs' m' ->
   bblock_para_check bb = true ->
-  parexec_bblock ge fn bb rs m o ->
-  o = Next rs' m'.
+  det_parexec ge fn bb rs m rs' m'.
 Proof.
-  intros. unfold bblock_para_check in H1.
+  intros H H0 H1 o H2. unfold bblock_para_check in H1.
   exploit forward_simu; eauto. eapply trans_state_match.
   intros (s2' & EXEC & MS).
   exploit forward_simu_par_alt. 2: apply (trans_state_match (State rs m)). all: eauto.

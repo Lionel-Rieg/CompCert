@@ -776,36 +776,25 @@ Proof.
   intros; eapply find_bblock_Some_in; eauto.
 Qed.
 
-Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
+Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m':
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
   verify_par_bblock bundle = OK tt ->
-  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+  det_parexec (globalenv (semantics tprog)) f bundle rs m rs' m'.
 Proof.
   intros. unfold verify_par_bblock in H0. destruct (Asmblockdeps.bblock_para_check _) eqn:BPC; try discriminate. clear H0.
-  simpl in H. simpl in H1.
+  simpl in H.
   eapply Asmblockdeps.bblock_para_check_correct; eauto.
 Qed.
 
-Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
+Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m':
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
-  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+  det_parexec (globalenv (semantics tprog)) f bundle rs m rs' m'.
 Proof.
   intros; eapply checked_bundles_are_parexec_equiv; eauto.
   eapply all_bundles_are_checked; eauto.
 Qed.
-
-Lemma seqexec_parexec_wio b ofs f bundle rs rs' m m':
-  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
-  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
-  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
-  parexec_wio_bblock (globalenv (semantics tprog)) f bundle rs m = Next rs' m'.
-Proof.
-  intros; erewrite <- seqexec_parexec_equiv; eauto.
-  eapply parexec_bblock_write_in_order.
-Qed.
-
 
 Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
@@ -814,7 +803,6 @@ Proof.
   - intros; subst; auto.
   - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
     + eapply exec_step_internal; eauto.
-      eapply seqexec_parexec_wio; eauto.
       intros; eapply seqexec_parexec_equiv; eauto.
     + eapply exec_step_builtin; eauto.
     + eapply exec_step_external; eauto.
