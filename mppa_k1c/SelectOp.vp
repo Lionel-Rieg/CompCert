@@ -481,6 +481,7 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
   | Eop (Oaddrsymbol id ofs) Enil => if Archi.pic_code tt then (Aindexed Ptrofs.zero, e:::Enil) else (Aglobal id ofs, Enil)
   | Eop (Oaddimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int n), e1:::Enil)
   | Eop (Oaddlimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int64 n), e1:::Enil)
+  | Eop Oaddl (e1:::e2:::Enil) => (Aindexed2, e1:::e2:::Enil) 
   | _ => (Aindexed Ptrofs.zero, e:::Enil)
   end.
 
