@@ -600,16 +600,22 @@ Qed.
 
 Theorem eval_longofsingle: partial_unary_constructor_sound longofsingle Val.longofsingle.
 Proof.
-  unfold longofsingle; red; intros. (* destruct Archi.splitlong eqn:SL. *)
-  eapply SplitLongproof.eval_longofsingle; eauto.
-(*   TrivialExists. *)
+  unfold longofsingle; red; intros.
+  destruct x; simpl in H0; inv H0. destruct (Float32.to_long f) as [n|] eqn:EQ; simpl in H2; inv H2.
+  exploit eval_floatofsingle; eauto. intros (v & A & B). simpl in B. inv B.
+  apply Float32.to_long_double in EQ.
+  eapply eval_longoffloat; eauto. simpl.
+  change (Float.of_single f) with (Float32.to_double f); rewrite EQ; auto.
 Qed.
 
 Theorem eval_longuofsingle: partial_unary_constructor_sound longuofsingle Val.longuofsingle.
 Proof.
   unfold longuofsingle; red; intros. (* destruct Archi.splitlong eqn:SL. *)
-  eapply SplitLongproof.eval_longuofsingle; eauto.
-(*   TrivialExists. *)
+  destruct x; simpl in H0; inv H0. destruct (Float32.to_longu f) as [n|] eqn:EQ; simpl in H2; inv H2.
+  exploit eval_floatofsingle; eauto. intros (v & A & B). simpl in B. inv B.
+  apply Float32.to_longu_double in EQ.
+  eapply eval_longuoffloat; eauto. simpl.
+  change (Float.of_single f) with (Float32.to_double f); rewrite EQ; auto.
 Qed.
 
 Theorem eval_singleoflong: partial_unary_constructor_sound singleoflong Val.singleoflong.
