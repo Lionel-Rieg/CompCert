@@ -1631,16 +1631,16 @@ Arguments ppos: simpl never.
 
 Variable Ge: genv.
 
-Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' mw' i:
+Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' i:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_arith_instr ge i rsr rsw = rsw' -> mw = mw' ->
+  parexec_arith_instr ge i rsr rsw = rsw' ->
   exists sw',
      macro_prun Ge (trans_arith i) sw sr sr = Some sw'
-  /\ match_states (State rsw' mw') sw'.
+  /\ match_states (State rsw' mw) sw'.
 Proof.
-  intros GENV MSR MSW PARARITH MWEQ. subst. inv MSR. inv MSW.
+  intros GENV MSR MSW PARARITH. subst. inv MSR. inv MSW.
   unfold parexec_arith_instr. destruct i.
 (* Ploadsymbol *)
   - destruct i. eexists; split; [| split].
@@ -1716,6 +1716,62 @@ Proof.
       destruct (ireg_eq g rd); subst; Simpl.
 Qed.
 
+Theorem forward_simu_par_wio_basic_gen ge fn rsr rsw mr mw sr sw bi:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (macro_prun Ge (trans_basic bi) sw sr sr).
+Proof.
+  intros GENV MSR MSW; inversion MSR as (H & H0); inversion MSW as (H1 & H2).
+  destruct bi; simpl.
+(* Arith *)
+  - exploit trans_arith_par_correct. 5: eauto. all: eauto.
+(* Load *)
+  - destruct i; unfold parexec_load; simpl; unfold exec_load_deps.
+    erewrite GENV, H, H0.
+    destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto.
+    destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto.
+    eexists; intuition eauto; Simpl.
+    destruct r; Simpl;
+        destruct (ireg_eq g rd); [
+         subst; Simpl|
+         Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption].
+(* Store *)
+  - destruct i; unfold parexec_store; simpl; unfold exec_store_deps.
+    erewrite GENV, H, ! H0.
+    destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto.
+    destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto.
+    eexists; intuition eauto; Simpl.
+(* Allocframe *)
+  - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
+    * eexists; repeat split.
+      { Simpl. erewrite !H0, H, MEMAL, MEMS. Simpl.
+      rewrite H, MEMAL. rewrite MEMS. reflexivity. }
+      { Simpl. }
+      { intros rr; destruct rr; Simpl.
+        destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl. }
+    * simpl; Simpl; erewrite !H0, H, MEMAL, MEMS; auto.
+  (* Freeframe *)
+  - erewrite !H0, H.
+    destruct (Mem.loadv _ _ _) eqn:MLOAD; simpl; auto.
+    destruct (rsr GPR12) eqn:SPeq; simpl; auto.
+    destruct (Mem.free _ _ _ _) eqn:MFREE; simpl; auto.
+    eexists; repeat split.
+    * simpl. Simpl. erewrite H0, SPeq, MLOAD, MFREE. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
+(* Pget *)
+  - destruct rs eqn:rseq; simpl; auto.
+    eexists. repeat split. Simpl. intros rr; destruct rr; Simpl.
+    destruct (ireg_eq g rd); subst; Simpl.
+(* Pset *)
+  - destruct rd eqn:rdeq; simpl; auto.
+    eexists. repeat split. Simpl. intros rr; destruct rr; Simpl.
+(* Pnop *)
+  - eexists. repeat split; assumption.
+Qed.
+
+
 Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi rsw' mw':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -1725,54 +1781,8 @@ Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi rsw' mw':
      macro_prun Ge (trans_basic bi) sw sr sr = Some sw'
   /\ match_states (State rsw' mw') sw'.
 Proof.
-  intros GENV MSR MSW H.
-  destruct bi.
-(* Arith *)
-  - simpl in H. inversion H. subst rsw' mw'. simpl macro_prun. eapply trans_arith_par_correct; eauto.
-(* Load *)
-  - simpl in H. destruct i.
-    unfold parexec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-    destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H. inv MSR; inv MSW;
-    eexists; split; try split;
-    [ simpl; rewrite EVALOFF; rewrite H; pose (H0 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
-     Simpl|
-     intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); [
-       subst; Simpl|
-       Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
-(* Store *)
-  - simpl in H. destruct i.
-    unfold parexec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate.
-    destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate. inv H; inv MSR; inv MSW.
-    eexists; split; try split.
-    * simpl. rewrite EVALOFF. rewrite H. rewrite (H0 ra). rewrite (H0 rs). rewrite MEML. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl.
-(* Allocframe *)
-  - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
-    inv H. inv MSR. inv MSW. eexists. split; try split.
-    * simpl. Simpl. rewrite (H0 GPR12). rewrite H. rewrite MEMAL. rewrite MEMS. Simpl.
-      rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl.
-      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
-(* Freeframe *)
-  - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rsr GPR12) eqn:SPeq; try discriminate.
-    destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv MSR. inv MSW.
-    eexists. split; try split.
-    * simpl. rewrite (H0 GPR12). rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
-      Simpl. rewrite (H0 GPR12). rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
-(* Pget *)
-  - simpl in H. destruct rs eqn:rseq; try discriminate. inv H. inv MSR. inv MSW.
-    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
-    destruct (ireg_eq g rd); subst; Simpl.
-(* Pset *)
-  - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv MSR; inv MSW.
-    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
-(* Pnop *)
-  - simpl in H. inv H. inv MSR. inv MSW. eexists. split; try split. assumption. assumption.
+  intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
+  simpl; auto.
 Qed.
 
 Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
@@ -1782,28 +1792,8 @@ Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
   parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
   macro_prun Ge (trans_basic bi) sw sr sr = None.
 Proof.
-  intros GENV MSR MSW H0. inv MSR; inv MSW.
-  unfold parexec_basic_instr in H0. destruct bi; try discriminate.
-(* PLoad *)
-  - destruct i; destruct i.
-    all: simpl; rewrite H; rewrite (H1 ra); unfold parexec_load in H0;
-    destruct (eval_offset _ _); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
-(* PStore *)
-  - destruct i; destruct i;
-    simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs);
-    unfold parexec_store in H0; destruct (eval_offset _ _); auto; destruct (Mem.storev _ _ _); auto; discriminate.
-(* Pallocframe *)
-  - simpl. Simpl. rewrite (H1 SP). rewrite H. destruct (Mem.alloc _ _ _). simpl in H0.
-    destruct (Mem.store _ _ _ _); try discriminate. reflexivity.
-(* Pfreeframe *)
-  - simpl. Simpl. rewrite (H1 SP). rewrite H.
-    destruct (Mem.loadv _ _ _); auto. destruct (rsr GPR12); auto. destruct (Mem.free _ _ _ _); auto.
-    discriminate.
-(* Pget *)
-  - simpl. destruct rs; subst; try discriminate.
-    all: simpl; auto.
-  - simpl. destruct rd; subst; try discriminate.
-    all: simpl; auto.
+  intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
+  simpl; auto.
 Qed.
 
 Theorem forward_simu_par_body:
