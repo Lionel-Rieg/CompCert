@@ -542,7 +542,7 @@ Definition inv_ppos (p: R.t) : option preg :=
 
 Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
-Definition trans_control (ctl: control) : macro :=
+Definition trans_control (ctl: control) : inst :=
   match ctl with
   | Pret => [(#PC, Name (#RA))]
   | Pcall s => [(#RA, Name (#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
@@ -558,14 +558,14 @@ Definition trans_control (ctl: control) : macro :=
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
-Definition trans_exit (ex: option control) : L.macro :=
+Definition trans_exit (ex: option control) : L.inst :=
   match ex with
   | None => []
   | Some ctl => trans_control ctl
   end
 .
 
-Definition trans_arith (ai: ar_instruction) : macro :=
+Definition trans_arith (ai: ar_instruction) : inst :=
   match ai with
   | PArithR n d => [(#d, Op (Arith (OArithR n)) Enil)]
   | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (Name (#s) @ Enil))]
@@ -582,7 +582,7 @@ Definition trans_arith (ai: ar_instruction) : macro :=
   end.
 
 
-Definition trans_basic (b: basic) : macro :=
+Definition trans_basic (b: basic) : inst :=
   match b with
   | PArith ai => trans_arith ai
   | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
@@ -603,13 +603,13 @@ Definition trans_basic (b: basic) : macro :=
   | Pnop => []
   end.
 
-Fixpoint trans_body (b: list basic) : list L.macro :=
+Fixpoint trans_body (b: list basic) : list L.inst :=
   match b with
   | nil => nil
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-Definition trans_pcincr (sz: Z) (k: L.macro) := (#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k.
+Definition trans_pcincr (sz: Z) (k: L.inst) := (#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k.
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ (trans_pcincr (size b) (trans_exit (exit b)) :: nil).
@@ -686,7 +686,7 @@ Lemma exec_app_some:
 Proof.
   induction c.
   - simpl. intros. congruence.
-  - intros. simpl in *. destruct (macro_run _ _ _ _); auto. eapply IHc; eauto. discriminate.
+  - intros. simpl in *. destruct (inst_run _ _ _ _); auto. eapply IHc; eauto. discriminate.
 Qed.
 
 Lemma exec_app_none:
@@ -696,7 +696,7 @@ Lemma exec_app_none:
 Proof.
   induction c.
   - simpl. discriminate.
-  - intros. simpl. simpl in H. destruct (macro_run _ _ _ _); auto.
+  - intros. simpl. simpl in H. destruct (inst_run _ _ _ _); auto.
 Qed.
 
 Lemma trans_arith_correct:
@@ -704,7 +704,7 @@ Lemma trans_arith_correct:
   exec_arith_instr ge i rs = rs' ->
   match_states (State rs m) s ->
   exists s',
-     macro_run (Genv ge fn) (trans_arith i) s s = Some s'
+     inst_run (Genv ge fn) (trans_arith i) s s = Some s'
   /\ match_states (State rs' m) s'.
 Proof.
   intros. unfold exec_arith_instr in H. destruct i.
@@ -793,12 +793,12 @@ Lemma forward_simu_basic:
   exec_basic_instr ge b rs m = Next rs' m' ->
   match_states (State rs m) s ->
   exists s',
-     macro_run (Genv ge fn) (trans_basic b) s s = Some s'
+     inst_run (Genv ge fn) (trans_basic b) s s = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
   intros. destruct b.
 (* Arith *)
-  - simpl in H. inv H. simpl macro_run. eapply trans_arith_correct; eauto.
+  - simpl in H. inv H. simpl inst_run. eapply trans_arith_correct; eauto.
 (* Load *)
   - simpl in H. destruct i.
     unfold exec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
@@ -1040,11 +1040,11 @@ Proof.
     eapply IHc; eauto.
 Qed.
 
-Lemma exec_trans_pcincr_exec_macrorun:
+Lemma exec_trans_pcincr_exec_instrun:
   forall rs m s b k,
   match_states (State rs m) s ->
   exists s',
-     macro_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = macro_run Ge k s' s
+     inst_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = inst_run Ge k s' s
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros. inv H. eexists. split. simpl. pose (H1 PC); simpl in e; rewrite e. destruct Ge. simpl. eapply eq_refl.
@@ -1053,9 +1053,9 @@ Proof.
   - intros rr; destruct rr; Simpl.
 Qed.
 
-Lemma macro_run_trans_exit_noold:
+Lemma inst_run_trans_exit_noold:
   forall ex s s' s'',
-  macro_run Ge (trans_exit ex) s s' = macro_run Ge (trans_exit ex) s s''.
+  inst_run Ge (trans_exit ex) s s' = inst_run Ge (trans_exit ex) s s''.
 Proof.
   intros. destruct ex.
   - destruct c; destruct i; reflexivity.
@@ -1070,10 +1070,10 @@ Lemma exec_trans_pcincr_exec:
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros.
-  exploit exec_trans_pcincr_exec_macrorun; eauto.
+  exploit exec_trans_pcincr_exec_instrun; eauto.
   intros (s' & MRUN & MS).
   eexists. split. unfold exec. unfold trans_pcincr. unfold run. rewrite MRUN.
-  erewrite macro_run_trans_exit_noold; eauto.
+  erewrite inst_run_trans_exit_noold; eauto.
   assumption.
 Qed.
 
@@ -1603,7 +1603,7 @@ End SECT.
 
 (** Parallelizability of a bblock *)
 
-Module PChk := ParallelChecks L PosResourceSet.
+Module PChk := ParallelChecks L PosPseudoRegSet.
 
 Definition bblock_para_check (p: Asmblock.bblock) : bool :=
   PChk.is_parallelizable (trans_block p).
@@ -1637,7 +1637,7 @@ Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' i:
   match_states (State rsw mw) sw ->
   parexec_arith_instr ge i rsr rsw = rsw' ->
   exists sw',
-     macro_prun Ge (trans_arith i) sw sr sr = Some sw'
+     inst_prun Ge (trans_arith i) sw sr sr = Some sw'
   /\ match_states (State rsw' mw) sw'.
 Proof.
   intros GENV MSR MSW PARARITH. subst. inv MSR. inv MSW.
@@ -1720,7 +1720,7 @@ Theorem forward_simu_par_wio_basic_gen ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (macro_prun Ge (trans_basic bi) sw sr sr).
+  match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (inst_prun Ge (trans_basic bi) sw sr sr).
 Proof.
   intros GENV MSR MSW; inversion MSR as (H & H0); inversion MSW as (H1 & H2).
   destruct bi; simpl.
@@ -1778,7 +1778,7 @@ Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi rsw' mw':
   match_states (State rsw mw) sw ->
   parexec_basic_instr ge bi rsr rsw mr mw = Next rsw' mw' ->
   exists sw',
-     macro_prun Ge (trans_basic bi) sw sr sr = Some sw'
+     inst_prun Ge (trans_basic bi) sw sr sr = Some sw'
   /\ match_states (State rsw' mw') sw'.
 Proof.
   intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
@@ -1790,7 +1790,7 @@ Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
-  macro_prun Ge (trans_basic bi) sw sr sr = None.
+  inst_prun Ge (trans_basic bi) sw sr sr = None.
 Proof.
   intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
   simpl; auto.
@@ -1826,7 +1826,7 @@ Theorem forward_simu_par_control ge fn rsr rsw mr mw sr sw sz rs' ex m':
   match_states (State rsw mw) sw ->
   parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Next rs' m' ->
   exists s',
-     macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
+     inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
   intros GENV MSR MSW H0.
@@ -1937,7 +1937,7 @@ Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Stuck ->
-  macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
+  inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Proof.
   intros GENV MSR MSW H0. inv MSR; inv MSW. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).

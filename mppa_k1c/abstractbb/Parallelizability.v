@@ -21,20 +21,20 @@ Local Open Scope list.
 Section PARALLEL.
 Variable ge: genv.
 
-(* parallel run of a macro *)
-Fixpoint macro_prun (i: macro) (m tmp old: mem): option mem :=
+(* parallel run of a inst *)
+Fixpoint inst_prun (i: inst) (m tmp old: mem): option mem :=
   match i with
   | nil => Some m
   | (x, e)::i' =>
      match exp_eval ge e tmp old with
-     | Some v' => macro_prun i' (assign m x v') (assign tmp x v') old
+     | Some v' => inst_prun i' (assign m x v') (assign tmp x v') old
      | None => None
      end
   end.
 
-(* [macro_prun] is generalization of [macro_run] *)   
-Lemma macro_run_prun i: forall m old,
-  macro_run ge i m old = macro_prun i m m old.
+(* [inst_prun] is generalization of [inst_run] *)   
+Lemma inst_run_prun i: forall m old,
+  inst_run ge i m old = inst_prun i m m old.
 Proof.
   induction i as [|[y e] i']; simpl; auto.
   intros m old; destruct (exp_eval ge e m old); simpl; auto.
@@ -46,7 +46,7 @@ Fixpoint prun_iw (p: bblock) m old: option mem :=
   match p with
   | nil => Some m
   | i::p' =>
-    match macro_prun i m old old with
+    match inst_prun i m old old with
     | Some m1 => prun_iw p' m1 old
     | None => None
     end
@@ -58,9 +58,9 @@ Definition prun (p: bblock) m (om: option mem) := exists p', res_eq om (prun_iw 
 
 (* a few lemma on equality *)
 
-Lemma macro_prun_equiv i old: forall m1 m2 tmp,
+Lemma inst_prun_equiv i old: forall m1 m2 tmp,
   (forall x, m1 x = m2 x) ->
-  res_eq (macro_prun i m1 tmp old) (macro_prun i m2 tmp old).
+  res_eq (inst_prun i m1 tmp old) (inst_prun i m2 tmp old).
 Proof.
   induction i as [|[x e] i']; simpl; eauto.
   intros m1 m2 tmp H; destruct (exp_eval ge e tmp old); simpl; auto.
@@ -73,8 +73,8 @@ Lemma prun_iw_equiv p: forall m1 m2 old,
 Proof.
   induction p as [|i p']; simpl; eauto.
   - intros m1 m2 old H.
-    generalize (macro_prun_equiv i old m1 m2 old H);
-    destruct (macro_prun i m1 old old); simpl.
+    generalize (inst_prun_equiv i old m1 m2 old H);
+    destruct (inst_prun i m1 old old); simpl.
     + intros (m3 & H3 & H4); rewrite H3; simpl; eauto.
     + intros H1; rewrite H1; simpl; auto.
 Qed.
@@ -88,7 +88,7 @@ Lemma prun_iw_app p1: forall m1 old p2,
      end.
 Proof.
    induction p1; simpl; try congruence.
-   intros; destruct (macro_prun _ _ _); simpl; auto.
+   intros; destruct (inst_prun _ _ _); simpl; auto.
 Qed.
 
 Lemma prun_iw_app_None p1: forall m1 old p2,
@@ -272,15 +272,15 @@ Qed.
 
 (** * Writing frames *)
 
-Fixpoint macro_wframe(i:macro): list R.t := 
+Fixpoint inst_wframe(i:inst): list R.t := 
   match i with
   | nil => nil
-  | a::i' => (fst a)::(macro_wframe i') 
+  | a::i' => (fst a)::(inst_wframe i') 
   end.
 
-Lemma macro_wframe_correct i m' old: forall m tmp, 
-  macro_prun ge i m tmp old = Some m' -> 
-  forall x, notIn x (macro_wframe i) -> m' x  = m x.
+Lemma inst_wframe_correct i m' old: forall m tmp, 
+  inst_prun ge i m tmp old = Some m' -> 
+  forall x, notIn x (inst_wframe i) -> m' x  = m x.
 Proof.
   induction i as [|[y e] i']; simpl.
   - intros m tmp H x H0; inversion_clear H; auto.
@@ -289,47 +289,47 @@ Proof.
     rewrite assign_diff; auto.
 Qed.
 
-Lemma macro_prun_fequiv i old: forall m1 m2 tmp, 
-  frame_eq (fun x => In x (macro_wframe i)) (macro_prun ge i m1 tmp old) (macro_prun ge i m2 tmp old).
+Lemma inst_prun_fequiv i old: forall m1 m2 tmp, 
+  frame_eq (fun x => In x (inst_wframe i)) (inst_prun ge i m1 tmp old) (inst_prun ge i m2 tmp old).
 Proof.
   induction i as [|[y e] i']; simpl.
   - intros m1 m2 tmp; eexists; intuition eauto.
   - intros m1 m2 tmp. destruct (exp_eval ge e tmp old); simpl; auto.
     eapply frame_eq_list_split; eauto. clear IHi'.
     intros m1' m2' x H1 H2.
-    lapply (macro_wframe_correct i' m1' old (assign m1 y v) (assign tmp y v)); eauto.
-    lapply (macro_wframe_correct i' m2' old (assign m2 y v) (assign tmp y v)); eauto.
+    lapply (inst_wframe_correct i' m1' old (assign m1 y v) (assign tmp y v)); eauto.
+    lapply (inst_wframe_correct i' m2' old (assign m2 y v) (assign tmp y v)); eauto.
     intros Xm2 Xm1 H H0. destruct H. 
     + subst. rewrite Xm1, Xm2; auto. rewrite !assign_eq. auto.
     + rewrite <- notIn_iff in H0; tauto.
 Qed.
 
-Lemma macro_prun_None i m1 m2 tmp old: 
-  macro_prun ge i m1 tmp old = None -> 
-  macro_prun ge i m2 tmp old = None.
+Lemma inst_prun_None i m1 m2 tmp old: 
+  inst_prun ge i m1 tmp old = None -> 
+  inst_prun ge i m2 tmp old = None.
 Proof.
-  intros H; generalize (macro_prun_fequiv i old m1 m2 tmp).
+  intros H; generalize (inst_prun_fequiv i old m1 m2 tmp).
   rewrite H; simpl; auto.
 Qed.
 
-Lemma macro_prun_Some i m1 m2 tmp old m1': 
-  macro_prun ge i m1 tmp old = Some m1' -> 
-  res_eq (Some (frame_assign m2 (macro_wframe i) m1')) (macro_prun ge i m2 tmp old).
+Lemma inst_prun_Some i m1 m2 tmp old m1': 
+  inst_prun ge i m1 tmp old = Some m1' -> 
+  res_eq (Some (frame_assign m2 (inst_wframe i) m1')) (inst_prun ge i m2 tmp old).
 Proof.
-  intros H; generalize (macro_prun_fequiv i old m1 m2 tmp).
+  intros H; generalize (inst_prun_fequiv i old m1 m2 tmp).
   rewrite H; simpl.
   intros (m2' & H1 & H2).
   eexists; intuition eauto.
   rewrite frame_assign_def.
-  lapply (macro_wframe_correct i m2' old m2 tmp); eauto.
-  destruct (notIn_dec x (macro_wframe i)); auto.
+  lapply (inst_wframe_correct i m2' old m2 tmp); eauto.
+  destruct (notIn_dec x (inst_wframe i)); auto.
   intros X; rewrite X; auto.
 Qed.
 
 Fixpoint bblock_wframe(p:bblock): list R.t := 
   match p with
   | nil => nil
-  | i::p' => (macro_wframe i)++(bblock_wframe p') 
+  | i::p' => (inst_wframe i)++(bblock_wframe p') 
   end.
 
 Local Hint Resolve Permutation_app_head Permutation_app_tail Permutation_app_comm.
@@ -350,11 +350,11 @@ Proof.
   induction p as [|i p']; simpl.
   - intros m H; inversion_clear H; auto.
   - intros m H x; rewrite notIn_app; intros (H1 & H2). 
-    remember (macro_prun i m old old) as om.
+    remember (inst_prun i m old old) as om.
     destruct om as [m1|]; simpl.
     + eapply eq_trans.
       eapply IHp'; eauto.
-      eapply macro_wframe_correct; eauto.
+      eapply inst_wframe_correct; eauto.
     + inversion H.
 Qed.
 
@@ -363,13 +363,13 @@ Lemma prun_iw_fequiv p old: forall m1 m2,
 Proof.
   induction p as [|i p']; simpl.
   - intros m1 m2; eexists; intuition eauto.
-  - intros m1 m2; generalize (macro_prun_fequiv i old m1 m2 old).
-    remember (macro_prun i m1 old old) as om.
+  - intros m1 m2; generalize (inst_prun_fequiv i old m1 m2 old).
+    remember (inst_prun i m1 old old) as om.
     destruct om as [m1'|]; simpl.
     + intros (m2' & H1 & H2). rewrite H1; simpl.
     eapply frame_eq_list_split; eauto. clear IHp'.
     intros m1'' m2'' x H3 H4. rewrite in_app_iff.
-    intros X X2. assert (X1: In x (macro_wframe i)). { destruct X; auto. rewrite <- notIn_iff in X2; tauto. }
+    intros X X2. assert (X1: In x (inst_wframe i)). { destruct X; auto. rewrite <- notIn_iff in X2; tauto. }
     clear X.
     lapply (bblock_wframe_correct p' m1'' old m1'); eauto.
     lapply (bblock_wframe_correct p' m2'' old m2'); eauto.
@@ -397,7 +397,7 @@ Fixpoint is_det (p: bblock): Prop :=
   match p with
   | nil => True
   | i::p' =>
-       disjoint (macro_wframe i) (bblock_wframe p') (* no WRITE-AFTER-WRITE *)
+       disjoint (inst_wframe i) (bblock_wframe p') (* no WRITE-AFTER-WRITE *)
     /\ is_det p'
   end.
 
@@ -419,32 +419,32 @@ Theorem is_det_correct p p':
 Proof.
   induction 1 as [ | i p p' | i1 i2 p | p1 p2 p3 ]; simpl; eauto.
   - intros [H0 H1] m old.
-    remember (macro_prun ge i m old old) as om0.
+    remember (inst_prun ge i m old old) as om0.
     destruct om0 as [ m0 | ]; simpl; auto.
   - rewrite disjoint_app_r.
     intros ([Z1 Z2] & Z3 & Z4) m old.
-    remember (macro_prun ge i2 m old old) as om2.
+    remember (inst_prun ge i2 m old old) as om2.
     destruct om2 as [ m2 | ]; simpl; auto.
-    + remember (macro_prun ge i1 m old old) as om1.
+    + remember (inst_prun ge i1 m old old) as om1.
       destruct om1 as [ m1 | ]; simpl; auto.
-      * lapply (macro_prun_Some i2 m m1 old old m2); simpl; auto.
-        lapply (macro_prun_Some i1 m m2 old old m1); simpl; auto.
+      * lapply (inst_prun_Some i2 m m1 old old m2); simpl; auto.
+        lapply (inst_prun_Some i1 m m2 old old m1); simpl; auto.
         intros (m1' & Hm1' & Xm1') (m2' & Hm2' & Xm2').
         rewrite Hm1', Hm2'; simpl.
         eapply prun_iw_equiv.
         intros x; rewrite <- Xm1', <- Xm2'. clear Xm2' Xm1' Hm1' Hm2' m1' m2'.
         rewrite frame_assign_def.
         rewrite disjoint_sym in Z1; unfold disjoint in Z1.
-        destruct (notIn_dec x (macro_wframe i1)) as [ X1 | X1 ].
-        { rewrite frame_assign_def; destruct (notIn_dec x (macro_wframe i2)) as [ X2 | X2 ]; auto.
-          erewrite (macro_wframe_correct i2 m2 old m old); eauto.
-          erewrite (macro_wframe_correct i1 m1 old m old); eauto.
+        destruct (notIn_dec x (inst_wframe i1)) as [ X1 | X1 ].
+        { rewrite frame_assign_def; destruct (notIn_dec x (inst_wframe i2)) as [ X2 | X2 ]; auto.
+          erewrite (inst_wframe_correct i2 m2 old m old); eauto.
+          erewrite (inst_wframe_correct i1 m1 old m old); eauto.
         }
         rewrite frame_assign_notIn; auto.
-     * erewrite macro_prun_None; eauto. simpl; auto.
-   + remember (macro_prun ge i1 m old old) as om1.
+     * erewrite inst_prun_None; eauto. simpl; auto.
+   + remember (inst_prun ge i1 m old old) as om1.
      destruct om1 as [ m1 | ]; simpl; auto.
-     erewrite macro_prun_None; eauto.
+     erewrite inst_prun_None; eauto.
   - intros; eapply res_eq_trans.
     eapply IHPermutation1; eauto.
     eapply IHPermutation2; eauto.
@@ -479,23 +479,23 @@ Proof.
     intros; (eapply H1 || eapply H2); rewrite in_app_iff; auto.
 Qed.
 
-Fixpoint macro_frame (i: macro): list R.t :=
+Fixpoint inst_frame (i: inst): list R.t :=
   match i with
   | nil => nil
-  | a::i' => (fst a)::(exp_frame (snd a) ++ macro_frame i') 
+  | a::i' => (fst a)::(exp_frame (snd a) ++ inst_frame i') 
   end.
 
-Lemma macro_wframe_frame i x: In x (macro_wframe i) -> In x (macro_frame i).
+Lemma inst_wframe_frame i x: In x (inst_wframe i) -> In x (inst_frame i).
 Proof.
   induction i as [ | [y e] i']; simpl; intuition.
 Qed.
 
 
-Lemma macro_frame_correct i wframe old1 old2: forall m tmp1 tmp2,
-  (disjoint (macro_frame i) wframe) ->
+Lemma inst_frame_correct i wframe old1 old2: forall m tmp1 tmp2,
+  (disjoint (inst_frame i) wframe) ->
   (forall x, notIn x wframe -> old1 x = old2 x) ->
   (forall x, notIn x wframe -> tmp1 x = tmp2 x) ->
-  macro_prun ge i m tmp1 old1 = macro_prun ge i m tmp2 old2.
+  inst_prun ge i m tmp1 old1 = inst_prun ge i m tmp2 old2.
 Proof.
   induction i as [|[x e] i']; simpl; auto.
   intros m tmp1 tmp2; rewrite disjoint_cons_l, disjoint_app_l.
@@ -515,8 +515,8 @@ Fixpoint pararec (p: bblock) (wframe: list R.t): Prop :=
   match p with
   | nil => True
   | i::p' =>
-       disjoint (macro_frame i) wframe (* no USE-AFTER-WRITE *)
-    /\ pararec p' ((macro_wframe i) ++ wframe)
+       disjoint (inst_frame i) wframe (* no USE-AFTER-WRITE *)
+    /\ pararec p' ((inst_wframe i) ++ wframe)
   end.
 
 Lemma pararec_disjoint (p: bblock): forall wframe, pararec p wframe -> disjoint (bblock_wframe p) wframe.
@@ -527,7 +527,7 @@ Proof.
     generalize (IHp' _ H1).
     rewrite disjoint_app_r. intuition. 
     eapply disjoint_incl_l. 2: eapply H0.
-    unfold incl. eapply macro_wframe_frame; eauto.
+    unfold incl. eapply inst_wframe_frame; eauto.
 Qed.
 
 Lemma pararec_det p: forall wframe, pararec p wframe -> is_det p.
@@ -546,13 +546,13 @@ Lemma pararec_correct p old: forall wframe m,
 Proof.
   elim p; clear p; simpl; auto.
   intros i p' X wframe m [H H0] H1.
-  erewrite macro_run_prun, macro_frame_correct; eauto.
-  remember (macro_prun ge i m old old) as om0.
+  erewrite inst_run_prun, inst_frame_correct; eauto.
+  remember (inst_prun ge i m old old) as om0.
   destruct om0 as [m0 | ]; try congruence.
   eapply X; eauto.
   intro x; rewrite notIn_app. intros [H3 H4].
   rewrite <- H1; auto.
-  eapply macro_wframe_correct; eauto.
+  eapply inst_wframe_correct; eauto.
 Qed.
 
 Definition parallelizable (p: bblock) := pararec p nil.
@@ -576,9 +576,9 @@ End PARALLELI.
 End ParallelizablityChecking.
 
 
-Module Type ResourceSet.
+Module Type PseudoRegSet.
 
-Declare Module R: ResourceNames.
+Declare Module R: PseudoRegisters.
 
 (** We assume a datatype [t] refining (list R.t)
 
@@ -602,7 +602,7 @@ Parameter union_match_frame: forall s1 s2 l1 l2, match_frame s1 l1 -> match_fram
 Parameter is_disjoint: t -> t -> bool.
 Parameter is_disjoint_match_frame: forall s1 s2 l1 l2, match_frame s1 l1 -> match_frame s2 l2 -> (is_disjoint s1 s2)=true -> disjoint l1 l2. 
 
-End ResourceSet.
+End PseudoRegSet.
 
 
 Lemma lazy_andb_bool_true (b1 b2: bool): b1 &&& b2 = true <-> b1 = true /\ b2 = true.
@@ -613,7 +613,7 @@ Qed.
 
 
 
-Module ParallelChecks (L: SeqLanguage) (S:ResourceSet with Module R:=L.LP.R).
+Module ParallelChecks (L: SeqLanguage) (S:PseudoRegSet with Module R:=L.LP.R).
 
 Include ParallelizablityChecking L.
 
@@ -624,13 +624,13 @@ Local Hint Resolve S.empty_match_frame S.add_match_frame S.union_match_frame S.i
 
 (** Now, refinement of each operation toward parallelizable *)
 
-Fixpoint macro_wsframe(i:macro): S.t :=
+Fixpoint inst_wsframe(i:inst): S.t :=
   match i with
   | nil => S.empty
-  | a::i' => S.add (fst a) (macro_wsframe i') 
+  | a::i' => S.add (fst a) (inst_wsframe i') 
   end.
 
-Lemma macro_wsframe_correct i: S.match_frame (macro_wsframe i) (macro_wframe i).
+Lemma inst_wsframe_correct i: S.match_frame (inst_wsframe i) (inst_wframe i).
 Proof.
   induction i; simpl; auto.
 Qed.
@@ -653,27 +653,27 @@ Proof.
   induction e using exp_mut with (P0:=fun l => S.match_frame (list_exp_sframe l) (list_exp_frame l)); simpl; auto.
 Qed.
 
-Fixpoint macro_sframe (i: macro): S.t :=
+Fixpoint inst_sframe (i: inst): S.t :=
   match i with
   | nil => S.empty
-  | a::i' => S.add (fst a) (S.union (exp_sframe (snd a)) (macro_sframe i'))
+  | a::i' => S.add (fst a) (S.union (exp_sframe (snd a)) (inst_sframe i'))
   end.
 
 Local Hint Resolve exp_sframe_correct.
 
-Lemma macro_sframe_correct i: S.match_frame (macro_sframe i) (macro_frame i).
+Lemma inst_sframe_correct i: S.match_frame (inst_sframe i) (inst_frame i).
 Proof.
   induction i as [|[y e] i']; simpl; auto.
 Qed.
 
-Local Hint Resolve macro_wsframe_correct macro_sframe_correct.
+Local Hint Resolve inst_wsframe_correct inst_sframe_correct.
 
 Fixpoint is_pararec (p: bblock) (wsframe: S.t): bool :=
   match p with
   | nil => true
   | i::p' =>
-       S.is_disjoint (macro_sframe i) wsframe (* no USE-AFTER-WRITE *)
-    &&& is_pararec p' (S.union (macro_wsframe i) wsframe)
+       S.is_disjoint (inst_sframe i) wsframe (* no USE-AFTER-WRITE *)
+    &&& is_pararec p' (S.union (inst_wsframe i) wsframe)
   end.
 
 Lemma is_pararec_correct (p: bblock): forall s l, S.match_frame s l -> (is_pararec p s)=true -> (pararec p l).
@@ -706,7 +706,7 @@ End ParallelChecks.
 Require Import PArith.
 Require Import MSets.MSetPositive.
 
-Module PosResourceSet <: ResourceSet with Module R:=Pos.
+Module PosPseudoRegSet <: PseudoRegSet with Module R:=Pos.
 
 Module R:=Pos.
 
@@ -776,4 +776,4 @@ Proof.
   intros H4 H5; eapply is_disjoint_spec_true; eauto.
 Qed.
 
-End PosResourceSet.
+End PosPseudoRegSet.

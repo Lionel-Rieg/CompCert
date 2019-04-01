@@ -2,19 +2,19 @@
 *)
 
 
-Module Type ResourceNames.
+Module Type PseudoRegisters.
 
 Parameter t: Type.
 
 Parameter eq_dec: forall (x y: t), { x = y } + { x<>y }.
 
-End ResourceNames.
+End PseudoRegisters.
 
 
 (** * Parameters of the language of Basic Blocks *)
 Module Type LangParam.
 
-Declare Module R: ResourceNames.
+Declare Module R: PseudoRegisters.
 
 Parameter value: Type.
 
@@ -85,25 +85,25 @@ with list_exp_eval (le: list_exp) (m old: mem): option (list value) :=
   | LOld le => list_exp_eval le old old
   end.
 
-Definition macro := list (R.t * exp). (* = a sequence of assignments *) 
+Definition inst := list (R.t * exp). (* = a sequence of assignments *) 
 
-Fixpoint macro_run (i: macro) (m old: mem): option mem :=
+Fixpoint inst_run (i: inst) (m old: mem): option mem :=
   match i with
   | nil => Some m
   | (x, e)::i' =>
      match exp_eval e m old with
-     | Some v' => macro_run i' (assign m x v') old
+     | Some v' => inst_run i' (assign m x v') old
      | None => None
      end
   end.
 
-Definition bblock := list macro.
+Definition bblock := list inst.
 
 Fixpoint run (p: bblock) (m: mem): option mem :=
   match p with
   | nil => Some m
   | i::p' =>
-     match macro_run i m m with
+     match inst_run i m m with
      | Some m' => run p' m'
      | None => None
      end
@@ -166,10 +166,10 @@ Qed.
 Definition bblock_equiv (p1 p2: bblock): Prop
   := forall m, res_eq (run p1 m) (run p2 m).
 
-Lemma alt_macro_equiv_refl i old1 old2: 
+Lemma alt_inst_equiv_refl i old1 old2: 
   (forall x, old1 x = old2 x) ->
   forall m1 m2, (forall x, m1 x = m2 x) -> 
-  res_eq (macro_run i m1 old1) (macro_run i m2 old2).
+  res_eq (inst_run i m1 old1) (inst_run i m2 old2).
 Proof.
   intro H; induction i as [ | [x e]]; simpl; eauto.
   intros m1 m2 H1. erewrite exp_equiv; eauto.
@@ -181,9 +181,9 @@ Qed.
 Lemma alt_bblock_equiv_refl p: forall m1 m2, (forall x, m1 x = m2 x) -> res_eq (run p m1) (run p m2).
 Proof.
   induction p as [ | i p']; simpl; eauto.
-  intros m1 m2 H; lapply (alt_macro_equiv_refl i m1 m2); auto.
+  intros m1 m2 H; lapply (alt_inst_equiv_refl i m1 m2); auto.
   intros X; lapply (X m1 m2); auto; clear X.
-  destruct (macro_run i m1 m1); simpl.
+  destruct (inst_run i m1 m1); simpl.
   - intros [m3 [H1 H2]]; rewrite H1; simpl; auto.
   - intros H1; rewrite H1; simpl; auto.
 Qed.
