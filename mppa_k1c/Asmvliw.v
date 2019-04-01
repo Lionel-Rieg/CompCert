@@ -251,7 +251,6 @@ Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rsr rsw: regset)
   match parexec_wio_body bdy rsr rsw mr mw with
   | Next rsw mw =>
     let rsr := par_nextblock size_b rsr in 
-    let rsw := par_nextblock size_b rsw in 
     parexec_control f ext rsr rsw mw
   | Stuck => Stuck
   end.

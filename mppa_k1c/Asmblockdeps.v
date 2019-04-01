@@ -1834,7 +1834,7 @@ Theorem forward_simu_par_control ge fn rsr rsw mr mw sr sw sz rs' ex m':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Next rs' m' ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Next rs' m' ->
   exists s',
      macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
   /\ match_states (State rs' m') s'.
@@ -1946,7 +1946,7 @@ Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Stuck ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Stuck ->
   macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Proof.
   intros GENV MSR MSW H0. inv MSR; inv MSW. destruct ex as [ctl|]; try discriminate.
