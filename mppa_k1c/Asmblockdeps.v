@@ -359,19 +359,24 @@ Qed.
 Hint Resolve store_op_eq_correct: wlp.
 Opaque store_op_eq_correct.
 
-(* TODO: rewrite control_op_eq in a robust style against the miss of a case
-   cf. arith_op_eq above *)
 Definition control_op_eq (c1 c2: control_op): ?? bool :=
-  match c1, c2 with
-  | Oj_l l1, Oj_l l2 => phys_eq l1 l2
-  | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
-  | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
-  | Ojumptable tbl1, Ojumptable tbl2 => phys_eq tbl1 tbl2
-  | Odiv, Odiv => RET true
-  | Odivu, Odivu => RET true
-  | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
-  | OError, OError => RET true
-  | _, _ => RET false
+  match c1 with
+  | Oj_l l1 =>
+     match c2 with Oj_l l2 => phys_eq l1 l2 | _ => RET false end
+  | Ocb bt1 l1 =>
+     match c2 with Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2) | _ => RET false end
+  | Ocbu bt1 l1 =>
+     match c2 with Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2) | _ => RET false end
+  | Ojumptable tbl1 =>
+     match c2 with Ojumptable tbl2 => phys_eq tbl1 tbl2 | _ => RET false end
+  | Odiv =>
+     match c2 with Odiv => RET true | _ => RET false end
+  | Odivu =>
+     match c2 with Odivu => RET true | _ => RET false end
+  | OIncremPC sz1 =>
+     match c2 with OIncremPC sz2 => RET (Z.eqb sz1 sz2) | _ => RET false end
+  | OError =>
+     match c2 with OError => RET true | _ => RET false end
   end.
 
 Lemma control_op_eq_correct c1 c2:
@@ -382,22 +387,28 @@ Qed.
 Hint Resolve control_op_eq_correct: wlp.
 Opaque control_op_eq_correct.
 
-
-(* TODO: rewrite op_eq in a robust style against the miss of a case
-   cf. arith_op_eq above *)
 Definition op_eq (o1 o2: op): ?? bool :=
-  match o1, o2 with
-  | Arith i1, Arith i2 => arith_op_eq i1 i2
-  | Load i1, Load i2 => load_op_eq i1 i2
-  | Store i1, Store i2 => store_op_eq i1 i2
-  | Control i1, Control i2 => control_op_eq i1 i2
-  | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Allocframe2 sz1 pos1, Allocframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Constant c1, Constant c2 => phys_eq c1 c2
-  | Fail, Fail => RET true
-  | _, _ => RET false
+  match o1 with
+  | Arith i1 =>
+    match o2 with Arith i2 => arith_op_eq i1 i2 | _ => RET false end
+  | Load i1 =>
+    match o2 with Load i2 => load_op_eq i1 i2 | _ => RET false end
+  | Store i1 =>
+    match o2 with Store i2 => store_op_eq i1 i2 | _ => RET false end
+  | Control i1 =>
+    match o2 with Control i2 => control_op_eq i1 i2 | _ => RET false end
+  | Allocframe sz1 pos1 =>
+    match o2 with Allocframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Allocframe2 sz1 pos1 =>
+    match o2 with Allocframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Freeframe sz1 pos1 =>
+    match o2 with Freeframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Freeframe2 sz1 pos1 =>
+    match o2 with Freeframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Constant c1 =>
+    match o2 with Constant c2 => phys_eq c1 c2 | _ => RET false end
+  | Fail =>
+    match o2 with Fail => RET true | _ => RET false end
   end.
 
 Theorem op_eq_correct o1 o2: 
