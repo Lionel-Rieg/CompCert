@@ -163,114 +163,7 @@ Proof.
     + revert H. unfold Mach.find_label. simpl. rewrite peq_false; auto.
 Qed.
 
-
-Definition concat (h: list label) (c: code): code :=
-  match c with
-  | nil =>  {| header := h; body := nil; exit := None |}::nil
-  | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
-  end.
-
-(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
-
-Lemma to_bblock_start_label i c l b c0: 
-  (b, c0) = to_bblock (i :: c)
-  -> In l (header b)
-  -> i <> Mlabel l
-  -> exists l2, i=Mlabel l2.
-Proof.
-   unfold to_bblock.
-   remember (to_bblock_header _) as bh; destruct bh as [h c1].
-   remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
-   remember (to_bblock_exit _) as be; destruct be as [ext c3].
-   intros H; inversion H; subst; clear H; simpl.
-   destruct i; try (simpl in Heqbh; inversion Heqbh; subst; clear Heqbh; simpl; intuition eauto).
-Qed.
-
-Lemma find_label_stop c:
- forall l b c0 c',
-   (b, c0) = to_bblock c
- -> Mach.find_label l c = Some c'
- -> In l (header b)
- -> exists h, In l h /\ Some (b :: trans_code c0) = Some (concat h (trans_code c')).
-Proof.
-  induction c as [ |i c].
-  - simpl; intros; discriminate.
-  - intros l b c0 c' H H1 H2.
-    exploit Mach_find_label_split; eauto; clear H1.
-    intros [(X1 & X2) | (X1 & X2)].
-    * subst. exploit to_bblock_label; eauto. clear H.
-      intros (H3 & H4). constructor 1 with (x:=l::nil); simpl; intuition auto.
-      symmetry.
-      rewrite trans_code_equation.
-      destruct c as [ |i c].
-      + unfold to_bblock in H4; simpl in H4.
-        injection H4. clear H4; intros H4 H H0 H1; subst. simpl.
-        rewrite trans_code_equation; simpl.
-        rewrite <- H1 in H3; clear H1.
-        destruct b as [h b e]; simpl in * |- *; subst; auto.
-      + rewrite H4; clear H4; simpl. rewrite <- H3; clear H3.
-        destruct b; simpl; auto.
-    * exploit to_bblock_start_label; eauto.
-      intros (l' & H'). subst.
-      assert (X: l' <> l). { intro Z; subst; destruct X1; auto. }
-      clear X1.
-      exploit to_bblock_label; eauto. clear H.
-      intros (H3 & H4).
-      exploit IHc; eauto. { simpl. rewrite H3 in H2; simpl in H2. destruct H2; subst; tauto. }
-      intros (h' & H5 & H6).
-      constructor 1 with (x:=l'::h'); simpl; intuition auto.
-      destruct b as [h b e]; simpl in * |- *; subst.
-      remember (tl h) as th. subst h.
-      remember (trans_code c') as tcc'.
-      rewrite trans_code_equation in Heqtcc'.
-      destruct c'; subst; simpl in * |- *. 
-      + inversion H6; subst; auto.
-      + destruct (to_bblock (i :: c')) as [b1 c1]. simpl in * |- *.
-        inversion H6; subst; auto.
-Qed.
-
-Lemma to_bblock_header_find_label c l: forall c1 h c',
-  to_bblock_header c = (h, c1)
-  -> Mach.find_label l c = Some c'
-  -> ~ In l h
-  -> Mach.find_label l c = Mach.find_label l c1.
-Proof.
-  induction c as [|i  c]; simpl; auto.
-  - intros; discriminate.
-  - destruct i;
-    try (simpl; intros c1 h c' H1 H2; inversion H1; subst; clear H1; intros; apply refl_equal).
-    remember (to_bblock_header c) as tbhc. destruct tbhc as [h2 c2].
-    intros h c1 c' H1; inversion H1; subst; clear H1.
-    simpl. destruct (peq _ _).
-    + subst; tauto.
-    + intros H1 H2; erewrite IHc; eauto.
-Qed.
-
-Lemma to_bblock_body_find_label c1 l: forall c2 bdy,
-  (bdy, c2) = to_bblock_body c1 ->
-  Mach.find_label l c1 = Mach.find_label l c2.
-Proof.
-  induction c1 as [|i c1].
-  - intros bdy0 c0 H. simpl in H. inversion H; subst; clear H. auto.
-  - intros bdy' c2' H. simpl in H. destruct i; try (
-      simpl in H; remember (to_bblock_body c1) as tbb; destruct tbb as [p c''];
-      inversion H; subst; clear H; simpl; erewrite IHc1; eauto; fail).
-Qed.
-
-Lemma to_bblock_exit_find_label c1 l c2 ext:
- (ext, c2) = to_bblock_exit c1
- -> Mach.find_label l c1 = Mach.find_label l c2.
-Proof.
-  intros H. destruct c1 as [|i c1].
-  - simpl in H. inversion H; subst; clear H. auto.
-  - destruct i; try (
-      simpl in H; inversion H; subst; clear H; auto; fail).
-Qed.
-*)
-
-Axiom TODO: False. (* A ELIMINER *)
-
-Lemma find_label_is_end_block_is_label i l c bl:
+Lemma find_label_is_end_block_not_label i l c bl:
       is_end_block (trans_inst i) bl ->
       is_trans_code c bl ->
       i <> Mlabel l -> find_label l (add_to_new_bblock (trans_inst i) :: bl) = find_label l bl.  
@@ -290,20 +183,21 @@ Lemma find_label_at_begin l bh bl:
   In l (header bh)
   -> find_label l (bh :: bl) = Some (bh::bl).
 Proof.
-  intro H; unfold find_label. destruct (is_label l bh) eqn:H0; auto.
-  rewrite <- is_label_correct_false in H0. tauto.
+  unfold find_label; rewrite is_label_correct_true; intro H; rewrite H; simpl; auto.
 Qed.
-
-
 
 Lemma find_label_add_label_diff l bh bl:
       ~(In l (header bh)) -> 
-      find_label l bl = find_label l (bh::bl).
+      find_label l (bh::bl) = find_label l bl.
 Proof.
-  intros. unfold find_label. destruct (is_label l bh) eqn:H0; auto.
-  rewrite <- is_label_correct_true in H0. tauto.
+  unfold find_label; rewrite is_label_correct_false; intro H; rewrite H; simpl; auto.
 Qed.
 
+Definition concat (h: list label) (c: code): code :=
+  match c with
+  | nil =>  {| header := h; body := nil; exit := None |}::nil
+  | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
+  end.
 
 Lemma find_label_transcode_preserved:
   forall l c c',
@@ -314,60 +208,48 @@ Proof.
   rewrite <- is_trans_code_inv in * |-.
   induction Heqbl. 
   + (* Tr_nil *) 
-    intros.
-    exists (l::nil).
-    split.
-    apply in_eq.
-    simpl.
+    intros; exists (l::nil); simpl in * |- *; intuition.
     discriminate.
   + (* Tr_end_block *)
     intros.
     exploit Mach_find_label_split; eauto.
     clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
-    - subst. simpl.
-      unfold add_label, is_label; simpl.
-      destruct (in_dec l (l::nil)) as [H0|H0].
-      * inversion H as [mbi H1 H2| | ].
-        subst bl.
-        inversion Heqbl.
-        subst c. simpl. eauto.
-      * destruct H0. simpl; auto.
+    - subst. rewrite find_label_at_begin; simpl; auto.
+      inversion H as [mbi H1 H2| | ].
+      subst.
+      inversion Heqbl.
+      subst.
+      exists (l :: nil); simpl; eauto.
     - exploit IHHeqbl; eauto.
       destruct 1 as (h & H3 & H4).
       exists h.
       split; auto.
-      rewrite (find_label_is_end_block_is_label i l c bl);auto.
+      erewrite find_label_is_end_block_not_label;eauto.
   + (* Tr_add_label *)
     intros.
     exploit Mach_find_label_split; eauto.
     clear H0; destruct 1 as [(H0&H2)|(H0&H2)].
-    - subst. simpl.
+    - subst.
       inversion H0 as [H1].
       clear H0.
-      unfold add_label, is_label; simpl.
+      erewrite find_label_at_begin; simpl; eauto.
       apply is_trans_code_inv in Heqbl.
       rewrite <- Heqbl.
-      destruct (in_dec l (l :: header bh)) as [H0|H0].
-      * unfold concat.
-        exists (l :: nil).
-        split; simpl; eauto.
-      * destruct H0. simpl; eauto.
+      exists (l :: nil); simpl; eauto.
     - subst; assert (H: l0 <> l); try congruence; clear H0.
       exploit IHHeqbl; eauto.
       clear IHHeqbl Heqbl.
-      destruct 1 as (h & H3 & H4).
+      intros (h & H3 & H4).
       simpl; unfold is_label, add_label; simpl.
       destruct (in_dec l (l0::header bh)) as [H5|H5]; simpl in H5.
       * destruct H5; try congruence.
         exists (l0::h); simpl; intuition.
         rewrite find_label_at_begin in H4; auto.
         apply f_equal. inversion H4 as [H5]. clear H4.
-        unfold concat in * |- *.
         destruct (trans_code c'); simpl in * |- *;
         inversion H5; subst; simpl; auto.
-      * exists h.
-        split; eauto.
-        rewrite (find_label_add_label_diff l bh bl); eauto.
+      * exists h. intuition.
+        erewrite <- find_label_add_label_diff; eauto.
   + (* Tr_add_basic *)
     intros.
     exploit Mach_find_label_split; eauto.
@@ -375,46 +257,11 @@ Proof.
     rewrite H2 in H. unfold  trans_inst in H. congruence.
     exploit IHHeqbl; eauto.
     clear IHHeqbl Heqbl.
-    destruct 1 as (h & H4 & H5).
-    simpl; unfold is_label.
-    assert ((header (add_basic bi bh))=(header bh)) as H6. auto. 
-    rewrite H6. 
-    destruct (in_dec l (header bh))  as [H7|H7]; simpl in H6.
-    * rewrite <- H6 in H7; simpl in H7; destruct H7.
-    * exists h.
-      split; eauto.
-      rewrite (find_label_add_label_diff l bh bl); eauto.
+    intros (h & H4 & H5).
+    rewrite find_label_add_label_diff; auto.
+    rewrite find_label_add_label_diff in H5; eauto.
+    rewrite H0; auto.
 Qed.
-    
-
-Lemma find_label_add_basic l bh bl:
-      ~(In l (header bh)) -> 
-      forall bi, find_label l (add_basic bi bh :: bl) = find_label l (bh::bl).  
-Admitted.
-      
-
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
- induction c, (trans_code c) using trans_code_ind.
-  - intros c' H; inversion H.
-  - intros c' H. subst _x. destruct c as [| i c]; try tauto.
-   unfold to_bblock in * |-.
-   remember (to_bblock_header _) as bh; destruct bh as [h c1].
-   remember (to_bblock_body _) as bb; destruct bb as [bdy c2].
-   remember (to_bblock_exit _) as be; destruct be as [ext c3].
-   simpl; injection e0; intros; subst; clear e0.
-   unfold is_label; simpl; destruct (in_dec l h) as [Y|Y].
-   + clear IHc0.
-     eapply find_label_stop; eauto.
-     unfold to_bblock.
-     rewrite <- Heqbh, <- Heqbb, <- Heqbe. 
-     auto.
-   + exploit IHc0; eauto. clear IHc0.
-     rewrite <- H.
-     erewrite (to_bblock_header_find_label (i::c) l c1); eauto.
-     erewrite (to_bblock_body_find_label c1 l c2); eauto.
-     erewrite (to_bblock_exit_find_label c2 l c0); eauto.
-Qed.
-*)
 
 Lemma find_label_preserved:
   forall l f c,
@@ -436,13 +283,11 @@ Local Hint Resolve symbols_preserved senv_preserved init_mem_preserved prog_main
                    parent_sp_preserved.
 
 
-
 Definition dist_end_block_code (c: Mach.code) := 
  match trans_code c with
  | nil => 0
  | bh::_ => (size bh-1)%nat
  end.
-
 
 Definition dist_end_block (s: Mach.state): nat :=
   match s with
@@ -453,63 +298,15 @@ Definition dist_end_block (s: Mach.state): nat :=
 Local Hint Resolve exec_nil_body exec_cons_body.
 Local Hint Resolve exec_MBgetstack exec_MBsetstack exec_MBgetparam exec_MBop exec_MBload exec_MBstore.
 
-(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
-
-Ltac ExploitDistEndBlockCode :=
-  match goal with
-  | [ H : dist_end_block_code (Mlabel ?l :: ?c) <> 0%nat |- _ ] =>
-      exploit (to_bblock_size_single_label c (Mlabel l)); eauto
-  | [ H : dist_end_block_code (?i0 :: ?c) <> 0%nat |- _ ] =>
-      exploit (to_bblock_size_single_basic c i0); eauto
-  | _ => idtac
-  end.
-
-Ltac totologize H :=
-  match type of H with
-  | ( ?id = _ ) =>
-    let Hassert := fresh "Htoto" in (
-    assert (id = id) as Hassert; auto; rewrite H in Hassert at 2; simpl in Hassert; rewrite H in Hassert)
-  end.
-
-Lemma dist_end_block_code_simu_mid_block i c:
-  dist_end_block_code (i::c) <> 0 ->
-  (dist_end_block_code (i::c) = Datatypes.S (dist_end_block_code c)).
+Lemma size_add_label l bh: size (add_label l bh) = size bh + 1.
 Proof.
-  intros H.
-  unfold dist_end_block_code.
-  destruct (get_code_nature (i::c)) eqn:GCNIC.
-  - apply get_code_nature_empty in GCNIC. discriminate.
-  - rewrite to_bblock_size_single_label; auto.
-    destruct c as [|i' c].
-    + contradict H. destruct i; simpl; auto.
-    + assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil. omega. 
-  - destruct (get_code_nature c) eqn:GCNC.
-    + apply get_code_nature_empty in GCNC. subst. contradict H. destruct i; simpl; auto.
-    + contradict H. destruct c as [|i' c]; try discriminate.
-      destruct i'; try discriminate.
-      destruct i; try discriminate. all: simpl; auto.
-    + destruct (to_basic_inst i) eqn:TBI; [| destruct i; discriminate].
-      erewrite to_bblock_basic; eauto; [| rewrite GCNC; discriminate ].
-      simpl. destruct c as [|i' c]; try discriminate.
-      assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil.
-      cutrewrite (Datatypes.S (size (fst (to_bblock (i'::c))) - 1) = size (fst (to_bblock (i'::c)))).
-      unfold size. cutrewrite (length (header (fst (to_bblock (i' :: c)))) = 0). simpl. omega.
-      rewrite to_bblock_noLabel. simpl; auto.
-      rewrite GCNC. discriminate.
-      omega.
-    + destruct (to_basic_inst i) eqn:TBI; [| destruct i; discriminate].
-      erewrite to_bblock_basic; eauto; [| rewrite GCNC; discriminate ].
-      simpl. destruct c as [|i' c]; try discriminate.
-      assert (size (fst (to_bblock (i'::c))) <> 0). apply to_bblock_nonil.
-      cutrewrite (Datatypes.S (size (fst (to_bblock (i'::c))) - 1) = size (fst (to_bblock (i'::c)))).
-      unfold size. cutrewrite (length (header (fst (to_bblock (i' :: c)))) = 0). simpl. omega.
-      rewrite to_bblock_noLabel. simpl; auto.
-      rewrite GCNC. discriminate.
-      omega.
-  - contradict H. destruct i; try discriminate.
-    all: unfold dist_end_block_code; erewrite to_bblock_CFI; eauto; simpl; eauto.
+  unfold add_label, size; simpl; omega.
 Qed.
-*)
+
+Lemma size_add_to_newblock i: size (add_to_new_bblock i) = 1.
+Proof.
+  destruct i; auto.
+Qed.
 
 Lemma dist_end_block_code_simu_mid_block i c:
   dist_end_block_code (i::c) <> 0 ->
@@ -517,9 +314,15 @@ Lemma dist_end_block_code_simu_mid_block i c:
 Proof.
   unfold dist_end_block_code.
   remember (trans_code (i::c)) as bl.
-  rewrite <- is_trans_code_inv in * |-.
-  inversion Heqbl as [| | |]; subst.
-Admitted. (* A FAIRE *)
+  rewrite <- is_trans_code_inv in Heqbl.
+  inversion Heqbl as [|bl0 H| |]; subst; clear Heqbl.
+  - rewrite size_add_to_newblock; omega.
+  - rewrite size_add_label;
+    rewrite is_trans_code_inv in H; rewrite <- H.
+    omega.
+Admitted. (* A FINIR *)
+
+Axiom TODO: False. (* a éliminer *)
 
 Local Hint Resolve dist_end_block_code_simu_mid_block.
 
