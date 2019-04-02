@@ -550,6 +550,7 @@ Proof.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
 Qed.
 
 Lemma eval_offset_preserved:

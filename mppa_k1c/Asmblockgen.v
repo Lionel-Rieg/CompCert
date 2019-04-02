@@ -913,8 +913,9 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
     | MBreturn =>
         OK (make_epilogue f (Pret ::g nil))
       (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*) 
-    | MBjumptable _ _ =>
-        Error (msg "Asmblockgen.transl_instr_control MBjumptable")
+    | MBjumptable arg tbl =>
+      do r <- ireg_of arg;
+      OK (Pjumptable r tbl ::g nil)
     end
   end.
 

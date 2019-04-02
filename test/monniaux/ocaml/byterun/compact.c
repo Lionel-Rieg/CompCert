@@ -32,6 +32,7 @@
 
 extern uintnat caml_percent_free;                   /* major_gc.c */
 extern void caml_shrink_heap (char *);              /* memory.c */
+extern void caml_final_invert_finalisable_values (void);
 
 /* Encoded headers: the color is stored in the 2 least significant bits.
    (For pointer inversion, we need to distinguish headers from pointers.)

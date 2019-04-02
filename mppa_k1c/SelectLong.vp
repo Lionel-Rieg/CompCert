@@ -384,10 +384,9 @@ Definition floatoflongu (e: expr) :=
   if Archi.splitlong then SplitLong.floatoflongu e else 
   Eop Ofloatoflongu (e:::Enil).
 
-(* SplitLong.longofsingle splits the operation into (longoffloat (floatofsingle e)) *)
-Definition longofsingle (e: expr) := SplitLong.longofsingle e.
+Definition longofsingle (e: expr) := longoffloat (floatofsingle e).
 
-Definition longuofsingle (e: expr) := SplitLong.longuofsingle e.
+Definition longuofsingle (e: expr) := longuoffloat (floatofsingle e).
 
 Definition singleoflong (e: expr) := SplitLong.singleoflong e.
 
