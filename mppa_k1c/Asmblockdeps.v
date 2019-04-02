@@ -270,25 +270,28 @@ Definition op_eval (o: op) (l: list value) :=
   end.
 
 
-Definition is_constant (o: op): bool := 
- (* FIXME
+ (** Function [is_constant] is used for a small optimization inside the scheduling verifier.
+    It is good that it answers [true] as much as possible while satisfying [is_constant_correct] below.
 
-   => répondre "true" autant que possible mais en satisfaisant [is_constant_correct] ci-dessous.
+   BE CAREFUL that, [is_constant] must not depend on [ge].
+   Otherwise, we would have an easy implementation: [match op_eval o nil with Some _ => true | _ => false end]
 
-   ATTENTION, is_constant ne doit pas dépendre de [ge].
-   Sinon, on aurait une implémentation facile: [match op_eval o nil with Some _ => true | _ => false end]
-
-   => REM: il n'est pas sûr que ce soit utile de faire qqchose de très exhaustif en pratique...
-   (ça sert juste à une petite optimisation du vérificateur de scheduling).
+   => REM: when [is_constant] is not complete w.r.t [is_constant_correct], this should have only a very little impact
+      on the performance of the scheduling verifier...
   *)
+
+Definition is_constant (o: op): bool :=
   match o with
-  | Constant _ => true
+  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
   | _ => false
   end.
 
 Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
 Proof.
   destruct o; simpl; try congruence.
+  destruct ao; simpl; try congruence;
+  destruct n; simpl; try congruence;
+  unfold arith_eval; destruct Ge; simpl; try congruence.
 Qed.
 
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
