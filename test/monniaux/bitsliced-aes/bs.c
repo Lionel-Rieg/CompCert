@@ -29,7 +29,6 @@ static inline word_t compcert_ternary(word_t x, word_t v0, word_t v1) {
 #error "endianness not supported"
 #endif
 
-
 void bs_addroundkey(word_t * B, word_t * rk)
 {
     int i;

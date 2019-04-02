@@ -5,10 +5,16 @@
 
 typedef uint32_t data;
 
+#if 0
+#define TERNARY(a, b, c) ((a) ? (b) : (c))
+#else
+#define TERNARY(a, b, c) (((-(a)) & (b)) | ((-1+(a)) & (c)))
+#endif
+
 data silly_computation(void) {
   data x = 1;
   for(int i=0; i<10000; i++) {
-    x = x * (((x & 0x100) != 0) ? 45561U : 337777U);
+     x = x * TERNARY(((x & 0x100) != 0), 45561U, 337777U);
   }
   return x;
 }

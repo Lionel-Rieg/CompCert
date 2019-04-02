@@ -79,6 +79,24 @@ Proof.
     + intros H1; rewrite H1; simpl; auto.
 Qed.
 
+Lemma prun_iw_app_None p1: forall m1 old p2,
+   prun_iw p1 m1 old = None ->
+   prun_iw (p1++p2) m1 old = None.
+Proof.
+   induction p1; simpl; try congruence.
+   intros; destruct (macro_prun _ _ _); simpl; auto.
+Qed.
+
+Lemma prun_iw_app_Some p1: forall m1 old m2 p2,
+   prun_iw p1 m1 old = Some m2 ->
+   prun_iw (p1++p2) m1 old = prun_iw p2 m2 old.
+Proof.
+   induction p1; simpl; try congruence.
+   intros; destruct (macro_prun _ _ _); simpl; auto. 
+   congruence.
+Qed.
+
+
 End PARALLEL.
 End ParallelSemantics.
 
