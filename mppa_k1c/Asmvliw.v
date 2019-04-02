@@ -70,24 +70,42 @@ Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
 
 (* TODO: factoriser ? *)
 Definition parexec_load (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
-                     (d: ireg) (a: ireg) (ofs: offset) :=
+                     (d: ireg) (a: ireg) (ptr: ptrofs) :=
+  match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
+  | None => Stuck
+  | Some v => Next (rsw#d <- v) mw
+  end
+.
+
+Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ge ofs) with
-  | OK ptr =>
-    match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
-    | None => Stuck
-    | Some v => Next (rsw#d <- v) mw
-    end
+  | OK ptr => parexec_load chunk rsr rsw mr mw d a ptr
+  | _ => Stuck
+  end.
+
+Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+  match (rsr ro) with
+  | Vptr _ ofs => parexec_load chunk rsr rsw mr mw d a ofs
   | _ => Stuck
   end.
 
 Definition parexec_store (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
-                      (s: ireg) (a: ireg) (ofs: offset) :=
+                      (s: ireg) (a: ireg) (ptr: ptrofs) :=
+  match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
+  | None => Stuck
+  | Some m' => Next rsw m'
+  end
+.
+
+Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ge ofs) with
-  | OK ptr => 
-    match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
-    | None => Stuck
-    | Some m' => Next rsw m'
-    end
+  | OK ptr => parexec_store chunk rsr rsw mr mw s a ptr
+  | _ => Stuck
+  end.
+
+Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
+  match (rsr ro) with
+  | Vptr _ ofs => parexec_store chunk rsr rsw mr mw s a ofs
   | _ => Stuck
   end.
 
@@ -100,9 +118,11 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   match bi with
   | PArith ai => Next (parexec_arith_instr ai rsr rsw) mw
 
-  | PLoadRRO n d a ofs => parexec_load (load_chunk n) rsr rsw mr mw d a ofs
+  | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
+  | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
 
-  | PStoreRRO n s a ofs => parexec_store (store_chunk n) rsr rsw mr mw s a ofs
+  | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
+  | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
 
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in

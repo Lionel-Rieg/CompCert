@@ -72,12 +72,14 @@ Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 
 Inductive load_op :=
   | OLoadRRO (n: load_name_rro) (ofs: offset)
+  | OLoadRRR (n: load_name_rro)
 .
 
 Coercion OLoadRRO: load_name_rro >-> Funclass.
 
 Inductive store_op :=
   | OStoreRRO (n: store_name_rro) (ofs: offset)
+  | OStoreRRR (n: store_name_rro)
 .
 
 Coercion OStoreRRO: store_name_rro >-> Funclass.
@@ -126,38 +128,58 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   end.
 
 Definition exec_load_deps (chunk: memory_chunk) (m: mem)
-                     (v: val) (ofs: offset) :=
+                     (v: val) (ptr: ptrofs) :=
+  match Mem.loadv chunk m (Val.offset_ptr v ptr) with
+  | None => None
+  | Some vl => Some (Val vl)
+  end
+.
+
+Definition exec_load_deps_offset (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
   let (ge, fn) := Ge in
   match (eval_offset ge ofs) with
-  | OK ptr =>
-    match Mem.loadv chunk m (Val.offset_ptr v ptr) with
-    | None => None
-    | Some vl => Some (Val vl)
-    end
+  | OK ptr => exec_load_deps chunk m v ptr
+  | _ => None
+  end.
+
+Definition exec_load_deps_reg (chunk: memory_chunk) (m: mem) (v vo: val) :=
+  match vo with
+  | Vptr _ ofs => exec_load_deps chunk m v ofs
   | _ => None
   end.
 
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
-  | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps (load_chunk n) m v ofs
+  | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps_offset (load_chunk n) m v ofs
+  | OLoadRRR n, [Val v; Val vo; Memstate m] => exec_load_deps_reg (load_chunk n) m v vo
   | _, _ => None
   end.
 
 Definition exec_store_deps (chunk: memory_chunk) (m: mem)
-                      (vs va: val) (ofs: offset) :=
+                      (vs va: val) (ptr: ptrofs) :=
+  match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
+  | None => None
+  | Some m' => Some (Memstate m')
+  end
+.
+
+Definition exec_store_deps_offset (chunk: memory_chunk) (m: mem) (vs va: val) (ofs: offset) :=
   let (ge, fn) := Ge in
   match (eval_offset ge ofs) with
-  | OK ptr => 
-    match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
-    | None => None
-    | Some m' => Some (Memstate m')
-    end
+  | OK ptr => exec_store_deps chunk m vs va ptr
+  | _ => None
+  end.
+
+Definition exec_store_deps_reg (chunk: memory_chunk) (m: mem) (vs va vo: val) :=
+  match vo with
+  | Vptr _ ofs => exec_store_deps chunk m vs va ofs
   | _ => None
   end.
 
 Definition store_eval (so: store_op) (l: list value) :=
   match so, l with
-  | OStoreRRO n ofs, [Val vs; Val va; Memstate m] => exec_store_deps (store_chunk n) m vs va ofs
+  | OStoreRRO n ofs, [Val vs; Val va; Memstate m] => exec_store_deps_offset (store_chunk n) m vs va ofs
+  | OStoreRRR n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_reg (store_chunk n) m vs va vo
   | _, _ => None
   end.
 
@@ -337,26 +359,32 @@ Qed.
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
   match o1, o2 with
   | OLoadRRO n1 ofs1, OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
+  | OLoadRRR n1, OLoadRRR n2 => phys_eq n1 n2
+  | _, _ => RET false
   end.
 
 Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify.
-  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
 Qed.
 
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1, o2 with
   | OStoreRRO n1 ofs1, OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
+  | OStoreRRR n1, OStoreRRR n2 => phys_eq n1 n2
+  | _, _ => RET false
   end.
 
 Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify.
-  apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
 Qed.
 
 (* TODO: rewrite control_op_eq in a robust style against the miss of a case
@@ -586,7 +614,9 @@ Definition trans_basic (b: basic) : macro :=
   match b with
   | PArith ai => trans_arith ai
   | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
+  | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (Name (#a) @ Name (#ro) @ Name pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
+  | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (Name (#s) @ Name (#a) @ Name (#ro) @ Name pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, Name (#SP)); (#SP, Op (Allocframe2 sz pos) (Name (#SP) @ Name pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (Name (#SP)) @ Name pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
@@ -799,25 +829,47 @@ Proof.
   intros. destruct b.
 (* Arith *)
   - simpl in H. inv H. simpl macro_run. eapply trans_arith_correct; eauto.
+
 (* Load *)
   - simpl in H. destruct i.
-    unfold exec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-    destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; rewrite EVALOFF; rewrite H; pose (H1 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
-     Simpl|
-     intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); [
-       subst; Simpl|
-       Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
+  (* Load Offset *)
+    + destruct i. all:
+      unfold exec_load_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate; unfold exec_load in H;
+      destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+      eexists; split; try split; [
+        simpl; rewrite EVALOFF; rewrite H; rewrite (H1 ra); unfold exec_load_deps; simpl in MEML; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
+  (* Load Reg *)
+    + destruct i. all:
+      unfold exec_load_reg in H; destruct (rs rofs) eqn:ROFS; try discriminate; unfold exec_load in H;
+      destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+      eexists; split; try split; [
+        simpl; rewrite H; rewrite (H1 rofs); rewrite (H1 ra); unfold exec_load_deps_reg; rewrite ROFS;
+        unfold exec_load_deps; simpl in MEML; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
+
 (* Store *)
   - simpl in H. destruct i.
-    all: unfold exec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-    destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
-    eexists; split; try split;
-    [ simpl; rewrite EVALOFF; rewrite H; pose (H1 ra); simpl in e; rewrite e; pose (H1 rs0); simpl in e0; rewrite e0; rewrite MEML; reflexivity
-    | Simpl
-    | intros rr; destruct rr; Simpl].
+  (* Store Offset *)
+    + destruct i. all:
+      unfold exec_store_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate; unfold exec_store in H;
+      destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+      eexists; split; try split;
+      [ simpl; rewrite EVALOFF; rewrite H; rewrite (H1 ra); rewrite (H1 rs0); unfold exec_store_deps; simpl in MEML; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl ].
+  (* Store Reg *)
+    + destruct i. all:
+      unfold exec_store_reg in H; destruct (rs rofs) eqn:ROFS; try discriminate; unfold exec_store in H;
+      destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv H0;
+      eexists; split; try split;
+      [ simpl; rewrite H; rewrite (H1 rofs); rewrite (H1 ra); rewrite (H1 rs0); unfold exec_store_deps_reg; rewrite ROFS;
+        unfold exec_store_deps; simpl in MEML; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl ].
+
 (* Allocframe *)
   - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
     inv H. inv H0. eexists. split; try split.
@@ -1155,13 +1207,28 @@ Lemma forward_simu_basic_instr_stuck:
 Proof.
   intros. inv H1. unfold exec_basic_instr in H0. destruct i; try discriminate.
 (* PLoad *)
-  - destruct i; destruct i.
-    all: simpl; rewrite H2; pose (H3 ra); simpl in e; rewrite e; clear e;
-    unfold exec_load in H0; destruct (eval_offset _ _); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
+  - destruct i.
+  (* Load Offset *)
+    + destruct i. all:
+    simpl; rewrite H2; rewrite (H3 ra); unfold exec_load_offset in H0; destruct (eval_offset _ _); auto;
+    unfold exec_load in H0; unfold exec_load_deps; simpl in H0; destruct (Mem.loadv _ _ _); auto; discriminate.
+  (* Load Reg *)
+    + destruct i. all:
+    simpl; rewrite H2; rewrite (H3 rofs); rewrite (H3 ra); unfold exec_load_reg in H0; unfold exec_load_deps_reg;
+    destruct (rs rofs); auto; unfold exec_load in H0; simpl in H0; unfold exec_load_deps; destruct (Mem.loadv _ _ _); auto; discriminate.
+
 (* PStore *)
-  - destruct i; destruct i;
-    simpl; rewrite H2; pose (H3 ra); simpl in e; rewrite e; clear e; pose (H3 rs0); simpl in e; rewrite e; clear e;
-    unfold exec_store in H0; destruct (eval_offset _ _); auto; destruct (Mem.storev _ _ _); auto; discriminate.
+  - destruct i.
+  (* Store Offset *)
+    + destruct i. all:
+    simpl; rewrite H2; rewrite (H3 ra); rewrite (H3 rs0); unfold exec_store_offset in H0; destruct (eval_offset _ _); auto;
+    unfold exec_store in H0; simpl in H0; unfold exec_store_deps; destruct (Mem.storev _ _ _); auto; discriminate.
+  (* Store Reg *)
+    + destruct i. all:
+    simpl; rewrite H2; rewrite (H3 rofs); rewrite (H3 ra); rewrite (H3 rs0); simpl in H0; unfold exec_store_reg in H0;
+    unfold exec_store_deps_reg; destruct (rs rofs); auto; unfold exec_store in H0; unfold exec_store_deps;
+    destruct (Mem.storev _ _ _ _); auto; discriminate.
+
 (* Pallocframe *)
   - simpl. Simpl. pose (H3 SP); simpl in e; rewrite e; clear e. rewrite H2. destruct (Mem.alloc _ _ _). simpl in H0.
     destruct (Mem.store _ _ _ _); try discriminate. reflexivity.
@@ -1521,6 +1588,7 @@ Definition string_of_name_lrro (n: load_name_rro) : pstring :=
 Definition string_of_load (op: load_op): pstring :=
   match op with
   | OLoadRRO n _ => string_of_name_lrro n
+  | OLoadRRR n => string_of_name_lrro n
   end.
 
 Definition string_of_name_srro (n: store_name_rro) : pstring :=
@@ -1538,6 +1606,7 @@ Definition string_of_name_srro (n: store_name_rro) : pstring :=
 Definition string_of_store (op: store_op) : pstring :=
   match op with
   | OStoreRRO n _ => string_of_name_srro n
+  | OStoreRRR n => string_of_name_srro n
   end.
 
 Definition string_of_control (op: control_op) : pstring :=
@@ -1731,23 +1800,46 @@ Proof.
   - simpl in H. inversion H. subst rsw' mw'. simpl macro_prun. eapply trans_arith_par_correct; eauto.
 (* Load *)
   - simpl in H. destruct i.
-    unfold parexec_load in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-    destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H. inv MSR; inv MSW;
-    eexists; split; try split;
-    [ simpl; rewrite EVALOFF; rewrite H; pose (H0 ra); simpl in e; rewrite e; rewrite MEML; reflexivity|
-     Simpl|
-     intros rr; destruct rr; Simpl;
-      destruct (ireg_eq g rd); [
-       subst; Simpl|
-       Simpl; rewrite assign_diff; pose (H1 g); simpl in e; try assumption; Simpl; unfold ppos; apply not_eq_ireg_to_pos; assumption]].
+    (* Load Offset *)
+    + destruct i; simpl load_chunk in H. all:
+      unfold parexec_load_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+      unfold parexec_load in H; destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
+      eexists; split; try split;
+      [ simpl; rewrite EVALOFF; rewrite H; rewrite (H0 ra); unfold exec_load_deps; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
+
+    (* Load Reg *)
+    + destruct i; simpl load_chunk in H. all:
+      unfold parexec_load_reg in H; destruct (rsr rofs) eqn:ROFS; try discriminate;
+      unfold parexec_load in H; destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
+      eexists; split; try split;
+      [ simpl; rewrite H; rewrite (H0 rofs); rewrite (H0 ra); unfold exec_load_deps_reg; rewrite ROFS;
+        unfold exec_load_deps; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
+
 (* Store *)
   - simpl in H. destruct i.
-    unfold parexec_store in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate.
-    destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate. inv H; inv MSR; inv MSW.
-    eexists; split; try split.
-    * simpl. rewrite EVALOFF. rewrite H. rewrite (H0 ra). rewrite (H0 rs). rewrite MEML. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl.
+    (* Store Offset *)
+    + destruct i; simpl store_chunk in H. all:
+      unfold parexec_store_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
+      unfold parexec_store in H; destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
+      eexists; split; try split;
+      [ simpl; rewrite EVALOFF; rewrite H; rewrite (H0 ra); rewrite (H0 rs); unfold exec_store_deps; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl ].
+
+    (* Store Reg *)
+    + destruct i; simpl store_chunk in H. all:
+      unfold parexec_store_reg in H; destruct (rsr rofs) eqn:ROFS; try discriminate;
+      unfold parexec_store in H; destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
+      eexists; split; try split;
+      [ simpl; rewrite H; rewrite (H0 rofs); rewrite (H0 ra); rewrite (H0 rs); unfold exec_store_deps_reg; rewrite ROFS;
+        unfold exec_store_deps; rewrite MEML; reflexivity
+      | Simpl
+      | intros rr; destruct rr; Simpl ].
+
 (* Allocframe *)
   - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
     inv H. inv MSR. inv MSW. eexists. split; try split.
@@ -1785,13 +1877,27 @@ Proof.
   intros GENV MSR MSW H0. inv MSR; inv MSW.
   unfold parexec_basic_instr in H0. destruct bi; try discriminate.
 (* PLoad *)
-  - destruct i; destruct i.
-    all: simpl; rewrite H; rewrite (H1 ra); unfold parexec_load in H0;
-    destruct (eval_offset _ _); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
+  - destruct i.
+  (* Load Offset *)
+    + destruct i; simpl in H0. all:
+      simpl; rewrite H; rewrite (H1 ra); unfold parexec_load_offset in H0; destruct (eval_offset _ _); auto;
+      unfold parexec_load in H0; unfold exec_load_deps; destruct (Mem.loadv _ _ _); auto; discriminate.
+  (* Load Reg *)
+    + destruct i; simpl in H0. all:
+      simpl; rewrite H; rewrite (H1 rofs); rewrite (H1 ra); unfold parexec_load_reg in H0; unfold exec_load_deps_reg;
+      destruct (rsr rofs); auto; unfold parexec_load in H0; unfold exec_load_deps; destruct (Mem.loadv _ _ _); auto; discriminate.
+
 (* PStore *)
-  - destruct i; destruct i;
-    simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs);
-    unfold parexec_store in H0; destruct (eval_offset _ _); auto; destruct (Mem.storev _ _ _); auto; discriminate.
+  - destruct i.
+  (* Store Offset *)
+    + destruct i; simpl in H0. all:
+      simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs); unfold parexec_store_offset in H0; destruct (eval_offset _ _); auto;
+      unfold parexec_store in H0; unfold exec_store_deps; destruct (Mem.storev _ _ _ _); auto; discriminate.
+
+  (* Store Reg *)
+    + destruct i; simpl in H0. all:
+      simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs); rewrite (H1 rofs); unfold parexec_store_reg in H0; unfold exec_store_deps_reg;
+      destruct (rsr rofs); auto; unfold parexec_store in H0; unfold exec_store_deps; destruct (Mem.storev _ _ _ _); auto; discriminate.
 (* Pallocframe *)
   - simpl. Simpl. rewrite (H1 SP). rewrite H. destruct (Mem.alloc _ _ _). simpl in H0.
     destruct (Mem.store _ _ _ _); try discriminate. reflexivity.

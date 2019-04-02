@@ -164,6 +164,10 @@ module Target (*: TARGET*) =
     | Ofsimm n -> ptrofs oc n
     | Ofslow(id, ofs) -> fprintf oc "%%lo(%a)" symbol_offset (id, ofs)
 
+    let addressing oc = function
+    | AOff ofs -> offset oc ofs
+    | AReg ro -> ireg oc ro
+
     let icond_name = let open Asmblock in function
       | ITne | ITneu -> "ne"
       | ITeq | ITequ -> "eq"
@@ -287,27 +291,27 @@ module Target (*: TARGET*) =
          section oc Section_text
 
       (* Load/Store instructions *)
-      | Plb(rd, ra, ofs) ->
-         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plbu(rd, ra, ofs) ->
-         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plh(rd, ra, ofs) ->
-         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plhu(rd, ra, ofs) ->
-         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
-         fprintf oc "	lws	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a = %a[%a]\n" ireg rd offset ofs ireg ra
+      | Plb(rd, ra, adr) ->
+         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plbu(rd, ra, adr) ->
+         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plh(rd, ra, adr) ->
+         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plhu(rd, ra, adr) ->
+         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
+         fprintf oc "	lws	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	ld	%a = %a[%a]\n" ireg rd addressing adr ireg ra
     
-      | Psb(rd, ra, ofs) ->
-         fprintf oc "	sb	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psh(rd, ra, ofs) ->
-         fprintf oc "	sh	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
-         fprintf oc "	sw	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n" offset ofs ireg ra ireg rd
+      | Psb(rd, ra, adr) ->
+         fprintf oc "	sb	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psh(rd, ra, adr) ->
+         fprintf oc "	sh	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psw(rd, ra, adr) | Psw_a(rd, ra, adr) | Pfss(rd, ra, adr) ->
+         fprintf oc "	sw	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	sd	%a[%a] = %a\n" addressing adr ireg ra ireg rd
 
       (* Arith R instructions *)
 

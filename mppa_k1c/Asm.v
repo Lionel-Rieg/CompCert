@@ -38,6 +38,11 @@ Require Import Errors.
 Definition label := positive.
 Definition preg := preg.
 
+Inductive addressing : Type :=
+  | AOff (ofs: offset)
+  | AReg (ro: ireg)
+.
+
 (** Syntax *)
 Inductive instruction : Type :=
   (** pseudo instructions *)
@@ -70,26 +75,26 @@ Inductive instruction : Type :=
   | Ploopdo (count: ireg) (loopend: label)
 
   (** Loads **)
-  | Plb     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte *)
-  | Plbu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load byte unsigned *)
-  | Plh     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word *)
-  | Plhu    (rd: ireg) (ra: ireg) (ofs: offset)     (**r load half word unsigned *)
-  | Plw     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int32 *)
-  | Plw_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any32 *)
-  | Pld     (rd: ireg) (ra: ireg) (ofs: offset)     (**r load int64 *)
-  | Pld_a   (rd: ireg) (ra: ireg) (ofs: offset)     (**r load any64 *)
-  | Pfls    (rd: freg) (ra: ireg) (ofs: offset)     (**r load float *)
-  | Pfld     (rd: freg) (ra: ireg) (ofs: offset)    (**r load 64-bit float *)
+  | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)
+  | Plbu    (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte unsigned *)
+  | Plh     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word *)
+  | Plhu    (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word unsigned *)
+  | Plw     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int32 *)
+  | Plw_a   (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any32 *)
+  | Pld     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int64 *)
+  | Pld_a   (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any64 *)
+  | Pfls    (rd: freg) (ra: ireg) (ofs: addressing)     (**r load float *)
+  | Pfld     (rd: freg) (ra: ireg) (ofs: addressing)    (**r load 64-bit float *)
 
   (** Stores **)
-  | Psb     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store byte *)
-  | Psh     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store half byte *)
-  | Psw     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int32 *)
-  | Psw_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any32 *)
-  | Psd     (rs: ireg) (ra: ireg) (ofs: offset)     (**r store int64 *)
-  | Psd_a   (rs: ireg) (ra: ireg) (ofs: offset)     (**r store any64 *)
-  | Pfss    (rs: freg) (ra: ireg) (ofs: offset)     (**r store float *)
-  | Pfsd     (rd: freg) (ra: ireg) (ofs: offset)    (**r store 64-bit float *)
+  | Psb     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store byte *)
+  | Psh     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store half byte *)
+  | Psw     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store int32 *)
+  | Psw_a   (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store any32 *)
+  | Psd     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store int64 *)
+  | Psd_a   (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store any64 *)
+  | Pfss    (rs: freg) (ra: ireg) (ofs: addressing)     (**r store float *)
+  | Pfsd     (rd: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
 
   (** Arith RR *)
   | Pmv     (rd rs: ireg)                           (**r register move *)
@@ -364,26 +369,46 @@ Definition basic_to_instruction (b: basic) :=
   | PArithARRI64 Asmblock.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
                                                           
   (** Load *)
-  | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra ofs
-  | PLoadRRO Asmblock.Plbu rd ra ofs  => Plbu rd ra ofs
-  | PLoadRRO Asmblock.Plh rd ra ofs   => Plh rd ra ofs
-  | PLoadRRO Asmblock.Plhu rd ra ofs  => Plhu rd ra ofs
-  | PLoadRRO Asmblock.Plw rd ra ofs   => Plw rd ra ofs
-  | PLoadRRO Asmblock.Plw_a rd ra ofs => Plw_a rd ra ofs
-  | PLoadRRO Asmblock.Pld rd ra ofs   => Pld rd ra ofs
-  | PLoadRRO Asmblock.Pld_a rd ra ofs => Pld_a rd ra ofs
-  | PLoadRRO Asmblock.Pfls rd ra ofs  => Pfls rd ra ofs
-  | PLoadRRO Asmblock.Pfld rd ra ofs  => Pfld rd ra ofs
+  | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Plbu rd ra ofs  => Plbu rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Plh rd ra ofs   => Plh rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Plhu rd ra ofs  => Plhu rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Plw rd ra ofs   => Plw rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Plw_a rd ra ofs => Plw_a rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Pld rd ra ofs   => Pld rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Pld_a rd ra ofs => Pld_a rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Pfls rd ra ofs  => Pfls rd ra (AOff ofs)
+  | PLoadRRO Asmblock.Pfld rd ra ofs  => Pfld rd ra (AOff ofs)
+
+  | PLoadRRR Asmblock.Plb rd ra ro   => Plb rd ra (AReg ro)
+  | PLoadRRR Asmblock.Plbu rd ra ro  => Plbu rd ra (AReg ro)
+  | PLoadRRR Asmblock.Plh rd ra ro   => Plh rd ra (AReg ro)
+  | PLoadRRR Asmblock.Plhu rd ra ro  => Plhu rd ra (AReg ro)
+  | PLoadRRR Asmblock.Plw rd ra ro   => Plw rd ra (AReg ro)
+  | PLoadRRR Asmblock.Plw_a rd ra ro => Plw_a rd ra (AReg ro)
+  | PLoadRRR Asmblock.Pld rd ra ro   => Pld rd ra (AReg ro)
+  | PLoadRRR Asmblock.Pld_a rd ra ro => Pld_a rd ra (AReg ro)
+  | PLoadRRR Asmblock.Pfls rd ra ro  => Pfls rd ra (AReg ro)
+  | PLoadRRR Asmblock.Pfld rd ra ro  => Pfld rd ra (AReg ro)
 
   (** Store *)
-  | PStoreRRO Asmblock.Psb rd ra ofs  => Psb rd ra ofs
-  | PStoreRRO Asmblock.Psh rd ra ofs => Psh rd ra ofs
-  | PStoreRRO Asmblock.Psw rd ra ofs => Psw rd ra ofs
-  | PStoreRRO Asmblock.Psw_a rd ra ofs => Psw_a rd ra ofs
-  | PStoreRRO Asmblock.Psd rd ra ofs => Psd rd ra ofs
-  | PStoreRRO Asmblock.Psd_a rd ra ofs => Psd_a rd ra ofs
-  | PStoreRRO Asmblock.Pfss rd ra ofs => Pfss rd ra ofs
-  | PStoreRRO Asmblock.Pfsd rd ra ofs => Pfsd rd ra ofs
+  | PStoreRRO Asmblock.Psb rd ra ofs  => Psb rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Psh rd ra ofs => Psh rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Psw rd ra ofs => Psw rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Psw_a rd ra ofs => Psw_a rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Psd rd ra ofs => Psd rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Psd_a rd ra ofs => Psd_a rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Pfss rd ra ofs => Pfss rd ra (AOff ofs)
+  | PStoreRRO Asmblock.Pfsd rd ra ofs => Pfsd rd ra (AOff ofs)
+
+  | PStoreRRR Asmblock.Psb rd ra ro  => Psb rd ra (AReg ro)
+  | PStoreRRR Asmblock.Psh rd ra ro => Psh rd ra (AReg ro)
+  | PStoreRRR Asmblock.Psw rd ra ro => Psw rd ra (AReg ro)
+  | PStoreRRR Asmblock.Psw_a rd ra ro => Psw_a rd ra (AReg ro)
+  | PStoreRRR Asmblock.Psd rd ra ro => Psd rd ra (AReg ro)
+  | PStoreRRR Asmblock.Psd_a rd ra ro => Psd_a rd ra (AReg ro)
+  | PStoreRRR Asmblock.Pfss rd ra ro => Pfss rd ra (AReg ro)
+  | PStoreRRR Asmblock.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
 
   end.
 
