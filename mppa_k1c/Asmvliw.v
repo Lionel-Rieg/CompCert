@@ -69,44 +69,34 @@ Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
 (** * load/store *)
 
 (* TODO: factoriser ? *)
-Definition parexec_load (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
-                     (d: ireg) (a: ireg) (ptr: ptrofs) :=
-  match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
-  | None => Stuck
-  | Some v => Next (rsw#d <- v) mw
-  end
-.
-
 Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ge ofs) with
-  | OK ptr => parexec_load chunk rsr rsw mr mw d a ptr
+  | OK ptr => match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
+              | None => Stuck
+              | Some v => Next (rsw#d <- v) mw
+              end
   | _ => Stuck
   end.
 
 Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
-  match (rsr ro) with
-  | Vptr _ ofs => parexec_load chunk rsr rsw mr mw d a ofs
-  | _ => Stuck
-  end.
-
-Definition parexec_store (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
-                      (s: ireg) (a: ireg) (ptr: ptrofs) :=
-  match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
+  match Mem.loadv chunk mr (Val.addl (rsr a) (rsr ro)) with
   | None => Stuck
-  | Some m' => Next rsw m'
-  end
-.
+  | Some v => Next (rsw#d <- v) mw
+  end.
 
 Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ge ofs) with
-  | OK ptr => parexec_store chunk rsr rsw mr mw s a ptr
+  | OK ptr => match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
+              | None => Stuck
+              | Some m' => Next rsw m'
+              end
   | _ => Stuck
   end.
 
 Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
-  match (rsr ro) with
-  | Vptr _ ofs => parexec_store chunk rsr rsw mr mw s a ofs
-  | _ => Stuck
+  match Mem.storev chunk mr (Val.addl (rsr a) (rsr ro)) (rsr s) with
+  | None => Stuck
+  | Some m' => Next rsw m'
   end.
 
 (* rem: parexec_store = exec_store *)
