@@ -755,11 +755,7 @@ Definition indexed_memory_access
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
       mk_instr base (Ofsimm (Ptrofs.of_int64 imm))
-(*| Imm64_pair hi lo =>
-      Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
-  | Imm64_large imm =>
-      Pmake GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
-*)end.
+end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
   match ty, preg_of dst with
@@ -791,6 +787,17 @@ Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) :=
 
 (** Translation of memory accesses: loads, and stores. *)
 
+Definition transl_memory_access2
+     (mk_instr: ireg -> ireg -> basic)
+     (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
+  match addr, args with
+  | Aindexed2, a1 :: a2 :: nil =>
+      do rs1 <- ireg_of a1;
+      do rs2 <- ireg_of a2;
+      OK (mk_instr rs1 rs2 ::i k)
+  | _, _ => Error (msg "Asmblockgen.transl_memory_access2")
+  end.
+
 Definition transl_memory_access
      (mk_instr: ireg -> offset -> basic)
      (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
@@ -806,60 +813,64 @@ Definition transl_memory_access
       Error(msg "Asmblockgen.transl_memory_access")
   end.
 
+Definition chunk2load (chunk: memory_chunk) :=
+  match chunk with
+  | Mint8signed => Plb
+  | Mint8unsigned => Plbu
+  | Mint16signed => Plh
+  | Mint16unsigned => Plhu
+  | Mint32 => Plw
+  | Mint64 => Pld
+  | Mfloat32 => Pfls
+  | Mfloat64 => Pfld
+  | Many32 => Plw_a
+  | Many64 => Pld_a
+  end.
+
+Definition transl_load_rro (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of dst;
+  transl_memory_access (PLoadRRO (chunk2load chunk) r) addr args k.
+
+Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of dst;
+  transl_memory_access2 (PLoadRRR (chunk2load chunk) r) addr args k.
+
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
-  match chunk with
-  | Mint8signed =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plb r)  addr args k
-  | Mint8unsigned =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plbu r) addr args k
-  | Mint16signed =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plh r)  addr args k
-  | Mint16unsigned =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plhu r) addr args k
-  | Mint32 =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plw r)  addr args k
-  | Mint64 =>
-      do r <- ireg_of dst;
-      transl_memory_access (Pld r)  addr args k
-  | Mfloat32 =>
-      do r <- freg_of dst;
-      transl_memory_access (Pfls r) addr args k
-  | Mfloat64 =>
-      do r <- freg_of dst;
-      transl_memory_access (Pfld r) addr args k
-  | _ =>
-      Error (msg "Asmblockgen.transl_load")
+  match addr with
+  | Aindexed2 => transl_load_rrr chunk addr args dst k
+  | _ => transl_load_rro chunk addr args dst k
   end.
+
+Definition chunk2store (chunk: memory_chunk) :=
+  match chunk with
+  | Mint8signed | Mint8unsigned => Psb
+  | Mint16signed | Mint16unsigned => Psh
+  | Mint32 => Psw
+  | Mint64 => Psd
+  | Mfloat32 => Pfss
+  | Mfloat64 => Pfsd
+  | Many32 => Psw_a
+  | Many64 => Psd_a
+  end.
+
+Definition transl_store_rro (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of src;
+  transl_memory_access (PStoreRRO (chunk2store chunk) r) addr args k.
+
+Definition transl_store_rrr (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of src;
+  transl_memory_access2 (PStoreRRR (chunk2store chunk) r) addr args k.
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
-  match chunk with
-  | Mint8signed | Mint8unsigned =>
-      do r <- ireg_of src;
-      transl_memory_access (Psb r)  addr args k
-  | Mint16signed | Mint16unsigned =>
-      do r <- ireg_of src;
-      transl_memory_access (Psh r)  addr args k
-  | Mint32 =>
-      do r <- ireg_of src;
-      transl_memory_access (Psw r)  addr args k
-  | Mint64 =>
-      do r <- ireg_of src;
-      transl_memory_access (Psd r)  addr args k
-  | Mfloat32 =>
-      do r <- freg_of src;
-      transl_memory_access (Pfss r) addr args k
-  | Mfloat64 =>
-      do r <- freg_of src;
-      transl_memory_access (Pfsd r) addr args k
-  | _ =>
-      Error (msg "Asmblockgen.transl_store")
+  match addr with
+  | Aindexed2 => transl_store_rrr chunk addr args src k
+  | _ => transl_store_rro chunk addr args src k
   end.
 
 (** Function epilogue *)

@@ -160,6 +160,7 @@ let print_operation reg pp = function
 
 let print_addressing reg pp = function
   | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)
+  | Aindexed2, [r1;r2] -> fprintf pp "%a + %a" reg r1 reg r2
   | Aglobal(id, ofs), [] ->
       fprintf pp "\"%s\" + %Ld" (extern_atom id) (camlint64_of_ptrofs ofs)
   | Ainstack ofs, [] -> fprintf pp "stack(%Ld)" (camlint64_of_ptrofs ofs)

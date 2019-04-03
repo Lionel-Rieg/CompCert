@@ -42,7 +42,7 @@ End ISeqLanguage.
 
 Module Type ImpDict.
 
-Include ResourceDictionary.
+Include PseudoRegDictionary.
 
 Parameter eq_test: forall {A}, t A -> t A -> ?? bool.
 
@@ -171,7 +171,7 @@ Hint Resolve hdeps_get_correct: wlp.
 
 Fixpoint hexp_tree (e: exp) (d od: hdeps) (dbg: option pstring) : ?? hashV tree :=
   match e with
-  | Name x => hdeps_get d x dbg
+  | PReg x => hdeps_get d x dbg
   | Op o le =>
      DO lt <~ hlist_exp_tree le d od;; 
      hTop o lt dbg
@@ -209,7 +209,7 @@ Hint Resolve hexp_tree_correct: wlp.
 
 Variable debug_assign: R.t -> ?? option pstring.
 
-Fixpoint hmacro_deps (i: macro) (d od: hdeps): ?? hdeps :=
+Fixpoint hinst_deps (i: inst) (d od: hdeps): ?? hdeps :=
   match i with
   | nil => RET d
   | (x, e)::i' =>
@@ -221,7 +221,7 @@ Fixpoint hmacro_deps (i: macro) (d od: hdeps): ?? hdeps :=
       else
         DO t1 <~ hexp_tree e d od None;; 
         hTerase t1 t0 dbg);;
-     hmacro_deps i' (Dict.set d x v') od
+     hinst_deps i' (Dict.set d x v') od
   end.
 
 Lemma pset_spec_eq d x t:
@@ -244,11 +244,11 @@ Qed.
 Hint Rewrite pset_spec_eq pempty_spec: dict_rw.
 
 
-Lemma hmacro_deps_correct i: forall d1 od1,
-  WHEN hmacro_deps i d1 od1 ~> d1' THEN
+Lemma hinst_deps_correct i: forall d1 od1,
+  WHEN hinst_deps i d1 od1 ~> d1' THEN
     forall od2 d2, (forall x, pdeps_get od1 x = deps_get od2 x) ->
     (forall x, pdeps_get d1 x = deps_get d2 x) -> 
-    forall x, pdeps_get d1' x = deps_get (macro_deps i d2 od2) x.
+    forall x, pdeps_get d1' x = deps_get (inst_deps i d2 od2) x.
 Proof.
   induction i; simpl; wlp_simplify.
   + cutrewrite (failsafe (deps_get d2 a0) = failsafe (data exta0)). 
@@ -265,10 +265,10 @@ Proof.
       * rewrite set_spec_diff, pset_spec_diff; auto.
    - rewrite H, H5; auto.
 Qed.
-Global Opaque hmacro_deps.
-Hint Resolve hmacro_deps_correct: wlp.
+Global Opaque hinst_deps.
+Hint Resolve hinst_deps_correct: wlp.
 
-(* logging info: we log the number of macro-instructions passed ! *)
+(* logging info: we log the number of inst-instructions passed ! *)
 Variable log: unit -> ?? unit. 
 
 Fixpoint hbblock_deps_rec (p: bblock) (d: hdeps): ?? hdeps :=
@@ -276,7 +276,7 @@ Fixpoint hbblock_deps_rec (p: bblock) (d: hdeps): ?? hdeps :=
   | nil => RET d
   | i::p' =>
      log tt;;
-     DO d' <~ hmacro_deps i d d;;
+     DO d' <~ hinst_deps i d d;;
      hbblock_deps_rec p' d'
   end.
 
@@ -371,10 +371,10 @@ Local Hint Resolve hbblock_deps_correct Dict.eq_test_correct: wlp.
 
 Section Prog_Eq_Gen.
 
-Variable dbg1: R.t -> ?? option pstring. (* debugging of p1 macros *)
-Variable dbg2: R.t -> ?? option pstring. (* log of p2 macros *)
-Variable log1: unit -> ?? unit. (* log of p1 macros *)
-Variable log2: unit -> ?? unit. (* log of p2 macros *)
+Variable dbg1: R.t -> ?? option pstring. (* debugging of p1 insts *)
+Variable dbg2: R.t -> ?? option pstring. (* log of p2 insts *)
+Variable log1: unit -> ?? unit. (* log of p1 insts *)
+Variable log2: unit -> ?? unit. (* log of p2 insts *)
 
 
 Variable hco_tree: hashConsing tree.

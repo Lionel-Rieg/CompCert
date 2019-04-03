@@ -1076,6 +1076,7 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
+  - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.
 

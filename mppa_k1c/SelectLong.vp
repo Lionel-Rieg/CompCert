@@ -285,7 +285,10 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
   | Eop (Olongconst n1) Enil, t2 => orlimm n1 t2
   | t1, Eop (Olongconst n2) Enil => orlimm n2 t1
   | (Eop Onotl (t1:::Enil)), t2 => Eop Oornl (t1:::t2:::Enil) 
-  | t1, (Eop Onotl (t2:::Enil))  => Eop Oornl (t2:::t1:::Enil) 
+  | t1, (Eop Onotl (t2:::Enil))  => Eop Oornl (t2:::t1:::Enil)
+  end.
+     
+  (*
   |  (Eop Oandl ((Eop Ocast32signed
          ((Eop Oneg ((Eop (Ocmp (Ccomplimm Ceq zero0))
         (y0:::Enil)):::Enil)):::Enil)):::v0:::Enil)),
@@ -298,8 +301,7 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
      then Eop Oselectl (v0:::v1:::y0:::Enil)
      else Eop Oorl (e1:::e2:::Enil)
   | _, _ => Eop Oorl (e1:::e2:::Enil)
-  end.
-     
+  *)
 
 Nondetfunction xorlimm (n1: int64) (e2: expr) :=
   if Int64.eq n1 Int64.zero then e2 else

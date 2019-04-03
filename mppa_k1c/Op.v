@@ -189,6 +189,7 @@ Inductive operation : Type :=
   addressing. *)
 
 Inductive addressing: Type :=
+  | Aindexed2: addressing                  (**r Address is [r1 + r2] *)
   | Aindexed: ptrofs -> addressing    (**r Address is [r1 + offset] *)
   | Aglobal: ident -> ptrofs -> addressing  (**r Address is global plus offset *)
   | Ainstack: ptrofs -> addressing.   (**r Address is [stack_pointer + offset] *)
@@ -271,12 +272,12 @@ Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
 
 Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
-  | Vlong iselect =>
+  | Vint iselect =>
     match v0 with
     | Vlong i0 =>
       match v1 with
       | Vlong i1 =>
-        Vlong (if Int64.cmp Ceq Int64.zero iselect
+        Vlong (if Int.cmp Ceq Int.zero iselect
                then i0
                else i1)
       | _ => Vundef
@@ -423,6 +424,7 @@ Definition eval_addressing
     (F V: Type) (genv: Genv.t F V) (sp: val)
     (addr: addressing) (vl: list val) : option val :=
   match addr, vl with
+  | Aindexed2, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Aindexed n, v1 :: nil => Some (Val.offset_ptr v1 n)
   | Aglobal s ofs, nil => Some (Genv.symbol_address genv s ofs)
   | Ainstack n, nil => Some (Val.offset_ptr sp n)
@@ -605,11 +607,12 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocmp c => (type_of_condition c, Tint)
                 
   | Oselect  => (Tint :: Tint :: Tint :: nil, Tint)
-  | Oselectl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
+  | Oselectl => (Tlong :: Tlong :: Tint :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
   match addr with
+  | Aindexed2 => Tptr :: Tptr :: nil
   | Aindexed _ => Tptr :: nil
   | Aglobal _ _ => nil
   | Ainstack _ => nil
@@ -959,6 +962,7 @@ Qed.
 
 Definition offset_addressing (addr: addressing) (delta: Z) : option addressing :=
   match addr with
+  | Aindexed2 => None
   | Aindexed n => Some(Aindexed (Ptrofs.add n (Ptrofs.repr delta)))
   | Aglobal id n => Some(Aglobal id (Ptrofs.add n (Ptrofs.repr delta)))
   | Ainstack n => Some(Ainstack (Ptrofs.add n (Ptrofs.repr delta)))
@@ -1390,9 +1394,10 @@ Lemma eval_addressing_inj:
   exists v2, eval_addressing ge2 sp2 addr vl2 = Some v2 /\ Val.inject f v1 v2.
 Proof.
   intros. destruct addr; simpl in H2; simpl; FuncInv; InvInject; TrivialExists.
-  apply Val.offset_ptr_inject; auto.
-  apply H; simpl; auto.
-  apply Val.offset_ptr_inject; auto. 
+  - apply Val.addl_inject; auto.
+  - apply Val.offset_ptr_inject; auto.
+  - apply H; simpl; auto.
+  - apply Val.offset_ptr_inject; auto. 
 Qed.
 
 End EVAL_COMPAT.

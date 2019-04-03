@@ -452,6 +452,7 @@ Proof.
 - InvEval. apply eval_orlimm; auto.
 - (*orn*) InvEval. TrivialExists; simpl; congruence.
 - (*orn reversed*) InvEval. rewrite Val.orl_commut. TrivialExists; simpl; congruence.
+                   (*
   - (* selectl *)
     destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try TrivialExists.
     predSpec Int64.eq Int64.eq_spec zero0 Int64.zero; simpl; try TrivialExists.
@@ -525,7 +526,7 @@ Proof.
       rewrite Int64.and_mone.
       rewrite Int64.and_zero.
       rewrite Int64.or_zero.
-      reflexivity.
+      reflexivity. *)
 - TrivialExists.
 Qed.
 

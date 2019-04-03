@@ -36,6 +36,7 @@ Definition eval_static_condition (cond: condition) (vl: list aval): abool :=
 Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
   match addr, vl with
   | Aindexed n, v1::nil => offset_ptr v1 n
+  | Aindexed2, v1::v2::nil => addl v1 v2
   | Aglobal s ofs, nil => Ptr (Gl s ofs)
   | Ainstack ofs, nil => Ptr (Stk ofs)
   | _, _ => Vbot
@@ -272,8 +273,8 @@ Proof.
       destruct a1; destruct a0; eauto; constructor.
   (* selectl *)
   - inv H2; simpl; try constructor.
-    + destruct (Int64.eq _ _); apply binop_long_sound; trivial.
-    + destruct (Int64.eq _ _);
+    + destruct (Int.eq _ _); apply binop_long_sound; trivial.
+    + destruct (Int.eq _ _);
       destruct a1; destruct a0; eauto; constructor.
 Qed.
 
