@@ -152,8 +152,7 @@ Definition destroyed_by_store (chunk: memory_chunk) (addr: addressing): list mre
 
 Definition destroyed_by_cond (cond: condition): list mreg := nil.
 
-(* Definition destroyed_by_jumptable: list mreg := R5 :: nil. *)
-Definition destroyed_by_jumptable: list mreg := nil.
+Definition destroyed_by_jumptable: list mreg := R62 :: R63 :: nil.
 
 Fixpoint destroyed_by_clobber (cl: list string): list mreg :=
   match cl with

@@ -157,10 +157,10 @@ let expand_builtin_memcpy_big sz al src dst =
   let lbl = new_label() in
   emit (Ploopdo (tmpbuf, lbl));
   emit Psemi;
-  emit (Plb (tmpbuf, srcptr, Asmblock.Ofsimm Z.zero));
+  emit (Plb (tmpbuf, srcptr, AOff (Asmblock.Ofsimm Z.zero)));
   emit (Paddil (srcptr, srcptr, Z.one));
   emit Psemi;
-  emit (Psb (tmpbuf, dstptr, Asmblock.Ofsimm Z.zero));
+  emit (Psb (tmpbuf, dstptr, AOff (Asmblock.Ofsimm Z.zero)));
   emit (Paddil (dstptr, dstptr, Z.one));
   emit Psemi;
   emit (Plabel lbl);;
@@ -176,30 +176,30 @@ let expand_builtin_memcpy  sz al args =
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
   | Mint8unsigned, BR(Asmblock.IR res) ->
-     emit (Plbu (res, base, Asmblock.Ofsimm ofs))
+     emit (Plbu (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint8signed, BR(Asmblock.IR res) ->
-     emit (Plb  (res, base, Asmblock.Ofsimm ofs))
+     emit (Plb  (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint16unsigned, BR(Asmblock.IR res) ->
-     emit (Plhu (res, base, Asmblock.Ofsimm ofs))
+     emit (Plhu (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint16signed, BR(Asmblock.IR res) ->
-     emit (Plh  (res, base, Asmblock.Ofsimm ofs))
+     emit (Plh  (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint32, BR(Asmblock.IR res) ->
-     emit (Plw  (res, base, Asmblock.Ofsimm ofs))
+     emit (Plw  (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint64, BR(Asmblock.IR res) ->
-     emit (Pld  (res, base, Asmblock.Ofsimm ofs))
+     emit (Pld  (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint64, BR_splitlong(BR(Asmblock.IR res1), BR(Asmblock.IR res2)) ->
      let ofs' = Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, Asmblock.Ofsimm ofs));
-         emit (Plw (res1, base, Asmblock.Ofsimm ofs'))
+         emit (Plw (res2, base, AOff (Asmblock.Ofsimm ofs)));
+         emit (Plw (res1, base, AOff (Asmblock.Ofsimm ofs')))
        end else begin
-         emit (Plw (res1, base, Asmblock.Ofsimm ofs'));
-         emit (Plw (res2, base, Asmblock.Ofsimm ofs))
+         emit (Plw (res1, base, AOff (Asmblock.Ofsimm ofs')));
+         emit (Plw (res2, base, AOff (Asmblock.Ofsimm ofs)))
        end
   | Mfloat32, BR(Asmblock.IR res) ->
-     emit (Pfls (res, base, Asmblock.Ofsimm ofs))
+     emit (Pfls (res, base, AOff (Asmblock.Ofsimm ofs)))
   | Mfloat64, BR(Asmblock.IR res) ->
-     emit (Pfld (res, base, Asmblock.Ofsimm ofs))
+     emit (Pfld (res, base, AOff (Asmblock.Ofsimm ofs)))
   | _ ->
      assert false
 
@@ -218,21 +218,21 @@ let expand_builtin_vload chunk args res =
 let expand_builtin_vstore_common chunk base ofs src =
   match chunk, src with
   | (Mint8signed | Mint8unsigned), BA(Asmblock.IR src) ->
-     emit (Psb (src, base, Asmblock.Ofsimm ofs))
+     emit (Psb (src, base, AOff (Asmblock.Ofsimm ofs)))
   | (Mint16signed | Mint16unsigned), BA(Asmblock.IR src) ->
-     emit (Psh (src, base, Asmblock.Ofsimm ofs))
+     emit (Psh (src, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint32, BA(Asmblock.IR src) ->
-     emit (Psw (src, base, Asmblock.Ofsimm ofs))
+     emit (Psw (src, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint64, BA(Asmblock.IR src) ->
-     emit (Psd (src, base, Asmblock.Ofsimm ofs))
+     emit (Psd (src, base, AOff (Asmblock.Ofsimm ofs)))
   | Mint64, BA_splitlong(BA(Asmblock.IR src1), BA(Asmblock.IR src2)) ->
      let ofs' = Ptrofs.add ofs _4 in
-     emit (Psw (src2, base, Asmblock.Ofsimm ofs));
-     emit (Psw (src1, base, Asmblock.Ofsimm ofs'))
+     emit (Psw (src2, base, AOff (Asmblock.Ofsimm ofs)));
+     emit (Psw (src1, base, AOff (Asmblock.Ofsimm ofs')))
   | Mfloat32, BA(Asmblock.IR src) ->
-     emit (Pfss (src, base, Asmblock.Ofsimm ofs))
+     emit (Pfss (src, base, AOff (Asmblock.Ofsimm ofs)))
   | Mfloat64, BA(Asmblock.IR src) ->
-     emit (Pfsd (src, base, Asmblock.Ofsimm ofs))
+     emit (Pfsd (src, base, AOff (Asmblock.Ofsimm ofs)))
   | _ ->
      assert false
 

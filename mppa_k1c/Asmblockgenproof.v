@@ -16,7 +16,6 @@ Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
-(* Require Import Asmgen Asmgenproof0 Asmgenproof1. *)
 Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
 
 Module MB := Machblock.
@@ -75,34 +74,6 @@ Proof.
   omega.
 Qed.
 
-(*
-Lemma exec_straight_exec:
-  forall fb f c ep tf tc c' rs m rs' m',
-  transl_code_at_pc ge (rs PC) fb f c ep tf tc ->
-  exec_straight tge tf tc rs m c' rs' m' ->
-  plus step tge (State rs m) E0 (State rs' m').
-Proof.
-  intros. inv H.
-  eapply exec_straight_steps_1; eauto.
-  eapply transf_function_no_overflow; eauto.
-  eapply functions_transl; eauto.
-Qed.
-
-Lemma exec_straight_at:
-  forall fb f c ep tf tc c' ep' tc' rs m rs' m',
-  transl_code_at_pc ge (rs PC) fb f c ep tf tc ->
-  transl_code f c' ep' = OK tc' ->
-  exec_straight tge tf tc rs m tc' rs' m' ->
-  transl_code_at_pc ge (rs' PC) fb f c' ep' tf tc'.
-Proof.
-  intros. inv H.
-  exploit exec_straight_steps_2; eauto.
-  eapply transf_function_no_overflow; eauto.
-  eapply functions_transl; eauto.
-  intros [ofs' [PC' CT']].
-  rewrite PC'. constructor; auto.
-Qed.
- *)
 (** The following lemmas show that the translation from Mach to Asm
   preserves labels, in the sense that the following diagram commutes:
 <<
@@ -120,314 +91,6 @@ Qed.
 *)
 
 Section TRANSL_LABEL.
-
-(* Remark loadimm32_label:
-  forall r n k, tail_nolabel k (loadimm32 r n k).
-Proof.
-  intros; unfold loadimm32. destruct (make_immed32 n); TailNoLabel.
-(*unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.*)
-Qed.
-Hint Resolve loadimm32_label: labels.
-
-Remark opimm32_label:
-  forall (op: arith_name_rrr) (opimm: arith_name_rri32) r1 r2 n k,
-  (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
-  (forall r1 r2 n, nolabel (opimm r1 r2 n)) ->
-  tail_nolabel k (opimm32 op opimm r1 r2 n k).
-Proof.
-  intros; unfold opimm32. destruct (make_immed32 n); TailNoLabel.
-(*unfold load_hilo32. destruct (Int.eq lo Int.zero); TailNoLabel.*)
-Qed.
-Hint Resolve opimm32_label: labels.
-
-Remark loadimm64_label:
-  forall r n k, tail_nolabel k (loadimm64 r n k).
-Proof.
-  intros; unfold loadimm64. destruct (make_immed64 n); TailNoLabel.
-(*unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.*)
-Qed.
-Hint Resolve loadimm64_label: labels.
-
-Remark cast32signed_label:
-  forall rd rs k, tail_nolabel k (cast32signed rd rs k).
-Proof.
-  intros; unfold cast32signed. destruct (ireg_eq rd rs); TailNoLabel.
-Qed.
-Hint Resolve cast32signed_label: labels.
-
-Remark opimm64_label:
-  forall (op: arith_name_rrr) (opimm: arith_name_rri64) r1 r2 n k,
-  (forall r1 r2 r3, nolabel (op r1 r2 r3)) ->
-  (forall r1 r2 n, nolabel (opimm r1 r2 n)) ->
-  tail_nolabel k (opimm64 op opimm r1 r2 n k).
-Proof.
-  intros; unfold opimm64. destruct (make_immed64 n); TailNoLabel.
-(*unfold load_hilo64. destruct (Int64.eq lo Int64.zero); TailNoLabel.*)
-Qed.
-Hint Resolve opimm64_label: labels.
-
-Remark addptrofs_label:
-  forall r1 r2 n k, tail_nolabel k (addptrofs r1 r2 n k).
-Proof.
-  unfold addptrofs; intros. destruct (Ptrofs.eq_dec n Ptrofs.zero). TailNoLabel.
-  apply opimm64_label; TailNoLabel.
-Qed.
-Hint Resolve addptrofs_label: labels.
-(*
-Remark transl_cond_float_nolabel:
-  forall c r1 r2 r3 insn normal,
-  transl_cond_float c r1 r2 r3 = (insn, normal) -> nolabel insn.
-Proof.
-  unfold transl_cond_float; intros. destruct c; inv H; exact I.
-Qed.
-
-Remark transl_cond_single_nolabel:
-  forall c r1 r2 r3 insn normal,
-  transl_cond_single c r1 r2 r3 = (insn, normal) -> nolabel insn.
-Proof.
-  unfold transl_cond_single; intros. destruct c; inv H; exact I.
-Qed.
-*)
-Remark transl_cbranch_label:
-  forall cond args lbl k c,
-  transl_cbranch cond args lbl k = OK c -> tail_nolabel k c.
-Proof.
-  intros. unfold transl_cbranch in H. destruct cond; TailNoLabel.
-(* Ccomp *)
-  - unfold transl_comp; TailNoLabel.
-(* Ccompu *)
-  - unfold transl_comp; TailNoLabel.
-(* Ccompimm *)
-  - destruct (Int.eq n Int.zero); TailNoLabel.
-    unfold loadimm32. destruct (make_immed32 n); TailNoLabel. unfold transl_comp; TailNoLabel.
-(* Ccompuimm *)
-  - unfold transl_opt_compuimm.
-    remember (select_comp n c0) as selcomp; destruct selcomp.
-    + destruct c; TailNoLabel; contradict Heqselcomp; unfold select_comp;
-      destruct (Int.eq n Int.zero); destruct c0; discriminate.
-    + unfold loadimm32;
-      destruct (make_immed32 n); TailNoLabel; unfold transl_comp; TailNoLabel.
-(* Ccompl *)
-  - unfold transl_compl; TailNoLabel.
-(* Ccomplu *)
-  - unfold transl_compl; TailNoLabel.
-(* Ccomplimm *)
-  - destruct (Int64.eq n Int64.zero); TailNoLabel.
-    unfold loadimm64. destruct (make_immed64 n); TailNoLabel. unfold transl_compl; TailNoLabel.
-(* Ccompluimm *)
-  - unfold transl_opt_compluimm.
-    remember (select_compl n c0) as selcomp; destruct selcomp.
-    + destruct c; TailNoLabel; contradict Heqselcomp; unfold select_compl;
-      destruct (Int64.eq n Int64.zero); destruct c0; discriminate.
-    + unfold loadimm64;
-      destruct (make_immed64 n); TailNoLabel; unfold transl_compl; TailNoLabel.
-Qed.
-
-(*
-- destruct c0; simpl; TailNoLabel.
-- destruct c0; simpl; TailNoLabel.
-- destruct (Int.eq n Int.zero).
-  destruct c0; simpl; TailNoLabel.
-  apply tail_nolabel_trans with (transl_cbranch_int32s c0 x X31 lbl :: k).
-  auto with labels. destruct c0; simpl; TailNoLabel.
-- destruct (Int.eq n Int.zero).
-  destruct c0; simpl; TailNoLabel.
-  apply tail_nolabel_trans with (transl_cbranch_int32u c0 x X31 lbl :: k).
-  auto with labels. destruct c0; simpl; TailNoLabel.
-- destruct c0; simpl; TailNoLabel.
-- destruct c0; simpl; TailNoLabel.
-- destruct (Int64.eq n Int64.zero).
-  destruct c0; simpl; TailNoLabel.
-  apply tail_nolabel_trans with (transl_cbranch_int64s c0 x X31 lbl :: k).
-  auto with labels. destruct c0; simpl; TailNoLabel.
-- destruct (Int64.eq n Int64.zero).
-  destruct c0; simpl; TailNoLabel.
-  apply tail_nolabel_trans with (transl_cbranch_int64u c0 x X31 lbl :: k).
-  auto with labels. destruct c0; simpl; TailNoLabel.
-- destruct (transl_cond_float c0 X31 x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_float_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_float c0 X31 x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_float_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_single c0 X31 x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-- destruct (transl_cond_single c0 X31 x x0) as [insn normal] eqn:F; inv EQ2.
-  apply tail_nolabel_cons. eapply transl_cond_single_nolabel; eauto. 
-  destruct normal; TailNoLabel.
-*)
-
-Remark transl_cond_op_label:
-  forall cond args r k c,
-  transl_cond_op cond r args k = OK c -> tail_nolabel k c.
-Proof.
-  intros. unfold transl_cond_op in H; destruct cond; TailNoLabel.
-- unfold transl_cond_int32s; destruct c0; simpl; TailNoLabel.
-- unfold transl_cond_int32u; destruct c0; simpl; TailNoLabel. 
-- unfold transl_condimm_int32s; destruct c0; simpl; TailNoLabel.
-- unfold transl_condimm_int32u; destruct c0; simpl; TailNoLabel.
-- unfold transl_cond_int64s; destruct c0; simpl; TailNoLabel.
-- unfold transl_cond_int64u; destruct c0; simpl; TailNoLabel. 
-- unfold transl_condimm_int64s; destruct c0; simpl; TailNoLabel.
-- unfold transl_condimm_int64u; destruct c0; simpl; TailNoLabel.
-Qed.
-
-Remark transl_op_label:
-  forall op args r k c,
-  transl_op op args r k = OK c -> tail_nolabel k c.
-Proof.
-Opaque Int.eq.
-  unfold transl_op; intros; destruct op; TailNoLabel.
-(* Omove *)
-- destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
-(* Oaddrsymbol *)
-- destruct (Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)); TailNoLabel.
-(* Oaddimm32 *)
-- apply opimm32_label; intros; exact I.
-(* Oandimm32 *)
-- apply opimm32_label; intros; exact I.
-(* Oorimm32 *)
-- apply opimm32_label; intros; exact I.
-(* Oxorimm32 *)
-- apply opimm32_label; intros; exact I.
-(* Oshrximm *)
-- destruct (Int.eq n Int.zero); TailNoLabel.
-(* Oaddimm64 *)
-- apply opimm64_label; intros; exact I.
-(* Oandimm64  *)
-- apply opimm64_label; intros; exact I.
-(* Oorimm64  *)
-- apply opimm64_label; intros; exact I.
-(* Oxorimm64  *)
-- apply opimm64_label; intros; exact I.
-(* Ocmp *)
-- eapply transl_cond_op_label; eauto.
-Qed.
-
-(*
-- destruct (preg_of r); try discriminate; destruct (preg_of m); inv H; TailNoLabel.
-- destruct (Float.eq_dec n Float.zero); TailNoLabel.
-- destruct (Float32.eq_dec n Float32.zero); TailNoLabel.
-- destruct (Archi.pic_code tt && negb (Ptrofs.eq ofs Ptrofs.zero)).
-+ eapply tail_nolabel_trans; [|apply addptrofs_label]. TailNoLabel.
-+ TailNoLabel. 
-- apply opimm32_label; intros; exact I.
-- apply opimm32_label; intros; exact I.
-- apply opimm32_label; intros; exact I.
-- apply opimm32_label; intros; exact I.
-- destruct (Int.eq n Int.zero); TailNoLabel.
-- apply opimm64_label; intros; exact I.
-- apply opimm64_label; intros; exact I.
-- apply opimm64_label; intros; exact I.
-- apply opimm64_label; intros; exact I.
-- destruct (Int.eq n Int.zero); TailNoLabel.
-- eapply transl_cond_op_label; eauto.
-*)
-*)
-
-(* Remark indexed_memory_access_label:
-  forall (mk_instr: ireg -> offset -> instruction) base ofs k,
-  (forall r o, nolabel (mk_instr r o)) ->
-  tail_nolabel k (indexed_memory_access mk_instr base ofs k).
-Proof.
-  unfold indexed_memory_access; intros. 
-  (* destruct Archi.ptr64. *)
-  destruct (make_immed64 (Ptrofs.to_int64 ofs)); TailNoLabel.
-  (* destruct (make_immed32 (Ptrofs.to_int ofs)); TailNoLabel. *)
-Qed. *)
-
-(*
-Remark loadind_label:
-  forall base ofs ty dst k c,
-  loadind base ofs ty dst k = OK c -> tail_nolabel k c.
-Proof.
-  unfold loadind; intros.
-  destruct ty, (preg_of dst); inv H; apply indexed_memory_access_label; intros; exact I.
-Qed.
-
-Remark storeind_label:
-  forall src base ofs ty k c,
-  storeind src base ofs ty k = OK c -> tail_nolabel k c.
-Proof.
-  unfold storeind; intros.
-  destruct ty, (preg_of src); inv H; apply indexed_memory_access_label; intros; exact I.
-Qed.
-
-Remark loadind_ptr_label:
-  forall base ofs dst k, tail_nolabel k (loadind_ptr base ofs dst k).
-Proof.
-  intros. apply indexed_memory_access_label. intros; destruct Archi.ptr64; exact I.
-Qed.
-*)
-
-(* Remark storeind_ptr_label:
-  forall src base ofs k, tail_nolabel k (storeind_ptr src base ofs k).
-Proof.
-  intros. apply indexed_memory_access_label. intros; destruct Archi.ptr64; exact I.
-Qed. *)
-
-(*
-Remark transl_memory_access_label:
-  forall (mk_instr: ireg -> offset -> instruction) addr args k c,
-  (forall r o, nolabel (mk_instr r o)) ->
-  transl_memory_access mk_instr addr args k = OK c ->
-  tail_nolabel k c.
-Proof.
-  unfold transl_memory_access; intros; destruct addr; TailNoLabel; apply indexed_memory_access_label; auto. 
-Qed.
-
-Remark make_epilogue_label:
-  forall f k, tail_nolabel k (make_epilogue f k).
-Proof.
-  unfold make_epilogue; intros. eapply tail_nolabel_trans. apply loadind_ptr_label. TailNoLabel.
-Qed.
-
-Lemma transl_instr_label:
-  forall f i ep k c,
-  transl_instr f i ep k = OK c ->
-  match i with Mlabel lbl => c = Plabel lbl ::i k | _ => tail_nolabel k c end.
-Proof.
-  unfold transl_instr; intros; destruct i; TailNoLabel.
-(* loadind *)
-- eapply loadind_label; eauto.
-(* storeind *)
-- eapply storeind_label; eauto.
-(* Mgetparam *)
-- destruct ep. eapply loadind_label; eauto.
-  eapply tail_nolabel_trans. apply loadind_ptr_label. eapply loadind_label; eauto. 
-(* transl_op *)
-- eapply transl_op_label; eauto.
-(* transl_load *)
-- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
-(* transl store *)
-- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
-- destruct s0; monadInv H; TailNoLabel.
-- destruct s0; monadInv H; eapply tail_nolabel_trans
-  ; [eapply make_epilogue_label|TailNoLabel].
-- eapply transl_cbranch_label; eauto.
-- eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
-Qed.
-(*
-
-
-- eapply transl_op_label; eauto.
-- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
-- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
-- destruct s0; monadInv H; (eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel]).
-- eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel].
-*)
-
-Lemma transl_instr_label':
-  forall lbl f i ep k c,
-  transl_instr f i ep k = OK c ->
-  find_label lbl c = if Mach.is_label lbl i then Some k else find_label lbl k.
-Proof.
-  intros. exploit transl_instr_label; eauto.
-  destruct i; try (intros [A B]; apply B).
-  intros. subst c. simpl. auto.
-Qed.
-*)
 
 Lemma gen_bblocks_label:
   forall hd bdy ex tbb tc,
@@ -640,115 +303,6 @@ Qed.
 - Mach register values and Asm register values agree.
 *)
 
-(*
-Lemma exec_straight_steps:
-  forall s fb f rs1 i c ep tf tc m1' m2 m2' sp ms2,
-  match_stack ge s ->
-  Mem.extends m2 m2' ->
-  Genv.find_funct_ptr ge fb = Some (Internal f) ->
-  transl_code_at_pc ge (rs1 PC) fb f (i :: c) ep tf tc ->
-  (forall k c (TR: transl_instr f i ep k = OK c),
-   exists rs2,
-       exec_straight tge tf c rs1 m1' k rs2 m2'
-    /\ agree ms2 sp rs2
-    /\ (fp_is_parent ep i = true -> rs2#FP = parent_sp s)) ->
-  exists st',
-  plus step tge (State rs1 m1') E0 st' /\
-  match_states (Mach.State s fb sp c ms2 m2) st'.
-Proof.
-  intros. inversion H2. subst. monadInv H7.
-  exploit H3; eauto. intros [rs2 [A [B C]]].
-  exists (State rs2 m2'); split.
-  eapply exec_straight_exec; eauto.
-  econstructor; eauto. eapply exec_straight_at; eauto.
-Qed.
-*)
-
-(*
-Lemma exec_straight_steps_goto:
-  forall s fb f rs1 i c ep tf tc m1' m2 m2' sp ms2 lbl c',
-  match_stack ge s ->
-  Mem.extends m2 m2' ->
-  Genv.find_funct_ptr ge fb = Some (Internal f) ->
-  Mach.find_label lbl f.(Mach.fn_code) = Some c' ->
-  transl_code_at_pc ge (rs1 PC) fb f (i :: c) ep tf tc ->
-  fp_is_parent ep i = false ->
-  (forall k c (TR: transl_instr f i ep k = OK c),
-   exists jmp, exists k', exists rs2,
-       exec_straight tge tf c rs1 m1' (jmp :: k') rs2 m2'
-    /\ agree ms2 sp rs2
-    /\ exec_instr tge tf jmp rs2 m2' = goto_label tf lbl rs2 m2') ->
-  exists st',
-  plus step tge (State rs1 m1') E0 st' /\
-  match_states (Mach.State s fb sp c' ms2 m2) st'.
-Proof.
-  intros. inversion H3. subst. monadInv H9.
-  exploit H5; eauto. intros [jmp [k' [rs2 [A [B C]]]]].
-  generalize (functions_transl _ _ _ H7 H8); intro FN.
-  generalize (transf_function_no_overflow _ _ H8); intro NOOV.
-  exploit exec_straight_steps_2; eauto.
-  intros [ofs' [PC2 CT2]].
-  exploit find_label_goto_label; eauto.
-  intros [tc' [rs3 [GOTO [AT' OTH]]]].
-  exists (State rs3 m2'); split.
-  eapply plus_right'.
-  eapply exec_straight_steps_1; eauto.
-  econstructor; eauto.
-  eapply find_instr_tail. eauto.
-  rewrite C. eexact GOTO.
-  traceEq.
-  econstructor; eauto.
-  apply agree_exten with rs2; auto with asmgen.
-  congruence.
-Qed.
-
-Lemma exec_straight_opt_steps_goto:
-  forall s fb f rs1 i c ep tf tc m1' m2 m2' sp ms2 lbl c',
-  match_stack ge s ->
-  Mem.extends m2 m2' ->
-  Genv.find_funct_ptr ge fb = Some (Internal f) ->
-  Mach.find_label lbl f.(Mach.fn_code) = Some c' ->
-  transl_code_at_pc ge (rs1 PC) fb f (i :: c) ep tf tc ->
-  fp_is_parent ep i = false ->
-  (forall k c (TR: transl_instr f i ep k = OK c),
-   exists jmp, exists k', exists rs2,
-       exec_straight_opt tge tf c rs1 m1' (jmp :: k') rs2 m2'
-    /\ agree ms2 sp rs2
-    /\ exec_instr tge tf jmp rs2 m2' = goto_label tf lbl rs2 m2') ->
-  exists st',
-  plus step tge (State rs1 m1') E0 st' /\
-  match_states (Mach.State s fb sp c' ms2 m2) st'.
-Proof.
-  intros. inversion H3. subst. monadInv H9.
-  exploit H5; eauto. intros [jmp [k' [rs2 [A [B C]]]]].
-  generalize (functions_transl _ _ _ H7 H8); intro FN.
-  generalize (transf_function_no_overflow _ _ H8); intro NOOV.
-  inv A.
-- exploit find_label_goto_label; eauto.
-  intros [tc' [rs3 [GOTO [AT' OTH]]]].
-  exists (State rs3 m2'); split.
-  apply plus_one. econstructor; eauto.
-  eapply find_instr_tail. eauto.
-  rewrite C. eexact GOTO.
-  econstructor; eauto.
-  apply agree_exten with rs2; auto with asmgen.
-  congruence.
-- exploit exec_straight_steps_2; eauto.
-  intros [ofs' [PC2 CT2]].
-  exploit find_label_goto_label; eauto.
-  intros [tc' [rs3 [GOTO [AT' OTH]]]].
-  exists (State rs3 m2'); split.
-  eapply plus_right'.
-  eapply exec_straight_steps_1; eauto.
-  econstructor; eauto.
-  eapply find_instr_tail. eauto.
-  rewrite C. eexact GOTO.
-  traceEq.
-  econstructor; eauto.
-  apply agree_exten with rs2; auto with asmgen.
-  congruence.
-Qed. *)
-
 (** We need to show that, in the simulation diagram, we cannot
   take infinitely many Mach transitions that correspond to zero
   transitions on the Asm side.  Actually, all Mach transitions
@@ -883,11 +437,16 @@ Proof.
   intros until x2. intros Hbuiltin TIC.
   destruct ex.
   - destruct c.
+    (* MBcall *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBtailcall *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBbuiltin *)
     + assert (H: Some (MBbuiltin e l b) <>  Some (MBbuiltin e l b)).
         apply Hbuiltin. contradict H; auto.
+    (* MBgoto *)
     + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBcond *)
     + simpl in TIC. unfold transl_cbranch in TIC. exploreInst; simpl; eauto.
       * unfold transl_opt_compuimm. exploreInst; simpl; eauto.
       * unfold transl_opt_compluimm. exploreInst; simpl; eauto.
@@ -895,7 +454,9 @@ Proof.
       * unfold transl_comp_notfloat64. exploreInst; simpl; eauto.
       * unfold transl_comp_float32. exploreInst; simpl; eauto.
       * unfold transl_comp_notfloat32. exploreInst; simpl; eauto.
-    + simpl in TIC. inv TIC.
+    (* MBjumptable *)
+    + simpl in TIC. exploreInst; simpl; eauto.
+    (* MBreturn *)
     + simpl in TIC. monadInv TIC. simpl. eauto.
   - monadInv TIC. simpl; auto.
 Qed.
@@ -960,9 +521,9 @@ Proof.
     unfold transl_cond_float32. exploreInst; try discriminate.
     unfold transl_cond_notfloat32. exploreInst; try discriminate.
   - simpl in TIB. unfold transl_load in TIB. exploreInst; try discriminate.
-    all: unfold transl_memory_access in EQ0; exploreInst; try discriminate.
+    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; exploreInst; try discriminate.
   - simpl in TIB. unfold transl_store in TIB. exploreInst; try discriminate.
-    all: unfold transl_memory_access in EQ0; exploreInst; try discriminate.
+    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; exploreInst; try discriminate.
 Qed.
 
 Lemma transl_basic_code_nonil:
@@ -1358,7 +919,29 @@ Proof.
         intros. discriminate.
     + (* MBjumptable *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
-      inv TBC. inv TIC.
+      inv TBC. inv TIC. inv H0.
+
+      assert (f0 = f) by congruence. subst f0.
+      monadInv H1.
+      generalize (transf_function_no_overflow _ _ TRANSF0); intro NOOV.
+      assert (f1 = f) by congruence. subst f1.
+      exploit find_label_goto_label. 4: eapply H16. 1-2: eauto. instantiate (2 := (nextblock tbb rs2) # GPR62 <- Vundef # GPR63 <- Vundef).
+        unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. reflexivity.
+      exploit functions_transl. eapply FIND0. eapply TRANSF0. intros FIND3. assert (fn = tf) by congruence. subst fn.
+
+      intros [tc' [rs' [A [B C]]]].
+      exploit ireg_val; eauto. rewrite H13. intros LD; inv LD.
+      
+      repeat eexists.
+        rewrite H6. simpl extract_basic. simpl. eauto.
+        rewrite H7. simpl extract_ctl. simpl. Simpl. rewrite <- H1. unfold Mach.label in H14. unfold label. rewrite H14. eapply A.
+      econstructor; eauto.
+        eapply agree_undef_regs; eauto. intros. rewrite C; auto with asmgen.
+        { assert (destroyed_by_jumptable = R62 :: R63 :: nil) by auto. rewrite H2 in H0. simpl in H0. inv H0.
+          destruct (preg_eq r' GPR63). subst. contradiction.
+          destruct (preg_eq r' GPR62). subst. contradiction.
+          destruct r'; Simpl. }
+        discriminate.
     + (* MBreturn *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
       inv TBC. inv TIC. inv H0.

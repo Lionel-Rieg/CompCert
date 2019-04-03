@@ -99,6 +99,14 @@ module Target (*: TARGET*) =
 
 (* Associate labels to floating-point constants and to symbols. *)
 
+    let print_tbl oc (lbl, tbl) =
+      fprintf oc "	.balign 4\n";
+      fprintf oc "%a:\n" label lbl;
+      List.iter
+        (fun l -> fprintf oc "	.4byte	%a\n"
+                    print_label l)
+        tbl
+
     let emit_constants oc lit =
       if exists_constants () then begin
          section oc lit;
@@ -155,6 +163,10 @@ module Target (*: TARGET*) =
     let offset oc = let open Asmblock in function
     | Ofsimm n -> ptrofs oc n
     | Ofslow(id, ofs) -> fprintf oc "%%lo(%a)" symbol_offset (id, ofs)
+
+    let addressing oc = function
+    | AOff ofs -> offset oc ofs
+    | AReg ro -> ireg oc ro
 
     let icond_name = let open Asmblock in function
       | ITne | ITneu -> "ne"
@@ -264,29 +276,42 @@ module Target (*: TARGET*) =
          fprintf oc "	cb.%a	%a? %a\n" bcond bt ireg r print_label lbl
       | Ploopdo (r, lbl) ->
          fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl        
+      | Pjumptable (idx_reg, tbl) ->
+         let lbl = new_label() in
+         (* jumptables := (lbl, tbl) :: !jumptables; *)
+         let base_reg = if idx_reg=Asmblock.GPR63 then Asmblock.GPR62 else Asmblock.GPR63 in
+         fprintf oc "%s jumptable [ " comment;
+         List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
+         fprintf oc "]\n";
+         fprintf oc "    make    %a = %a\n    ;;\n" ireg base_reg label lbl; 
+         fprintf oc "    lwz.xs  %a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
+         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg;
+         section oc Section_jumptable;
+         print_tbl oc (lbl, tbl);
+         section oc Section_text
 
       (* Load/Store instructions *)
-      | Plb(rd, ra, ofs) ->
-         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plbu(rd, ra, ofs) ->
-         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plh(rd, ra, ofs) ->
-         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plhu(rd, ra, ofs) ->
-         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Plw(rd, ra, ofs) | Plw_a(rd, ra, ofs) | Pfls(rd, ra, ofs) ->
-         fprintf oc "	lws	%a = %a[%a]\n" ireg rd offset ofs ireg ra
-      | Pld(rd, ra, ofs) | Pfld(rd, ra, ofs) | Pld_a(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a = %a[%a]\n" ireg rd offset ofs ireg ra
+      | Plb(rd, ra, adr) ->
+         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plbu(rd, ra, adr) ->
+         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plh(rd, ra, adr) ->
+         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plhu(rd, ra, adr) ->
+         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
+         fprintf oc "	lws	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+      | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	ld	%a = %a[%a]\n" ireg rd addressing adr ireg ra
     
-      | Psb(rd, ra, ofs) ->
-         fprintf oc "	sb	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psh(rd, ra, ofs) ->
-         fprintf oc "	sh	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psw(rd, ra, ofs) | Psw_a(rd, ra, ofs) | Pfss(rd, ra, ofs) ->
-         fprintf oc "	sw	%a[%a] = %a\n" offset ofs ireg ra ireg rd
-      | Psd(rd, ra, ofs) | Psd_a(rd, ra, ofs) | Pfsd(rd, ra, ofs) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n" offset ofs ireg ra ireg rd
+      | Psb(rd, ra, adr) ->
+         fprintf oc "	sb	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psh(rd, ra, adr) ->
+         fprintf oc "	sh	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psw(rd, ra, adr) | Psw_a(rd, ra, adr) | Pfss(rd, ra, adr) ->
+         fprintf oc "	sw	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+      | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	sd	%a[%a] = %a\n" addressing adr ireg ra ireg rd
 
       (* Arith R instructions *)
 
@@ -517,21 +542,14 @@ module Target (*: TARGET*) =
 
     let print_align oc alignment =
       fprintf oc "	.balign %d\n" alignment
-
-    let print_jumptable oc jmptbl =
-      let print_tbl oc (lbl, tbl) =
-        fprintf oc "%a:\n" label lbl;
-        List.iter
-          (fun l -> fprintf oc "	.long	%a - %a\n"
-                               print_label l label lbl)
-          tbl in
-      if !jumptables <> [] then
+      
+    let print_jumptable oc jmptbl = () 
+      (* if !jumptables <> [] then
         begin
           section oc jmptbl;
-          fprintf oc "	.balign 4\n";
           List.iter (print_tbl oc) !jumptables;
           jumptables := []
-        end
+        end *)
 
     let print_fun_info = elf_print_fun_info
 

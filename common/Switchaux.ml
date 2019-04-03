@@ -80,10 +80,7 @@ let compile_switch_as_jumptable default cases minkey maxkey =
               CTaction default)
 
 let dense_enough (numcases: int) (minkey: Z.t) (maxkey: Z.t) =
-  (* FIXME DMonniaux disable jump tables until we can prove them through *)
-  false
-
-(*
+  (* DM Settings this to constant false disables jump tables *)
   let span = Z.sub maxkey minkey in
   assert (Z.ge span Z.zero);
   let tree_size = Z.mul (Z.of_uint 4) (Z.of_uint numcases)
@@ -91,7 +88,6 @@ let dense_enough (numcases: int) (minkey: Z.t) (maxkey: Z.t) =
   numcases >= 7           (* small jump tables are always less efficient *)
   && Z.le table_size tree_size
   && Z.lt span (Z.of_uint Sys.max_array_length)
- *)
   
 let compile_switch modulus default table =
   let (tbl, keys) = normalize_table table in

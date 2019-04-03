@@ -95,23 +95,46 @@ Proof.
   - repeat (rewrite Pregmap.gso); auto.
 Qed.
 
-Lemma exec_load_pc_var:
+Lemma exec_load_offset_pc_var:
   forall ge t rs m rd ra ofs rs' m' v,
-  exec_load ge t rs m rd ra ofs = Next rs' m' ->
-  exec_load ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+  exec_load_offset ge t rs m rd ra ofs = Next rs' m' ->
+  exec_load_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
+  intros. unfold exec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
 Qed.
 
-Lemma exec_store_pc_var:
-  forall ge t rs m rd ra ofs rs' m' v,
-  exec_store ge t rs m rd ra ofs = Next rs' m' ->
-  exec_store ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Lemma exec_load_reg_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_load_reg t rs m rd ra ro = Next rs' m' ->
+  exec_load_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
+  intros. unfold exec_load_reg in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - discriminate.
+Qed.
+
+Lemma exec_store_offset_pc_var:
+  forall ge t rs m rd ra ofs rs' m' v,
+  exec_store_offset ge t rs m rd ra ofs = Next rs' m' ->
+  exec_store_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_offset in *. rewrite Pregmap.gso; try discriminate.
+  destruct (eval_offset ge ofs); try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
+Lemma exec_store_reg_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_store_reg t rs m rd ra ro = Next rs' m' ->
+  exec_store_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
   - discriminate.
@@ -129,8 +152,12 @@ Proof.
 
       (* Some cases treated seperately because exploreInst destructs too much *)
       all: try (inv H; apply next_eq; auto; apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
-  - exploreInst; apply exec_load_pc_var; auto.
-  - exploreInst; apply exec_store_pc_var; auto.
+  - destruct i.
+    + exploreInst; apply exec_load_offset_pc_var; auto.
+    + exploreInst; apply exec_load_reg_pc_var; auto.
+  - destruct i.
+    + exploreInst; apply exec_store_offset_pc_var; auto.
+    + exploreInst; apply exec_store_reg_pc_var; auto.
   - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
     destruct (Mem.storev _ _ _ _); try discriminate.
     inv H. apply next_eq; auto. apply functional_extensionality. intros.
@@ -550,6 +577,7 @@ Proof.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
   - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
 Qed.
 
 Lemma eval_offset_preserved:
@@ -558,16 +586,16 @@ Proof.
   intros. unfold eval_offset. destruct ofs; auto. erewrite symbol_address_preserved; eauto.
 Qed.
 
-Lemma transf_exec_load:
-  forall t rs m rd ra ofs, exec_load ge t rs m rd ra ofs = exec_load tge t rs m rd ra ofs.
+Lemma transf_exec_load_offset:
+  forall t rs m rd ra ofs, exec_load_offset ge t rs m rd ra ofs = exec_load_offset tge t rs m rd ra ofs.
 Proof.
-  intros. unfold exec_load. rewrite eval_offset_preserved. reflexivity.
+  intros. unfold exec_load_offset. rewrite eval_offset_preserved. reflexivity.
 Qed.
 
-Lemma transf_exec_store:
-  forall t rs m rs0 ra ofs, exec_store ge t rs m rs0 ra ofs = exec_store tge t rs m rs0 ra ofs.
+Lemma transf_exec_store_offset:
+  forall t rs m rs0 ra ofs, exec_store_offset ge t rs m rs0 ra ofs = exec_store_offset tge t rs m rs0 ra ofs.
 Proof.
-  intros. unfold exec_store. rewrite eval_offset_preserved. reflexivity.
+  intros. unfold exec_store_offset. rewrite eval_offset_preserved. reflexivity.
 Qed.
 
 Lemma transf_exec_basic_instr:
@@ -576,8 +604,8 @@ Proof.
   intros. pose symbol_address_preserved.
   unfold exec_basic_instr. exploreInst; simpl; auto; try congruence.
   - unfold exec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
-  - apply transf_exec_load.
-  - apply transf_exec_store.
+  - apply transf_exec_load_offset.
+  - apply transf_exec_store_offset.
 Qed.
 
 Lemma transf_exec_body:
@@ -775,36 +803,25 @@ Proof.
   intros; eapply find_bblock_Some_in; eauto.
 Qed.
 
-Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m' o:
+Lemma checked_bundles_are_parexec_equiv f bundle rs rs' m m':
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
   verify_par_bblock bundle = OK tt ->
-  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+  det_parexec (globalenv (semantics tprog)) f bundle rs m rs' m'.
 Proof.
   intros. unfold verify_par_bblock in H0. destruct (Asmblockdeps.bblock_para_check _) eqn:BPC; try discriminate. clear H0.
-  simpl in H. simpl in H1.
+  simpl in H.
   eapply Asmblockdeps.bblock_para_check_correct; eauto.
 Qed.
 
-Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m' o:
+Lemma seqexec_parexec_equiv b ofs f bundle rs rs' m m':
   Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
   find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
   exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
-  parexec_bblock (globalenv (semantics tprog)) f bundle rs m o -> o = Next rs' m'.
+  det_parexec (globalenv (semantics tprog)) f bundle rs m rs' m'.
 Proof.
   intros; eapply checked_bundles_are_parexec_equiv; eauto.
   eapply all_bundles_are_checked; eauto.
 Qed.
-
-Lemma seqexec_parexec_wio b ofs f bundle rs rs' m m':
-  Genv.find_funct_ptr (globalenv (Asmblock.semantics tprog)) b = Some (Internal f) ->
-  find_bblock (Ptrofs.unsigned ofs) (fn_blocks f) = Some bundle ->
-  exec_bblock (globalenv (Asmblock.semantics tprog)) f bundle rs m = Next rs' m' ->
-  parexec_wio_bblock (globalenv (semantics tprog)) f bundle rs m = Next rs' m'.
-Proof.
-  intros; erewrite <- seqexec_parexec_equiv; eauto.
-  eapply parexec_bblock_write_in_order.
-Qed.
-
 
 Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
@@ -813,7 +830,6 @@ Proof.
   - intros; subst; auto.
   - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
     + eapply exec_step_internal; eauto.
-      eapply seqexec_parexec_wio; eauto.
       intros; eapply seqexec_parexec_equiv; eauto.
     + eapply exec_step_builtin; eauto.
     + eapply exec_step_external; eauto.

@@ -231,6 +231,7 @@ Inductive cf_instruction : Type :=
   | Pret                                            (**r return *)
   | Pcall   (l: label)                              (**r function call *)
   | Picall  (r: ireg)                               (**r function call on register value *)
+  | Pjumptable (r: ireg) (labels: list label) (**r N-way branch through a jump table (pseudo) *)
 
   (* Pgoto is for tailcalls, Pj_l is for jumping to a particular label *)
   | Pgoto   (l: label)                              (**r goto *)
@@ -243,7 +244,7 @@ Inductive cf_instruction : Type :=
 .
 
 (** Loads **)
-Inductive load_name_rro : Type :=
+Inductive load_name : Type :=
   | Plb                                             (**r load byte *)
   | Plbu                                            (**r load byte unsigned *)
   | Plh                                             (**r load half word *)
@@ -257,13 +258,15 @@ Inductive load_name_rro : Type :=
 .
 
 Inductive ld_instruction : Type :=
-  | PLoadRRO   (i: load_name_rro) (rd: ireg) (ra: ireg) (ofs: offset)
+  | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
+  | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
 .
 
-Coercion PLoadRRO:       load_name_rro        >-> Funclass.
+Coercion PLoadRRO:       load_name        >-> Funclass.
+Coercion PLoadRRR:       load_name        >-> Funclass.
 
 (** Stores **)
-Inductive store_name_rro : Type :=
+Inductive store_name : Type :=
   | Psb                                             (**r store byte *)
   | Psh                                             (**r store half byte *)
   | Psw                                             (**r store int32 *)
@@ -275,10 +278,12 @@ Inductive store_name_rro : Type :=
 .
 
 Inductive st_instruction : Type :=
-  | PStoreRRO  (i: store_name_rro) (rs: ireg) (ra: ireg) (ofs: offset)
+  | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
+  | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
 .
 
-Coercion PStoreRRO:       store_name_rro        >-> Funclass.
+Coercion PStoreRRO:       store_name        >-> Funclass.
+Coercion PStoreRRR:       store_name        >-> Funclass.
 
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
@@ -1274,26 +1279,34 @@ Definition eval_offset (ofs: offset) : res ptrofs :=
       end
   end.
 
-Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
-                     (d: ireg) (a: ireg) (ofs: offset) :=
+Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
-  | OK ptr =>
-    match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
-    | None => Stuck
-    | Some v => Next (rs#d <- v) m
-    end
+  | OK ptr => match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
+              | None => Stuck
+              | Some v => Next (rs#d <- v) m
+              end
   | _ => Stuck
   end.
 
-Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
-                      (s: ireg) (a: ireg) (ofs: offset) :=
+Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) :=
+  match Mem.loadv chunk m (Val.addl (rs a) (rs ro)) with
+  | None => Stuck
+  | Some v => Next (rs#d <- v) m
+  end.
+
+Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
-  | OK ptr => 
-    match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
-    | None => Stuck
-    | Some m' => Next rs m'
-    end
+  | OK ptr => match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
+              | None => Stuck
+              | Some m' => Next rs m'
+              end
   | _ => Stuck
+  end.
+
+Definition exec_store_reg (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) :=
+  match Mem.storev chunk m (Val.addl (rs a) (rs ro)) (rs s) with
+  | None => Stuck
+  | Some m' => Next rs m'
   end.
 
 Definition load_chunk n :=
@@ -1328,9 +1341,11 @@ Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome :=
   match bi with
   | PArith ai => Next (exec_arith_instr ai rs) m
 
-  | PLoadRRO n d a ofs => exec_load (load_chunk n) rs m d a ofs
+  | PLoadRRO n d a ofs => exec_load_offset (load_chunk n) rs m d a ofs
+  | PLoadRRR n d a ro => exec_load_reg (load_chunk n) rs m d a ro
 
-  | PStoreRRO n s a ofs => exec_store (store_chunk n) rs m s a ofs
+  | PStoreRRO n s a ofs => exec_store_offset (store_chunk n) rs m s a ofs
+  | PStoreRRR n s a ro => exec_store_reg (store_chunk n) rs m s a ro
 
   | Pallocframe sz pos =>
       let (m1, stk) := Mem.alloc m 0 sz in
@@ -1485,6 +1500,16 @@ Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem)
       Next (rs#PC <- (rs#r)) m
   | Pj_l l =>
       goto_label f l rs m
+  | Pjumptable r tbl =>
+      match rs#r with
+      | Vint n =>
+          match list_nth_z tbl (Int.unsigned n) with
+          | None => Stuck
+          | Some lbl => goto_label f lbl (rs #GPR62 <- Vundef #GPR63 <- Vundef) m
+          end
+      | _ => Stuck
+      end
+      
   | Pcb bt r l =>
       match cmp_for_btest bt with
       | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs#r (Vint (Int.repr 0)))
@@ -1642,6 +1667,8 @@ Inductive final_state: state -> int -> Prop :=
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
 
+(* Useless
+
 Remark extcall_arguments_determ:
   forall rs m sg args1 args2,
   extcall_arguments rs m sg args1 -> extcall_arguments rs m sg args2 -> args1 = args2.
@@ -1701,6 +1728,7 @@ Ltac Equalities :=
 - (* final states *)
   inv H; inv H0. congruence.
 Qed.
+*)
 
 Definition data_preg (r: preg) : bool :=
   match r with
@@ -1713,7 +1741,7 @@ Definition data_preg (r: preg) : bool :=
 
 (** Determinacy of the [Asm] semantics. *)
 
-(* TODO.
+(* Useless.
 
 Remark extcall_arguments_determ:
   forall rs m sg args1 args2,
