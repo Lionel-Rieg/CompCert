@@ -282,32 +282,29 @@ Definition op_eval (o: op) (l: list value) :=
   end.
 
 
-Definition is_constant (o: op): bool := 
- (* FIXME
+ (** Function [is_constant] is used for a small optimization inside the scheduling verifier.
+    It is good that it answers [true] as much as possible while satisfying [is_constant_correct] below.
 
-   => répondre "true" autant que possible mais en satisfaisant [is_constant_correct] ci-dessous.
+   BE CAREFUL that, [is_constant] must not depend on [ge].
+   Otherwise, we would have an easy implementation: [match op_eval o nil with Some _ => true | _ => false end]
 
-   ATTENTION, is_constant ne doit pas dépendre de [ge].
-   Sinon, on aurait une implémentation facile: [match op_eval o nil with Some _ => true | _ => false end]
-
-   => REM: il n'est pas sûr que ce soit utile de faire qqchose de très exhaustif en pratique...
-   (ça sert juste à une petite optimisation du vérificateur de scheduling).
+   => REM: when [is_constant] is not complete w.r.t [is_constant_correct], this should have only a very little impact
+      on the performance of the scheduling verifier...
   *)
+
+Definition is_constant (o: op): bool :=
   match o with
-  | Constant _ => true
+  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
   | _ => false
   end.
 
 Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
 Proof.
   destruct o; simpl; try congruence.
+  destruct ao; simpl; try congruence;
+  destruct n; simpl; try congruence;
+  unfold arith_eval; destruct Ge; simpl; try congruence.
 Qed.
-
-
-Definition iandb (ib1 ib2: ?? bool): ?? bool :=
-  DO b1 <~ ib1;;
-  DO b2 <~ ib2;;
-  RET (andb b1 b2).
 
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   match o1 with
@@ -337,14 +334,15 @@ Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
      match o2 with OArithARRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   end.
 
+Ltac my_wlp_simplify := wlp_xsimplify ltac:(intros; subst; simpl in * |- *; congruence || intuition eauto with wlp).
+
 Lemma arith_op_eq_correct o1 o2:
   WHEN arith_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  all: try congruence.
-  all: apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  destruct o1, o2; my_wlp_simplify; try congruence.
 Qed.
-
+Hint Resolve arith_op_eq_correct: wlp.
+Opaque arith_op_eq_correct.
 
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
   match o1, o2 with
@@ -357,9 +355,11 @@ Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
   - congruence.
 Qed.
+Hint Resolve load_op_eq_correct: wlp.
+Opaque load_op_eq_correct.
 
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
@@ -373,69 +373,71 @@ Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
+  - congruence.
   - congruence.
 Qed.
+Hint Resolve store_op_eq_correct: wlp.
+Opaque store_op_eq_correct.
 
-(* TODO: rewrite control_op_eq in a robust style against the miss of a case
-   cf. arith_op_eq above *)
 Definition control_op_eq (c1 c2: control_op): ?? bool :=
-  match c1, c2 with
-  | Oj_l l1, Oj_l l2 => phys_eq l1 l2
-  | Ocb bt1 l1, Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
-  | Ocbu bt1 l1, Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2)
-  | Ojumptable tbl1, Ojumptable tbl2 => phys_eq tbl1 tbl2
-  | Odiv, Odiv => RET true
-  | Odivu, Odivu => RET true
-  | OIncremPC sz1, OIncremPC sz2 => RET (Z.eqb sz1 sz2)
-  | OError, OError => RET true
-  | _, _ => RET false
+  match c1 with
+  | Oj_l l1 =>
+     match c2 with Oj_l l2 => phys_eq l1 l2 | _ => RET false end
+  | Ocb bt1 l1 =>
+     match c2 with Ocb bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2) | _ => RET false end
+  | Ocbu bt1 l1 =>
+     match c2 with Ocbu bt2 l2 => iandb (phys_eq bt1 bt2) (phys_eq l1 l2) | _ => RET false end
+  | Ojumptable tbl1 =>
+     match c2 with Ojumptable tbl2 => phys_eq tbl1 tbl2 | _ => RET false end
+  | Odiv =>
+     match c2 with Odiv => RET true | _ => RET false end
+  | Odivu =>
+     match c2 with Odivu => RET true | _ => RET false end
+  | OIncremPC sz1 =>
+     match c2 with OIncremPC sz2 => RET (Z.eqb sz1 sz2) | _ => RET false end
+  | OError =>
+     match c2 with OError => RET true | _ => RET false end
   end.
 
 Lemma control_op_eq_correct c1 c2:
   WHEN control_op_eq c1 c2 ~> b THEN b = true -> c1 = c2.
 Proof.
-  destruct c1, c2; wlp_simplify; try discriminate.
-  - congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - apply andb_prop in H1; inversion H1; apply H in H2; apply H0 in H3; congruence.
-  - rewrite Z.eqb_eq in * |-. congruence.
-  - congruence.
+  destruct c1, c2; wlp_simplify; try rewrite Z.eqb_eq in * |-; try congruence.
 Qed.
+Hint Resolve control_op_eq_correct: wlp.
+Opaque control_op_eq_correct.
 
-
-(* TODO: rewrite op_eq in a robust style against the miss of a case
-   cf. arith_op_eq above *)
 Definition op_eq (o1 o2: op): ?? bool :=
-  match o1, o2 with
-  | Arith i1, Arith i2 => arith_op_eq i1 i2
-  | Load i1, Load i2 => load_op_eq i1 i2
-  | Store i1, Store i2 => store_op_eq i1 i2
-  | Control i1, Control i2 => control_op_eq i1 i2
-  | Allocframe sz1 pos1, Allocframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Allocframe2 sz1 pos1, Allocframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Freeframe sz1 pos1, Freeframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Freeframe2 sz1 pos1, Freeframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2)
-  | Constant c1, Constant c2 => phys_eq c1 c2
-  | Fail, Fail => RET true
-  | _, _ => RET false
+  match o1 with
+  | Arith i1 =>
+    match o2 with Arith i2 => arith_op_eq i1 i2 | _ => RET false end
+  | Load i1 =>
+    match o2 with Load i2 => load_op_eq i1 i2 | _ => RET false end
+  | Store i1 =>
+    match o2 with Store i2 => store_op_eq i1 i2 | _ => RET false end
+  | Control i1 =>
+    match o2 with Control i2 => control_op_eq i1 i2 | _ => RET false end
+  | Allocframe sz1 pos1 =>
+    match o2 with Allocframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Allocframe2 sz1 pos1 =>
+    match o2 with Allocframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Freeframe sz1 pos1 =>
+    match o2 with Freeframe sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Freeframe2 sz1 pos1 =>
+    match o2 with Freeframe2 sz2 pos2 => iandb (RET (Z.eqb sz1 sz2)) (phys_eq pos1 pos2) | _ => RET false end
+  | Constant c1 =>
+    match o2 with Constant c2 => phys_eq c1 c2 | _ => RET false end
+  | Fail =>
+    match o2 with Fail => RET true | _ => RET false end
   end.
-
 
 Theorem op_eq_correct o1 o2: 
  WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
 Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  - simpl in Hexta. exploit arith_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit load_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit store_op_eq_correct. eassumption. eauto. congruence.
-  - simpl in Hexta. exploit control_op_eq_correct. eassumption. eauto. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - apply andb_prop in H0; inversion_clear H0. apply H in H2. apply Z.eqb_eq in H1. congruence.
-  - congruence.
+  destruct o1, o2; wlp_simplify; try rewrite Z.eqb_eq in * |- ; try congruence.
 Qed.
+Hint Resolve op_eq_correct: wlp.
+Global Opaque op_eq_correct.
 
 
 (* QUICK FIX WITH struct_eq *)
@@ -560,76 +562,76 @@ Definition inv_ppos (p: R.t) : option preg :=
 
 Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
-Definition trans_control (ctl: control) : macro :=
+Definition trans_control (ctl: control) : inst :=
   match ctl with
-  | Pret => [(#PC, Name (#RA))]
-  | Pcall s => [(#RA, Name (#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
-  | Picall r => [(#RA, Name (#PC)); (#PC, Name (#r))]
+  | Pret => [(#PC, PReg(#RA))]
+  | Pcall s => [(#RA, PReg(#PC)); (#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
+  | Picall r => [(#RA, PReg(#PC)); (#PC, PReg(#r))]
   | Pgoto s => [(#PC, Op (Arith (OArithR (Ploadsymbol s Ptrofs.zero))) Enil)]
-  | Pigoto r => [(#PC, Name (#r))]
-  | Pj_l l => [(#PC, Op (Control (Oj_l l)) (Name (#PC) @ Enil))]
-  | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (Name (#r) @ Name (#PC) @ Enil))]
-  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (Name (#r) @ Name (#PC) @ Enil));
+  | Pigoto r => [(#PC, PReg(#r))]
+  | Pj_l l => [(#PC, Op (Control (Oj_l l)) (PReg(#PC) @ Enil))]
+  | Pcb bt r l => [(#PC, Op (Control (Ocb bt l)) (PReg(#r) @ PReg(#PC) @ Enil))]
+  | Pcbu bt r l => [(#PC, Op (Control (Ocbu bt l)) (PReg(#r) @ PReg(#PC) @ Enil))]
+  | Pjumptable r labels => [(#PC, Op (Control (Ojumptable labels)) (PReg(#r) @ PReg(#PC) @ Enil));
                             (#GPR62, Op (Constant Vundef) Enil);
                             (#GPR63, Op (Constant Vundef) Enil) ]
   | Pbuiltin ef args res => [(#PC, Op (Control (OError)) Enil)]
   end.
 
-Definition trans_exit (ex: option control) : L.macro :=
+Definition trans_exit (ex: option control) : L.inst :=
   match ex with
   | None => []
   | Some ctl => trans_control ctl
   end
 .
 
-Definition trans_arith (ai: ar_instruction) : macro :=
+Definition trans_arith (ai: ar_instruction) : inst :=
   match ai with
   | PArithR n d => [(#d, Op (Arith (OArithR n)) Enil)]
-  | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (Name (#s) @ Enil))]
+  | PArithRR n d s => [(#d, Op (Arith (OArithRR n)) (PReg(#s) @ Enil))]
   | PArithRI32 n d i => [(#d, Op (Arith (OArithRI32 n i)) Enil)]
   | PArithRI64 n d i => [(#d, Op (Arith (OArithRI64 n i)) Enil)]
   | PArithRF32 n d i => [(#d, Op (Arith (OArithRF32 n i)) Enil)]
   | PArithRF64 n d i => [(#d, Op (Arith (OArithRF64 n i)) Enil)]
-  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (Name (#s1) @ Name (#s2) @ Enil))]
-  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (Name (#s) @ Enil))]
-  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (Name (#s) @ Enil))]
-  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (Name(#d) @ Name (#s1) @ Name (#s2) @ Enil))]
-  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (Name(#d) @ Name (#s) @ Enil))]
-  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (Name(#d) @ Name (#s) @ Enil))]
+  | PArithRRR n d s1 s2 => [(#d, Op (Arith (OArithRRR n)) (PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (PReg(#s) @ Enil))]
+  | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (PReg(#s) @ Enil))]
+  | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (PReg(#d) @ PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
+  | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   end.
 
 
-Definition trans_basic (b: basic) : macro :=
+Definition trans_basic (b: basic) : inst :=
   match b with
   | PArith ai => trans_arith ai
-  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (Name (#a) @ Name pmem @ Enil))]
-  | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (Name (#a) @ Name (#ro) @ Name pmem @ Enil))]
-  | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (Name (#s) @ Name (#a) @ Name pmem @ Enil))]
-  | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (Name (#s) @ Name (#a) @ Name (#ro) @ Name pmem @ Enil))]
-  | Pallocframe sz pos => [(#FP, Name (#SP)); (#SP, Op (Allocframe2 sz pos) (Name (#SP) @ Name pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
-                           (pmem, Op (Allocframe sz pos) (Old (Name (#SP)) @ Name pmem @ Enil))]
-  | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (Name (#SP) @ Name pmem @ Enil));
-                          (#SP, Op (Freeframe2 sz pos) (Name (#SP) @ Old (Name pmem) @ Enil));
+  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg (#a) @ PReg pmem @ Enil))]
+  | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
+  | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
+                           (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
+  | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));
+                          (#SP, Op (Freeframe2 sz pos) (PReg (#SP) @ Old (PReg pmem) @ Enil));
                           (#RTMP, Op (Constant Vundef) Enil)]
   | Pget rd ra => match ra with
-                  | RA => [(#rd, Name (#ra))]
+                  | RA => [(#rd, PReg(#ra))]
                   | _ => [(#rd, Op Fail Enil)]
                   end
   | Pset ra rd => match ra with
-                  | RA => [(#ra, Name (#rd))]
+                  | RA => [(#ra, PReg(#rd))]
                   | _ => [(#rd, Op Fail Enil)]
                   end
   | Pnop => []
   end.
 
-Fixpoint trans_body (b: list basic) : list L.macro :=
+Fixpoint trans_body (b: list basic) : list L.inst :=
   match b with
   | nil => nil
   | b :: lb => (trans_basic b) :: (trans_body lb)
   end.
 
-Definition trans_pcincr (sz: Z) (k: L.macro) := (#PC, Op (Control (OIncremPC sz)) (Name (#PC) @ Enil)) :: k.
+Definition trans_pcincr (sz: Z) (k: L.inst) := (#PC, Op (Control (OIncremPC sz)) (PReg(#PC) @ Enil)) :: k.
 
 Definition trans_block (b: Asmblock.bblock) : L.bblock :=
   trans_body (body b) ++ (trans_pcincr (size b) (trans_exit (exit b)) :: nil).
@@ -706,7 +708,7 @@ Lemma exec_app_some:
 Proof.
   induction c.
   - simpl. intros. congruence.
-  - intros. simpl in *. destruct (macro_run _ _ _ _); auto. eapply IHc; eauto. discriminate.
+  - intros. simpl in *. destruct (inst_run _ _ _ _); auto. eapply IHc; eauto. discriminate.
 Qed.
 
 Lemma exec_app_none:
@@ -716,7 +718,7 @@ Lemma exec_app_none:
 Proof.
   induction c.
   - simpl. discriminate.
-  - intros. simpl. simpl in H. destruct (macro_run _ _ _ _); auto.
+  - intros. simpl. simpl in H. destruct (inst_run _ _ _ _); auto.
 Qed.
 
 Lemma trans_arith_correct:
@@ -724,7 +726,7 @@ Lemma trans_arith_correct:
   exec_arith_instr ge i rs = rs' ->
   match_states (State rs m) s ->
   exists s',
-     macro_run (Genv ge fn) (trans_arith i) s s = Some s'
+     inst_run (Genv ge fn) (trans_arith i) s s = Some s'
   /\ match_states (State rs' m) s'.
 Proof.
   intros. unfold exec_arith_instr in H. destruct i.
@@ -813,13 +815,12 @@ Lemma forward_simu_basic:
   exec_basic_instr ge b rs m = Next rs' m' ->
   match_states (State rs m) s ->
   exists s',
-     macro_run (Genv ge fn) (trans_basic b) s s = Some s'
+     inst_run (Genv ge fn) (trans_basic b) s s = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
   intros. destruct b.
 (* Arith *)
-  - simpl in H. inv H. simpl macro_run. eapply trans_arith_correct; eauto.
-
+  - simpl in H. inv H. simpl inst_run. eapply trans_arith_correct; eauto.
 (* Load *)
   - simpl in H. destruct i.
   (* Load Offset *)
@@ -1080,11 +1081,11 @@ Proof.
     eapply IHc; eauto.
 Qed.
 
-Lemma exec_trans_pcincr_exec_macrorun:
+Lemma exec_trans_pcincr_exec_instrun:
   forall rs m s b k,
   match_states (State rs m) s ->
   exists s',
-     macro_run Ge ((# PC, Op (OIncremPC (size b)) (Name (# PC) @ Enil)) :: k) s s = macro_run Ge k s' s
+     inst_run Ge ((# PC, Op (OIncremPC (size b)) (PReg(# PC) @ Enil)) :: k) s s = inst_run Ge k s' s
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros. inv H. eexists. split. simpl. pose (H1 PC); simpl in e; rewrite e. destruct Ge. simpl. eapply eq_refl.
@@ -1093,9 +1094,9 @@ Proof.
   - intros rr; destruct rr; Simpl.
 Qed.
 
-Lemma macro_run_trans_exit_noold:
+Lemma inst_run_trans_exit_noold:
   forall ex s s' s'',
-  macro_run Ge (trans_exit ex) s s' = macro_run Ge (trans_exit ex) s s''.
+  inst_run Ge (trans_exit ex) s s' = inst_run Ge (trans_exit ex) s s''.
 Proof.
   intros. destruct ex.
   - destruct c; destruct i; reflexivity.
@@ -1110,10 +1111,10 @@ Lemma exec_trans_pcincr_exec:
   /\ match_states (State (nextblock b rs) m) s'.
 Proof.
   intros.
-  exploit exec_trans_pcincr_exec_macrorun; eauto.
+  exploit exec_trans_pcincr_exec_instrun; eauto.
   intros (s' & MRUN & MS).
   eexists. split. unfold exec. unfold trans_pcincr. unfold run. rewrite MRUN.
-  erewrite macro_run_trans_exit_noold; eauto.
+  erewrite inst_run_trans_exit_noold; eauto.
   assumption.
 Qed.
 
@@ -1660,7 +1661,7 @@ End SECT.
 
 (** Parallelizability of a bblock *)
 
-Module PChk := ParallelChecks L PosResourceSet.
+Module PChk := ParallelChecks L PosPseudoRegSet.
 
 Definition bblock_para_check (p: Asmblock.bblock) : bool :=
   PChk.is_parallelizable (trans_block p).
@@ -1688,16 +1689,16 @@ Arguments ppos: simpl never.
 
 Variable Ge: genv.
 
-Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' mw' i:
+Lemma trans_arith_par_correct ge fn rsr mr sr rsw mw sw rsw' i:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_arith_instr ge i rsr rsw = rsw' -> mw = mw' ->
+  parexec_arith_instr ge i rsr rsw = rsw' ->
   exists sw',
-     macro_prun Ge (trans_arith i) sw sr sr = Some sw'
-  /\ match_states (State rsw' mw') sw'.
+     inst_prun Ge (trans_arith i) sw sr sr = Some sw'
+  /\ match_states (State rsw' mw) sw'.
 Proof.
-  intros GENV MSR MSW PARARITH MWEQ. subst. inv MSR. inv MSW.
+  intros GENV MSR MSW PARARITH. subst. inv MSR. inv MSW.
   unfold parexec_arith_instr. destruct i.
 (* Ploadsymbol *)
   - destruct i. eexists; split; [| split].
@@ -1773,86 +1774,91 @@ Proof.
       destruct (ireg_eq g rd); subst; Simpl.
 Qed.
 
+Theorem forward_simu_par_wio_basic_gen ge fn rsr rsw mr mw sr sw bi:
+  Ge = Genv ge fn ->
+  match_states (State rsr mr) sr ->
+  match_states (State rsw mw) sw ->
+  match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (inst_prun Ge (trans_basic bi) sw sr sr).
+Proof.
+  intros GENV MSR MSW; inversion MSR as (H & H0); inversion MSW as (H1 & H2).
+  destruct bi; simpl.
+(* Arith *)
+  - exploit trans_arith_par_correct. 5: eauto. all: eauto.
+(* Load *)
+  - destruct i.
+    (* Load Offset *)
+    + destruct i; simpl load_chunk. all:
+      unfold parexec_load_offset; simpl; unfold exec_load_deps_offset; erewrite GENV, H, H0;
+      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
+
+    (* Load Reg *)
+    + destruct i; simpl load_chunk. all:
+      unfold parexec_load_reg; simpl; unfold exec_load_deps_reg; rewrite H, H0; rewrite (H0 rofs);
+      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
+
+(* Store *)
+  - destruct i.
+    (* Store Offset *)
+    + destruct i; simpl store_chunk. all:
+      unfold parexec_store_offset; simpl; unfold exec_store_deps_offset; erewrite GENV, H, H0; rewrite (H0 ra);
+      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl.
+
+    (* Store Reg *)
+    + destruct i; simpl store_chunk. all:
+      unfold parexec_store_reg; simpl; unfold exec_store_deps_reg; rewrite H, H0; rewrite (H0 ra); rewrite (H0 rofs);
+      destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl.
+
+(* Allocframe *)
+  - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
+    * eexists; repeat split.
+      { Simpl. erewrite !H0, H, MEMAL, MEMS. Simpl.
+      rewrite H, MEMAL. rewrite MEMS. reflexivity. }
+      { Simpl. }
+      { intros rr; destruct rr; Simpl.
+        destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl. }
+    * simpl; Simpl; erewrite !H0, H, MEMAL, MEMS; auto.
+  (* Freeframe *)
+  - erewrite !H0, H.
+    destruct (Mem.loadv _ _ _) eqn:MLOAD; simpl; auto.
+    destruct (rsr GPR12) eqn:SPeq; simpl; auto.
+    destruct (Mem.free _ _ _ _) eqn:MFREE; simpl; auto.
+    eexists; repeat split.
+    * simpl. Simpl. erewrite H0, SPeq, MLOAD, MFREE. reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
+(* Pget *)
+  - destruct rs eqn:rseq; simpl; auto.
+    eexists. repeat split. Simpl. intros rr; destruct rr; Simpl.
+    destruct (ireg_eq g rd); subst; Simpl.
+(* Pset *)
+  - destruct rd eqn:rdeq; simpl; auto.
+    eexists. repeat split. Simpl. intros rr; destruct rr; Simpl.
+(* Pnop *)
+  - eexists. repeat split; assumption.
+Qed.
+
+
 Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi rsw' mw':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   parexec_basic_instr ge bi rsr rsw mr mw = Next rsw' mw' ->
   exists sw',
-     macro_prun Ge (trans_basic bi) sw sr sr = Some sw'
+     inst_prun Ge (trans_basic bi) sw sr sr = Some sw'
   /\ match_states (State rsw' mw') sw'.
 Proof.
-  intros GENV MSR MSW H.
-  destruct bi.
-(* Arith *)
-  - simpl in H. inversion H. subst rsw' mw'. simpl macro_prun. eapply trans_arith_par_correct; eauto.
-(* Load *)
-  - simpl in H. destruct i.
-    (* Load Offset *)
-    + destruct i; simpl load_chunk in H. all:
-      unfold parexec_load_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-      destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
-      eexists; split; try split;
-      [ simpl; rewrite EVALOFF; rewrite H; rewrite (H0 ra); rewrite MEML; reflexivity
-      | Simpl
-      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
-
-    (* Load Reg *)
-    + destruct i; simpl load_chunk in H. all:
-      unfold parexec_load_reg in H;
-      destruct (Mem.loadv _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
-      eexists; split; try split;
-      [ simpl; rewrite H; rewrite (H0 rofs); rewrite (H0 ra); unfold exec_load_deps_reg;
-        rewrite MEML; reflexivity
-      | Simpl
-      | intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl ].
-
-(* Store *)
-  - simpl in H. destruct i.
-    (* Store Offset *)
-    + destruct i; simpl store_chunk in H. all:
-      unfold parexec_store_offset in H; destruct (eval_offset _ _) eqn:EVALOFF; try discriminate;
-      destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
-      eexists; split; try split;
-      [ simpl; rewrite EVALOFF; rewrite H; rewrite (H0 ra); rewrite (H0 rs); rewrite MEML; reflexivity
-      | Simpl
-      | intros rr; destruct rr; Simpl ].
-
-    (* Store Reg *)
-    + destruct i; simpl store_chunk in H. all:
-      unfold parexec_store_reg in H;
-      destruct (Mem.storev _ _ _ _) eqn:MEML; try discriminate; inv H; inv MSR; inv MSW;
-      eexists; split; try split;
-      [ simpl; rewrite H; rewrite (H0 rofs); rewrite (H0 ra); rewrite (H0 rs); unfold exec_store_deps_reg;
-        rewrite MEML; reflexivity
-      | Simpl
-      | intros rr; destruct rr; Simpl ].
-
-(* Allocframe *)
-  - simpl in H. destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS; try discriminate.
-    inv H. inv MSR. inv MSW. eexists. split; try split.
-    * simpl. Simpl. rewrite (H0 GPR12). rewrite H. rewrite MEMAL. rewrite MEMS. Simpl.
-      rewrite H. rewrite MEMAL. rewrite MEMS. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl.
-      destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
-(* Freeframe *)
-  - simpl in H. destruct (Mem.loadv _ _ _) eqn:MLOAD; try discriminate. destruct (rsr GPR12) eqn:SPeq; try discriminate.
-    destruct (Mem.free _ _ _ _) eqn:MFREE; try discriminate. inv H. inv MSR. inv MSW.
-    eexists. split; try split.
-    * simpl. rewrite (H0 GPR12). rewrite H. rewrite SPeq. rewrite MLOAD. rewrite MFREE.
-      Simpl. rewrite (H0 GPR12). rewrite SPeq. rewrite MLOAD. rewrite MFREE. reflexivity.
-    * Simpl.
-    * intros rr; destruct rr; Simpl. destruct (ireg_eq g GPR32); [| destruct (ireg_eq g GPR12); [| destruct (ireg_eq g GPR17)]]; subst; Simpl.
-(* Pget *)
-  - simpl in H. destruct rs eqn:rseq; try discriminate. inv H. inv MSR. inv MSW.
-    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
-    destruct (ireg_eq g rd); subst; Simpl.
-(* Pset *)
-  - simpl in H. destruct rd eqn:rdeq; try discriminate. inv H. inv MSR; inv MSW.
-    eexists. split; try split. Simpl. intros rr; destruct rr; Simpl.
-(* Pnop *)
-  - simpl in H. inv H. inv MSR. inv MSW. eexists. split; try split. assumption. assumption.
+  intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
+  simpl; auto.
 Qed.
 
 Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
@@ -1860,44 +1866,10 @@ Theorem forward_simu_par_wio_basic_Stuck ge fn rsr rsw mr mw sr sw bi:
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   parexec_basic_instr ge bi rsr rsw mr mw = Stuck ->
-  macro_prun Ge (trans_basic bi) sw sr sr = None.
+  inst_prun Ge (trans_basic bi) sw sr sr = None.
 Proof.
-  intros GENV MSR MSW H0. inv MSR; inv MSW.
-  unfold parexec_basic_instr in H0. destruct bi; try discriminate.
-(* PLoad *)
-  - destruct i.
-  (* Load Offset *)
-    + destruct i; simpl in H0. all:
-      simpl; rewrite H; rewrite (H1 ra); unfold parexec_load_offset in H0; destruct (eval_offset _ _); auto;
-      destruct (Mem.loadv _ _ _); auto; discriminate.
-  (* Load Reg *)
-    + destruct i; simpl in H0. all:
-      simpl; rewrite H; rewrite (H1 rofs); rewrite (H1 ra); unfold parexec_load_reg in H0; unfold exec_load_deps_reg;
-      destruct (rsr rofs); auto; destruct (Mem.loadv _ _ _); auto; discriminate.
-
-(* PStore *)
-  - destruct i.
-  (* Store Offset *)
-    + destruct i; simpl in H0. all:
-      simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs); unfold parexec_store_offset in H0; destruct (eval_offset _ _); auto;
-      destruct (Mem.storev _ _ _ _); auto; discriminate.
-
-  (* Store Reg *)
-    + destruct i; simpl in H0. all:
-      simpl; rewrite H; rewrite (H1 ra); rewrite (H1 rs); rewrite (H1 rofs); unfold parexec_store_reg in H0; unfold exec_store_deps_reg;
-      destruct (rsr rofs); auto; destruct (Mem.storev _ _ _ _); auto; discriminate.
-(* Pallocframe *)
-  - simpl. Simpl. rewrite (H1 SP). rewrite H. destruct (Mem.alloc _ _ _). simpl in H0.
-    destruct (Mem.store _ _ _ _); try discriminate. reflexivity.
-(* Pfreeframe *)
-  - simpl. Simpl. rewrite (H1 SP). rewrite H.
-    destruct (Mem.loadv _ _ _); auto. destruct (rsr GPR12); auto. destruct (Mem.free _ _ _ _); auto.
-    discriminate.
-(* Pget *)
-  - simpl. destruct rs; subst; try discriminate.
-    all: simpl; auto.
-  - simpl. destruct rd; subst; try discriminate.
-    all: simpl; auto.
+  intros H H0 H1 H2; exploit forward_simu_par_wio_basic_gen; [ eapply H | eapply H0 | eapply H1 | erewrite H2 ].
+  simpl; auto.
 Qed.
 
 Theorem forward_simu_par_body:
@@ -1928,9 +1900,9 @@ Theorem forward_simu_par_control ge fn rsr rsw mr mw sr sw sz rs' ex m':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Next rs' m' ->
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Next rs' m' ->
   exists s',
-     macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
+     inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
   /\ match_states (State rs' m') s'.
 Proof.
   intros GENV MSR MSW H0.
@@ -2040,8 +2012,8 @@ Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) (par_nextblock (Ptrofs.repr sz) rsw) mw = Stuck ->
-  macro_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
+  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Stuck ->
+  inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Proof.
   intros GENV MSR MSW H0. inv MSR; inv MSW. destruct ex as [ctl|]; try discriminate.
   destruct ctl; destruct i; try discriminate; try (simpl; reflexivity).
@@ -2252,15 +2224,13 @@ Proof.
     constructor; auto.
 Qed.
 
-Lemma bblock_para_check_correct:
-  forall ge fn bb rs m rs' m' o,
+Lemma bblock_para_check_correct ge fn bb rs m rs' m':
   Ge = Genv ge fn ->
   exec_bblock ge fn bb rs m = Next rs' m' ->
   bblock_para_check bb = true ->
-  parexec_bblock ge fn bb rs m o ->
-  o = Next rs' m'.
+  det_parexec ge fn bb rs m rs' m'.
 Proof.
-  intros. unfold bblock_para_check in H1.
+  intros H H0 H1 o H2. unfold bblock_para_check in H1.
   exploit forward_simu; eauto. eapply trans_state_match.
   intros (s2' & EXEC & MS).
   exploit forward_simu_par_alt. 2: apply (trans_state_match (State rs m)). all: eauto.

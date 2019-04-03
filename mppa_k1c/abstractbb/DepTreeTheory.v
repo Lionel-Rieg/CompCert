@@ -9,9 +9,9 @@ Require Setoid. (* in order to rewrite <-> *)
 Require Export AbstractBasicBlocksDef.
 
 
-Module Type ResourceDictionary.
+Module Type PseudoRegDictionary.
 
-Declare Module R: ResourceNames.
+Declare Module R: PseudoRegisters.
 
 Parameter t: Type -> Type.
 
@@ -30,12 +30,12 @@ Parameter empty: forall {A}, t A.
 Parameter empty_spec: forall A x,
   get (empty (A:=A)) x = None.
 
-End ResourceDictionary.
+End PseudoRegDictionary.
 
 
 (** * Computations of "bblock" Dependencies and application to the equality test *)
 
-Module DepTree (L: SeqLanguage) (Dict: ResourceDictionary with Module R:=L.LP.R).
+Module DepTree (L: SeqLanguage) (Dict: PseudoRegDictionary with Module R:=L.LP.R).
 
 Export L.
 Export LP.
@@ -115,7 +115,7 @@ Hint Rewrite set_spec_eq empty_spec: dict_rw.
 
 Fixpoint exp_tree (e: exp) (d old: deps): tree :=
   match e with
-  | Name x => deps_get d x
+  | PReg x => deps_get d x
   | Op o le => Top o (list_exp_tree le d old)
   | Old e => exp_tree e old old
   end
@@ -142,21 +142,21 @@ Proof.
   eauto.
 Qed.
 
-Fixpoint macro_deps (i: macro) (d old: deps): deps :=
+Fixpoint inst_deps (i: inst) (d old: deps): deps :=
   match i with
   | nil => d
   | (x, e)::i' =>
      let t0:=deps_get d x in
      let t1:=exp_tree e d old in
      let v':=if failsafe t0 then t1 else (Terase t1 t0) in
-     macro_deps i' (Dict.set d x v') old
+     inst_deps i' (Dict.set d x v') old
   end.
 
 Fixpoint bblock_deps_rec (p: bblock) (d: deps): deps :=
   match p with
   | nil => d
   | i::p' =>
-     let d':=macro_deps i d d in
+     let d':=inst_deps i d d in
      bblock_deps_rec p' d'
   end.
 
@@ -177,9 +177,9 @@ Proof.
   - intros; erewrite IHe, IHe0; eauto. 
 Qed.
 
-Lemma tree_eval_macro_abort i m0 x old: forall d,
+Lemma tree_eval_inst_abort i m0 x old: forall d,
     tree_eval (deps_get d x) m0 = None ->
-    tree_eval (deps_get (macro_deps i d old) x) m0 = None.
+    tree_eval (deps_get (inst_deps i d old) x) m0 = None.
 Proof.
   induction i as [|[y e] i IHi]; simpl; auto.
   intros d H; erewrite IHi; eauto. clear IHi.
@@ -197,15 +197,15 @@ Lemma tree_eval_abort p m0 x: forall d,
 Proof.
   induction p; simpl; auto.
   intros d H; erewrite IHp; eauto. clear IHp.
-  eapply tree_eval_macro_abort; eauto.
+  eapply tree_eval_inst_abort; eauto.
 Qed.
 
-Lemma tree_eval_macro_Some_correct1 i m0 old od: 
+Lemma tree_eval_inst_Some_correct1 i m0 old od: 
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall (m1 m2: mem) d, 
-  macro_run ge i m1 old = Some m2 -> 
+  inst_run ge i m1 old = Some m2 -> 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-  (forall x, tree_eval (deps_get (macro_deps i d od) x) m0 = Some (m2 x)).
+  (forall x, tree_eval (deps_get (inst_deps i d od) x) m0 = Some (m2 x)).
 Proof.
   intro X; induction i as [|[x e] i IHi]; simpl; intros m1 m2 d H.
   - inversion_clear H; eauto.
@@ -222,7 +222,7 @@ Proof.
     + inversion H. 
 Qed.
 
-Local Hint Resolve tree_eval_macro_Some_correct1 tree_eval_abort.
+Local Hint Resolve tree_eval_inst_Some_correct1 tree_eval_abort.
 
 Lemma tree_eval_Some_correct1 p m0: forall (m1 m2: mem) d, 
  run ge p m1 = Some m2 -> 
@@ -232,7 +232,7 @@ Proof.
   induction p as [ | i p]; simpl; intros m1 m2 d H.
   - inversion_clear H; eauto.
   - intros H0 x0.
-    remember (macro_run ge i m1 m1) as om.
+    remember (inst_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _ _ _ _); eauto.
     + inversion H. 
@@ -246,10 +246,10 @@ Proof.
   intros; autorewrite with dict_rw; simpl; eauto.
 Qed.
 
-Lemma tree_eval_macro_None_correct i m0 old od: 
+Lemma tree_eval_inst_None_correct i m0 old od: 
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall m1 d,  (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-  macro_run ge i m1 old = None <-> exists x, tree_eval (deps_get (macro_deps i d od) x) m0 = None.
+  inst_run ge i m1 old = None <-> exists x, tree_eval (deps_get (inst_deps i d od) x) m0 = None.
 Proof.
   intro X; induction i as [|[x e] i IHi]; simpl; intros m1 d.
   - constructor 1; [discriminate | intros [x H']; rewrite H in H'; discriminate].
@@ -264,7 +264,7 @@ Proof.
       * rewrite set_spec_diff; auto.
     + intuition.
       constructor 1 with (x:=x); simpl.
-      apply tree_eval_macro_abort.
+      apply tree_eval_inst_abort.
       autorewrite with dict_rw.
       destruct (failsafe (deps_get d x)); simpl; try rewrite H0;
       erewrite tree_eval_exp; eauto.
@@ -278,12 +278,12 @@ Proof.
   induction p as [|i p IHp]; simpl; intros m1 d.
   - constructor 1; [discriminate | intros [x H']; rewrite H in H'; discriminate].
   - intros H0.
-    remember (macro_run ge i m1 m1) as om.
+    remember (inst_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _); eauto.
     + intuition.
-      assert (X: macro_run ge i m1 m1 = None); auto.
-      rewrite tree_eval_macro_None_correct in X; auto.
+      assert (X: inst_run ge i m1 m1 = None); auto.
+      rewrite tree_eval_inst_None_correct in X; auto.
       destruct X as [x H1].
       constructor 1 with (x:=x); simpl; auto.
 Qed.
@@ -295,12 +295,12 @@ Proof.
   intros; autorewrite with dict_rw; simpl; eauto.
 Qed.
 
-Lemma tree_eval_macro_Some_correct2 i m0 old od: 
+Lemma tree_eval_inst_Some_correct2 i m0 old od: 
   (forall x, tree_eval (deps_get od x) m0 = Some (old x)) ->
   forall (m1 m2: mem) d, 
   (forall x, tree_eval (deps_get d x) m0 = Some (m1 x)) ->
-    (forall x, tree_eval (deps_get (macro_deps i d od) x) m0 = Some (m2 x)) ->
-    res_eq (Some m2) (macro_run ge i m1 old).
+    (forall x, tree_eval (deps_get (inst_deps i d od) x) m0 = Some (m2 x)) ->
+    res_eq (Some m2) (inst_run ge i m1 old).
 Proof.
   intro X.
   induction i as [|[x e] i IHi]; simpl; intros m1 m2 d H0.
@@ -317,7 +317,7 @@ Proof.
         erewrite tree_eval_exp; eauto.
       * rewrite set_spec_diff; auto.
     + generalize (H x).
-      rewrite tree_eval_macro_abort; try discriminate.
+      rewrite tree_eval_inst_abort; try discriminate.
       autorewrite with dict_rw. 
       destruct (failsafe (deps_get d x)); simpl; try rewrite H0;
       erewrite tree_eval_exp; eauto.
@@ -333,11 +333,11 @@ Proof.
     generalize (H0 x); rewrite H.
     congruence.
   - intros H.
-    remember (macro_run ge i m1 m1) as om.
+    remember (inst_run ge i m1 m1) as om.
     destruct om.
     + refine (IHp _ _ _ _ _); eauto.
-    + assert (X: macro_run ge i m1 m1 = None); auto.
-      rewrite tree_eval_macro_None_correct in X; auto.
+    + assert (X: inst_run ge i m1 m1 = None); auto.
+      rewrite tree_eval_inst_None_correct in X; auto.
       destruct X as [x H1].
       generalize (H x).
       rewrite tree_eval_abort; congruence.
@@ -377,7 +377,7 @@ End DepTree.
 Require Import PArith.
 Require Import FMapPositive.
 
-Module PosDict <: ResourceDictionary with Module R:=Pos.
+Module PosDict <: PseudoRegDictionary with Module R:=Pos.
 
 Module R:=Pos.
 

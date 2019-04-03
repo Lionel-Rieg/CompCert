@@ -1650,6 +1650,8 @@ Inductive final_state: state -> int -> Prop :=
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
 
+(* Useless
+
 Remark extcall_arguments_determ:
   forall rs m sg args1 args2,
   extcall_arguments rs m sg args1 -> extcall_arguments rs m sg args2 -> args1 = args2.
@@ -1709,6 +1711,7 @@ Ltac Equalities :=
 - (* final states *)
   inv H; inv H0. congruence.
 Qed.
+*)
 
 Definition data_preg (r: preg) : bool :=
   match r with
@@ -1721,7 +1724,7 @@ Definition data_preg (r: preg) : bool :=
 
 (** Determinacy of the [Asm] semantics. *)
 
-(* TODO.
+(* Useless.
 
 Remark extcall_arguments_determ:
   forall rs m sg args1 args2,
