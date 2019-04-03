@@ -741,7 +741,7 @@ Definition transl_op
       do r0 <- ireg_of a0;
       do r1 <- ireg_of a1;
       do rS <- ireg_of aS;
-        OK (Pcmove BTdnez r0 rS r1 ::i k)
+        OK (Pcmove BTwnez r0 rS r1 ::i k)
 
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")

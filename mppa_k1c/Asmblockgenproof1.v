@@ -1661,8 +1661,8 @@ Opaque Int.eq.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
       simpl.
-      rewrite int64_eq_comm.
-      destruct (Int64.eq i Int64.zero); simpl; rewrite Pregmap.gss; constructor.
+      rewrite int_eq_comm.
+      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
 Qed.

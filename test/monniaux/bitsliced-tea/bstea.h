@@ -6,16 +6,8 @@
 
 #include "bstea_wordsize.h"
 
-static inline long compcert_ternary_signedl(long x, long v0, long v1) {
-  return ((-(x==0)) & v0) | ((-(x!=0)) & v1);
-}
-
-static inline uint32_t compcert_ternary(uint32_t x, uint32_t v0, uint32_t v1) {
-  return compcert_ternary_signedl(x, v0, v1);
-}
-
-#if defined(__K1C__)
-#define TERNARY(x, v1, v0) compcert_ternary((x), (v0), (v1))
+#if defined(__K1C__) && defined(__COMPCERT__)
+#define TERNARY(x, v1, v0) __builtin_ternary_ulong((x)!=0, (v1), (v0))
 #else
 #define TERNARY(x, v1, v0) ((x) ? (v1) : (v0))
 #endif

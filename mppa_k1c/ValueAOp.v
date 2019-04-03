@@ -53,8 +53,8 @@ Definition select (v0 v1 vselect : aval) : aval :=
 
 Definition selectl (v0 v1 vselect : aval) : aval :=
   match vselect with
-  | L iselect =>
-    if Int64.eq Int64.zero iselect
+  | I iselect =>
+    if Int.eq Int.zero iselect
     then binop_long (fun x0 x1 => x0) v0 v1
     else binop_long (fun x0 x1 => x1) v0 v1
   | _ => Vtop
@@ -274,8 +274,9 @@ Proof.
   (* selectl *)
   - inv H2; simpl; try constructor.
     + destruct (Int.eq _ _); apply binop_long_sound; trivial.
-    + destruct (Int.eq _ _);
-      destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
 Qed.
 
 End SOUNDNESS.
