@@ -195,13 +195,14 @@ Qed.
 
 Definition concat (h: list label) (c: code): code :=
   match c with
-  | nil =>  {| header := h; body := nil; exit := None |}::nil
+  | nil =>  empty_bblock::nil
   | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
   end.
 
 Ltac subst_is_trans_code H :=
   rewrite is_trans_code_inv in H;
-  rewrite <- H in * |- *.
+  rewrite <- H in * |- *;
+  rewrite <- is_trans_code_inv in H.
 
 Lemma find_label_transcode_preserved:
   forall l c c',
@@ -325,6 +326,13 @@ Proof.
     omega.
 Admitted. (* A FINIR *)
 
+
+Lemma size_nonzero c b bl:
+  is_trans_code c (b :: bl) -> size b <> 0.
+Proof.
+   intros H; inversion H; subst.
+Admitted. (* A FINIR *)
+
 Axiom TODO: False. (* a éliminer *)
 
 Local Hint Resolve dist_end_block_code_simu_mid_block.
@@ -348,14 +356,22 @@ Proof.
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
 Qed.
 
+Inductive is_first_bblock b c blc: Prop :=
+  | Tr_dummy_nil: b = empty_bblock -> c=nil -> blc = nil -> is_first_bblock b c blc
+  | Tr_trans_code: is_trans_code c (b::blc) -> is_first_bblock b c blc
+  .
+
+Lemma star_step_simu_body_step s f sp c bl:
+  is_trans_code c bl -> forall b blc rs m t s',
+  bl=b::blc ->
+  (header b)=nil ->
+  starN (Mach.step (inv_trans_rao rao)) ge (length (body b)) (Mach.State s f sp c rs m) t s' ->
+  exists c' rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp (body b) rs m rs' m' /\ is_first_bblock {| header := nil; body:=nil; exit := exit b |} c' blc.
+Proof.
+  induction 1; intros b blc rs m t s' X; inversion X; subst; clear X.
+Admitted. (* A FINIR *)
 
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-Lemma star_step_simu_body_step s f sp c:
- forall (p:bblock_body) c' rs m t s',
-  to_bblock_body c = (p, c') ->
-  starN (Mach.step (inv_trans_rao rao)) ge (length p) (Mach.State s f sp c rs m) t s' ->
-  exists rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp p rs m rs' m'.
-Proof.
   induction c as [ | i0 c0 Hc0]; simpl; intros p c' rs m t s' H.
   * (* nil *)
     inversion_clear H; simpl; intros X; inversion_clear X.
@@ -392,8 +408,7 @@ Proof.
     elim TODO. (* A FAIRE *)
   + intros H r; constructor 1; intro X; inversion X.
 Qed.
-
-(* VIELLES PREUVES -- UTILE POUR S'INSPIRER ??? 
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
   constructor 1; simpl.
   + intros (t0 & s1' & H0) t s'. 
     rewrite! trans_code_equation.
@@ -408,7 +423,9 @@ Qed.
       inversion H2; subst; simpl; eauto.
   + intros H r; constructor 1; intro X; inversion X.
 Qed.
+*)
 
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Lemma step_simu_cfi_step:
   forall c e c' stk f sp rs m t s' b lb',
   to_bblock_exit c = (Some e, c') ->
@@ -445,12 +462,18 @@ Proof.
     rewrite parent_sp_preserved in H8; subst; auto.
     rewrite parent_ra_preserved in H9; subst; auto.
 Qed.
+*)
 
-
-Lemma step_simu_exit_step c e c' stk f sp rs m t s' b:
-  to_bblock_exit c = (e, c') ->
-  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s' ->
-  exists s2, exit_step rao tge e (State (trans_stack stk) f sp (b::trans_code c') rs m) t s2 /\ match_states s' s2.
+Lemma step_simu_exit_step c stk f sp rs m t s1 b blc b':
+  is_trans_code c (b::blc) ->
+  (header b)=nil ->
+  (body b)=nil ->
+  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt (exit b)) (Mach.State stk f sp c rs m) t s1 ->
+  exists c' s2, exit_step rao tge (exit b) (State (trans_stack stk) f sp (b'::blc) rs m) t s2 /\ match_states s1 s2 /\ is_trans_code c' blc.
+Proof.
+  inversion_clear 1. (* A FINIR *)
+Admitted.
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Proof.
   intros H1 H2; destruct e as [ e |]; inversion_clear H2. 
   + (* Some *) inversion H0; clear H0; subst. autorewrite with trace_rewrite.
@@ -463,11 +486,17 @@ Proof.
        inversion_clear H1.
        eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
 Qed.
+*)
 
-Lemma step_simu_header st f sp rs m s c: forall h c' t, 
- (h, c') = to_bblock_header c ->
- starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> s = Mach.State st f sp c' rs m /\ t = E0.
+Lemma step_simu_header st f sp rs m s c bl: 
+ is_trans_code c bl -> forall b blc t, bl=b::blc ->
+ starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length (header b)) (Mach.State st f sp c rs m) t s -> 
+ exists c', s = Mach.State st f sp c' rs m /\ t = E0 /\ is_first_bblock {| header := nil; body:=body b; exit := exit b |} c' blc.
 Proof.
+  induction 1; intros b blc t X; inversion X; subst; clear X.
+Admitted.
+
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
    induction c as [ | i c]; simpl; intros h c' t H.
    - inversion_clear H. simpl; intros H; inversion H; auto.
    - destruct i; try (injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst; auto).
@@ -475,7 +504,7 @@ Proof.
      injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst.
      inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
      exploit IHc; eauto.
-Qed. 
+Qed.
 *)
 
 Lemma simu_end_block:
@@ -485,57 +514,51 @@ Lemma simu_end_block:
 Proof.
   destruct s1; simpl.
   + (* State *)
-    unfold dist_end_block_code.
-    remember (trans_code _) as bl.
-    rewrite <- is_trans_code_inv in * |-.
-    intros t s1' H.
-    inversion Heqbl as [| | |]; subst; simpl in * |- *;  (* inversion vs induction ?? *)
-    elim TODO. (* A FAIRE *)
- 
-  (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-
-   destruct c as [|i c]; simpl; try ( (* nil => absurd *)
-      unfold dist_end_block_code; simpl;
-      intros t s1' H; inversion_clear H;
-      inversion_clear H0; fail
-    ).
-
-    intros t s1' H.
-
-    remember (_::_) as c0. remember (trans_code c0) as tc0.
-
-    (* tc0 cannot be nil *)
-    destruct tc0; try
-    ( exploit (trans_code_nonil c0); subst; auto; try discriminate; intro H0; contradict H0 ).
-
-    assert (X: Datatypes.S (dist_end_block_code c0) = (size (fst (to_bblock c0)))).
+    remember (trans_code _) as tc.
+    rewrite <- is_trans_code_inv in Heqtc.
+    intros t s1 H.
+    destruct tc as [|b bl].
+    { (* nil => absurd *) 
+      inversion Heqtc. subst. 
+      unfold dist_end_block_code; simpl.
+      inversion_clear H;
+      inversion_clear H0. 
+    }
+    assert (X: Datatypes.S (dist_end_block_code c) = (size b)).
     {
-      unfold dist_end_block_code. remember (size _) as siz.
-      assert (siz <> 0%nat). rewrite Heqsiz; subst; apply to_bblock_nonil with (c0 := c) (i := i); auto.
+      unfold dist_end_block_code. 
+      subst_is_trans_code Heqtc.
+      lapply (size_nonzero c b bl); auto.
       omega.
     }
-
-    (* decomposition of starN in 3 parts: header + body + exit *)
     rewrite X in H; unfold size in H.
-    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H _ _ refl_equal) as [t3 [t4 [s1 [H0 [H3 H4]]]]].
+    destruct b as [bh bb be]; simpl in * |- *.
+    (* decomposition of starN in 3 parts: header + body + exit *)
+    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H _ _ refl_equal) as [t3 [t4 [s1' [H0 [H3 H4]]]]].
     subst t; clear X H.
-    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H0 _ _ refl_equal) as [t1 [t2 [s0 [H [H1 H2]]]]].
+    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H0 _ _ refl_equal) as [t1 [t2 [s1'' [H [H1 H2]]]]].
     subst t3; clear H0.
+    (* header steps *)
+    exploit step_simu_header; eauto.
+    clear c Heqtc H; simpl; intros (c & X1 & X2 & X3); subst.
+    destruct X3 as [H|Heqtc]. 
+    { subst. inversion H. subst. simpl in * |-.
+      inversion H1. subst.
+      inversion H3. subst.
+      autorewrite with trace_rewrite.
+      eapply ex_intro; intuition eauto.
+      eapply exec_bblock; simpl; eauto.
+    }
+    autorewrite with trace_rewrite.
+    (* body steps *)
+    exploit (star_step_simu_body_step); eauto.
+    clear H1; simpl; intros (rs' & m' & X1 & X2 & X3 & X4 & X5); subst.
+    elim TODO. (* A FAIRE *) 
+   (* VIELLE PREUVE -- UTILE POUR S'INSPIRER !!!
 
-    unfold to_bblock in * |- *.
-    (* naming parts of block "b" *)
-    remember (to_bblock_header c0) as hd. destruct hd as [hb c1].
-    remember (to_bblock_body c1) as bb. destruct bb as [bb c2].
-    remember (to_bblock_exit c2) as exb. destruct exb as [exb c3].
-    simpl in * |- *.
-
-    exploit trans_code_step; eauto. intro EQ. destruct EQ as (EQH & EQB & EQE & EQTB0).
-    subst hb bb exb.
-
-    (* header opt step *)
+    (* header steps *)
     exploit step_simu_header; eauto.
     intros [X1 X2]; subst s0 t1.
-    autorewrite with trace_rewrite.
     (* body steps *)
     exploit (star_step_simu_body_step); eauto.
     clear H1; intros [rs' [m' [H0 [H1 H2]]]].
