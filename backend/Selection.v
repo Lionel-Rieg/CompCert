@@ -267,6 +267,11 @@ Definition sel_switch_long :=
     (fun arg ofs => subl arg (longconst (Int64.repr ofs)))
     lowlong.
 
+Definition sel_builtin optid ef args :=
+  Sbuiltin (sel_builtin_res optid) ef
+           (sel_builtin_args args
+                             (Machregs.builtin_constraints ef)).
+
 (** Conversion from Cminor statements to Cminorsel statements. *)
 
 Fixpoint sel_stmt (s: Cminor.stmt) : res stmt :=
@@ -278,9 +283,7 @@ Fixpoint sel_stmt (s: Cminor.stmt) : res stmt :=
       OK (match classify_call fn with
       | Call_default => Scall optid sg (inl _ (sel_expr fn)) (sel_exprlist args)
       | Call_imm id  => Scall optid sg (inr _ id) (sel_exprlist args)
-      | Call_builtin ef => Sbuiltin (sel_builtin_res optid) ef
-                                    (sel_builtin_args args
-                                       (Machregs.builtin_constraints ef))
+      | Call_builtin ef => sel_builtin optid ef args
       end)
   | Cminor.Sbuiltin optid ef args =>
       OK (Sbuiltin (sel_builtin_res optid) ef
