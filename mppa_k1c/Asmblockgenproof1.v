@@ -1956,6 +1956,29 @@ Proof.
   auto.
 Qed.
 
+Lemma transl_load_memory_access_ok:
+  forall addr chunk args dst k c rs a v m,
+  addr <> Aindexed2 ->
+  transl_load chunk addr args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = Some v ->
+  exists mk_instr rd,
+     preg_of dst = IR rd
+  /\ transl_memory_access mk_instr addr args k = OK c
+  /\ forall base ofs rs,
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset ge chunk rs m rd base ofs.
+Proof.
+  intros until m. intros ADDR TR ? ?.
+  unfold transl_load in TR. destruct addr; try contradiction.
+  - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
+  - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
+    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    | eauto ].
+  - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
+    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    | eauto ].
+Qed.
+
 Lemma transl_load_correct:
   forall chunk addr args dst k c (rs: regset) m a v,
   transl_load chunk addr args dst k = OK c ->
@@ -1966,16 +1989,61 @@ Lemma transl_load_correct:
   /\ rs'#(preg_of dst) = v
   /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
-  intros until v; intros TR EV LOAD. 
-  assert (A: exists mk_instr rd,
-      preg_of dst = IR rd
-   /\ transl_memory_access mk_instr addr args k = OK c
-   /\ forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset ge chunk rs m rd base ofs).
-  { (* unfold transl_load in TR; destruct chunk; ArgsInv; econstructor; (esplit; eauto). *) admit. }
-  destruct A as (mk_instr & rd & rdEq & B & C). rewrite rdEq.
-  eapply transl_load_access_correct; eauto with asmgen.
+  intros until v; intros TR EV LOAD. destruct addr.
+  2-4: exploit transl_load_memory_access_ok; eauto; try discriminate;
+    intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
+    eapply transl_load_access_correct; eauto with asmgen.
+  admit.
 Admitted.
+
+Remark exec_store_offset_8_sign rs m x base ofs:
+  exec_store_offset ge Mint8unsigned rs m x base ofs = exec_store_offset ge Mint8signed rs m x base ofs.
+Proof.
+  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold exec_store. unfold Mem.storev.
+  destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_8. reflexivity.
+Qed.
+
+Remark exec_store_offset_16_sign rs m x base ofs:
+  exec_store_offset ge Mint16unsigned rs m x base ofs = exec_store_offset ge Mint16signed rs m x base ofs.
+Proof.
+  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold exec_store. unfold Mem.storev.
+  destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_16. reflexivity.
+Qed.
+
+Lemma transl_store_memory_access_ok:
+  forall addr chunk args src k c rs a m m',
+  addr <> Aindexed2 ->
+  transl_store chunk addr args src k = OK c ->
+  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  Mem.storev chunk m a (rs (preg_of src)) = Some m' ->
+  exists mk_instr chunk' rr,
+     preg_of src = IR rr
+  /\ transl_memory_access mk_instr addr args k = OK c
+  /\ (forall base ofs rs,
+       exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk' rs m rr base ofs)
+  /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src).
+Proof.
+  intros until m'. intros ? TR ? ?.
+  unfold transl_store in TR. destruct addr; try contradiction.
+  - monadInv TR. destruct chunk. all:
+    ArgsInv; eexists; eexists; eexists; split; try split; [
+      repeat (destruct args; try discriminate); eassumption
+    | split; eauto; intros; simpl; try reflexivity].
+    eapply exec_store_offset_8_sign.
+    eapply exec_store_offset_16_sign.
+  - monadInv TR. destruct chunk. all:
+    ArgsInv; eexists; eexists; eexists; split; try split;
+    [ repeat (destruct args; try discriminate); instantiate (1 := PStoreRRO _ x); simpl; eassumption
+    | split; eauto; intros; simpl; try reflexivity].
+    eapply exec_store_offset_8_sign.
+    eapply exec_store_offset_16_sign.
+  - monadInv TR. destruct chunk. all:
+    ArgsInv; eexists; eexists; eexists; split; try split;
+    [ repeat (destruct args; try discriminate); instantiate (1 := PStoreRRO _ x); simpl; eassumption
+    | split; eauto; intros; simpl; try reflexivity].
+    eapply exec_store_offset_8_sign.
+    eapply exec_store_offset_16_sign.
+Qed.
 
 Lemma transl_store_correct:
   forall chunk addr args src k c (rs: regset) m a m',
@@ -1986,22 +2054,13 @@ Lemma transl_store_correct:
      exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros until m'; intros TR EV STORE. 
-  assert (A: exists mk_instr chunk' rr,
-      preg_of src = IR rr
-   /\ transl_memory_access mk_instr addr args k = OK c
-   /\ (forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk' rs m rr base ofs)
-   /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src)).
-  { admit. (* unfold transl_store in TR; destruct chunk; ArgsInv;
-    (econstructor; econstructor; econstructor; split; [eauto | split; [eassumption | split; [ intros; simpl; reflexivity | auto]]]).
-    destruct a; auto. apply Mem.store_signed_unsigned_8. 
-    destruct a; auto. apply Mem.store_signed_unsigned_16.  *)
-  }
-  destruct A as (mk_instr & chunk' & rr & rrEq & B & C & D).
-  rewrite D in STORE; clear D. 
-  eapply transl_store_access_correct; eauto with asmgen. congruence.
-  destruct rr; try discriminate. destruct src; try discriminate.
+  intros until m'; intros TR EV STORE. destruct addr.
+  2-4: exploit transl_store_memory_access_ok; eauto; try discriminate; intro A;
+    destruct A as (mk_instr & chunk' & rr & rrEq & B & C & D);
+    rewrite D in STORE; clear D; 
+    eapply transl_store_access_correct; eauto with asmgen; try congruence;
+    destruct rr; try discriminate; destruct src; try discriminate.
+  admit.
 Admitted.
 
 Lemma make_epilogue_correct:

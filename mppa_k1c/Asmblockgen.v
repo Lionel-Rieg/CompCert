@@ -825,8 +825,8 @@ Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
 
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
-  match args with
-  | a1 :: a2 :: nil => transl_load_rrr chunk addr args dst k
+  match addr with
+  | Aindexed2 => transl_load_rrr chunk addr args dst k
   | _ => transl_load_rro chunk addr args dst k
   end.
 
@@ -854,9 +854,9 @@ Definition transl_store_rrr (chunk: memory_chunk) (addr: addressing)
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
-  match args with
-  | a1 :: a2 :: nil => transl_store_rrr chunk addr args src k
-  | _ => transl_load_rro chunk addr args src k
+  match addr with
+  | Aindexed2 => transl_store_rrr chunk addr args src k
+  | _ => transl_store_rro chunk addr args src k
   end.
 
 (** Function epilogue *)
