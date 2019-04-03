@@ -188,6 +188,10 @@ let builtins_generic = {
     (* Ternary operator *)
     builtin_ternary "uint" (TInt(IUInt, []));
     builtin_ternary "ulong" (TInt(IULong, []));
+    builtin_ternary "int" (TInt(IInt, []));
+    builtin_ternary "long" (TInt(ILong, []));
+    builtin_ternary "double" (TFloat(FDouble, []));
+    builtin_ternary "float" (TFloat(FFloat, []));
 	    
     (* Annotations *)
     "__builtin_annot",

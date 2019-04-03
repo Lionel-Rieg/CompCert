@@ -276,6 +276,7 @@ Definition sel_builtin optid ef args :=
   match ef with
     | EF_builtin name sign =>
       (if String.string_dec name "__builtin_ternary_uint"
+       || String.string_dec name "__builtin_ternary_int"
        then
          match optid with
            | None => OK Sskip
@@ -286,11 +287,12 @@ Definition sel_builtin optid ef args :=
                                      ((sel_expr a3):::
                                       (sel_expr a2):::
                                       (sel_expr a1):::Enil)))
-               | _ => Error (msg "__builtin_ternary_ulong: arguments")
+               | _ => Error (msg "__builtin_ternary_(u)int: arguments")
              end
          end
        else
        if String.string_dec name "__builtin_ternary_ulong"
+       || String.string_dec name "__builtin_ternary_long"  
        then
          match optid with
            | None => OK Sskip
@@ -301,7 +303,37 @@ Definition sel_builtin optid ef args :=
                                      ((sel_expr a3):::
                                                    (sel_expr a2):::
                                                    (sel_expr a1):::Enil)))
-               | _ => Error (msg "__builtin_ternary_uint: arguments")
+               | _ => Error (msg "__builtin_ternary_(u)long: arguments")
+             end
+         end
+       else
+       if String.string_dec name "__builtin_ternary_double"
+       then
+         match optid with
+           | None => OK Sskip
+           | Some id =>
+             match args with
+               | a1::a2::a3::nil =>
+                 OK (Sassign id (Eop Oselectf
+                                     ((sel_expr a3):::
+                                                   (sel_expr a2):::
+                                                   (sel_expr a1):::Enil)))
+               | _ => Error (msg "__builtin_ternary_double: arguments")
+             end
+         end
+       else
+       if String.string_dec name "__builtin_ternary_float"
+       then
+         match optid with
+           | None => OK Sskip
+           | Some id =>
+             match args with
+               | a1::a2::a3::nil =>
+                 OK (Sassign id (Eop Oselectfs
+                                     ((sel_expr a3):::
+                                                   (sel_expr a2):::
+                                                   (sel_expr a1):::Enil)))
+               | _ => Error (msg "__builtin_ternary_float: arguments")
              end
          end
        else

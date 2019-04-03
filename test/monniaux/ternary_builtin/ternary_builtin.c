@@ -1,14 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-unsigned essai(int x, unsigned y, unsigned z) {
-  return __builtin_ternary_uint(x, y, z);
-}
-
-unsigned long essai2(int x, unsigned long y, unsigned long z) {
-  return __builtin_ternary_ulong(x, y, z);
-}
-
-int main() {
-  printf("%ld\n", essai2(0, 42, 69));
+int main(int argc, char **argv) {
+  int i=0;
+  if (argc >= 2) i=atoi(argv[1]);
+  printf("%ld\n", __builtin_ternary_int(i, 42, 69));
+  printf("%f\n", __builtin_ternary_double(i, 42.0, 69.0));
   return 0;
 }

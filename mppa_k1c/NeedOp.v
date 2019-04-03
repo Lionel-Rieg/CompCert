@@ -117,7 +117,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ointofsingle | Ointuofsingle | Osingleofint | Osingleofintu => op1 (default nv)
   | Olongofsingle | Olonguofsingle | Osingleoflong | Osingleoflongu => op1 (default nv)
   | Ocmp c => needs_of_condition c
-  | Oselect | Oselectl => op3 (default nv)
+  | Oselect | Oselectl | Oselectf | Oselectfs => op3 (default nv)
   end.
 
 Definition operation_is_redundant (op: operation) (nv: nval): bool :=
@@ -227,6 +227,44 @@ Proof.
     constructor.
 Qed.
 
+Lemma selectf_sound:
+  forall v0 w0 v1 w1 v2 w2 x,
+    vagree v0 w0 (default x) ->
+    vagree v1 w1 (default x) ->
+    vagree v2 w2 (default x) ->
+    vagree (selectf v0 v1 v2) (selectf w0 w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+    inv H. inv H0. inv H1. simpl.
+    constructor.
+Qed.
+
+Lemma selectfs_sound:
+  forall v0 w0 v1 w1 v2 w2 x,
+    vagree v0 w0 (default x) ->
+    vagree v1 w1 (default x) ->
+    vagree v2 w2 (default x) ->
+    vagree (selectfs v0 v1 v2) (selectfs w0 w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+  - destruct v2; simpl; trivial.
+    destruct v0; simpl; trivial.
+    destruct v1; simpl; trivial.
+    inv H. inv H0. inv H1. simpl.
+    constructor.
+Qed.
+
 Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
@@ -283,6 +321,10 @@ Proof.
 - apply select_sound; trivial.
   (* selectl *)
 - apply selectl_sound; trivial.
+  (* selectf *)
+- apply selectf_sound; trivial.
+  (* selectfs *)
+- apply selectfs_sound; trivial.
 Qed.
 
 Lemma operation_is_redundant_sound:
