@@ -195,7 +195,7 @@ Qed.
 
 Definition concat (h: list label) (c: code): code :=
   match c with
-  | nil =>  empty_bblock::nil
+  | nil =>  {| header := h; body := nil; exit := None |}::nil
   | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
   end.
 
@@ -325,6 +325,7 @@ Proof.
     subst_is_trans_code H.
     omega.
 Admitted. (* A FINIR *)
+Local Hint Resolve dist_end_block_code_simu_mid_block.
 
 
 Lemma size_nonzero c b bl:
@@ -333,9 +334,41 @@ Proof.
    intros H; inversion H; subst.
 Admitted. (* A FINIR *)
 
-Axiom TODO: False. (* a éliminer *)
+(* TODO: définir les predicats inductifs suivants de façon à prouver le lemme [is_trans_code_decompose] ci-dessous *)
 
-Local Hint Resolve dist_end_block_code_simu_mid_block.
+Inductive is_header: list label -> Mach.code -> Mach.code -> Prop :=
+ . (* A FAIRE *)
+
+Inductive is_body: list basic_inst -> Mach.code -> Mach.code -> Prop :=
+ . (* A FAIRE *)
+
+Inductive is_exit: option control_flow_inst -> Mach.code -> Mach.code -> Prop :=
+ . (* A FAIRE *)
+
+Lemma trans_code_decompose c bc:
+  is_trans_code c bc -> forall b blc, bc=(b::blc) ->
+  exists c0 c1 c2, is_header (header b) c c0 /\ is_body (body b) c0 c1 /\ is_exit (exit b) c1 c2 /\ is_trans_code c2 blc.
+Proof.
+  induction 1; intros b blc X; inversion X; subst; clear X.
+Admitted.
+
+Lemma step_simu_header st f sp rs m s c h c' t: 
+ is_header h c c' ->
+ starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> 
+ s = Mach.State st f sp c' rs m /\ t = E0.
+Proof.
+  induction 1. (* A FINIR *)
+Admitted.
+(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
+   induction c as [ | i c]; simpl; intros h c' t H.
+   - inversion_clear H. simpl; intros H; inversion H; auto.
+   - destruct i; try (injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst; auto).
+     remember (to_bblock_header c) as bhc. destruct bhc as [h0 c0].
+     injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst.
+     inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
+     exploit IHc; eauto.
+Qed.
+*)
 
 Lemma step_simu_basic_step (i: Mach.instruction) (bi: basic_inst) (c: Mach.code) s f sp rs m (t:trace) (s':Mach.state):
   trans_inst i = MB_basic bi ->
@@ -356,19 +389,12 @@ Proof.
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
 Qed.
 
-Inductive is_first_bblock b c blc: Prop :=
-  | Tr_dummy_nil: b = empty_bblock -> c=nil -> blc = nil -> is_first_bblock b c blc
-  | Tr_trans_code: is_trans_code c (b::blc) -> is_first_bblock b c blc
-  .
-
-Lemma star_step_simu_body_step s f sp c bl:
-  is_trans_code c bl -> forall b blc rs m t s',
-  bl=b::blc ->
-  (header b)=nil ->
-  starN (Mach.step (inv_trans_rao rao)) ge (length (body b)) (Mach.State s f sp c rs m) t s' ->
-  exists c' rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp (body b) rs m rs' m' /\ is_first_bblock {| header := nil; body:=nil; exit := exit b |} c' blc.
+Lemma star_step_simu_body_step s f sp c bdy c':
+  is_body bdy c c' -> forall rs m t s',
+  starN (Mach.step (inv_trans_rao rao)) ge (length bdy) (Mach.State s f sp c rs m) t s' ->
+  exists rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp bdy rs m rs' m'.
 Proof.
-  induction 1; intros b blc rs m t s' X; inversion X; subst; clear X.
+  induction 1.
 Admitted. (* A FINIR *)
 
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
@@ -397,6 +423,8 @@ Qed.
 Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit.
 Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
 
+
+Axiom TODO: False. (* a éliminer *)
 Lemma match_states_concat_trans_code st f sp c rs m h: 
   match_states (Mach.State st f sp c rs m) (State (trans_stack st) f sp (concat h (trans_code c)) rs m).
 Proof.
@@ -464,14 +492,12 @@ Proof.
 Qed.
 *)
 
-Lemma step_simu_exit_step c stk f sp rs m t s1 b blc b':
-  is_trans_code c (b::blc) ->
-  (header b)=nil ->
-  (body b)=nil ->
-  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt (exit b)) (Mach.State stk f sp c rs m) t s1 ->
-  exists c' s2, exit_step rao tge (exit b) (State (trans_stack stk) f sp (b'::blc) rs m) t s2 /\ match_states s1 s2 /\ is_trans_code c' blc.
+Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
+  is_exit e c c' -> is_trans_code c' blc ->
+  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s1 ->
+  exists s2, exit_step rao tge e (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ match_states s1 s2.
 Proof.
-  inversion_clear 1. (* A FINIR *)
+  destruct 1. (* A FINIR *)
 Admitted.
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Proof.
@@ -485,25 +511,6 @@ Proof.
      - remember to_cfi as o. destruct o; try discriminate.
        inversion_clear H1.
        eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
-Qed.
-*)
-
-Lemma step_simu_header st f sp rs m s c bl: 
- is_trans_code c bl -> forall b blc t, bl=b::blc ->
- starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length (header b)) (Mach.State st f sp c rs m) t s -> 
- exists c', s = Mach.State st f sp c' rs m /\ t = E0 /\ is_first_bblock {| header := nil; body:=body b; exit := exit b |} c' blc.
-Proof.
-  induction 1; intros b blc t X; inversion X; subst; clear X.
-Admitted.
-
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-   induction c as [ | i c]; simpl; intros h c' t H.
-   - inversion_clear H. simpl; intros H; inversion H; auto.
-   - destruct i; try (injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst; auto).
-     remember (to_bblock_header c) as bhc. destruct bhc as [h0 c0].
-     injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst.
-     inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
-     exploit IHc; eauto.
 Qed.
 *)
 
@@ -532,44 +539,25 @@ Proof.
       omega.
     }
     rewrite X in H; unfold size in H.
-    destruct b as [bh bb be]; simpl in * |- *.
     (* decomposition of starN in 3 parts: header + body + exit *)
-    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H _ _ refl_equal) as [t3 [t4 [s1' [H0 [H3 H4]]]]].
+    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H _ _ refl_equal) as (t3&t4&s1'&H0&H3&H4).
     subst t; clear X H.
-    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H0 _ _ refl_equal) as [t1 [t2 [s1'' [H [H1 H2]]]]].
+    destruct (starN_split (Mach.semantics (inv_trans_rao rao) prog) _ _ _ _ H0 _ _ refl_equal) as (t1&t2&s1''&H&H1&H2).
     subst t3; clear H0.
+    exploit trans_code_decompose; eauto. clear Heqtc.
+    intros (c0&c1&c2&Hc0&Hc1&Hc2&Heqtc).
     (* header steps *)
     exploit step_simu_header; eauto.
-    clear c Heqtc H; simpl; intros (c & X1 & X2 & X3); subst.
-    destruct X3 as [H|Heqtc]. 
-    { subst. inversion H. subst. simpl in * |-.
-      inversion H1. subst.
-      inversion H3. subst.
-      autorewrite with trace_rewrite.
-      eapply ex_intro; intuition eauto.
-      eapply exec_bblock; simpl; eauto.
-    }
+    clear H; intros [X1 X2]; subst.
+    (* body steps *)
+    exploit (star_step_simu_body_step); eauto.
+    clear H1; intros (rs'&m'&H0&H1&H2). subst.
     autorewrite with trace_rewrite.
-    (* body steps *)
-    exploit (star_step_simu_body_step); eauto.
-    clear H1; simpl; intros (rs' & m' & X1 & X2 & X3 & X4 & X5); subst.
-    elim TODO. (* A FAIRE *) 
-   (* VIELLE PREUVE -- UTILE POUR S'INSPIRER !!!
-
-    (* header steps *)
-    exploit step_simu_header; eauto.
-    intros [X1 X2]; subst s0 t1.
-    (* body steps *)
-    exploit (star_step_simu_body_step); eauto.
-    clear H1; intros [rs' [m' [H0 [H1 H2]]]].
-    subst s1 t2. autorewrite with trace_rewrite.
     (* exit step *)
-    subst tc0.
-    exploit step_simu_exit_step; eauto. clear H3.
-    intros (s2' & H3 & H4).
+    exploit step_simu_exit_step; eauto.
+    clear H3; intros (s2' & H3 & H4).
     eapply ex_intro; intuition eauto.
-    eapply exec_bblock; eauto.
-*)
+    (* VIELLE PREUVE: eapply exec_bblock; eauto. *)
   + (* Callstate *)
     intros t s1' H; inversion_clear H.
     eapply ex_intro; constructor 1; eauto.
@@ -591,7 +579,7 @@ Proof.
     inversion H1; subst; clear H1.
     inversion_clear H0; simpl.
     eapply exec_return.
-Qed.
+Admitted. (* A FIXER *)
 
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
