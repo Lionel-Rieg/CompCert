@@ -792,61 +792,41 @@ Definition transl_memory_access
       Error(msg "Asmblockgen.transl_memory_access")
   end.
 
+Definition chunk2load (chunk: memory_chunk) :=
+  match chunk with
+  | Mint8signed => Plb
+  | Mint8unsigned => Plbu
+  | Mint16signed => Plh
+  | Mint16unsigned => Plhu
+  | Mint32 => Plw
+  | Mint64 => Pld
+  | Mfloat32 => Pfls
+  | Mfloat64 => Pfld
+  | Many32 => Plw_a
+  | Many64 => Pld_a
+  end.
+
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of dst;
+  transl_memory_access (chunk2load chunk r) addr args k.
+
+Definition chunk2store (chunk: memory_chunk) :=
   match chunk with
-  | Mint8signed =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plb r)  addr args k
-  | Mint8unsigned =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plbu r) addr args k
-  | Mint16signed =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plh r)  addr args k
-  | Mint16unsigned =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plhu r) addr args k
-  | Mint32 =>
-      do r <- ireg_of dst;
-      transl_memory_access (Plw r)  addr args k
-  | Mint64 =>
-      do r <- ireg_of dst;
-      transl_memory_access (Pld r)  addr args k
-  | Mfloat32 =>
-      do r <- freg_of dst;
-      transl_memory_access (Pfls r) addr args k
-  | Mfloat64 =>
-      do r <- freg_of dst;
-      transl_memory_access (Pfld r) addr args k
-  | _ =>
-      Error (msg "Asmblockgen.transl_load")
+  | Mint8signed | Mint8unsigned => Psb
+  | Mint16signed | Mint16unsigned => Psh
+  | Mint32 => Psw
+  | Mint64 => Psd
+  | Mfloat32 => Pfss
+  | Mfloat64 => Pfsd
+  | Many32 => Psw_a
+  | Many64 => Psd_a
   end.
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
-  match chunk with
-  | Mint8signed | Mint8unsigned =>
-      do r <- ireg_of src;
-      transl_memory_access (Psb r)  addr args k
-  | Mint16signed | Mint16unsigned =>
-      do r <- ireg_of src;
-      transl_memory_access (Psh r)  addr args k
-  | Mint32 =>
-      do r <- ireg_of src;
-      transl_memory_access (Psw r)  addr args k
-  | Mint64 =>
-      do r <- ireg_of src;
-      transl_memory_access (Psd r)  addr args k
-  | Mfloat32 =>
-      do r <- freg_of src;
-      transl_memory_access (Pfss r) addr args k
-  | Mfloat64 =>
-      do r <- freg_of src;
-      transl_memory_access (Pfsd r) addr args k
-  | _ =>
-      Error (msg "Asmblockgen.transl_store")
-  end.
+  do r <- ireg_of src;
+  transl_memory_access (chunk2store chunk r) addr args k.
 
 (** Function epilogue *)
 

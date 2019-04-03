@@ -71,18 +71,18 @@ Coercion OArithRRI32: arith_name_rri32 >-> Funclass.
 Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 
 Inductive load_op :=
-  | OLoadRRO (n: load_name_rro) (ofs: offset)
-  | OLoadRRR (n: load_name_rro)
+  | OLoadRRO (n: load_name) (ofs: offset)
+  | OLoadRRR (n: load_name)
 .
 
-Coercion OLoadRRO: load_name_rro >-> Funclass.
+Coercion OLoadRRO: load_name >-> Funclass.
 
 Inductive store_op :=
-  | OStoreRRO (n: store_name_rro) (ofs: offset)
-  | OStoreRRR (n: store_name_rro)
+  | OStoreRRO (n: store_name) (ofs: offset)
+  | OStoreRRR (n: store_name)
 .
 
-Coercion OStoreRRO: store_name_rro >-> Funclass.
+Coercion OStoreRRO: store_name >-> Funclass.
 
 Inductive op_wrap :=
   | Arith (ao: arith_op)
@@ -1571,7 +1571,7 @@ Definition string_of_arith (op: arith_op): pstring :=
   | OArithARRI64 n _ => string_of_name_arri64 n
   end.
 
-Definition string_of_name_lrro (n: load_name_rro) : pstring :=
+Definition string_of_load_name (n: load_name) : pstring :=
   match n with
     Plb => "Plb"
   | Plbu => "Plbu"
@@ -1587,11 +1587,11 @@ Definition string_of_name_lrro (n: load_name_rro) : pstring :=
 
 Definition string_of_load (op: load_op): pstring :=
   match op with
-  | OLoadRRO n _ => string_of_name_lrro n
-  | OLoadRRR n => string_of_name_lrro n
+  | OLoadRRO n _ => string_of_load_name n
+  | OLoadRRR n => string_of_load_name n
   end.
 
-Definition string_of_name_srro (n: store_name_rro) : pstring :=
+Definition string_of_store_name (n: store_name) : pstring :=
   match n with
     Psb => "Psb"
   | Psh => "Psh"
@@ -1605,8 +1605,8 @@ Definition string_of_name_srro (n: store_name_rro) : pstring :=
 
 Definition string_of_store (op: store_op) : pstring :=
   match op with
-  | OStoreRRO n _ => string_of_name_srro n
-  | OStoreRRR n => string_of_name_srro n
+  | OStoreRRO n _ => string_of_store_name n
+  | OStoreRRR n => string_of_store_name n
   end.
 
 Definition string_of_control (op: control_op) : pstring :=

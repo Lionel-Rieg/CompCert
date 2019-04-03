@@ -244,7 +244,7 @@ Inductive cf_instruction : Type :=
 .
 
 (** Loads **)
-Inductive load_name_rro : Type :=
+Inductive load_name : Type :=
   | Plb                                             (**r load byte *)
   | Plbu                                            (**r load byte unsigned *)
   | Plh                                             (**r load half word *)
@@ -258,15 +258,15 @@ Inductive load_name_rro : Type :=
 .
 
 Inductive ld_instruction : Type :=
-  | PLoadRRO   (i: load_name_rro) (rd: ireg) (ra: ireg) (ofs: offset)
-  | PLoadRRR   (i: load_name_rro) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
+  | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
 .
 
-Coercion PLoadRRO:       load_name_rro        >-> Funclass.
-Coercion PLoadRRR:       load_name_rro        >-> Funclass.
+Coercion PLoadRRO:       load_name        >-> Funclass.
+Coercion PLoadRRR:       load_name        >-> Funclass.
 
 (** Stores **)
-Inductive store_name_rro : Type :=
+Inductive store_name : Type :=
   | Psb                                             (**r store byte *)
   | Psh                                             (**r store half byte *)
   | Psw                                             (**r store int32 *)
@@ -278,12 +278,12 @@ Inductive store_name_rro : Type :=
 .
 
 Inductive st_instruction : Type :=
-  | PStoreRRO  (i: store_name_rro) (rs: ireg) (ra: ireg) (ofs: offset)
-  | PStoreRRR  (i: store_name_rro) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
+  | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
 .
 
-Coercion PStoreRRO:       store_name_rro        >-> Funclass.
-Coercion PStoreRRR:       store_name_rro        >-> Funclass.
+Coercion PStoreRRO:       store_name        >-> Funclass.
+Coercion PStoreRRR:       store_name        >-> Funclass.
 
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
