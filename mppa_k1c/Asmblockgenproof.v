@@ -1185,7 +1185,7 @@ Local Transparent destroyed_by_op.
     exploit eval_addressing_lessdef. eapply preg_vals; eauto. eexact H1.
     intros [a' [A B]]. rewrite (sp_val _ _ _ AG) in A.
     exploit Mem.loadv_extends; eauto. intros [v' [C D]].
-    exploit transl_load_correct; eauto. admit.
+    exploit transl_load_correct; eauto.
     intros [rs2 [P [Q R]]].
 
     eapply exec_straight_body in P.
@@ -1212,7 +1212,7 @@ Local Transparent destroyed_by_op.
     intros [a' [A B]]. rewrite (sp_val _ _ _ AG) in A.
     assert (Val.lessdef (ms src) (rs1 (preg_of src))). eapply preg_val; eauto.
     exploit Mem.storev_extends; eauto. intros [m2' [C D]].
-    exploit transl_store_correct; eauto. admit. intros [rs2 [P Q]].
+    exploit transl_store_correct; eauto. intros [rs2 [P Q]].
 
     eapply exec_straight_body in P.
       2: eapply code_to_basics_id; eauto.
@@ -1227,7 +1227,7 @@ Local Transparent destroyed_by_op.
 
     eapply agree_undef_regs; eauto with asmgen.
     simpl; congruence.
-Admitted.
+Qed.
 
 Lemma exec_body_trans:
   forall l l' rs0 m0 rs1 m1 rs2 m2,

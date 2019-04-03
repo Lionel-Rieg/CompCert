@@ -1749,7 +1749,7 @@ Proof.
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_load_offset. rewrite PtrEq. unfold exec_load. rewrite B, LOAD. eauto. Simpl. 
+  unfold exec_load_offset. rewrite PtrEq. rewrite B, LOAD. eauto. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -1769,7 +1769,7 @@ Proof.
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_store_offset. rewrite PtrEq. unfold exec_store. rewrite B, C, STORE.
+  unfold exec_store_offset. rewrite PtrEq. rewrite B, C, STORE.
     eauto.
     discriminate.
     { intro. inv H. contradiction. }
@@ -1913,6 +1913,45 @@ Proof.
   inv TR. inv EV. apply indexed_memory_access_correct; eauto with asmgen.
 Qed.
 
+Lemma transl_memory_access2_correct:
+  forall mk_instr addr args k c (rs: regset) m v,
+  transl_memory_access2 mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  exists base ro mro mr1 rs',
+     args = mr1 :: mro :: nil
+  /\ ireg_of mro = OK ro
+  /\ exec_straight_opt (basics_to_code c) rs m (mk_instr base ro ::g (basics_to_code k)) rs' m
+  /\ Val.addl rs'#base rs'#ro = v
+  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+Proof.
+  intros until v; intros TR EV. 
+  unfold transl_memory_access2 in TR; destruct addr; ArgsInv.
+  inv EV. repeat eexists. eassumption. econstructor; eauto.
+Qed.
+
+Lemma transl_load_access2_correct:
+  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro v',
+  args = mr1 :: mro :: nil ->
+  ireg_of mro = OK ro ->
+  (forall base rs,
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro) ->
+  transl_memory_access2 mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = Some v' ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = v'
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until v'; intros ARGS IREGE INSTR TR EV LOAD. 
+  exploit transl_memory_access2_correct; eauto.
+  intros (base & ro2 & mro2 & mr2 & rs' & ARGSS & IREGEQ & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mr2 mro2. clear ARGS.
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
+  rewrite INSTR. unfold exec_load_reg. rewrite B, LOAD. reflexivity. Simpl. 
+  split; intros; Simpl. auto.
+Qed.
+
 Lemma transl_load_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
   (forall base ofs rs,
@@ -1930,30 +1969,8 @@ Proof.
   intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_load_offset. unfold exec_load. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
+  rewrite INSTR. unfold exec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
   split; intros; Simpl. auto.
-Qed.
-
-Lemma transl_store_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c r1 (rs: regset) m v m',
-  (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk rs m r1 base ofs) ->
-  transl_memory_access mk_instr addr args k = OK c ->
-  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
-  Mem.storev chunk m v rs#r1 = Some m' ->
-  r1 <> RTMP ->
-  exists rs',
-     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
-  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
-Proof.
-  intros until m'; intros INSTR TR EV STORE NOT31. 
-  exploit transl_memory_access_correct; eauto.
-  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
-  econstructor; split.
-  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_store_offset. unfold exec_store. rewrite PtrEq, B. rewrite C; try discriminate. rewrite STORE. auto.
-  intro. inv H. contradiction.
-  auto.
 Qed.
 
 Lemma transl_load_memory_access_ok:
@@ -1979,6 +1996,28 @@ Proof.
     | eauto ].
 Qed.
 
+Lemma transl_load_memory_access2_ok:
+  forall addr chunk args dst k c rs a v m,
+  addr = Aindexed2 ->
+  transl_load chunk addr args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = Some v ->
+  exists mk_instr mr0 mro rd ro,
+      args = mr0 :: mro :: nil
+   /\ preg_of dst = IR rd
+   /\ preg_of mro = IR ro
+   /\ transl_memory_access2 mk_instr addr args k = OK c
+   /\ forall base rs,
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro.
+Proof.
+  intros until m. intros ? TR ? ?.
+  unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
+  unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
+  [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ x)); simpl; reflexivity
+  | eauto].
+Qed.
+
 Lemma transl_load_correct:
   forall chunk addr args dst k c (rs: regset) m a v,
   transl_load chunk addr args dst k = OK c ->
@@ -1993,20 +2032,68 @@ Proof.
   2-4: exploit transl_load_memory_access_ok; eauto; try discriminate;
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
     eapply transl_load_access_correct; eauto with asmgen.
-  admit.
-Admitted.
+  - exploit transl_load_memory_access2_ok; eauto. intros (mk_instr & mr0 & mro & rd & ro & argsEq & rdEq & roEq & B & C).
+    rewrite rdEq. eapply transl_load_access2_correct; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
+Qed.
+
+Lemma transl_store_access2_correct:
+  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c r1 (rs: regset) m v mr1 mro ro m',
+  args = mr1 :: mro :: nil ->
+  ireg_of mro = OK ro ->
+  (forall base rs,
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_store_reg chunk rs m r1 base ro) ->
+  transl_memory_access2 mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.storev chunk m v rs#r1 = Some m' ->
+  r1 <> RTMP ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
+  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+Proof.
+  intros until m'; intros ARGS IREG INSTR TR EV STORE NOT31. 
+  exploit transl_memory_access2_correct; eauto.
+  intros (base & ro2 & mr2 & mro2 & rs' & ARGSS & IREGG & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mro2 mr2. clear ARGS.
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
+  rewrite INSTR. unfold exec_store_reg. rewrite B. rewrite C; try discriminate. rewrite STORE. auto.
+  intro. inv H. contradiction.
+  auto.
+Qed.
+
+Lemma transl_store_access_correct:
+  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c r1 (rs: regset) m v m',
+  (forall base ofs rs,
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk rs m r1 base ofs) ->
+  transl_memory_access mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.storev chunk m v rs#r1 = Some m' ->
+  r1 <> RTMP ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
+  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+Proof.
+  intros until m'; intros INSTR TR EV STORE NOT31. 
+  exploit transl_memory_access_correct; eauto.
+  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
+  rewrite INSTR. unfold exec_store_offset. rewrite PtrEq, B. rewrite C; try discriminate. rewrite STORE. auto.
+  intro. inv H. contradiction.
+  auto.
+Qed.
+
 
 Remark exec_store_offset_8_sign rs m x base ofs:
   exec_store_offset ge Mint8unsigned rs m x base ofs = exec_store_offset ge Mint8signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold exec_store. unfold Mem.storev.
+  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_8. reflexivity.
 Qed.
 
 Remark exec_store_offset_16_sign rs m x base ofs:
   exec_store_offset ge Mint16unsigned rs m x base ofs = exec_store_offset ge Mint16signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold exec_store. unfold Mem.storev.
+  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_16. reflexivity.
 Qed.
 
@@ -2045,6 +2132,45 @@ Proof.
     eapply exec_store_offset_16_sign.
 Qed.
 
+Remark exec_store_reg_8_sign rs m x base ofs:
+  exec_store_reg Mint8unsigned rs m x base ofs = exec_store_reg Mint8signed rs m x base ofs.
+Proof.
+  unfold exec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
+  erewrite <- Mem.store_signed_unsigned_8. reflexivity.
+Qed.
+
+Remark exec_store_reg_16_sign rs m x base ofs:
+  exec_store_reg Mint16unsigned rs m x base ofs = exec_store_reg Mint16signed rs m x base ofs.
+Proof.
+  unfold exec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
+  erewrite <- Mem.store_signed_unsigned_16. reflexivity.
+Qed.
+
+Lemma transl_store_memory_access2_ok:
+  forall addr chunk args src k c rs a m m',
+  addr = Aindexed2 ->
+  transl_store chunk addr args src k = OK c ->
+  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  Mem.storev chunk m a (rs (preg_of src)) = Some m' ->
+  exists mk_instr chunk' rr mr0 mro ro,
+     args = mr0 :: mro :: nil
+  /\ preg_of mro = IR ro
+  /\ preg_of src = IR rr
+  /\ transl_memory_access2 mk_instr addr args k = OK c
+  /\ (forall base rs,
+       exec_basic_instr ge (mk_instr base ro) rs m = exec_store_reg chunk' rs m rr base ro)
+  /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src).
+Proof.
+  intros until m'. intros ? TR ? ?.
+  unfold transl_store in TR. subst addr. monadInv TR. destruct chunk. all:
+  unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
+  [ ArgsInv; reflexivity
+  | rewrite EQ1; rewrite EQ0; instantiate (1 := (PStoreRRR _ x)); simpl; reflexivity
+  | eauto ].
+  - simpl. intros. eapply exec_store_reg_8_sign.
+  - simpl. intros. eapply exec_store_reg_16_sign.
+Qed.
+
 Lemma transl_store_correct:
   forall chunk addr args src k c (rs: regset) m a m',
   transl_store chunk addr args src k = OK c ->
@@ -2060,8 +2186,10 @@ Proof.
     rewrite D in STORE; clear D; 
     eapply transl_store_access_correct; eauto with asmgen; try congruence;
     destruct rr; try discriminate; destruct src; try discriminate.
-  admit.
-Admitted.
+  - exploit transl_store_memory_access2_ok; eauto. intros (mk_instr & chunk' & rr & mr0 & mro & ro & argsEq & roEq & srcEq & A & B & C).
+    eapply transl_store_access2_correct; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity. congruence.
+    destruct rr; try discriminate. destruct src; simpl in srcEq; try discriminate.
+Qed.
 
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,

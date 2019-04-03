@@ -1262,44 +1262,34 @@ Definition eval_offset (ofs: offset) : res ptrofs :=
       end
   end.
 
-Definition exec_load (chunk: memory_chunk) (rs: regset) (m: mem)
-                     (d: ireg) (a: ireg) (ptr: ptrofs) :=
-  match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
-  | None => Stuck
-  | Some v => Next (rs#d <- v) m
-  end
-.
-
 Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
-  | OK ptr => exec_load chunk rs m d a ptr
+  | OK ptr => match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
+              | None => Stuck
+              | Some v => Next (rs#d <- v) m
+              end
   | _ => Stuck
   end.
 
 Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) :=
-  match (rs ro) with
-  | Vptr _ ofs => exec_load chunk rs m d a ofs
-  | _ => Stuck
-  end.
-
-Definition exec_store (chunk: memory_chunk) (rs: regset) (m: mem)
-                      (s: ireg) (a: ireg) (ptr: ptrofs) :=
-  match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
+  match Mem.loadv chunk m (Val.addl (rs a) (rs ro)) with
   | None => Stuck
-  | Some m' => Next rs m'
-  end
-.
+  | Some v => Next (rs#d <- v) m
+  end.
 
 Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
-  | OK ptr => exec_store chunk rs m s a ptr
+  | OK ptr => match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
+              | None => Stuck
+              | Some m' => Next rs m'
+              end
   | _ => Stuck
   end.
 
 Definition exec_store_reg (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) :=
-  match (rs ro) with
-  | Vptr _ ofs => exec_store chunk rs m s a ofs
-  | _ => Stuck
+  match Mem.storev chunk m (Val.addl (rs a) (rs ro)) (rs s) with
+  | None => Stuck
+  | Some m' => Next rs m'
   end.
 
 Definition load_chunk n :=

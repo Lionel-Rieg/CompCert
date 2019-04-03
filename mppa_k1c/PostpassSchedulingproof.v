@@ -100,7 +100,7 @@ Lemma exec_load_offset_pc_var:
   exec_load_offset ge t rs m rd ra ofs = Next rs' m' ->
   exec_load_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load_offset in *. unfold exec_load in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
+  intros. unfold exec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -111,7 +111,7 @@ Lemma exec_load_reg_pc_var:
   exec_load_reg t rs m rd ra ro = Next rs' m' ->
   exec_load_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load_reg in *. unfold exec_load in *. rewrite Pregmap.gso; try discriminate. destruct (rs ro); try discriminate.
+  intros. unfold exec_load_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -122,7 +122,7 @@ Lemma exec_store_offset_pc_var:
   exec_store_offset ge t rs m rd ra ofs = Next rs' m' ->
   exec_store_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store_offset in *. unfold exec_store in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_store_offset in *. rewrite Pregmap.gso; try discriminate.
   destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
@@ -134,8 +134,7 @@ Lemma exec_store_reg_pc_var:
   exec_store_reg t rs m rd ra ro = Next rs' m' ->
   exec_store_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store_reg in *. unfold exec_store in *. rewrite Pregmap.gso; try discriminate.
-  destruct (rs ro); try discriminate.
+  intros. unfold exec_store_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
   - discriminate.
