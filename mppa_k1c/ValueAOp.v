@@ -273,8 +273,8 @@ Proof.
       destruct a1; destruct a0; eauto; constructor.
   (* selectl *)
   - inv H2; simpl; try constructor.
-    + destruct (Int64.eq _ _); apply binop_long_sound; trivial.
-    + destruct (Int64.eq _ _);
+    + destruct (Int.eq _ _); apply binop_long_sound; trivial.
+    + destruct (Int.eq _ _);
       destruct a1; destruct a0; eauto; constructor.
 Qed.
 

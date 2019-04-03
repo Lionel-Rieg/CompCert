@@ -286,10 +286,26 @@ Definition sel_builtin optid ef args :=
                                      ((sel_expr a3):::
                                       (sel_expr a2):::
                                       (sel_expr a1):::Enil)))
+               | _ => Error (msg "__builtin_ternary_ulong: arguments")
+             end
+         end
+       else
+       if String.string_dec name "__builtin_ternary_ulong"
+       then
+         match optid with
+           | None => OK Sskip
+           | Some id =>
+             match args with
+               | a1::a2::a3::nil =>
+                 OK (Sassign id (Eop Oselectl
+                                     ((sel_expr a3):::
+                                                   (sel_expr a2):::
+                                                   (sel_expr a1):::Enil)))
                | _ => Error (msg "__builtin_ternary_uint: arguments")
              end
          end
-       else sel_builtin_default optid ef args)
+       else
+         sel_builtin_default optid ef args)
     | _ => sel_builtin_default optid ef args
   end.
 

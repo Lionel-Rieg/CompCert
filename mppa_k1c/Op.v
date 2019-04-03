@@ -272,12 +272,12 @@ Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
 
 Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
-  | Vlong iselect =>
+  | Vint iselect =>
     match v0 with
     | Vlong i0 =>
       match v1 with
       | Vlong i1 =>
-        Vlong (if Int64.cmp Ceq Int64.zero iselect
+        Vlong (if Int.cmp Ceq Int.zero iselect
                then i0
                else i1)
       | _ => Vundef
@@ -607,7 +607,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocmp c => (type_of_condition c, Tint)
                 
   | Oselect  => (Tint :: Tint :: Tint :: nil, Tint)
-  | Oselectl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
+  | Oselectl => (Tlong :: Tlong :: Tint :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=

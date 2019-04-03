@@ -187,6 +187,7 @@ let builtins_generic = {
            false);
     (* Ternary operator *)
     builtin_ternary "uint" (TInt(IUInt, []));
+    builtin_ternary "ulong" (TInt(IULong, []));
 	    
     (* Annotations *)
     "__builtin_annot",
