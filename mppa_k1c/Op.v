@@ -183,7 +183,9 @@ Inductive operation : Type :=
 (*c Boolean tests: *)
   | Ocmp (cond: condition)   (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
   | Oselect                  (**r [rd = if r3 then r2 else r1] *)
-  | Oselectl.                (**r [rd = if r3 then r2 else r1] *)
+  | Oselectl                 (**r [rd = if r3 then r2 else r1] *)
+  | Oselectf                 (**r [rd = if r3 then r2 else r1] *)
+  | Oselectfs.               (**r [rd = if r3 then r2 else r1] *)
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -280,6 +282,40 @@ Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
         Vlong (if Int.cmp Ceq Int.zero iselect
                then i0
                else i1)
+      | _ => Vundef
+      end
+    | _ => Vundef
+    end
+  | _ => Vundef
+  end.
+
+Definition selectf (v0 : val) (v1 : val) (vselect : val) : val :=
+  match vselect with
+  | Vint iselect =>
+    match v0 with
+    | Vfloat i0 =>
+      match v1 with
+      | Vfloat i1 =>
+        Vfloat (if Int.cmp Ceq Int.zero iselect
+                then i0
+                else i1)
+      | _ => Vundef
+      end
+    | _ => Vundef
+    end
+  | _ => Vundef
+  end.
+
+Definition selectfs (v0 : val) (v1 : val) (vselect : val) : val :=
+  match vselect with
+  | Vint iselect =>
+    match v0 with
+    | Vsingle i0 =>
+      match v1 with
+      | Vsingle i1 =>
+        Vsingle (if Int.cmp Ceq Int.zero iselect
+                 then i0
+                 else i1)
       | _ => Vundef
       end
     | _ => Vundef
@@ -417,6 +453,8 @@ Definition eval_operation
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
   | Oselect, v0::v1::vselect::nil => Some (select v0 v1 vselect)
   | Oselectl, v0::v1::vselect::nil => Some (selectl v0 v1 vselect)
+  | Oselectf, v0::v1::vselect::nil => Some (selectf v0 v1 vselect)
+  | Oselectfs, v0::v1::vselect::nil => Some (selectfs v0 v1 vselect)
   | _, _ => None
   end.
 
@@ -608,6 +646,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
                 
   | Oselect  => (Tint :: Tint :: Tint :: nil, Tint)
   | Oselectl => (Tlong :: Tlong :: Tint :: nil, Tlong)
+  | Oselectf  => (Tfloat :: Tfloat :: Tint :: nil, Tfloat)
+  | Oselectfs => (Tsingle :: Tsingle :: Tint :: nil, Tsingle)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -846,6 +886,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* select *)
   - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
   (* selectl *)
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
+  (* selectf *)
+  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
+  (* selectfs *)
   - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
 Qed.
 
@@ -1378,6 +1422,14 @@ Proof.
     inv H4; simpl; try constructor.
     inv H2; simpl; constructor.
   (* selectl *)
+  - inv H3; simpl; try constructor.
+    inv H4; simpl; try constructor.
+    inv H2; simpl; constructor.
+  (* selectf *)
+  - inv H3; simpl; try constructor.
+    inv H4; simpl; try constructor.
+    inv H2; simpl; constructor.
+  (* selectfs *)
   - inv H3; simpl; try constructor.
     inv H4; simpl; try constructor.
     inv H2; simpl; constructor.
