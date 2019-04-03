@@ -741,11 +741,7 @@ Definition indexed_memory_access
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
       mk_instr base (Ofsimm (Ptrofs.of_int64 imm))
-(*| Imm64_pair hi lo =>
-      Pluil GPR31 hi :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm (Ptrofs.of_int64 lo)) :: k
-  | Imm64_large imm =>
-      Pmake GPR31 imm :: Paddl GPR31 base GPR31 :: mk_instr GPR31 (Ofsimm Ptrofs.zero) :: k
-*)end.
+end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
   match ty, preg_of dst with
@@ -777,6 +773,17 @@ Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) :=
 
 (** Translation of memory accesses: loads, and stores. *)
 
+Definition transl_memory_access2
+     (mk_instr: ireg -> ireg -> basic)
+     (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
+  match addr, args with
+  | Aindexed2, a1 :: a2 :: nil =>
+      do rs1 <- ireg_of a1;
+      do rs2 <- ireg_of a2;
+      OK (mk_instr rs1 rs2 ::i k)
+  | _, _ => Error (msg "Asmblockgen.transl_memory_access2")
+  end.
+
 Definition transl_memory_access
      (mk_instr: ireg -> offset -> basic)
      (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
@@ -806,10 +813,22 @@ Definition chunk2load (chunk: memory_chunk) :=
   | Many64 => Pld_a
   end.
 
-Definition transl_load (chunk: memory_chunk) (addr: addressing)
+Definition transl_load_rro (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access (chunk2load chunk r) addr args k.
+  transl_memory_access (PLoadRRO (chunk2load chunk) r) addr args k.
+
+Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of dst;
+  transl_memory_access2 (PLoadRRR (chunk2load chunk) r) addr args k.
+
+Definition transl_load (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  match args with
+  | a1 :: a2 :: nil => transl_load_rrr chunk addr args dst k
+  | _ => transl_load_rro chunk addr args dst k
+  end.
 
 Definition chunk2store (chunk: memory_chunk) :=
   match chunk with
@@ -823,10 +842,22 @@ Definition chunk2store (chunk: memory_chunk) :=
   | Many64 => Psd_a
   end.
 
-Definition transl_store (chunk: memory_chunk) (addr: addressing)
+Definition transl_store_rro (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of src;
-  transl_memory_access (chunk2store chunk r) addr args k.
+  transl_memory_access (PStoreRRO (chunk2store chunk) r) addr args k.
+
+Definition transl_store_rrr (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of src;
+  transl_memory_access2 (PStoreRRR (chunk2store chunk) r) addr args k.
+
+Definition transl_store (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  match args with
+  | a1 :: a2 :: nil => transl_store_rrr chunk addr args src k
+  | _ => transl_load_rro chunk addr args src k
+  end.
 
 (** Function epilogue *)
 
