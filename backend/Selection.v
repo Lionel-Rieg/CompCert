@@ -268,9 +268,20 @@ Definition sel_switch_long :=
     lowlong.
 
 Definition sel_builtin optid ef args :=
-  Sbuiltin (sel_builtin_res optid) ef
-           (sel_builtin_args args
-                             (Machregs.builtin_constraints ef)).
+  match ef with
+    | EF_builtin name sign =>
+      (if String.string_dec name "__builtin_ternary_uint"
+       then Sbuiltin (sel_builtin_res optid) ef
+               (sel_builtin_args args
+                                 (Machregs.builtin_constraints ef))
+       else Sbuiltin (sel_builtin_res optid) ef
+               (sel_builtin_args args
+                                 (Machregs.builtin_constraints ef)))
+    | _ =>
+      Sbuiltin (sel_builtin_res optid) ef
+               (sel_builtin_args args
+                                 (Machregs.builtin_constraints ef))
+  end.
 
 (** Conversion from Cminor statements to Cminorsel statements. *)
 
