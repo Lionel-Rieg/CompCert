@@ -276,10 +276,19 @@ Definition sel_builtin optid ef args :=
   match ef with
     | EF_builtin name sign =>
       (if String.string_dec name "__builtin_ternary_uint"
-       then (match optid with
-               | None => OK Sskip
-               | Some id => Error (msg "Selection: ternary uint")
-             end)
+       then
+         match optid with
+           | None => OK Sskip
+           | Some id =>
+             match args with
+               | a1::a2::a3::nil =>
+                 OK (Sassign id (Eop Oselect
+                                     ((sel_expr a3):::
+                                      (sel_expr a2):::
+                                      (sel_expr a1):::Enil)))
+               | _ => Error (msg "__builtin_ternary_uint: arguments")
+             end
+         end
        else sel_builtin_default optid ef args)
     | _ => sel_builtin_default optid ef args
   end.
