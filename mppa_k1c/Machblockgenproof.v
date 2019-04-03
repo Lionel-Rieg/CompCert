@@ -199,6 +199,10 @@ Definition concat (h: list label) (c: code): code :=
   | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
   end.
 
+Ltac subst_is_trans_code H :=
+  rewrite is_trans_code_inv in H;
+  rewrite <- H in * |- *.
+
 Lemma find_label_transcode_preserved:
   forall l c c',
   Mach.find_label l c = Some c' ->
@@ -233,8 +237,7 @@ Proof.
       inversion H0 as [H1].
       clear H0.
       erewrite find_label_at_begin; simpl; eauto.
-      apply is_trans_code_inv in Heqbl.
-      rewrite <- Heqbl.
+      subst_is_trans_code Heqbl.
       exists (l :: nil); simpl; eauto.
     - subst; assert (H: l0 <> l); try congruence; clear H0.
       exploit IHHeqbl; eauto.
@@ -254,7 +257,7 @@ Proof.
     intros.
     exploit Mach_find_label_split; eauto.
     destruct 1 as [(H2&H3)|(H2&H3)].
-    rewrite H2 in H. unfold  trans_inst in H. congruence.
+    rewrite H2 in H. unfold trans_inst in H. congruence.
     exploit IHHeqbl; eauto.
     clear IHHeqbl Heqbl.
     intros (h & H4 & H5).
@@ -318,7 +321,7 @@ Proof.
   inversion Heqbl as [|bl0 H| |]; subst; clear Heqbl.
   - rewrite size_add_to_newblock; omega.
   - rewrite size_add_label;
-    rewrite is_trans_code_inv in H; rewrite <- H.
+    subst_is_trans_code H.
     omega.
 Admitted. (* A FINIR *)
 
