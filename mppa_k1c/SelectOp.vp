@@ -61,6 +61,11 @@ Section SELECT.
 
 Context {hf: helper_functions}.
 
+(** Ternary operator *)
+Definition select o0 o1 oselect :=
+ Eop (Oselect (Ccomp0 Ceq))
+              (o0:::o1:::oselect:::Enil).
+				      
 (** ** Constants **)
 
 Definition addrsymbol (id: ident) (ofs: ptrofs) :=
