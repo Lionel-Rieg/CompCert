@@ -905,8 +905,58 @@ Proof.
     * eassumption.
 Qed.
 
-Lemma forward_simu_control:
-  forall ge fn ex b rs m rs2 m2 s,
+Theorem forward_simu_control_gen ge fn ex b rs m s:
+  Ge = Genv ge fn ->
+  match_states (State rs m) s ->
+  match_outcome (exec_control ge fn ex (nextblock b rs) m) (exec Ge (trans_pcincr (size b) (trans_exit ex) :: nil) s).
+Proof.
+  intros. destruct ex; simpl; inv H0.
+  - destruct c; destruct i; simpl; rewrite (H2 PC); auto.
+    all: try (eexists; split; try split; Simpl; intros rr; destruct rr; unfold nextblock; Simpl).
+
+    (* Pjumptable *)
+    + Simpl. rewrite (H2 r). destruct (rs r); simpl; auto. destruct (list_nth_z _ _); simpl; auto.
+      unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. Simpl.
+      destruct (Val.offset_ptr _ _); simpl; auto.
+      eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+      destruct (preg_eq GPR62 g). rewrite e. Simpl.
+      destruct (preg_eq GPR63 g). rewrite e. Simpl. Simpl.
+
+    (* Pj_l *)
+    + Simpl. unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto.
+      unfold nextblock. Simpl. destruct (Val.offset_ptr _ _); simpl; auto.
+      eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+
+    (* Pcb *)
+    + Simpl. destruct (cmp_for_btest _); simpl; auto. rewrite (H2 r). destruct o; simpl; auto. destruct i; unfold eval_branch; unfold eval_branch_deps.
+      ++ destruct (Val.cmp_bool _ _ _); simpl; auto. destruct b0.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+             destruct (Val.offset_ptr _ _); simpl; auto.
+             eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+         +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+      ++ destruct (Val.cmpl_bool _ _ _); simpl; auto. destruct b0.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+             destruct (Val.offset_ptr _ _); simpl; auto.
+             eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+         +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+
+    (* Pcbu *)
+    + Simpl. destruct (cmpu_for_btest _); simpl; auto. rewrite (H2 r). destruct o; simpl; auto. destruct i; unfold eval_branch; unfold eval_branch_deps.
+      ++ destruct (Val_cmpu_bool _ _ _); simpl; auto. destruct b0.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+             destruct (Val.offset_ptr _ _); simpl; auto.
+             eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+         +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+      ++ destruct (Val_cmplu_bool _ _ _); simpl; auto. destruct b0.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+             destruct (Val.offset_ptr _ _); simpl; auto.
+             eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+         +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+
+  - simpl. rewrite (H2 PC). eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
+Qed.
+
+Lemma forward_simu_control ge fn ex b rs m rs2 m2 s:
   Ge = Genv ge fn ->
   exec_control ge fn ex (nextblock b rs) m = Next rs2 m2 ->
   match_states (State rs m) s ->
@@ -914,108 +964,20 @@ Lemma forward_simu_control:
      exec Ge (trans_pcincr (size b) (trans_exit ex) :: nil) s = Some s'
   /\ match_states (State rs2 m2) s'.
 Proof.
-  intros. destruct ex.
-  - simpl in *. inv H1. destruct c; destruct i; try discriminate.
-    all: try (inv H0; eexists; split; try split; [ simpl control_eval; pose (H3 PC); simpl in e; rewrite e; reflexivity | Simpl | intros rr; destruct rr; Simpl]).
-    (* Pjumptable *)
-    + unfold goto_label in *.
-      repeat (rewrite Pregmap.gso in H0; try discriminate).
-      destruct (nextblock _ _ _) eqn:NB; try discriminate.
-      destruct (list_nth_z _ _) eqn:LI; try discriminate.
-      destruct (label_pos _ _ _) eqn:LPOS; try discriminate.
-      destruct (nextblock b rs PC) eqn:MB2; try discriminate. inv H0.
-      eexists; split; try split.
-      * simpl control_eval. rewrite (H3 PC). simpl. Simpl.
-        rewrite H3. unfold nextblock in NB. rewrite Pregmap.gso in NB; try discriminate. rewrite NB.
-        rewrite LI. unfold goto_label_deps. rewrite LPOS.
-        unfold nextblock in MB2. rewrite Pregmap.gss in MB2. rewrite MB2.
-        reflexivity.
-      * Simpl.
-      * intros rr; destruct rr; Simpl.
-        destruct (preg_eq GPR62 g); Simpl. rewrite e. Simpl.
-        destruct (preg_eq GPR63 g); Simpl. rewrite e. Simpl.
-    (* Pj_l *)
-    + unfold goto_label in H0.
-      destruct (label_pos _ _ _) eqn:LPOS; try discriminate.
-      destruct (nextblock _ _ _) eqn:NB; try discriminate. inv H0.
-      eexists; split; try split.
-      * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl. unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB.
-        rewrite NB. reflexivity.
-      * Simpl.
-      * intros rr; destruct rr; Simpl.
-    (* Pcb *)
-    + destruct (cmp_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
-      ++ unfold eval_branch in H0. destruct (Val.cmp_bool _ _ _) eqn:VALCMP; try discriminate. destruct b0.
-        +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
-            inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-      ++ unfold eval_branch in H0. destruct (Val.cmpl_bool _ _ _) eqn:VALCMP; try discriminate. destruct b0.
-        +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
-            inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-    (* Pcbu *)
-    + destruct (cmpu_for_btest _) eqn:CFB. destruct o; try discriminate. destruct i.
-      ++ unfold eval_branch in H0. destruct (Val_cmpu_bool  _ _) eqn:VALCMP; try discriminate. destruct b0.
-        +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
-            inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-      ++ unfold eval_branch in H0. destruct (Val_cmplu_bool  _ _) eqn:VALCMP; try discriminate. destruct b0.
-        +++ unfold goto_label in H0. destruct (label_pos _ _ _) eqn:LPOS; try discriminate. destruct (nextblock b rs PC) eqn:NB; try discriminate.
-            inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              unfold goto_label_deps. rewrite LPOS. rewrite nextblock_pc in NB. rewrite NB. reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-        +++ inv H0. eexists; split; try split.
-            * simpl control_eval. pose (H3 PC); simpl in e; rewrite e. simpl.
-              rewrite CFB. Simpl. pose (H3 r). simpl in e0. rewrite e0.
-              unfold eval_branch_deps. unfold nextblock in VALCMP. rewrite Pregmap.gso in VALCMP; try discriminate. rewrite VALCMP.
-              reflexivity.
-            * Simpl.
-            * intros rr; destruct rr; Simpl.
-  - simpl in *. inv H1. inv H0. eexists. split.
-    pose (H3 PC). simpl in e. rewrite e. simpl. reflexivity.
-    split. Simpl.
-    intros. unfold nextblock. destruct r; Simpl.
-Qed. 
+  intros. exploit (forward_simu_control_gen); eauto. intros.
+  rewrite H0 in H2. inv H2. eexists. eapply H3.
+Qed.
+
+Lemma forward_simu_control_stuck:
+  forall ge fn rs m s ex b,
+  Ge = Genv ge fn ->
+  match_states (State rs m) s ->
+  exec Ge (trans_pcincr (size b) (trans_exit ex) :: nil) s = None ->
+  exec_control ge fn ex (nextblock b rs) m = Stuck.
+Proof.
+  intros. exploit (forward_simu_control_gen); eauto. intros.
+  rewrite H1 in H2. destruct (exec_control _ _ _ _ _); auto. inv H2. inv H3. discriminate.
+Qed.
 
 Theorem forward_simu:
   forall rs1 m1 rs2 m2 s1' b ge fn,
@@ -1181,9 +1143,7 @@ Proof.
   - right. repeat eexists.
     exploit exec_body_next_exec; eauto.
     intros (s' & EXECBK' & MS'). unfold trans_block in EXECBK. rewrite EXECBK' in EXECBK. clear EXECBK'. clear EXEB MS.
-    exploit exec_trans_pcincr_exec; eauto. intros (s'' & EXECINCR' & MS'').
-    rewrite EXECINCR' in EXECBK. clear EXECINCR' MS'.
-    eapply exec_exit_none; eauto.
+    eapply forward_simu_control_stuck; eauto.
   - left. reflexivity.
 Qed.
 
