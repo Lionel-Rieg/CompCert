@@ -348,39 +348,52 @@ Proof.
    - rewrite size_add_basic; auto; omega.
 Qed.
 
-(* TODO: définir les predicats inductifs suivants de façon à prouver le lemme [is_trans_code_decompose] ci-dessous *)
-
-
 Inductive is_header: list label -> Mach.code -> Mach.code -> Prop :=
   | header_empty : is_header nil nil nil
-  | header_not_label i c: forall l, i <> Mlabel l -> is_header nil (i::c) c
+  | header_not_label i c: (forall l, i <> Mlabel l) -> is_header nil (i::c) (i::c)
   | header_is_label l h c c0: is_header h c c0 -> is_header (l::h) ((Mlabel l)::c) c0
  .
 
 Inductive is_body: list basic_inst -> Mach.code -> Mach.code -> Prop :=
   | body_empty : is_body nil nil nil
-  | body_not_bi i c: forall bi, (trans_inst i) <> (MB_basic bi) -> is_body nil (i::c) c
-  | body_is_bi i lbi c0 c1: forall bi, (trans_inst i) = MB_basic bi -> is_body lbi c0 c1 -> is_body (bi::lbi) (i::c0) c1
+  | body_not_bi i c: (forall bi, (trans_inst i) <> (MB_basic bi)) -> is_body nil (i::c) (i::c)
+  | body_is_bi i lbi c0 c1 bi: (trans_inst i) = MB_basic bi -> is_body lbi c0 c1 -> is_body (bi::lbi) (i::c0) c1
  .
 
 Inductive is_exit: option control_flow_inst -> Mach.code -> Mach.code -> Prop :=
-  | exit_not_cfi i c : forall cfi, (trans_inst i) <> MB_cfi cfi -> is_exit None (i::c) c
-  | exit_is_cfi i c : forall cfi, (trans_inst i) = MB_cfi cfi -> is_exit (Some cfi) (i::c) c
+  | exit_empty: is_exit None nil nil
+  | exit_not_cfi i c: (forall cfi, (trans_inst i) <> MB_cfi cfi) -> is_exit None (i::c) (i::c)
+  | exit_is_cfi i c cfi: (trans_inst i) = MB_cfi cfi -> is_exit (Some cfi) (i::c) c
  .
 
-Lemma trans_code_decompose c bc:
-  is_trans_code c bc -> forall b blc, bc=(b::blc) ->
-  exists c0 c1 c2, is_header (header b) c c0 /\ is_body (body b) c0 c1 /\ is_exit (exit b) c1 c2 /\ is_trans_code c2 blc.
+Lemma trans_code_decompose c: forall b bl,
+  is_trans_code c (b::bl) ->
+  exists c0 c1 c2, is_header (header b) c c0 /\ is_body (body b) c0 c1 /\ is_exit (exit b) c1 c2 /\ is_trans_code c2 bl.
 Proof.
-  induction 1; intros b blc X; inversion X; subst; clear X.
-Admitted.
+  induction c as [|i c].
+  { (* nil => absurd *) intros b bl H; inversion H. }
+  intros b bl H; remember (trans_inst i) as ti.
+  destruct ti as [lbl|bi|cfi];
+  inversion H as [|d0 d1 d2 H0 H1| |]; subst;
+  try (rewrite <- Heqti in * |- *); simpl;
+  try congruence.
+  + (* label at end block *)
+    inversion H1; subst. inversion H0; subst.
+    assert (X:i=Mlabel lbl). { destruct i; simpl in Heqti; congruence. }
+    subst. repeat econstructor; eauto.
+  + (* label at mid block *)
+    exploit IHc; eauto.
+    intros (c0 & c1 & c2 & H1 & H2 & H3 & H4).
+    repeat econstructor; eauto.
+  + (* basic at end block *)
+Admitted. (* A FINIR *)
 
 Lemma step_simu_header st f sp rs m s c h c' t: 
  is_header h c c' ->
  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> 
  s = Mach.State st f sp c' rs m /\ t = E0.
 Proof.
-  induction 1. (* A FINIR *)
+  induction 1; simpl. (* A FINIR *)
 Admitted.
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
    induction c as [ | i c]; simpl; intros h c' t H.
@@ -580,7 +593,7 @@ Proof.
     exploit step_simu_exit_step; eauto.
     clear H3; intros (s2' & H3 & H4).
     eapply ex_intro; intuition eauto.
-    (* VIELLE PREUVE: eapply exec_bblock; eauto. *)
+    eapply exec_bblock; eauto.
   + (* Callstate *)
     intros t s1' H; inversion_clear H.
     eapply ex_intro; constructor 1; eauto.
@@ -602,7 +615,7 @@ Proof.
     inversion H1; subst; clear H1.
     inversion_clear H0; simpl.
     eapply exec_return.
-Admitted. (* A FIXER *)
+Qed.
 
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
