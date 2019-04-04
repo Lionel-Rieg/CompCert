@@ -211,8 +211,6 @@ Lemma needs_of_condition0_sound:
 Proof.
   intros until arg2.
   intros Hcond Hagree.
-  Check eval_condition_inj.
-  Check default_needs_of_condition_sound.
   apply eval_condition0_inj with (f := inject_id) (m1 := m1) (v1 := arg1); simpl; auto.
   apply val_inject_lessdef. apply lessdef_vagree. assumption.
 Qed.
@@ -246,21 +244,40 @@ Proof.
 Qed.
   
 Lemma select_sound:
-  forall cond v0 w0 v1 w1 v2 w2,
-    vagree v0 w0 All ->
-    vagree v1 w1 All ->
-    vagree v2 w2 All ->
-    vagree (eval_select cond v0 v1 v2 m1) (eval_select cond w0 w1 w2 m2) All.
+  forall cond v0 w0 v1 w1 v2 w2 x,
+    vagree v0 w0 (default x) ->
+    vagree v1 w1 (default x) ->
+    vagree v2 w2 (default x) ->
+    vagree (eval_select cond v0 v1 v2 m1) (eval_select cond w0 w1 w2 m2) x.
 Proof.
   intros.
-  rewrite eval_select_to2.
-  rewrite eval_select_to2.
-  unfold eval_select2.
-  assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-  assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-  destruct (eval_condition0 cond v2 m1) in *.
-  simpl in *.
-  - destruct b.
+  destruct x; simpl in *; trivial.
+  - rewrite eval_select_to2.
+    rewrite eval_select_to2.
+    unfold eval_select2.
+    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
+    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
+    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
+    destruct b.
+    + rewrite Hneedstrue; trivial.
+      inv H; trivial.
+      destruct w0; trivial.
+      inv H0; trivial.
+      destruct w1; trivial.
+      apply iagree_refl.
+    + rewrite Hneedsfalse; trivial.
+      inv H; trivial.
+      destruct w0; trivial.
+      inv H0; trivial.
+      destruct w1; trivial.
+      apply iagree_refl.
+  - rewrite eval_select_to2.
+    rewrite eval_select_to2.
+    unfold eval_select2.
+    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
+    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
+    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
+    destruct b.
     + rewrite Hneedstrue; trivial.
       inv H; trivial.
       destruct w0; trivial.
@@ -269,7 +286,6 @@ Proof.
       inv H; trivial.
       destruct w0; trivial.
       inv H0; trivial.
-  - simpl. constructor.
 Qed.
 
 Lemma selectl_sound:
@@ -336,11 +352,11 @@ Qed.
 
 Lemma needs_of_operation_sound:
   forall op args v nv args',
-  eval_operation ge (Vptr sp Ptrofs.zero) op args m = Some v ->
+  eval_operation ge (Vptr sp Ptrofs.zero) op args m1 = Some v ->
   vagree_list args args' (needs_of_operation op nv) ->
   nv <> Nothing ->
   exists v',
-     eval_operation ge (Vptr sp Ptrofs.zero) op args' m' = Some v'
+     eval_operation ge (Vptr sp Ptrofs.zero) op args' m2 = Some v'
   /\ vagree v v' nv.
 Proof.
   unfold needs_of_operation; intros; destruct op; try (eapply default_needs_of_operation_sound; eauto; fail);
@@ -394,7 +410,7 @@ Qed.
 Lemma operation_is_redundant_sound:
   forall op nv arg1 args v arg1' args',
   operation_is_redundant op nv = true ->
-  eval_operation ge (Vptr sp Ptrofs.zero) op (arg1 :: args) m = Some v ->
+  eval_operation ge (Vptr sp Ptrofs.zero) op (arg1 :: args) m1 = Some v ->
   vagree_list (arg1 :: args) (arg1' :: args') (needs_of_operation op nv) ->
   vagree v arg1' nv.
 Proof.
