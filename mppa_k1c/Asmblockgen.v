@@ -729,7 +729,17 @@ Definition transl_op
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
 
-  | Oselect, a0 :: a1 :: aS :: nil
+  | Oselect cond, a0 :: a1 :: aS :: nil =>
+    assertion (mreg_eq a0 res);
+      do r0 <- ireg_of a0;
+      do r1 <- ireg_of a1;
+      do rS <- ireg_of aS;
+      (match cond with
+       | Ccomp0 cmp =>
+         OK (Pcmove (btest_for_cmpswz cmp) r0 rS r1 ::i k)
+       | _ => Error (msg "Asmblockgen Oselect")
+       end)
+    
   | Oselectl, a0 :: a1 :: aS :: nil
   | Oselectf, a0 :: a1 :: aS :: nil
   | Oselectfs, a0 :: a1 :: aS :: nil =>
