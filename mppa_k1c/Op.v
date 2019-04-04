@@ -1233,6 +1233,11 @@ Lemma eval_condition0_inj:
   eval_condition0 cond v2 m2 = Some b.
 Proof.
   intros. destruct cond; simpl in H0; FuncInv; InvInject; simpl; auto.
+  - inv H; simpl in *; congruence.
+  - eauto 3 using Val.cmpu_bool_inject, Mem.valid_pointer_implies.
+  - inv H; simpl in *; congruence.
+  - eauto 3 using Val.cmplu_bool_inject, Mem.valid_pointer_implies.
+Qed.
 
 Ltac TrivialExists :=
   match goal with
@@ -1463,9 +1468,25 @@ Proof.
     destruct b; simpl; constructor.
     simpl; constructor.
   (* select *)
-  - inv H4; simpl; try constructor.
-    inv H2; simpl; try constructor.
-    inv H3; simpl; try constructor.
+  - unfold eval_select.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial.
+    + destruct (eval_condition0 cond _ m1) eqn:Hcond; trivial.
+      assert (Hcond' : ((eval_condition0 cond (Vint i1) m2) = Some b)).
+      * eapply eval_condition0_inj.
+        constructor.
+        assumption.
+      * rewrite Hcond'. constructor.
+    + destruct (eval_condition0 cond _ m1) eqn:Hcond; trivial.
+      assert (Hcond' : ((eval_condition0 cond (Vlong i1) m2) = Some b)).
+      
+    trivial.
+    exploit eval_condition0_inj; eauto.
+    exploit eval_condition0_inj; eauto.
+    destruct v; trivial.
+    destruct v0; trivial.
+    destruct v'; trivial.
   (* selectl *)
   - inv H3; simpl; try constructor.
     inv H4; simpl; try constructor.
