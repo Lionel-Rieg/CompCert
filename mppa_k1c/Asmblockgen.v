@@ -737,6 +737,8 @@ Definition transl_op
       (match cond with
        | Ccomp0 cmp =>
          OK (Pcmove (btest_for_cmpswz cmp) r0 rS r1 ::i k)
+       | Ccompl0 cmp =>
+         OK (Pcmove (btest_for_cmpsdz cmp) r0 rS r1 ::i k)
        | _ => Error (msg "Asmblockgen Oselect")
        end)
     

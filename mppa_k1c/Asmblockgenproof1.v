@@ -1638,7 +1638,7 @@ Opaque Int.eq.
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
 - (* Oselect *)
-  destruct cond in *; simpl in *; try congruence; injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in *.
+  destruct cond in *; simpl in *; try congruence; injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in *;
   econstructor; split.
 
   + eapply exec_straight_one.
@@ -1649,6 +1649,17 @@ Opaque Int.eq.
       destruct (rs x0) eqn:eqX0; try constructor.
       destruct c0 in *; simpl;
       destruct (Val.cmp_bool _ _); simpl; try constructor;
+        destruct b; simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+  + eapply exec_straight_one.
+    simpl; reflexivity.
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl;
+      destruct (Val.cmpl_bool _ _); simpl; try constructor;
         destruct b; simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
