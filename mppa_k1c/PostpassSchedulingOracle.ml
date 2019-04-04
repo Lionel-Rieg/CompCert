@@ -634,6 +634,7 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
   and read = ref []
   and count = ref 0
   and constraints = ref []
+  and instr_infos = instruction_infos bb
   in let step (i: inst_info) = 
     let write_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.write_locs
     and read_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.read_locs
@@ -641,7 +642,7 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
     and waw = get_accesses i.write_locs !written
     and war = get_accesses i.write_locs !read
     in begin
-      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = i.latency} :: !constraints) (raw @ waw);
+      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = (List.nth instr_infos acc.inst).latency} :: !constraints) (raw @ waw);
       List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
       (* If it's a control instruction, add an extra 0-lat dependency between this instruction and all the previous ones *)
       if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
@@ -649,7 +650,6 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
       read := read_accesses @ !read;
       count := !count + 1
     end
-  and instr_infos = instruction_infos bb
   in (List.iter step instr_infos; !constraints)
 
 (**
