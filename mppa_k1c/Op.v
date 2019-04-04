@@ -51,6 +51,12 @@ Inductive condition : Type :=
   | Ccompfs (c: comparison)     (**r 32-bit floating-point comparison *)
   | Cnotcompfs (c: comparison). (**r negation of a floating-point comparison *)
 
+Inductive condition0 : Type :=
+  | Ccomp0 (c: comparison) (**r signed integer comparison with 0 *)
+  | Ccompu0 (c: comparison) (**r unsigned integer comparison with 0 *)
+  | Ccompl0 (c: comparison) (**r signed 64-bit integer comparison with 0 *)
+  | Ccomplu0 (c: comparison). (**r unsigned 64-bit integer comparison with 0 *)
+
 (** Arithmetic and logical operations.  In the descriptions, [rd] is the
   result of the operation and [r1], [r2], etc, are the arguments. *)
 
@@ -237,7 +243,7 @@ Global Opaque eq_condition eq_addressing eq_operation.
   to lists of values.  Return [None] when the computation can trigger an
   error, e.g. integer division by zero.  [eval_condition] returns a boolean,
   [eval_operation] and [eval_addressing] return a value. *)
-
+ 
 Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool :=
   match cond, vl with
   | Ccomp c, v1 :: v2 :: nil => Val.cmp_bool c v1 v2
@@ -254,8 +260,17 @@ Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool
   | Cnotcompfs c, v1 :: v2 :: nil => option_map negb (Val.cmpfs_bool c v1 v2)
   | _, _ => None
   end.
+ 
+Definition eval_condition0 (cond: condition0) (vl: list val) (m: mem): option bool :=
+  match cond, vl with
+  | Ccomp0 c, v1 :: nil => Val.cmp_bool c v1 (Vint Int.zero)
+  | Ccompu0 c, v1 :: nil => Val.cmpu_bool (Mem.valid_pointer m) c v1 (Vint Int.zero)
+  | Ccompl0 c, v1 :: nil => Val.cmpl_bool c v1 (Vlong Int64.zero)
+  | Ccomplu0 c, v1 :: nil => Val.cmplu_bool (Mem.valid_pointer m) c v1 (Vlong Int64.zero)
+  | _, _ => None
+  end.
 
-Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
+Definition eval_select (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
@@ -272,7 +287,7 @@ Definition select (v0 : val) (v1 : val) (vselect : val) : val :=
   | _ => Vundef
   end.
 
-Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
+Definition eval_selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
@@ -289,7 +304,7 @@ Definition selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   | _ => Vundef
   end.
 
-Definition selectf (v0 : val) (v1 : val) (vselect : val) : val :=
+Definition eval_selectf (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
@@ -306,7 +321,7 @@ Definition selectf (v0 : val) (v1 : val) (vselect : val) : val :=
   | _ => Vundef
   end.
 
-Definition selectfs (v0 : val) (v1 : val) (vselect : val) : val :=
+Definition eval_selectfs (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
     match v0 with
@@ -451,10 +466,10 @@ Definition eval_operation
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
-  | Oselect, v0::v1::vselect::nil => Some (select v0 v1 vselect)
-  | Oselectl, v0::v1::vselect::nil => Some (selectl v0 v1 vselect)
-  | Oselectf, v0::v1::vselect::nil => Some (selectf v0 v1 vselect)
-  | Oselectfs, v0::v1::vselect::nil => Some (selectfs v0 v1 vselect)
+  | Oselect, v0::v1::vselect::nil => Some (eval_select v0 v1 vselect)
+  | Oselectl, v0::v1::vselect::nil => Some (eval_selectl v0 v1 vselect)
+  | Oselectf, v0::v1::vselect::nil => Some (eval_selectf v0 v1 vselect)
+  | Oselectfs, v0::v1::vselect::nil => Some (eval_selectfs v0 v1 vselect)
   | _, _ => None
   end.
 

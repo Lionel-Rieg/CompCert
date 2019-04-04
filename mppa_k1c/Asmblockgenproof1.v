@@ -1642,7 +1642,7 @@ Opaque Int.eq.
   + eapply exec_straight_one.
     simpl; reflexivity.
   + split.
-    * unfold select.
+    * unfold eval_select.
       destruct (rs x1) eqn:eqX1; try constructor.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
@@ -1656,7 +1656,7 @@ Opaque Int.eq.
   + eapply exec_straight_one.
     simpl; reflexivity.
   + split.
-    * unfold selectl.
+    * unfold eval_selectl.
       destruct (rs x1) eqn:eqX1; try constructor.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
@@ -1670,7 +1670,7 @@ Opaque Int.eq.
   + eapply exec_straight_one.
     simpl; reflexivity.
   + split.
-    * unfold selectl.
+    * unfold eval_selectf.
       destruct (rs x1) eqn:eqX1; try constructor.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
@@ -1684,7 +1684,7 @@ Opaque Int.eq.
   + eapply exec_straight_one.
     simpl; reflexivity.
   + split.
-    * unfold selectl.
+    * unfold eval_selectfs.
       destruct (rs x1) eqn:eqX1; try constructor.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.

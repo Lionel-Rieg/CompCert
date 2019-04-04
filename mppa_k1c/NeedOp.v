@@ -192,7 +192,7 @@ Lemma select_sound:
     vagree v0 w0 (default x) ->
     vagree v1 w1 (default x) ->
     vagree v2 w2 (default x) ->
-    vagree (select v0 v1 v2) (select w0 w1 w2) x.
+    vagree (eval_select v0 v1 v2) (eval_select w0 w1 w2) x.
 Proof.
   unfold default; intros.
   destruct x; trivial.
@@ -213,7 +213,7 @@ Lemma selectl_sound:
     vagree v0 w0 (default x) ->
     vagree v1 w1 (default x) ->
     vagree v2 w2 (default x) ->
-    vagree (selectl v0 v1 v2) (selectl w0 w1 w2) x.
+    vagree (eval_selectl v0 v1 v2) (eval_selectl w0 w1 w2) x.
 Proof.
   unfold default; intros.
   destruct x; trivial.
@@ -232,7 +232,7 @@ Lemma selectf_sound:
     vagree v0 w0 (default x) ->
     vagree v1 w1 (default x) ->
     vagree v2 w2 (default x) ->
-    vagree (selectf v0 v1 v2) (selectf w0 w1 w2) x.
+    vagree (eval_selectf v0 v1 v2) (eval_selectf w0 w1 w2) x.
 Proof.
   unfold default; intros.
   destruct x; trivial.
@@ -251,7 +251,7 @@ Lemma selectfs_sound:
     vagree v0 w0 (default x) ->
     vagree v1 w1 (default x) ->
     vagree v2 w2 (default x) ->
-    vagree (selectfs v0 v1 v2) (selectfs w0 w1 w2) x.
+    vagree (eval_selectfs v0 v1 v2) (eval_selectfs w0 w1 w2) x.
 Proof.
   unfold default; intros.
   destruct x; trivial.

@@ -568,7 +568,7 @@ Proof.
     predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
     TrivialExists.
     simpl in *.
-    unfold select.
+    unfold eval_select.
     f_equal.
     inv H6.
     inv H7.
@@ -606,7 +606,7 @@ Proof.
     predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
     TrivialExists.
     simpl in *.
-    unfold select.
+    unfold eval_select.
     f_equal.
     inv H6.
     inv H7.
