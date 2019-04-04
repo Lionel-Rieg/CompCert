@@ -343,18 +343,30 @@ Lemma size_nonzero c b bl:
   is_trans_code c (b :: bl) -> size b <> 0.
 Proof.
    intros H; inversion H; subst.
-Admitted. (* A FINIR *)
+   - rewrite size_add_to_newblock; omega.
+   - rewrite size_add_label; omega.
+   - rewrite size_add_basic; auto; omega.
+Qed.
 
 (* TODO: définir les predicats inductifs suivants de façon à prouver le lemme [is_trans_code_decompose] ci-dessous *)
 
+
 Inductive is_header: list label -> Mach.code -> Mach.code -> Prop :=
- . (* A FAIRE *)
+  | header_empty : is_header nil nil nil
+  | header_not_label i c: forall l, i <> Mlabel l -> is_header nil (i::c) c
+  | header_is_label l h c c0: is_header h c c0 -> is_header (l::h) ((Mlabel l)::c) c0
+ .
 
 Inductive is_body: list basic_inst -> Mach.code -> Mach.code -> Prop :=
- . (* A FAIRE *)
+  | body_empty : is_body nil nil nil
+  | body_not_bi i c: forall bi, (trans_inst i) <> (MB_basic bi) -> is_body nil (i::c) c
+  | body_is_bi i lbi c0 c1: forall bi, (trans_inst i) = MB_basic bi -> is_body lbi c0 c1 -> is_body (bi::lbi) (i::c0) c1
+ .
 
 Inductive is_exit: option control_flow_inst -> Mach.code -> Mach.code -> Prop :=
- . (* A FAIRE *)
+  | exit_not_cfi i c : forall cfi, (trans_inst i) <> MB_cfi cfi -> is_exit None (i::c) c
+  | exit_is_cfi i c : forall cfi, (trans_inst i) = MB_cfi cfi -> is_exit (Some cfi) (i::c) c
+ .
 
 Lemma trans_code_decompose c bc:
   is_trans_code c bc -> forall b blc, bc=(b::blc) ->
