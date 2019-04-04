@@ -283,18 +283,9 @@ Definition eval_condition0 (cond: condition0) (v1: val) (m: mem): option bool :=
   end.
 
 Definition eval_select (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0 with
-  | Vint i0 =>
-    match v1 with
-    | Vint i1 =>
-      match (eval_condition0 cond vselect m) with
-      | Some bval =>
-        Vint (if bval then i1 else i0)
-      | None => Vundef
-      end
-    | _ => Vundef
-    end
-  | _ => Vundef
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vint i0, Vint i1, Some bval => Vint (if bval then i1 else i0)
+    | _,_,_ => Vundef
   end.
 
 Definition eval_selectl (v0 : val) (v1 : val) (vselect : val) : val :=

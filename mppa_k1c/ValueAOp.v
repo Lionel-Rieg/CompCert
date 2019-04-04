@@ -42,16 +42,36 @@ Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
   | _, _ => Vbot
   end.
 
-Definition select (v0 v1 vselect : aval) : aval :=
-  match vselect with
-  | I iselect =>
-    if Int.eq Int.zero iselect
-    then binop_int (fun x0 x1 => x0) v0 v1
-    else binop_int (fun x0 x1 => x1) v0 v1
+Definition eval_static_condition0 (cond : condition0) (v : aval) : abool :=
+  match cond with
+  | Ccomp0 c => cmp_bool c v (I Int.zero)
+  | Ccompu0 c => cmpu_bool c v (I Int.zero)
+  | Ccompl0  c => cmpl_bool c v (L Int64.zero)
+  | Ccomplu0 c => cmplu_bool c v (L Int64.zero)
+  end.
+  
+Definition eval_static_select (cond : condition0) (v0 v1 vselect : aval) : aval :=
+  match eval_static_condition0 cond vselect with
+  | Just b => binop_int (fun x0 x1 => if b then x1 else x0) v0 v1
   | _ => Vtop
   end.
 
-Definition selectl (v0 v1 vselect : aval) : aval :=
+Definition eval_select2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vint i0, Vint i1 => Vint (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_select_to2: forall cond v0 v1 vselect m,
+    (eval_select cond v0 v1 vselect m) =
+    (eval_select2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_select2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
+
+Definition eval_static_selectl (v0 v1 vselect : aval) : aval :=
   match vselect with
   | I iselect =>
     if Int.eq Int.zero iselect
@@ -60,7 +80,7 @@ Definition selectl (v0 v1 vselect : aval) : aval :=
   | _ => Vtop
   end.
 
-Definition selectf (v0 v1 vselect : aval) : aval :=
+Definition eval_static_selectf (v0 v1 vselect : aval) : aval :=
   match vselect with
   | I iselect =>
     if Int.eq Int.zero iselect
@@ -69,7 +89,7 @@ Definition selectf (v0 v1 vselect : aval) : aval :=
   | _ => Vtop
   end.
 
-Definition selectfs (v0 v1 vselect : aval) : aval :=
+Definition eval_static_selectfs (v0 v1 vselect : aval) : aval :=
   match vselect with
   | I iselect =>
     if Int.eq Int.zero iselect
@@ -202,10 +222,10 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Osingleoflong, v1::nil => singleoflong v1
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
-  | Oselect, v0::v1::vselect::nil => select v0 v1 vselect
-  | Oselectl, v0::v1::vselect::nil => selectl v0 v1 vselect               
-  | Oselectf, v0::v1::vselect::nil => selectf v0 v1 vselect
-  | Oselectfs, v0::v1::vselect::nil => selectfs v0 v1 vselect               
+  | (Oselect cond), v0::v1::vselect::nil => eval_static_select cond v0 v1 vselect
+  | Oselectl, v0::v1::vselect::nil => eval_static_selectl v0 v1 vselect               
+  | Oselectf, v0::v1::vselect::nil => eval_static_selectf v0 v1 vselect
+  | Oselectfs, v0::v1::vselect::nil => eval_static_selectfs v0 v1 vselect               
   | _, _ => Vbot
   end.
 
@@ -229,6 +249,15 @@ Proof.
   inv H2.
   destruct cond; simpl; eauto with va.
   destruct cond; auto with va.
+Qed.
+
+Theorem eval_static_condition0_sound:
+  forall cond varg m aarg,
+  vmatch bc varg aarg ->
+  cmatch (eval_condition0 cond varg m) (eval_static_condition0 cond aarg).
+Proof.
+  intros until aarg; intro VM.
+  destruct cond; simpl; eauto with va.
 Qed.
 
 Lemma symbol_address_sound:
@@ -276,18 +305,22 @@ Theorem eval_static_operation_sound:
   list_forall2 (vmatch bc) vargs aargs ->
   vmatch bc vres (eval_static_operation op aargs).
 Proof.
-  unfold eval_operation, eval_static_operation; intros;
+  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs; intros;
   destruct op; InvHyps; eauto with va.
   destruct (propagate_float_constants tt); constructor.
   destruct (propagate_float_constants tt); constructor.
   rewrite Ptrofs.add_zero_l; eauto with va.
   apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
   (* select *)
-  - inv H2; simpl; try constructor.
-    + destruct (Int.eq _ _); apply binop_int_sound; trivial.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
+    rewrite eval_select_to2.
+    unfold eval_select2.
+    inv Hcond; trivial; try constructor.
+    + apply binop_int_sound; assumption.
+    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      apply vmatch_ifptr_i.
+    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      apply vmatch_ifptr_i.
   (* selectl *)
   - inv H2; simpl; try constructor.
     + destruct (Int.eq _ _); apply binop_long_sound; trivial.
