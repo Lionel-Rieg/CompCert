@@ -283,7 +283,7 @@ Definition sel_builtin optid ef args :=
            | Some id =>
              match args with
                | a1::a2::a3::nil =>
-                 OK (Sassign id (Eop Oselect
+                 OK (Sassign id (Eop (Oselect (Ccomp0 Ceq))
                                      ((sel_expr a3):::
                                       (sel_expr a2):::
                                       (sel_expr a1):::Enil)))

@@ -288,6 +288,21 @@ Definition eval_select (cond : condition0) (v0 : val) (v1 : val) (vselect : val)
     | _,_,_ => Vundef
   end.
 
+Definition eval_select2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vint i0, Vint i1 => Vint (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_select_to2: forall cond v0 v1 vselect m,
+    (eval_select cond v0 v1 vselect m) =
+    (eval_select2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_select2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
+
 Definition eval_selectl (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
   | Vint iselect =>
