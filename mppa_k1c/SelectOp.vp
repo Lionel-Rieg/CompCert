@@ -63,7 +63,7 @@ Context {hf: helper_functions}.
 
 (** Ternary operator *)
 Definition select o0 o1 oselect :=
- Eop (Oselect (Ccomp0 Ceq))
+ Eop (Oselect (Ccomp0 Cne))
               (o0:::o1:::oselect:::Enil).
 				      
 (** ** Constants **)
@@ -288,7 +288,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      if same_expr_pure y0 y1
      && Int.eq zero0 Int.zero
      && Int.eq zero1 Int.zero                 
-     then Eop (Oselect (Ccomp0 Cne)) (v0:::v1:::y0:::Enil)
+     then select v0 v1 y0
      else Eop Oor (e1:::e2:::Enil)
   |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Ceq zero0))
         (y0:::Enil)):::Enil)):::v0:::Enil)),
@@ -297,7 +297,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      if same_expr_pure y0 y1
      && Int.eq zero0 Int.zero
      && Int.eq zero1 Int.zero                 
-     then Eop (Oselect (Ccompu0 Cne)) (v0:::v1:::y0:::Enil)
+     then select v0 v1 y0
      else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
