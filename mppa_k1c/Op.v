@@ -1471,22 +1471,16 @@ Proof.
   - unfold eval_select.
     inv H4; trivial.
     inv H2; trivial.
-    inv H3; trivial.
-    + destruct (eval_condition0 cond _ m1) eqn:Hcond; trivial.
-      assert (Hcond' : ((eval_condition0 cond (Vint i1) m2) = Some b)).
-      * eapply eval_condition0_inj.
-        constructor.
-        assumption.
-      * rewrite Hcond'. constructor.
-    + destruct (eval_condition0 cond _ m1) eqn:Hcond; trivial.
-      assert (Hcond' : ((eval_condition0 cond (Vlong i1) m2) = Some b)).
-      
-    trivial.
-    exploit eval_condition0_inj; eauto.
-    exploit eval_condition0_inj; eauto.
-    destruct v; trivial.
-    destruct v0; trivial.
-    destruct v'; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
   (* selectl *)
   - inv H3; simpl; try constructor.
     inv H4; simpl; try constructor.
