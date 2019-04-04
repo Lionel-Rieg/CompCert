@@ -307,10 +307,17 @@ Proof.
   unfold add_label, size; simpl; omega.
 Qed.
 
+Lemma size_add_basic bi bh: header bh = nil -> size (add_basic bi bh) = size bh + 1.
+Proof.
+  intro H. unfold add_basic, size; rewrite H; simpl. omega.
+Qed.
+
+
 Lemma size_add_to_newblock i: size (add_to_new_bblock i) = 1.
 Proof.
   destruct i; auto.
 Qed.
+
 
 Lemma dist_end_block_code_simu_mid_block i c:
   dist_end_block_code (i::c) <> 0 ->
@@ -324,7 +331,11 @@ Proof.
   - rewrite size_add_label;
     subst_is_trans_code H.
     omega.
-Admitted. (* A FINIR *)
+  - rewrite size_add_basic; auto.
+    subst_is_trans_code H. 
+    omega.
+Qed.
+
 Local Hint Resolve dist_end_block_code_simu_mid_block.
 
 
