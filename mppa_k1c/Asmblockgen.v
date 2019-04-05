@@ -367,6 +367,17 @@ Definition transl_cond_op
       Error(msg "Asmblockgen.transl_cond_op")
 end.
 
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpuwz (c: comparison) :=
+  match c with
+  | Cne => OK BTwnez
+  | Ceq => OK BTweqz
+  | Clt => Error (msg "btest_for_compuwz: Clt")
+  | Cge => Error (msg "btest_for_compuwz: Cge")
+  | Cle => Error (msg "btest_for_compuwz: Cle")
+  | Cgt => Error (msg "btest_for_compuwz: Cgt")
+  end.
+
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
 
@@ -737,6 +748,9 @@ Definition transl_op
       (match cond with
        | Ccomp0 cmp =>
          OK (Pcmove (btest_for_cmpswz cmp) r0 rS r1 ::i k)
+       | Ccompu0 cmp =>
+         do bt <- btest_for_cmpuwz cmp;
+           OK (Pcmoveu bt r0 rS r1 ::i k)
        | Ccompl0 cmp =>
          OK (Pcmove (btest_for_cmpsdz cmp) r0 rS r1 ::i k)
        | _ => Error (msg "Asmblockgen Oselect")

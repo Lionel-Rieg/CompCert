@@ -1446,6 +1446,7 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   | Pmaddw  => "Pmaddw"
   | Pmaddl  => "Pmaddl"
   | Pcmove _ => "Pcmove"
+  | Pcmoveu _ => "Pcmoveu"
   end.
 
 Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=

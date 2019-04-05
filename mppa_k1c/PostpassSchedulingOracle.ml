@@ -129,6 +129,7 @@ let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
   | Pmaddl -> "Pmaddl"
   | Pcmove _ -> "Pcmove"
+  | Pcmoveu _ -> "Pcmoveu"
             
 let arith_ri32_str = "Pmake"
 
@@ -488,7 +489,7 @@ let ab_inst_to_real = function
   | "Pfixedudrzz" -> Fixedudz
   | "Pfixeddrzz_i32" -> Fixeddz
   | "Pfixedudrzz_i32" -> Fixedudz
-  | "Pcmove" -> Cmoved
+  | "Pcmove" | "Pcmoveu" -> Cmoved
   
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
