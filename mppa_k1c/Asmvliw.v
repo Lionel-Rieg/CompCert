@@ -15,7 +15,9 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for K1c assembly language. *)
+(** Abstract syntax and semantics for VLIW semantics of K1c assembly language. *)
+
+(* FIXME: develop/fix the comments in this file *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -34,6 +36,12 @@ Require Import Errors.
 Require Import Sorting.Permutation.
 
 (** * Abstract syntax *)
+
+(** A K1c program is syntactically given as a list of functions. 
+    Each function is associated to a list of bundles of type [bblock] below.
+    Hence, syntactically, we view each bundle as a basic block:
+    this view induces our sequential semantics of bundles defined in [Asmblock].
+*)
 
 (** General Purpose registers.
 *)
@@ -481,21 +489,7 @@ Coercion PExpand:   ex_instruction >-> control.
 Coercion PCtlFlow:  cf_instruction >-> control.
 
 
-(** * Definition of a bblock *)
-
-Ltac exploreInst :=
-  repeat match goal with
-  | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
-  | [ H : OK _ = OK _ |- _ ] => monadInv H
-  | [ |- context[if ?b then _ else _] ] => destruct b
-  | [ |- context[match ?m with | _ => _ end] ] => destruct m
-  | [ |- context[match ?m as _ return _ with | _ => _ end]] => destruct m
-  | [ H : bind _ _ = OK _ |- _ ] => monadInv H
-  | [ H : Error _ = OK _ |- _ ] => inversion H
-  end.
-
-Definition non_empty_bblock (body: list basic) (exit: option control): Prop
- := body <> nil \/ exit <> None.
+(** * Definition of a bblock (ie a bundle) *)
 
 Definition non_empty_body (body: list basic): bool :=
   match body with
@@ -511,23 +505,11 @@ Definition non_empty_exit (exit: option control): bool :=
 
 Definition non_empty_bblockb (body: list basic) (exit: option control): bool := non_empty_body body || non_empty_exit exit.
 
-Lemma non_empty_bblock_refl:
-  forall body exit,
-  non_empty_bblock body exit <->
-  Is_true (non_empty_bblockb body exit).
-Proof.
-  intros. split.
-  - destruct body; destruct exit.
-    all: simpl; auto. intros. inversion H; contradiction.
-  - destruct body; destruct exit.
-    all: simpl; auto.
-    all: intros; try (right; discriminate); try (left; discriminate).
-    contradiction.
-Qed.
 
-Definition builtin_alone (body: list basic) (exit: option control) := forall ef args res,
-  exit = Some (PExpand (Pbuiltin ef args res)) -> body = nil.
-
+(** TODO
+ * For now, we consider a builtin is alone in a bundle (and a basic block).
+ * Is there a way to avoid that ?
+ *)
 Definition builtin_aloneb (body: list basic) (exit: option control) :=
   match exit with
   | Some (PExpand (Pbuiltin _ _ _)) =>
@@ -538,40 +520,8 @@ Definition builtin_aloneb (body: list basic) (exit: option control) :=
   | _ => true
   end.
 
-Lemma builtin_alone_refl:
-  forall body exit,
-  builtin_alone body exit <-> Is_true (builtin_aloneb body exit).
-Proof.
-  intros. split.
-  - destruct body; destruct exit.
-    all: simpl; auto.
-    all: exploreInst; simpl; auto.
-    unfold builtin_alone. intros. assert (Some (Pbuiltin e l b0) = Some (Pbuiltin e l b0)); auto.
-    assert (b :: body = nil). eapply H; eauto. discriminate.
-  - destruct body; destruct exit.
-    all: simpl; auto; try constructor.
-    + exploreInst; try discriminate.
-        simpl. contradiction.
-    + intros. discriminate.
-Qed.
-
 Definition wf_bblockb (body: list basic) (exit: option control) :=
   (non_empty_bblockb body exit) && (builtin_aloneb body exit).
-
-Definition wf_bblock (body: list basic) (exit: option control) :=
-  non_empty_bblock body exit /\ builtin_alone body exit.
-
-Lemma wf_bblock_refl:
-  forall body exit,
-  wf_bblock body exit <-> Is_true (wf_bblockb body exit).
-Proof.
-  intros. split.
-  - intros. inv H. apply non_empty_bblock_refl in H0. apply builtin_alone_refl in H1.
-    apply andb_prop_intro. auto.
-  - intros. apply andb_prop_elim in H. inv H.
-    apply non_empty_bblock_refl in H0. apply builtin_alone_refl in H1.
-    unfold wf_bblock. split; auto.
-Qed.
 
 (** A bblock is well-formed if he contains at least one instruction,
     and if there is a builtin then it must be alone in this bblock. *)
@@ -583,26 +533,7 @@ Record bblock := mk_bblock {
   correct: Is_true (wf_bblockb body exit)
 }.
 
-Ltac bblock_auto_correct := (apply non_empty_bblock_refl; try discriminate; try (left; discriminate); try (right; discriminate)).
-(* Local Obligation Tactic := bblock_auto_correct. *)
-
-Lemma Istrue_proof_irrelevant (b: bool): forall (p1 p2:Is_true b), p1=p2.
-Proof.
-  destruct b; simpl; auto.
-  - destruct p1, p2; auto.
-  - destruct p1.
-Qed.
-
-Lemma bblock_equality bb1 bb2: header bb1=header bb2 -> body bb1 = body bb2 -> exit bb1 = exit bb2 -> bb1 = bb2.
-Proof.
-  destruct bb1 as [h1 b1 e1 c1], bb2 as [h2 b2 e2 c2]; simpl.
-  intros; subst.
-  rewrite (Istrue_proof_irrelevant _ c1 c2).
-  auto.
-Qed.
-
-
-(* FIXME: redundant with definition in Machblock *)
+(* FIXME? redundant with definition in Machblock *)
 Definition length_opt {A} (o: option A) : nat :=
   match o with
   | Some o => 1
@@ -614,66 +545,6 @@ Definition length_opt {A} (o: option A) : nat :=
    The result is in Z to be compatible with operations on PC
 *)
 Definition size (b:bblock): Z := Z.of_nat (length (body b) + length_opt (exit b)).
-(*   match (body b, exit b) with
-  | (nil, None) => 1
-  | _ => 
-  end.
- *)
-
-Lemma length_nonil {A: Type} : forall l:(list A), l <> nil -> (length l > 0)%nat.
-Proof.
-  intros. destruct l; try (contradict H; auto; fail).
-  simpl. omega.
-Qed.
-
-Lemma to_nat_pos : forall z:Z, (Z.to_nat z > 0)%nat -> z > 0.
-Proof.
-  intros. destruct z; auto.
-  - contradict H. simpl. apply gt_irrefl.
-  - apply Zgt_pos_0.
-  - contradict H. simpl. apply gt_irrefl.
-Qed.
-
-Lemma size_positive (b:bblock): size b > 0.
-Proof.
-  unfold size. destruct b as [hd bdy ex cor]. simpl.
-  destruct ex; destruct bdy; try (apply to_nat_pos; rewrite Nat2Z.id; simpl; omega).
-  inversion cor; contradict H; simpl; auto.
-(*     rewrite eq. (* inversion COR. *) (* inversion H. *)
-  - assert ((length b > 0)%nat). apply length_nonil. auto.
-    omega.
-  - destruct e; simpl; try omega. contradict H; simpl; auto.
- *)Qed.
-
-
-Program Definition no_header (bb : bblock) := {| header := nil; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Lemma no_header_size:
-  forall bb, size (no_header bb) = size bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. unfold no_header. simpl. reflexivity.
-Qed.
-
-Program Definition stick_header (h : list label) (bb : bblock) := {| header := h; body := body bb; exit := exit bb |}.
-Next Obligation.
-  destruct bb; simpl. assumption.
-Defined.
-
-Lemma stick_header_size:
-  forall h bb, size (stick_header h bb) = size bb.
-Proof.
-  intros. destruct bb. unfold stick_header. simpl. reflexivity.
-Qed.
-
-Lemma stick_header_no_header:
-  forall bb, stick_header (header bb) (no_header bb) = bb.
-Proof.
-  intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
-Qed.
-
 
 Definition bblocks := list bblock.
 
@@ -688,103 +559,6 @@ Fixpoint size_blocks (l: bblocks): Z :=
 Record function : Type := mkfunction { fn_sig: signature; fn_blocks: bblocks }.
 Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.
-
-Inductive instruction : Type :=
-  | PBasic    (i: basic)
-  | PControl  (i: control)
-.
-
-Coercion PBasic:    basic >-> instruction.
-Coercion PControl:  control >-> instruction.
-
-Definition code := list instruction.
-Definition bcode := list basic.
-
-Fixpoint basics_to_code (l: list basic) :=
-  match l with
-  | nil => nil
-  | bi::l => (PBasic bi)::(basics_to_code l)
-  end.
-
-Fixpoint code_to_basics (c: code) :=
-  match c with
-  | (PBasic i)::c =>
-    match code_to_basics c with
-    | None => None
-    | Some l => Some (i::l)
-    end
-  | _::c => None
-  | nil => Some nil
-  end.
-
-Lemma code_to_basics_id: forall c, code_to_basics (basics_to_code c) = Some c.
-Proof.
-  intros. induction c as [|i c]; simpl; auto.
-  rewrite IHc. auto.
-Qed.
-
-Lemma code_to_basics_dist:
-  forall c c' l l',
-  code_to_basics c = Some l ->
-  code_to_basics c' = Some l' ->
-  code_to_basics (c ++ c') = Some (l ++ l').
-Proof.
-  induction c as [|i c]; simpl; auto.
-  - intros. inv H. simpl. auto.
-  - intros. destruct i; try discriminate. destruct (code_to_basics c) eqn:CTB; try discriminate.
-    inv H. erewrite IHc; eauto. auto.
-Qed.
-
-(** 
-  Asmblockgen will have to translate a Mach control into a list of instructions of the form
-   i1 :: i2 :: i3 :: ctl :: nil ; where i1..i3 are basic instructions, ctl is a control instruction
-  These functions provide way to extract the basic / control instructions
-*)
-
-Fixpoint extract_basic (c: code) :=
-  match c with
-  | nil => nil
-  | PBasic i :: c => i :: (extract_basic c)
-  | PControl i :: c => nil
-  end.
-
-Fixpoint extract_ctl (c: code) :=
-  match c with
-  | nil => None
-  | PBasic i :: c => extract_ctl c
-  | PControl i :: nil => Some i
-  | PControl i :: _ => None (* if the first found control instruction isn't the last *)
-  end.
-
-(** * Utility for Asmblockgen *)
-
-Program Definition bblock_single_inst (i: instruction) :=
-  match i with
-  | PBasic b => {| header:=nil; body:=(b::nil); exit:=None |}
-  | PControl ctl => {| header:=nil; body:=nil; exit:=(Some ctl) |}
-  end.
-Next Obligation.
-  apply wf_bblock_refl. constructor.
-    right. discriminate.
-    constructor.
-Qed.
-
-(** This definition is not used anymore *)
-(* Program Definition bblock_basic_ctl (c: list basic) (i: option control) :=
-  match i with
-  | Some i => {| header:=nil; body:=c; exit:=Some i |}
-  | None =>
-    match c with
-    | _::_ => {| header:=nil; body:=c; exit:=None |}
-    | nil => {| header:=nil; body:=Pnop::nil; exit:=None |}
-    end
-  end.
-Next Obligation.
-  bblock_auto_correct.
-Qed. Next Obligation.
-  bblock_auto_correct.
-Qed. *)
-
 
 (** * Operational semantics *)
 
@@ -841,6 +615,8 @@ Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
 
 Local Open Scope asm.
 
+(** * Parallel Semantics of bundles *)
+
 Section RELSEM.
 
 (** Execution of arith instructions *)
@@ -855,10 +631,8 @@ Variable ge: genv.
 
 Inductive outcome: Type :=
   | Next (rs:regset) (m:mem)
-  | Stuck.
-(* Arguments outcome: clear implicits. *)
-
-
+  | Stuck
+.
 
 (** ** Arithmetic Expressions (including comparisons) *)
 
@@ -1216,22 +990,18 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
-  end.                    
+  end.
 
 Definition arith_eval_arri32 n v1 v2 v3 :=
   match n with
   | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
-  end.                    
+  end.
 
 Definition arith_eval_arri64 n v1 v2 v3 :=
   match n with
   | Pmaddil => Val.addl v1 (Val.mull v2 (Vlong v3))
-  end.                    
+  end.
 
-(* TODO: on pourrait mettre ça dans Asmblock pour factoriser le code
-   en définissant 
-    exec_arith_instr ai rs := parexec_arith_instr ai rs rs
-*)
 Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
   match ai with
   | PArithR n d => rsw#d <- (arith_eval_r n)
@@ -1264,7 +1034,6 @@ Definition eval_offset (ofs: offset) : res ptrofs :=
 
 (** * load/store *)
 
-(* TODO: factoriser ? *)
 Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
@@ -1321,11 +1090,8 @@ Definition store_chunk n :=
   | Pfsd => Mfloat64
   end.
 
-(* rem: parexec_store = exec_store *)
-
 (** * basic instructions *)
 
-(* TODO: factoriser ? *)
 Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   match bi with
   | PArith ai => Next (parexec_arith_instr ai rsr rsw) mw
@@ -1381,15 +1147,7 @@ Fixpoint parexec_wio_body (body: list basic) (rsr rsw: regset) (mr mw: mem) :=
      end
   end.
 
-(** Manipulations over the [PC] register: continuing with the next
-  instruction ([nextblock]) or branching to a label ([goto_label]). *)
-
-(* TODO: factoriser ? *)
-Definition par_nextblock size_b (rs: regset) :=
-  rs#PC <- (Val.offset_ptr rs#PC size_b).
-
-
-(** TODO: redundant w.r.t Machblock *)
+(** TODO: redundant w.r.t Machblock ?? *)
 Lemma in_dec (lbl: label) (l: list label):  { List.In lbl l } + { ~(List.In lbl l) }.
 Proof.
   apply List.in_dec.
@@ -1423,7 +1181,6 @@ Fixpoint label_pos (lbl: label) (pos: Z) (lb: bblocks) {struct lb} : option Z :=
   | b :: lb' => if is_label lbl b then Some pos else label_pos lbl (pos + (size b)) lb'
   end.
 
-(* TODO: factoriser ? *)
 Definition par_goto_label (f: function) (lbl: label) (rsr rsw: regset) (mw: mem) :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => Stuck
@@ -1439,7 +1196,7 @@ Definition par_goto_label (f: function) (lbl: label) (rsr rsw: regset) (mw: mem)
 Warning: in m PC is assumed to be already pointing on the next instruction !
 
 *)
-(* TODO: factoriser ? *)
+
 Definition par_eval_branch (f: function) (l: label) (rsr rsw: regset) (mw: mem) (res: option bool) :=
   match res with
     | Some true  => par_goto_label f l rsr rsw mw
@@ -1447,6 +1204,8 @@ Definition par_eval_branch (f: function) (l: label) (rsr rsw: regset) (mw: mem) 
     | None => Stuck
   end.
 
+
+(* FIXME: comment not up-to-date for parallel semantics *)
 
 (** Execution of a single control-flow instruction [i] in initial state [rs] and
     [m].  Return updated state.
@@ -1514,17 +1273,18 @@ Definition parexec_control (f: function) (oc: option control) (rsr rsw: regset) 
 end.
 
 
-Definition parexec_wio_bblock_aux (f: function) bdy ext size_b (rsr rsw: regset) (mr mw: mem): outcome :=
+Definition incrPC size_b (rs: regset) :=
+  rs#PC <- (Val.offset_ptr rs#PC size_b).
+
+(** parallel execution of the exit instruction of a bundle *)
+Definition parexec_exit (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
+  := parexec_control f ext (incrPC size_b rsr) rsw mw.
+
+Definition parexec_wio_bblock_aux f bdy ext size_b (rsr rsw: regset) (mr mw: mem): outcome :=
   match parexec_wio_body bdy rsr rsw mr mw with
-  | Next rsw mw =>
-    let rsr := par_nextblock size_b rsr in 
-    parexec_control f ext rsr rsw mw
+  | Next rsw mw => parexec_exit f ext size_b rsr rsw mw
   | Stuck => Stuck
   end.
-
-(** parallel in-order writes execution of bundles *)
-Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
-  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
 
 (** non-deterministic (out-of-order writes) parallel execution of bundles *)
 Definition parexec_bblock (f: function) (bundle: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
@@ -1534,30 +1294,19 @@ Definition parexec_bblock (f: function) (bundle: bblock) (rs: regset) (m: mem) (
       | Stuck => Stuck
       end.
 
-Lemma parexec_bblock_write_in_order f b rs m:
-   parexec_bblock f b rs m (parexec_wio_bblock f b rs m).
-Proof.
-   exists (body b). exists nil.
-   constructor 1.
-   - rewrite app_nil_r; auto.
-   - unfold parexec_wio_bblock.
-     destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
-Qed.
-
 (** deterministic parallel (out-of-order writes) execution of bundles *)
 Definition det_parexec (f: function) (bundle: bblock) (rs: regset) (m: mem) rs' m': Prop :=
    forall o, parexec_bblock f bundle rs m o -> o = Next rs' m'.
 
 
-Local Hint Resolve parexec_bblock_write_in_order.
+(* FIXME: comment not up-to-date *)
+(** Translation of the LTL/Linear/Mach view of machine registers to
+  the RISC-V view.  Note that no LTL register maps to [X31].  This
+  register is reserved as temporary, to be used by the generated RV32G
+  code.  *)
 
-Lemma det_parexec_write_in_order f b rs m rs' m':
-   det_parexec f b rs m rs' m' -> parexec_wio_bblock f b rs m = Next rs' m'.
-Proof.
-   unfold det_parexec; auto.
-Qed.
 
-  (* FIXME - R16 and R32 are excluded *)
+(* FIXME - R16 and R32 are excluded *)
 Definition preg_of (r: mreg) : preg :=
   match r with
   | R0  => GPR0  | R1  => GPR1  | R2  => GPR2  | R3  => GPR3  | R4  => GPR4
@@ -1584,7 +1333,7 @@ Definition undef_caller_save_regs (rs: regset) : regset :=
     then rs r
     else Vundef.
 
-
+(* FIXME: comment not up-to-date *)
 (** Extract the values of the arguments of an external call.
     We exploit the calling conventions from module [Conventions], except that
     we use RISC-V registers instead of locations. *)
@@ -1615,11 +1364,6 @@ Definition extcall_arguments
 Definition loc_external_result (sg: signature) : rpair preg :=
   map_rpair preg_of (loc_result sg).
 
-(** Manipulations over the [PC] register: continuing with the next
-  instruction ([nextblock]) or branching to a label ([goto_label]). *)
-
-Definition nextblock (b:bblock) (rs: regset) :=
-  rs#PC <- (Val.offset_ptr rs#PC (Ptrofs.repr (size b))).
 
 (** Looking up bblocks in a code sequence by position. *)
 Fixpoint find_bblock (pos: Z) (lb: bblocks) {struct lb} : option bblock :=
@@ -1635,6 +1379,8 @@ Fixpoint find_bblock (pos: Z) (lb: bblocks) {struct lb} : option bblock :=
 Inductive state: Type :=
   | State: regset -> mem -> state.
 
+Definition nextblock (b:bblock) (rs: regset) :=
+  incrPC (Ptrofs.repr (size b)) rs.
 
 Inductive step: state -> trace -> state -> Prop :=
   | exec_step_internal:
@@ -1666,6 +1412,31 @@ Inductive step: state -> trace -> state -> Prop :=
       rs' = (set_pair (loc_external_result (ef_sig ef) ) res (undef_caller_save_regs rs))#PC <- (rs RA) ->
       step (State rs m) t (State rs' m')
   .
+
+
+(** parallel in-order writes execution of bundles *)
+Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
+  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
+
+
+Lemma parexec_bblock_write_in_order f b rs m:
+   parexec_bblock f b rs m (parexec_wio_bblock f b rs m).
+Proof.
+   exists (body b). exists nil.
+   constructor 1.
+   - rewrite app_nil_r; auto.
+   - unfold parexec_wio_bblock.
+     destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
+Qed.
+
+
+Local Hint Resolve parexec_bblock_write_in_order.
+
+Lemma det_parexec_write_in_order f b rs m rs' m':
+   det_parexec f b rs m rs' m' -> parexec_wio_bblock f b rs m = Next rs' m'.
+Proof.
+   unfold det_parexec; auto.
+Qed.
 
 End RELSEM.
 

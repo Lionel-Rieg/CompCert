@@ -745,7 +745,7 @@ Proof.
     * constructor.
     * split; auto. simpl. intros.
       assert (rs r1 = (nextblock tbb rs) r1).
-        unfold nextblock. Simpl. rewrite H1 in H0.
+        unfold nextblock, incrPC. Simpl. rewrite H1 in H0.
       (*assert (Val.cmp_bool Ceq (rs r1) (Vint (Int.repr 0)) = Some b) as EVAL'S.
       { rewrite <- H2. rewrite <- H0. rewrite <- H1. auto. }*)
       auto;
@@ -772,7 +772,7 @@ Proof.
     * constructor.
     * split; auto. simpl. intros.
       assert (rs r1 = (nextblock tbb rs) r1).
-        unfold nextblock. Simpl. rewrite H1 in H0.
+        unfold nextblock, incrPC. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0. auto.
   - (* c = Clt *) contradict H; unfold select_comp; destruct (Int.eq n Int.zero);
@@ -821,7 +821,7 @@ Proof.
     * constructor.
     * split; auto. simpl. intros.
       assert (rs r1 = (nextblock tbb rs) r1).
-        unfold nextblock. Simpl. rewrite H1 in H0.
+        unfold nextblock, incrPC. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0; auto.
   - (* c = Cne *)
@@ -846,7 +846,7 @@ Proof.
     * constructor.
     * split; auto. simpl. intros.
       assert (rs r1 = (nextblock tbb rs) r1).
-        unfold nextblock. Simpl. rewrite H1 in H0.
+        unfold nextblock, incrPC. Simpl. rewrite H1 in H0.
       auto;
       unfold eval_branch. rewrite H0; auto.
   - (* c = Clt *) contradict H; unfold select_compl; destruct (Int64.eq n Int64.zero);
@@ -903,7 +903,7 @@ Proof.
     * constructor.
     * split; auto.
       assert (rs x = (nextblock tbb rs) x).
-        unfold nextblock. Simpl. rewrite H0 in EVAL'. clear H0.
+        unfold nextblock, incrPC. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
   + exploit (loadimm32_correct RTMP n); eauto. intros (rs' & A & B & C).
@@ -966,7 +966,7 @@ Proof.
     * constructor.
     * split; auto.
       assert (rs x = (nextblock tbb rs) x).
-        unfold nextblock. Simpl. rewrite H0 in EVAL'. clear H0.
+        unfold nextblock, incrPC. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
   + exploit (loadimm64_correct RTMP n); eauto. intros (rs' & A & B & C).

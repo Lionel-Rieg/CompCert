@@ -1,4 +1,5 @@
 open Asmvliw
+open Asmblock
 open Printf
 open Camlcoq
 open InstructionScheduler

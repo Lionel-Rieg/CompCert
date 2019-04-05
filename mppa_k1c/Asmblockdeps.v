@@ -910,7 +910,7 @@ Theorem forward_simu_control_gen ge fn ex b rs m s:
 Proof.
   intros. destruct ex; simpl; inv H0.
   - destruct c; destruct i; simpl; rewrite (H2 PC); auto.
-    all: try (eexists; split; try split; Simpl; intros rr; destruct rr; unfold nextblock; Simpl).
+    all: try (eexists; split; try split; Simpl; intros rr; destruct rr; unfold nextblock, incrPC; Simpl).
 
     (* Pjumptable *)
     + Simpl. rewrite (H2 r). destruct (rs r); simpl; auto. destruct (list_nth_z _ _); simpl; auto.
@@ -922,18 +922,18 @@ Proof.
 
     (* Pj_l *)
     + Simpl. unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto.
-      unfold nextblock. Simpl. destruct (Val.offset_ptr _ _); simpl; auto.
+      unfold nextblock, incrPC. Simpl. destruct (Val.offset_ptr _ _); simpl; auto.
       eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
 
     (* Pcb *)
     + Simpl. destruct (cmp_for_btest _); simpl; auto. rewrite (H2 r). destruct o; simpl; auto. destruct i; unfold eval_branch; unfold eval_branch_deps.
       ++ destruct (Val.cmp_bool _ _ _); simpl; auto. destruct b0.
-         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock, incrPC; Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto.
              eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
          +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
       ++ destruct (Val.cmpl_bool _ _ _); simpl; auto. destruct b0.
-         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock, incrPC; Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto.
              eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
          +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
@@ -941,12 +941,12 @@ Proof.
     (* Pcbu *)
     + Simpl. destruct (cmpu_for_btest _); simpl; auto. rewrite (H2 r). destruct o; simpl; auto. destruct i; unfold eval_branch; unfold eval_branch_deps.
       ++ destruct (Val_cmpu_bool _ _ _); simpl; auto. destruct b0.
-         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock, incrPC; Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto.
              eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
          +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
       ++ destruct (Val_cmplu_bool _ _ _); simpl; auto. destruct b0.
-         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock; Simpl.
+         +++ unfold goto_label; unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. unfold nextblock, incrPC; Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto.
              eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
          +++ simpl. eexists; split; try split; Simpl. intros rr; destruct rr; Simpl.
@@ -1813,31 +1813,31 @@ Theorem forward_simu_par_control_gen ge fn rsr rsw mr mw sr sw sz ex:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  match_outcome (parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
+  match_outcome (parexec_control ge fn ex (incrPC (Ptrofs.repr sz) rsr) rsw mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
 Proof.
   intros GENV MSR MSW.
   simpl in *. inv MSR. inv MSW.
   destruct ex.
   - destruct c; destruct i; try discriminate; simpl.
-    all: try (rewrite (H0 PC); eexists; split; try split; Simpl; intros rr; destruct rr; unfold par_nextblock; Simpl).
+    all: try (rewrite (H0 PC); eexists; split; try split; Simpl; intros rr; destruct rr; unfold incrPC; Simpl).
 
     (* Pjumptable *)
-    + rewrite (H0 PC). Simpl. rewrite (H0 r). unfold par_nextblock. Simpl.
+    + rewrite (H0 PC). Simpl. rewrite (H0 r). unfold incrPC. Simpl.
       destruct (rsr r); simpl; auto. destruct (list_nth_z _ _); simpl; auto.
       unfold par_goto_label. unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. Simpl.
       destruct (Val.offset_ptr _ _); simpl; auto.
-      eexists; split; try split; Simpl. intros rr; destruct rr; unfold par_nextblock; Simpl.
+      eexists; split; try split; Simpl. intros rr; destruct rr; unfold incrPC; Simpl.
       destruct (preg_eq g GPR62). rewrite e. Simpl.
       destruct (preg_eq g GPR63). rewrite e. Simpl. Simpl.
 
     (* Pj_l *)
     + rewrite (H0 PC). Simpl. unfold par_goto_label. unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto.
-      unfold par_nextblock. Simpl. destruct (Val.offset_ptr _ _); simpl; auto.
-      eexists; split; try split; Simpl. intros rr; destruct rr; unfold par_nextblock; Simpl.
+      unfold incrPC. Simpl. destruct (Val.offset_ptr _ _); simpl; auto.
+      eexists; split; try split; Simpl. intros rr; destruct rr; unfold incrPC; Simpl.
 
     (* Pcb *)
     + rewrite (H0 PC). Simpl. rewrite (H0 r). destruct (cmp_for_btest _); simpl; auto. destruct o; simpl; auto.
-      unfold par_eval_branch. unfold eval_branch_deps. unfold par_nextblock. Simpl. destruct i.
+      unfold par_eval_branch. unfold eval_branch_deps. unfold incrPC. Simpl. destruct i.
       ++ destruct (Val.cmp_bool _ _ _); simpl; auto. destruct b.
          +++ unfold par_goto_label. unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto. eexists; split; try split; Simpl.
@@ -1851,7 +1851,7 @@ Proof.
 
     (* Pcbu *)
     + rewrite (H0 PC). Simpl. rewrite (H0 r). destruct (cmpu_for_btest _); simpl; auto. destruct o; simpl; auto.
-      unfold par_eval_branch. unfold eval_branch_deps. unfold par_nextblock. Simpl. destruct i.
+      unfold par_eval_branch. unfold eval_branch_deps. unfold incrPC. Simpl. destruct i.
       ++ destruct (Val_cmpu_bool _ _ _); simpl; auto. destruct b.
          +++ unfold par_goto_label. unfold goto_label_deps. destruct (label_pos _ _ _); simpl; auto. Simpl.
              destruct (Val.offset_ptr _ _); simpl; auto. eexists; split; try split; Simpl.
@@ -1864,14 +1864,14 @@ Proof.
          +++ repeat (econstructor; eauto). intros rr; destruct rr; Simpl.
 
   - simpl in *. rewrite (H0 PC). eexists; split; try split; Simpl.
-    intros rr; destruct rr; unfold par_nextblock; Simpl.
+    intros rr; destruct rr; unfold incrPC; Simpl.
 Qed.
 
 Theorem forward_simu_par_control ge fn rsr rsw mr mw sr sw sz rs' ex m':
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Next rs' m' ->
+  parexec_control ge fn ex (incrPC (Ptrofs.repr sz) rsr) rsw mw = Next rs' m' ->
   exists s',
      inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = Some s'
   /\ match_states (State rs' m') s'.
@@ -1885,7 +1885,7 @@ Lemma forward_simu_par_control_Stuck ge fn rsr rsw mr mw sr sw sz ex:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  parexec_control ge fn ex (par_nextblock (Ptrofs.repr sz) rsr) rsw mw = Stuck ->
+  parexec_control ge fn ex (incrPC (Ptrofs.repr sz) rsr) rsw mw = Stuck ->
   inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr = None.
 Proof.
   intros. exploit forward_simu_par_control_gen. 3: eapply H1. 2: eapply H0. all: eauto. 
