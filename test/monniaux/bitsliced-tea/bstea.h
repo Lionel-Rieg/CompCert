@@ -5,11 +5,16 @@
 #include <limits.h>
 
 #include "bstea_wordsize.h"
-
-#if 0 /* defined(__K1C__) && defined(__COMPCERT__) */
-#define TERNARY(x, v1, v0) __builtin_ternary_ulong((x)!=0, (v1), (v0))
-#else
+#include "../ternary.h"
+/*
 #define TERNARY(x, v1, v0) ((x) ? (v1) : (v0))
+*/
+#if __BSTEA_WORDSIZE==64
+#define TERNARY(x, v1, v0) TERNARY64(x, v1, v0)
+#elif __BSTEA_WORDSIZE==32
+#define TERNARY(x, v1, v0) TERNARY32(x, v1, v0)
+#else
+#error What is the bit size !?
 #endif
 
 #define TEA_ROUNDS      32
