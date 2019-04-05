@@ -856,35 +856,35 @@ Remark find_label_commut:
 Proof.
   induction s; intros until k'; simpl; intros MC SE; try (monadInv SE); simpl; auto.
 (* store *)
-  unfold store. destruct (addressing m (sel_expr e)); simpl; auto.
+- unfold store. destruct (addressing m (sel_expr e)); simpl; auto.
 (* call *)
-  destruct (classify_call (prog_defmap cunit) e); simpl; auto.
+- destruct (classify_call (prog_defmap cunit) e); simpl; auto.
 (* tailcall *)
-  destruct (classify_call (prog_defmap cunit) e); simpl; auto.
+- destruct (classify_call (prog_defmap cunit) e); simpl; auto.
 (* seq *)
-  exploit (IHs1 (Cminor.Kseq s2 k)). constructor; eauto. eauto.
+- exploit (IHs1 (Cminor.Kseq s2 k)). constructor; eauto. eauto.
   destruct (Cminor.find_label lbl s1 (Cminor.Kseq s2 k)) as [[sx kx] | ];
   destruct (find_label lbl x (Kseq x0 k')) as [[sy ky] | ];
   intuition. apply IHs2; auto.
 (* ifthenelse *)
-  exploit (IHs1 k); eauto.
+- exploit (IHs1 k); eauto.
   destruct (Cminor.find_label lbl s1 k) as [[sx kx] | ];
   destruct (find_label lbl x k') as [[sy ky] | ];
   intuition. apply IHs2; auto.
 (* loop *)
-  apply IHs. constructor; auto. simpl; rewrite EQ; auto. auto.
+- apply IHs. constructor; auto. simpl; rewrite EQ; auto. auto.
 (* block *)
-  apply IHs. constructor; auto. auto.
+- apply IHs. constructor; auto. auto.
 (* switch *)
-  destruct b.
+- destruct b.
   destruct (validate_switch Int64.modulus n l (compile_switch Int64.modulus n l)); inv SE.
   simpl; auto.
   destruct (validate_switch Int.modulus n l (compile_switch Int.modulus n l)); inv SE.
   simpl; auto.
 (* return *)
-  destruct o; inv SE; simpl; auto.
+- destruct o; inv SE; simpl; auto.
 (* label *)
-  destruct (ident_eq lbl l). auto. apply IHs; auto.
+- destruct (ident_eq lbl l). auto. apply IHs; auto.
 Qed.
 
 Definition measure (s: Cminor.state) : nat :=
