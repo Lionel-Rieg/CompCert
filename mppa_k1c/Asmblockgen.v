@@ -751,7 +751,8 @@ Definition transl_op
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
 
-  | Oselect cond, a0 :: a1 :: aS :: nil =>
+  | Oselect cond, a0 :: a1 :: aS :: nil
+  | Oselectl cond, a0 :: a1 :: aS :: nil =>
     assertion (mreg_eq a0 res);
       do r0 <- ireg_of a0;
       do r1 <- ireg_of a1;
@@ -769,7 +770,6 @@ Definition transl_op
            OK (Pcmoveu bt r0 rS r1 ::i k)
        end)
     
-  | Oselectl, a0 :: a1 :: aS :: nil
   | Oselectf, a0 :: a1 :: aS :: nil
   | Oselectfs, a0 :: a1 :: aS :: nil =>
     assertion (mreg_eq a0 res);

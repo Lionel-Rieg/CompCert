@@ -194,8 +194,8 @@ Inductive operation : Type :=
   | Osingleoflongu           (**r [rd = float32_of_unsigned_int(r1)] *)
 (*c Boolean tests: *)
   | Ocmp (cond: condition)   (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
-  | Oselect (cond: condition0) (**r [rd = if r3 then r2 else r1] *)
-  | Oselectl                 (**r [rd = if r3 then r2 else r1] *)
+  | Oselect (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
+  | Oselectl (cond: condition0)(**r [rd = if cond r3 then r2 else r1] *)
   | Oselectf                 (**r [rd = if r3 then r2 else r1] *)
   | Oselectfs.               (**r [rd = if r3 then r2 else r1] *)
 
@@ -303,22 +303,26 @@ Proof.
   destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
 Qed.
 
-Definition eval_selectl (v0 : val) (v1 : val) (vselect : val) : val :=
-  match vselect with
-  | Vint iselect =>
-    match v0 with
-    | Vlong i0 =>
-      match v1 with
-      | Vlong i1 =>
-        Vlong (if Int.cmp Ceq Int.zero iselect
-               then i0
-               else i1)
-      | _ => Vundef
-      end
-    | _ => Vundef
-    end
-  | _ => Vundef
+Definition eval_selectl (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vlong i0, Vlong i1, Some bval => Vlong (if bval then i1 else i0)
+    | _,_,_ => Vundef
   end.
+
+Definition eval_selectl2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vlong i0, Vlong i1 => Vlong (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_selectl_to2: forall cond v0 v1 vselect m,
+    (eval_selectl cond v0 v1 vselect m) =
+    (eval_selectl2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_selectl2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
 
 Definition eval_selectf (v0 : val) (v1 : val) (vselect : val) : val :=
   match vselect with
@@ -483,7 +487,7 @@ Definition eval_operation
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
   | (Oselect cond), v0::v1::vselect::nil => Some (eval_select cond v0 v1 vselect m)
-  | Oselectl, v0::v1::vselect::nil => Some (eval_selectl v0 v1 vselect)
+  | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
   | Oselectf, v0::v1::vselect::nil => Some (eval_selectf v0 v1 vselect)
   | Oselectfs, v0::v1::vselect::nil => Some (eval_selectfs v0 v1 vselect)
   | _, _ => None
@@ -676,7 +680,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocmp c => (type_of_condition c, Tint)
                 
   | Oselect cond => (Tint :: Tint :: (arg_type_of_condition0 cond) :: nil, Tint)
-  | Oselectl => (Tlong :: Tlong :: Tint :: nil, Tlong)
+  | Oselectl cond => (Tlong :: Tlong :: (arg_type_of_condition0 cond) :: nil, Tlong)
   | Oselectf  => (Tfloat :: Tfloat :: Tint :: nil, Tfloat)
   | Oselectfs => (Tsingle :: Tsingle :: Tint :: nil, Tsingle)
   end.
@@ -924,7 +928,15 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (_ && _); simpl; trivial.
       destruct (Val.cmp_different_blocks _); simpl; trivial.
   (* selectl *)
-  - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
+  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
+    destruct cond; destruct v2; simpl in *; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+
   (* selectf *)
   - destruct v0; destruct v1; destruct v2; simpl in *; try discriminate; trivial.
   (* selectfs *)
@@ -1092,6 +1104,9 @@ Definition op_depends_on_memory (op: operation) : bool :=
 
   | Oselect (Ccompu0 _) => negb Archi.ptr64
   | Oselect (Ccomplu0 _) => Archi.ptr64
+
+  | Oselectl (Ccompu0 _) => negb Archi.ptr64
+  | Oselectl (Ccomplu0 _) => Archi.ptr64
                                 
   | _ => false
   end.
@@ -1104,7 +1119,7 @@ Proof.
   intros until m2. destruct op; simpl; try congruence;
                      
   destruct cond; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
-  unfold eval_select, eval_condition0, Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  unfold eval_select, eval_selectl, eval_condition0, Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
 Qed.
 
 (** Global variables mentioned in an operation or addressing mode *)
@@ -1488,9 +1503,19 @@ Proof.
       assumption.
     * rewrite Hcond'. constructor.
   (* selectl *)
-  - inv H3; simpl; try constructor.
-    inv H4; simpl; try constructor.
-    inv H2; simpl; constructor.
+  - unfold eval_selectl.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
   (* selectf *)
   - inv H3; simpl; try constructor.
     inv H4; simpl; try constructor.

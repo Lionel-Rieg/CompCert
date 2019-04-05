@@ -56,12 +56,9 @@ Definition eval_static_select (cond : condition0) (v0 v1 vselect : aval) : aval 
   | _ => Vtop
   end.
 
-Definition eval_static_selectl (v0 v1 vselect : aval) : aval :=
-  match vselect with
-  | I iselect =>
-    if Int.eq Int.zero iselect
-    then binop_long (fun x0 x1 => x0) v0 v1
-    else binop_long (fun x0 x1 => x1) v0 v1
+Definition eval_static_selectl (cond : condition0) (v0 v1 vselect : aval) : aval :=
+  match eval_static_condition0 cond vselect with
+  | Just b => binop_long (fun x0 x1 => if b then x1 else x0) v0 v1
   | _ => Vtop
   end.
 
@@ -208,7 +205,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
   | (Oselect cond), v0::v1::vselect::nil => eval_static_select cond v0 v1 vselect
-  | Oselectl, v0::v1::vselect::nil => eval_static_selectl v0 v1 vselect               
+  | (Oselectl cond), v0::v1::vselect::nil => eval_static_selectl cond v0 v1 vselect               
   | Oselectf, v0::v1::vselect::nil => eval_static_selectf v0 v1 vselect
   | Oselectfs, v0::v1::vselect::nil => eval_static_selectfs v0 v1 vselect               
   | _, _ => Vbot
@@ -307,11 +304,15 @@ Proof.
     + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
       apply vmatch_ifptr_i.
   (* selectl *)
-  - inv H2; simpl; try constructor.
-    + destruct (Int.eq _ _); apply binop_long_sound; trivial.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
+    rewrite eval_selectl_to2.
+    unfold eval_selectl2.
+    inv Hcond; trivial; try constructor.
+    + apply binop_long_sound; assumption.
+    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      apply vmatch_ifptr_l.
+    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      apply vmatch_ifptr_l.
   (* selectf *)
   - inv H2; simpl; try constructor.
     + destruct (Int.eq _ _); apply binop_float_sound; trivial.

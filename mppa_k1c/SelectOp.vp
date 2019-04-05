@@ -62,9 +62,19 @@ Section SELECT.
 Context {hf: helper_functions}.
 
 (** Ternary operator *)
-Definition select o0 o1 oselect :=
+Definition select_base o0 o1 oselect :=
  Eop (Oselect (Ccomp0 Cne))
               (o0:::o1:::oselect:::Enil).
+				      
+Definition select o0 o1 oselect :=
+  select_base o0 o1 oselect.
+				      
+Definition selectl_base o0 o1 oselect :=
+ Eop (Oselectl (Ccomp0 Cne))
+              (o0:::o1:::oselect:::Enil).
+				      
+Definition selectl o0 o1 oselect :=
+  selectl_base o0 o1 oselect.
 				      
 (** ** Constants **)
 
@@ -288,7 +298,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      if same_expr_pure y0 y1
      && Int.eq zero0 Int.zero
      && Int.eq zero1 Int.zero                 
-     then select v0 v1 y0
+     then select_base v0 v1 y0
      else Eop Oor (e1:::e2:::Enil)
   |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Ceq zero0))
         (y0:::Enil)):::Enil)):::v0:::Enil)),
@@ -297,7 +307,7 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      if same_expr_pure y0 y1
      && Int.eq zero0 Int.zero
      && Int.eq zero1 Int.zero                 
-     then select v0 v1 y0
+     then select_base v0 v1 y0
      else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.

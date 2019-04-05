@@ -296,10 +296,7 @@ Definition sel_builtin optid ef args :=
            | Some id =>
              match args with
                | a1::a2::a3::nil =>
-                 OK (Sassign id (Eop Oselectl
-                                     ((sel_expr a3):::
-                                                   (sel_expr a2):::
-                                                   (sel_expr a1):::Enil)))
+                 OK (Sassign id (selectl (sel_expr a3) (sel_expr a2) (sel_expr a1)))
                | _ => Error (msg "__builtin_ternary_(u)long: arguments")
              end
          end
