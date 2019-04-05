@@ -76,6 +76,20 @@ Definition selectl_base o0 o1 oselect :=
 Definition selectl o0 o1 oselect :=
   selectl_base o0 o1 oselect.
 				      
+Definition selectf_base o0 o1 oselect :=
+ Eop (Oselectf (Ccomp0 Cne))
+              (o0:::o1:::oselect:::Enil).
+				      
+Definition selectf o0 o1 oselect :=
+  selectf_base o0 o1 oselect.
+				      
+Definition selectfs_base o0 o1 oselect :=
+ Eop (Oselectfs (Ccomp0 Cne))
+              (o0:::o1:::oselect:::Enil).
+				      
+Definition selectfs o0 o1 oselect :=
+  selectfs_base o0 o1 oselect.
+				      
 (** ** Constants **)
 
 Definition addrsymbol (id: ident) (ofs: ptrofs) :=

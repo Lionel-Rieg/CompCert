@@ -1698,7 +1698,7 @@ Opaque Int.eq.
     * intros.
       rewrite Pregmap.gso; congruence.
 
-- (* Oselect *)
+- (* Oselectl *)
   destruct cond in *; simpl in *; try congruence;
     try monadInv EQ3;
     try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
@@ -1760,31 +1760,125 @@ Opaque Int.eq.
       rewrite Pregmap.gso; congruence.
 
 - (* Oselectf *)
-  econstructor; split.
-  + eapply exec_straight_one.
-    simpl; reflexivity.
+  destruct cond in *; simpl in *; try congruence;
+    try monadInv EQ3;
+    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
+  econstructor; split;
+  try ( eapply exec_straight_one; simpl; reflexivity ).
+  (* Cmp *)
   + split.
-    * unfold eval_selectf.
-      destruct (rs x1) eqn:eqX1; try constructor.
+    * unfold eval_select.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
-      simpl.
-      rewrite int_eq_comm.
-      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
+      destruct c0 in *; simpl;
+      destruct (Val.cmp_bool _ _); simpl; try constructor;
+        destruct b; simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
-- (* Oselectfs *)
-  econstructor; split.
-  + eapply exec_straight_one.
-    simpl; reflexivity.
+  (* Cmpu *)
   + split.
-    * unfold eval_selectfs.
-      destruct (rs x1) eqn:eqX1; try constructor.
+    * unfold eval_select.
       destruct (rs x) eqn:eqX; try constructor.
       destruct (rs x0) eqn:eqX0; try constructor.
-      simpl.
-      rewrite int_eq_comm.
-      destruct (Int.eq i Int.zero); simpl; rewrite Pregmap.gss; constructor.
+      destruct c0 in *; simpl in *; inv EQ2; simpl.
+      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
+         destruct (Val.cmpu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
+         destruct (Val.cmpu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+
+  (* Cmpl *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl;
+      destruct (Val.cmpl_bool _ _); simpl; try constructor;
+        destruct b; simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+      
+  (* Cmplu *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl in *; inv EQ2; simpl.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+
+
+- (* Oselectfs *)
+  destruct cond in *; simpl in *; try congruence;
+    try monadInv EQ3;
+    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
+  econstructor; split;
+  try ( eapply exec_straight_one; simpl; reflexivity ).
+  (* Cmp *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl;
+      destruct (Val.cmp_bool _ _); simpl; try constructor;
+        destruct b; simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+  (* Cmpu *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl in *; inv EQ2; simpl.
+      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
+         destruct (Val.cmpu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
+         destruct (Val.cmpu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+
+  (* Cmpl *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl;
+      destruct (Val.cmpl_bool _ _); simpl; try constructor;
+        destruct b; simpl; rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+      
+  (* Cmplu *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl in *; inv EQ2; simpl.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
 Qed.

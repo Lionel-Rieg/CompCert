@@ -308,10 +308,7 @@ Definition sel_builtin optid ef args :=
            | Some id =>
              match args with
                | a1::a2::a3::nil =>
-                 OK (Sassign id (Eop Oselectf
-                                     ((sel_expr a3):::
-                                                   (sel_expr a2):::
-                                                   (sel_expr a1):::Enil)))
+                 OK (Sassign id (selectf (sel_expr a3) (sel_expr a2) (sel_expr a1)))
                | _ => Error (msg "__builtin_ternary_double: arguments")
              end
          end
@@ -323,10 +320,7 @@ Definition sel_builtin optid ef args :=
            | Some id =>
              match args with
                | a1::a2::a3::nil =>
-                 OK (Sassign id (Eop Oselectfs
-                                     ((sel_expr a3):::
-                                                   (sel_expr a2):::
-                                                   (sel_expr a1):::Enil)))
+                 OK (Sassign id (selectfs (sel_expr a3) (sel_expr a2) (sel_expr a1)))
                | _ => Error (msg "__builtin_ternary_float: arguments")
              end
          end

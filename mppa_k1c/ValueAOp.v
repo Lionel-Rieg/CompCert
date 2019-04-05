@@ -62,21 +62,15 @@ Definition eval_static_selectl (cond : condition0) (v0 v1 vselect : aval) : aval
   | _ => Vtop
   end.
 
-Definition eval_static_selectf (v0 v1 vselect : aval) : aval :=
-  match vselect with
-  | I iselect =>
-    if Int.eq Int.zero iselect
-    then binop_float (fun x0 x1 => x0) v0 v1
-    else binop_float (fun x0 x1 => x1) v0 v1
+Definition eval_static_selectf (cond : condition0) (v0 v1 vselect : aval) : aval :=
+  match eval_static_condition0 cond vselect with
+  | Just b => binop_float (fun x0 x1 => if b then x1 else x0) v0 v1
   | _ => Vtop
   end.
 
-Definition eval_static_selectfs (v0 v1 vselect : aval) : aval :=
-  match vselect with
-  | I iselect =>
-    if Int.eq Int.zero iselect
-    then binop_single (fun x0 x1 => x0) v0 v1
-    else binop_single (fun x0 x1 => x1) v0 v1
+Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : aval :=
+  match eval_static_condition0 cond vselect with
+  | Just b => binop_single (fun x0 x1 => if b then x1 else x0) v0 v1
   | _ => Vtop
   end.
   
@@ -206,8 +200,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
   | (Oselect cond), v0::v1::vselect::nil => eval_static_select cond v0 v1 vselect
   | (Oselectl cond), v0::v1::vselect::nil => eval_static_selectl cond v0 v1 vselect               
-  | Oselectf, v0::v1::vselect::nil => eval_static_selectf v0 v1 vselect
-  | Oselectfs, v0::v1::vselect::nil => eval_static_selectfs v0 v1 vselect               
+  | (Oselectf cond), v0::v1::vselect::nil => eval_static_selectf cond v0 v1 vselect
+  | (Oselectfs cond), v0::v1::vselect::nil => eval_static_selectfs cond v0 v1 vselect               
   | _, _ => Vbot
   end.
 
@@ -314,17 +308,25 @@ Proof.
     + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
       apply vmatch_ifptr_l.
   (* selectf *)
-  - inv H2; simpl; try constructor.
-    + destruct (Int.eq _ _); apply binop_float_sound; trivial.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
+    rewrite eval_selectf_to2.
+    unfold eval_selectf2.
+    inv Hcond; trivial; try constructor.
+    + apply binop_float_sound; assumption.
+    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      constructor.
+    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      constructor.
   (* selectfs *)
-  - inv H2; simpl; try constructor.
-    + destruct (Int.eq _ _); apply binop_single_sound; trivial.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
-    + destruct (Int.eq _ _); destruct a1; destruct a0; eauto; constructor.
+  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
+    rewrite eval_selectfs_to2.
+    unfold eval_selectfs2.
+    inv Hcond; trivial; try constructor.
+    + apply binop_single_sound; assumption.
+    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      constructor.
+    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
+      constructor.
 Qed.
 
 End SOUNDNESS.
