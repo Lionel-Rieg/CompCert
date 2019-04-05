@@ -1680,6 +1680,24 @@ Opaque Int.eq.
         destruct b; simpl; rewrite Pregmap.gss; constructor.
     * intros.
       rewrite Pregmap.gso; congruence.
+      
+  (* Cmplu *)
+  + split.
+    * unfold eval_select.
+      destruct (rs x) eqn:eqX; try constructor.
+      destruct (rs x0) eqn:eqX0; try constructor.
+      destruct c0 in *; simpl in *; inv EQ2; simpl.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
+         destruct (Val.cmplu_bool _ _); simpl; try constructor.
+         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
+         rewrite Pregmap.gss; constructor.
+    * intros.
+      rewrite Pregmap.gso; congruence.
+
 - (* Oselectl *)
   econstructor; split.
   + eapply exec_straight_one.

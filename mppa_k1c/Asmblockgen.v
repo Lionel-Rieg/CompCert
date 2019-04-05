@@ -378,6 +378,17 @@ Definition btest_for_cmpuwz (c: comparison) :=
   | Cgt => Error (msg "btest_for_compuwz: Cgt")
   end.
 
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpudz (c: comparison) :=
+  match c with
+  | Cne => OK BTdnez
+  | Ceq => OK BTdeqz
+  | Clt => Error (msg "btest_for_compudz: Clt")
+  | Cge => Error (msg "btest_for_compudz: Cge")
+  | Cle => Error (msg "btest_for_compudz: Cle")
+  | Cgt => Error (msg "btest_for_compudz: Cgt")
+  end.
+
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
 
@@ -753,7 +764,9 @@ Definition transl_op
            OK (Pcmoveu bt r0 rS r1 ::i k)
        | Ccompl0 cmp =>
          OK (Pcmove (btest_for_cmpsdz cmp) r0 rS r1 ::i k)
-       | _ => Error (msg "Asmblockgen Oselect")
+       | Ccomplu0 cmp =>
+         do bt <- btest_for_cmpudz cmp;
+           OK (Pcmoveu bt r0 rS r1 ::i k)
        end)
     
   | Oselectl, a0 :: a1 :: aS :: nil
