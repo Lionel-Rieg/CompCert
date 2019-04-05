@@ -304,7 +304,7 @@ let encode_imm (imm:int64) =
   else
     let length = unsigned_length imm
     in if length <= 6 then U6
-    else if length <= 10 then S10
+    else if length <= 9 then S10 (* Special case for S10 - stay signed no matter what *)
     else if length <= 32 then U27L5
     else if length <= 37 then U27L10
     else if length <= 64 then E27U27L10
