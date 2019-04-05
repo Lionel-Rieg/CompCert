@@ -1,12 +1,9 @@
 
 #include <string.h>
 #include "bs.h"
+#include "../ternary.h"
 
-#if 0 /* defined(__K1C__) && defined(__COMPCERT__) */
-#define TERNARY(x, v0, v1) __builtin_ternary_ulong((x)!=0, (v1), (v0))
-#else
-#define TERNARY(x, v0, v1) ((x) ? (v1) : (v0))
-#endif
+#define TERNARY(x, v0, v1) TERNARY64(x, v1, v0)
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
