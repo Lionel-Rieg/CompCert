@@ -1060,13 +1060,10 @@ Lemma transl_cbranch_correct_false:
   /\ exec_control ge fn (Some insn) (nextblock tbb rs') m' = Next (nextblock tbb rs') m'
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
-  intros. exploit transl_cbranch_correct_1; eauto.
+  intros. exploit transl_cbranch_correct_1. all: eauto. simpl eval_branch. instantiate (1 := tbb).
+  intros (rs' & insn & A & B & C). rewrite regset_same_assign in B.
+  eexists; eexists. split; try split. all: eassumption.
 Qed.
-(*   intros (rs' & insn & A & B & C).
-  exists rs'.
-  split. eapply exec_straight_opt_right; eauto. apply exec_straight_one; auto.
-  intros; Simpl. 
- *)
 
 (** Translation of condition operators *)
 
@@ -1749,7 +1746,7 @@ Proof.
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_load_offset. rewrite PtrEq. rewrite B, LOAD. eauto. Simpl. 
+  unfold exec_load_offset. unfold parexec_load_offset. rewrite PtrEq. rewrite B, LOAD. eauto. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -1769,7 +1766,7 @@ Proof.
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
-  unfold exec_store_offset. rewrite PtrEq. rewrite B, C, STORE.
+  unfold exec_store_offset. unfold parexec_store_offset. rewrite PtrEq. rewrite B, C, STORE.
     eauto.
     discriminate.
     { intro. inv H. contradiction. }
@@ -1948,7 +1945,7 @@ Proof.
   intros (base & ro2 & mro2 & mr2 & rs' & ARGSS & IREGEQ & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mr2 mro2. clear ARGS.
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
-  rewrite INSTR. unfold exec_load_reg. rewrite B, LOAD. reflexivity. Simpl. 
+  rewrite INSTR. unfold exec_load_reg. unfold parexec_load_reg. rewrite B, LOAD. reflexivity. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -1969,7 +1966,7 @@ Proof.
   intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
+  rewrite INSTR. unfold exec_load_offset. unfold parexec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
   split; intros; Simpl. auto.
 Qed.
 
@@ -2055,7 +2052,7 @@ Proof.
   intros (base & ro2 & mr2 & mro2 & rs' & ARGSS & IREGG & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mro2 mr2. clear ARGS.
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
-  rewrite INSTR. unfold exec_store_reg. rewrite B. rewrite C; try discriminate. rewrite STORE. auto.
+  rewrite INSTR. unfold exec_store_reg. unfold parexec_store_reg. rewrite B. rewrite C; try discriminate. rewrite STORE. auto.
   intro. inv H. contradiction.
   auto.
 Qed.
@@ -2077,7 +2074,7 @@ Proof.
   intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
-  rewrite INSTR. unfold exec_store_offset. rewrite PtrEq, B. rewrite C; try discriminate. rewrite STORE. auto.
+  rewrite INSTR. unfold exec_store_offset. unfold parexec_store_offset. rewrite PtrEq, B. rewrite C; try discriminate. rewrite STORE. auto.
   intro. inv H. contradiction.
   auto.
 Qed.
@@ -2086,14 +2083,14 @@ Qed.
 Remark exec_store_offset_8_sign rs m x base ofs:
   exec_store_offset ge Mint8unsigned rs m x base ofs = exec_store_offset ge Mint8signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
+  unfold exec_store_offset. unfold parexec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_8. reflexivity.
 Qed.
 
 Remark exec_store_offset_16_sign rs m x base ofs:
   exec_store_offset ge Mint16unsigned rs m x base ofs = exec_store_offset ge Mint16signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
+  unfold exec_store_offset. unfold parexec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_16. reflexivity.
 Qed.
 
@@ -2135,14 +2132,14 @@ Qed.
 Remark exec_store_reg_8_sign rs m x base ofs:
   exec_store_reg Mint8unsigned rs m x base ofs = exec_store_reg Mint8signed rs m x base ofs.
 Proof.
-  unfold exec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
+  unfold exec_store_reg. unfold parexec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
   erewrite <- Mem.store_signed_unsigned_8. reflexivity.
 Qed.
 
 Remark exec_store_reg_16_sign rs m x base ofs:
   exec_store_reg Mint16unsigned rs m x base ofs = exec_store_reg Mint16signed rs m x base ofs.
 Proof.
-  unfold exec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
+  unfold exec_store_reg. unfold parexec_store_reg. unfold Mem.storev. destruct (Val.addl _ _); auto.
   erewrite <- Mem.store_signed_unsigned_16. reflexivity.
 Qed.
 

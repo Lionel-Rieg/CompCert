@@ -39,113 +39,21 @@ Section RELSEM.
 
 Variable ge: genv.
 
-
-Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset :=
-  match ai with
-  | PArithR n d => rs#d <- (arith_eval_r ge n)
-
-  | PArithRR n d s => rs#d <- (arith_eval_rr n rs#s)
-
-  | PArithRI32 n d i => rs#d <- (arith_eval_ri32 n i)
-  | PArithRI64 n d i => rs#d <- (arith_eval_ri64 n i)
-  | PArithRF32 n d i => rs#d <- (arith_eval_rf32 n i)
-  | PArithRF64 n d i => rs#d <- (arith_eval_rf64 n i)
-
-  | PArithRRR n d s1 s2 => rs#d <- (arith_eval_rrr n rs#s1 rs#s2)
-
-  | PArithRRI32 n d s i => rs#d <- (arith_eval_rri32 n rs#s i)
-
-  | PArithRRI64 n d s i => rs#d <- (arith_eval_rri64 n rs#s i)
-
-  | PArithARRR n d s1 s2 => rs#d <- (arith_eval_arrr n rs#d rs#s1 rs#s2)
-
-  | PArithARRI32 n d s i => rs#d <- (arith_eval_arri32 n rs#d rs#s i)
-
-  | PArithARRI64 n d s i => rs#d <- (arith_eval_arri64 n rs#d rs#s i)
-  end.
-
-(** * load/store *)
+Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset := parexec_arith_instr ge ai rs rs.
 
 (** Auxiliaries for memory accesses *)
 
+Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) := parexec_load_offset ge chunk rs rs m m d a ofs.
 
-Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) :=
-  match (eval_offset ge ofs) with
-  | OK ptr => match Mem.loadv chunk m (Val.offset_ptr (rs a) ptr) with
-              | None => Stuck
-              | Some v => Next (rs#d <- v) m
-              end
-  | _ => Stuck
-  end.
+Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_reg chunk rs rs m m d a ro.
 
-Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) :=
-  match Mem.loadv chunk m (Val.addl (rs a) (rs ro)) with
-  | None => Stuck
-  | Some v => Next (rs#d <- v) m
-  end.
+Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: ireg) (ofs: offset) := parexec_store_offset ge chunk rs rs m m s a ofs.
 
-Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: ireg) (ofs: offset) :=
-  match (eval_offset ge ofs) with
-  | OK ptr => match Mem.storev chunk m (Val.offset_ptr (rs a) ptr) (rs s) with
-              | None => Stuck
-              | Some m' => Next rs m'
-              end
-  | _ => Stuck
-  end.
-
-Definition exec_store_reg (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) :=
-  match Mem.storev chunk m (Val.addl (rs a) (rs ro)) (rs s) with
-  | None => Stuck
-  | Some m' => Next rs m'
-  end.
-
-
+Definition exec_store_reg (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) := parexec_store_reg chunk rs rs m m s a ro.
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome :=
-  match bi with
-  | PArith ai => Next (exec_arith_instr ai rs) m
-
-  | PLoadRRO n d a ofs => exec_load_offset (load_chunk n) rs m d a ofs
-  | PLoadRRR n d a ro => exec_load_reg (load_chunk n) rs m d a ro
-
-  | PStoreRRO n s a ofs => exec_store_offset (store_chunk n) rs m s a ofs
-  | PStoreRRR n s a ro => exec_store_reg (store_chunk n) rs m s a ro
-
-  | Pallocframe sz pos =>
-      let (m1, stk) := Mem.alloc m 0 sz in
-      let sp := (Vptr stk Ptrofs.zero) in
-      match Mem.storev Mptr m1 (Val.offset_ptr sp pos) rs#SP with
-      | None => Stuck
-      | Some m2 => Next (rs #FP <- (rs SP) #SP <- sp #RTMP <- Vundef) m2
-      end
-
-  | Pfreeframe sz pos =>
-      match Mem.loadv Mptr m (Val.offset_ptr rs#SP pos) with
-      | None => Stuck
-      | Some v =>
-          match rs SP with
-          | Vptr stk ofs =>
-              match Mem.free m stk 0 sz with
-              | None => Stuck
-              | Some m' => Next (rs#SP <- v #RTMP <- Vundef) m'
-              end
-          | _ => Stuck
-          end
-      end
-  | Pget rd ra =>
-    match ra with
-    | RA => Next (rs#rd <- (rs#ra)) m
-    | _  => Stuck
-    end
-  | Pset ra rd =>
-    match ra with
-    | RA => Next (rs#ra <- (rs#rd)) m
-    | _  => Stuck
-    end
-  | Pnop => Next rs m
-end.
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := parexec_basic_instr ge bi rs rs m m.
 
 Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
   match body with
@@ -157,34 +65,16 @@ Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
      end
   end.
 
-
-
 (** Position corresponding to a label *)
 
-
-
-Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome :=
-  match label_pos lbl 0 (fn_blocks f) with
-  | None => Stuck
-  | Some pos =>
-      match rs#PC with
-      | Vptr b ofs => Next (rs#PC <- (Vptr b (Ptrofs.repr pos))) m
-      | _          => Stuck
-      end
-  end.
+Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome := par_goto_label f lbl rs rs m.
 
 (** Evaluating a branch 
 
 Warning: in m PC is assumed to be already pointing on the next instruction !
 
 *)
-Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome :=
-  match res with
-    | Some true  => goto_label f l rs m
-    | Some false => Next rs m
-    | None => Stuck
-  end.
-
+Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome := par_eval_branch f l rs rs m res.
 
 (** Execution of a single control-flow instruction [i] in initial state [rs] and
     [m].  Return updated state.
@@ -202,55 +92,7 @@ Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: opti
     we generate cannot use those registers to hold values that must
     survive the execution of the pseudo-instruction. *)
 
-Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome :=
-  match oc with
-  | Some ic =>
-(** Get/Set system registers *)
-  match ic with
-
-
-(** Branch Control Unit instructions *)
-  | Pret =>
-      Next (rs#PC <- (rs#RA)) m
-  | Pcall s =>
-      Next (rs#RA <- (rs#PC) #PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-  | Picall r =>
-      Next (rs#RA <- (rs#PC) #PC <- (rs#r)) m
-  | Pgoto s =>
-      Next (rs#PC <- (Genv.symbol_address ge s Ptrofs.zero)) m
-  | Pigoto r =>
-      Next (rs#PC <- (rs#r)) m
-  | Pj_l l =>
-      goto_label f l rs m
-  | Pjumptable r tbl =>
-      match rs#r with
-      | Vint n =>
-          match list_nth_z tbl (Int.unsigned n) with
-          | None => Stuck
-          | Some lbl => goto_label f lbl (rs #GPR62 <- Vundef #GPR63 <- Vundef) m
-          end
-      | _ => Stuck
-      end
-      
-  | Pcb bt r l =>
-      match cmp_for_btest bt with
-      | (Some c, Int)  => eval_branch f l rs m (Val.cmp_bool c rs#r (Vint (Int.repr 0)))
-      | (Some c, Long) => eval_branch f l rs m (Val.cmpl_bool c rs#r (Vlong (Int64.repr 0)))
-      | (None, _) => Stuck
-      end
-  | Pcbu bt r l => 
-      match cmpu_for_btest bt with
-      | (Some c, Int) => eval_branch f l rs m (Val_cmpu_bool c rs#r (Vint (Int.repr 0)))
-      | (Some c, Long) => eval_branch f l rs m (Val_cmplu_bool c rs#r (Vlong (Int64.repr 0)))
-      | (None, _) => Stuck
-      end
-
-(** Pseudo-instructions *)
-  | Pbuiltin ef args res =>
-      Stuck (**r treated specially below *)
-  end
-  | None => Next rs m
-end.
+Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome := parexec_control ge f oc rs rs m.
 
 Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcome :=
   match exec_body (body b) rs0 m with
@@ -258,19 +100,6 @@ Definition exec_bblock (f: function) (b: bblock) (rs0: regset) (m: mem) : outcom
     let rs1 := nextblock b rs' in exec_control f (exit b) rs1 m'
   | Stuck => Stuck
   end.
-
-(** Translation of the LTL/Linear/Mach view of machine registers to
-  the RISC-V view.  Note that no LTL register maps to [X31].  This
-  register is reserved as temporary, to be used by the generated RV32G
-  code.  *)
-
-
-
-
-
-
-
-(** Execution of the instruction at [rs PC]. *)
 
 
 (** TODO

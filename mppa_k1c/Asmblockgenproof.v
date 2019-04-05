@@ -259,7 +259,7 @@ Proof.
   exploit label_pos_code_tail; eauto. instantiate (1 := 0).
   intros [pos' [P [Q R]]].
   exists tc; exists (rs#PC <- (Vptr b (Ptrofs.repr pos'))).
-  split. unfold goto_label. rewrite P. rewrite H1. auto.
+  split. unfold goto_label. unfold par_goto_label. rewrite P. rewrite H1. auto.
   split. rewrite Pregmap.gss. constructor; auto.
   rewrite Ptrofs.unsigned_repr. replace (pos' - 0) with pos' in Q.
   auto. omega.
@@ -1680,7 +1680,7 @@ Proof.
   { change (fn_blocks tf) with tfbody; unfold tfbody.
     apply exec_straight_blocks_step with rs2 m2'.
     unfold exec_bblock. simpl exec_body. rewrite C. fold sp. simpl exec_control.
-    rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. simpl in F. rewrite F. reflexivity.
+    rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. simpl in F. rewrite F. rewrite regset_same_assign. reflexivity.
     reflexivity.
     eapply exec_straight_blocks_trans.
     - eexact W'.
