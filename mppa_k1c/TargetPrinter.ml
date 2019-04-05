@@ -40,7 +40,7 @@ module Target (*: TARGET*) =
 
     let print_label oc lbl = label oc (transl_label lbl)
 
-    let int_reg_name = let open Asmblock in function
+    let int_reg_name = let open Asmvliw in function
       | GPR0  -> "$r0"  | GPR1  -> "$r1"  | GPR2  -> "$r2"  | GPR3  -> "$r3"
       | GPR4  -> "$r4"  | GPR5  -> "$r5"  | GPR6  -> "$r6"  | GPR7  -> "$r7"
       | GPR8  -> "$r8"  | GPR9  -> "$r9"  | GPR10 -> "$r10" | GPR11 -> "$r11"
@@ -62,12 +62,12 @@ module Target (*: TARGET*) =
 
     let ireg = ireg
 
-    let preg oc = let open Asmblock in function
+    let preg oc = let open Asmvliw in function
       | IR r -> ireg oc r
       | RA   -> output_string oc "$ra"
       | _ -> assert false
 
-    let preg_annot = let open Asmblock in function
+    let preg_annot = let open Asmvliw in function
       | IR r -> int_reg_name r
       | RA   -> "$ra"
       | _ -> assert false
@@ -160,7 +160,7 @@ module Target (*: TARGET*) =
   *)
 (* Offset part of a load or store *)
 
-    let offset oc = let open Asmblock in function
+    let offset oc = let open Asmvliw in function
     | Ofsimm n -> ptrofs oc n
     | Ofslow(id, ofs) -> fprintf oc "%%lo(%a)" symbol_offset (id, ofs)
 
@@ -168,7 +168,7 @@ module Target (*: TARGET*) =
     | AOff ofs -> offset oc ofs
     | AReg ro -> ireg oc ro
 
-    let icond_name = let open Asmblock in function
+    let icond_name = let open Asmvliw in function
       | ITne | ITneu -> "ne"
       | ITeq | ITequ -> "eq"
       | ITlt   -> "lt"
@@ -186,7 +186,7 @@ module Target (*: TARGET*) =
 
     let icond oc c = fprintf oc "%s" (icond_name c)
 
-    let fcond_name = let open Asmblock in function
+    let fcond_name = let open Asmvliw in function
       | FTone -> "one"
       | FTueq -> "ueq"
       | FToeq -> "oeq"
@@ -198,7 +198,7 @@ module Target (*: TARGET*) =
 
     let fcond oc c = fprintf oc "%s" (fcond_name c)
   
-    let bcond_name = let open Asmblock in function
+    let bcond_name = let open Asmvliw in function
       | BTwnez -> "wnez"
       | BTweqz -> "weqz"
       | BTwltz -> "wltz"
@@ -279,7 +279,7 @@ module Target (*: TARGET*) =
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
          (* jumptables := (lbl, tbl) :: !jumptables; *)
-         let base_reg = if idx_reg=Asmblock.GPR63 then Asmblock.GPR62 else Asmblock.GPR63 in
+         let base_reg = if idx_reg=Asmvliw.GPR63 then Asmvliw.GPR62 else Asmvliw.GPR63 in
          fprintf oc "%s jumptable [ " comment;
          List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
          fprintf oc "]\n";

@@ -21,7 +21,7 @@ Require Import Axioms.
 
 Local Open Scope error_monad_scope.
 
-Definition match_prog (p tp: Asmblock.program) :=
+Definition match_prog (p tp: Asmvliw.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
@@ -826,7 +826,7 @@ Qed.
 Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
 Proof.
-  eapply forward_simulation_step with (match_states:=fun (s1:Asmblock.state) s2 => s1=s2); eauto.
+  eapply forward_simulation_step with (match_states:=fun (s1:Asmvliw.state) s2 => s1=s2); eauto.
   - intros; subst; auto.
   - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
     + eapply exec_step_internal; eauto.

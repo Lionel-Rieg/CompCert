@@ -220,195 +220,195 @@ Inductive instruction : Type :=
 
 Definition control_to_instruction (c: control) :=
   match c with
-  | PExpand (Asmblock.Pbuiltin ef args res) => Pbuiltin ef args res
-  | PCtlFlow Asmblock.Pret                  => Pret
-  | PCtlFlow (Asmblock.Pcall l)             => Pcall l
-  | PCtlFlow (Asmblock.Picall r)            => Picall r
-  | PCtlFlow (Asmblock.Pgoto l)             => Pgoto l
-  | PCtlFlow (Asmblock.Pigoto l)             => Pigoto l
-  | PCtlFlow (Asmblock.Pj_l l)              => Pj_l l
-  | PCtlFlow (Asmblock.Pcb bt r l)          => Pcb bt r l
-  | PCtlFlow (Asmblock.Pcbu bt r l)         => Pcbu bt r l
-  | PCtlFlow (Asmblock.Pjumptable r label)  => Pjumptable r label
+  | PExpand (Asmvliw.Pbuiltin ef args res) => Pbuiltin ef args res
+  | PCtlFlow Asmvliw.Pret                  => Pret
+  | PCtlFlow (Asmvliw.Pcall l)             => Pcall l
+  | PCtlFlow (Asmvliw.Picall r)            => Picall r
+  | PCtlFlow (Asmvliw.Pgoto l)             => Pgoto l
+  | PCtlFlow (Asmvliw.Pigoto l)             => Pigoto l
+  | PCtlFlow (Asmvliw.Pj_l l)              => Pj_l l
+  | PCtlFlow (Asmvliw.Pcb bt r l)          => Pcb bt r l
+  | PCtlFlow (Asmvliw.Pcbu bt r l)         => Pcbu bt r l
+  | PCtlFlow (Asmvliw.Pjumptable r label)  => Pjumptable r label
   end.
 
 Definition basic_to_instruction (b: basic) :=
   match b with
   (** Special basics *)
-  | Asmblock.Pget rd rs         => Pget rd rs
-  | Asmblock.Pset rd rs         => Pset rd rs
-  | Asmblock.Pnop               => Pnop
-  | Asmblock.Pallocframe sz pos => Pallocframe sz pos
-  | Asmblock.Pfreeframe sz pos  => Pfreeframe sz pos
+  | Asmvliw.Pget rd rs         => Pget rd rs
+  | Asmvliw.Pset rd rs         => Pset rd rs
+  | Asmvliw.Pnop               => Pnop
+  | Asmvliw.Pallocframe sz pos => Pallocframe sz pos
+  | Asmvliw.Pfreeframe sz pos  => Pfreeframe sz pos
 
   (** PArith basics *)
   (* R *)
-  | PArithR (Asmblock.Ploadsymbol id ofs) r => Ploadsymbol r id ofs
+  | PArithR (Asmvliw.Ploadsymbol id ofs) r => Ploadsymbol r id ofs
 
   (* RR *)
-  | PArithRR Asmblock.Pmv rd rs     => Pmv rd rs
-  | PArithRR Asmblock.Pnegw rd rs   => Pnegw rd rs
-  | PArithRR Asmblock.Pnegl rd rs   => Pnegl rd rs
-  | PArithRR Asmblock.Pcvtl2w rd rs => Pcvtl2w rd rs
-  | PArithRR Asmblock.Psxwd rd rs  => Psxwd rd rs
-  | PArithRR Asmblock.Pzxwd rd rs  => Pzxwd rd rs
-  | PArithRR Asmblock.Pfabsd rd rs => Pfabsd rd rs
-  | PArithRR Asmblock.Pfabsw rd rs => Pfabsw rd rs
-  | PArithRR Asmblock.Pfnegd rd rs  => Pfnegd rd rs
-  | PArithRR Asmblock.Pfnegw rd rs => Pfnegw rd rs
-  | PArithRR Asmblock.Pfnarrowdw rd rs => Pfnarrowdw rd rs
-  | PArithRR Asmblock.Pfwidenlwd rd rs => Pfwidenlwd rd rs
-  | PArithRR Asmblock.Pfloatuwrnsz rd rs => Pfloatuwrnsz rd rs
-  | PArithRR Asmblock.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
-  | PArithRR Asmblock.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
-  | PArithRR Asmblock.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
-  | PArithRR Asmblock.Pfloatudrnsz_i32 rd rs => Pfloatudrnsz_i32 rd rs
-  | PArithRR Asmblock.Pfloatdrnsz_i32 rd rs => Pfloatdrnsz_i32 rd rs
-  | PArithRR Asmblock.Pfixedwrzz rd rs => Pfixedwrzz rd rs
-  | PArithRR Asmblock.Pfixeduwrzz rd rs => Pfixeduwrzz rd rs
-  | PArithRR Asmblock.Pfixeddrzz rd rs => Pfixeddrzz rd rs
-  | PArithRR Asmblock.Pfixedudrzz rd rs => Pfixedudrzz rd rs
-  | PArithRR Asmblock.Pfixeddrzz_i32 rd rs => Pfixeddrzz_i32 rd rs
-  | PArithRR Asmblock.Pfixedudrzz_i32 rd rs => Pfixedudrzz_i32 rd rs
+  | PArithRR Asmvliw.Pmv rd rs     => Pmv rd rs
+  | PArithRR Asmvliw.Pnegw rd rs   => Pnegw rd rs
+  | PArithRR Asmvliw.Pnegl rd rs   => Pnegl rd rs
+  | PArithRR Asmvliw.Pcvtl2w rd rs => Pcvtl2w rd rs
+  | PArithRR Asmvliw.Psxwd rd rs  => Psxwd rd rs
+  | PArithRR Asmvliw.Pzxwd rd rs  => Pzxwd rd rs
+  | PArithRR Asmvliw.Pfabsd rd rs => Pfabsd rd rs
+  | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
+  | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs
+  | PArithRR Asmvliw.Pfnegw rd rs => Pfnegw rd rs
+  | PArithRR Asmvliw.Pfnarrowdw rd rs => Pfnarrowdw rd rs
+  | PArithRR Asmvliw.Pfwidenlwd rd rs => Pfwidenlwd rd rs
+  | PArithRR Asmvliw.Pfloatuwrnsz rd rs => Pfloatuwrnsz rd rs
+  | PArithRR Asmvliw.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
+  | PArithRR Asmvliw.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
+  | PArithRR Asmvliw.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
+  | PArithRR Asmvliw.Pfloatudrnsz_i32 rd rs => Pfloatudrnsz_i32 rd rs
+  | PArithRR Asmvliw.Pfloatdrnsz_i32 rd rs => Pfloatdrnsz_i32 rd rs
+  | PArithRR Asmvliw.Pfixedwrzz rd rs => Pfixedwrzz rd rs
+  | PArithRR Asmvliw.Pfixeduwrzz rd rs => Pfixeduwrzz rd rs
+  | PArithRR Asmvliw.Pfixeddrzz rd rs => Pfixeddrzz rd rs
+  | PArithRR Asmvliw.Pfixedudrzz rd rs => Pfixedudrzz rd rs
+  | PArithRR Asmvliw.Pfixeddrzz_i32 rd rs => Pfixeddrzz_i32 rd rs
+  | PArithRR Asmvliw.Pfixedudrzz_i32 rd rs => Pfixedudrzz_i32 rd rs
 
   (* RI32 *)
-  | PArithRI32 Asmblock.Pmake rd imm  => Pmake rd imm
+  | PArithRI32 Asmvliw.Pmake rd imm  => Pmake rd imm
 
   (* RI64 *)
-  | PArithRI64 Asmblock.Pmakel rd imm => Pmakel rd imm
+  | PArithRI64 Asmvliw.Pmakel rd imm => Pmakel rd imm
 
   (* RF32 *)
-  | PArithRF32 Asmblock.Pmakefs rd imm => Pmakefs rd imm
+  | PArithRF32 Asmvliw.Pmakefs rd imm => Pmakefs rd imm
 
   (* RF64 *)
-  | PArithRF64 Asmblock.Pmakef rd imm => Pmakef rd imm
+  | PArithRF64 Asmvliw.Pmakef rd imm => Pmakef rd imm
 
   (* RRR *)
-  | PArithRRR (Asmblock.Pcompw it) rd rs1 rs2 => Pcompw it rd rs1 rs2
-  | PArithRRR (Asmblock.Pcompl it) rd rs1 rs2 => Pcompl it rd rs1 rs2
-  | PArithRRR (Asmblock.Pfcompw ft) rd rs1 rs2 => Pfcompw ft rd rs1 rs2
-  | PArithRRR (Asmblock.Pfcompl ft) rd rs1 rs2 => Pfcompl ft rd rs1 rs2
-  | PArithRRR Asmblock.Paddw rd rs1 rs2       => Paddw rd rs1 rs2
-  | PArithRRR Asmblock.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
-  | PArithRRR Asmblock.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2
-  | PArithRRR Asmblock.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
-  | PArithRRR Asmblock.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
-  | PArithRRR Asmblock.Porw rd rs1 rs2        => Porw rd rs1 rs2
-  | PArithRRR Asmblock.Pnorw rd rs1 rs2       => Pnorw rd rs1 rs2
-  | PArithRRR Asmblock.Pxorw rd rs1 rs2       => Pxorw rd rs1 rs2
-  | PArithRRR Asmblock.Pnxorw rd rs1 rs2      => Pnxorw rd rs1 rs2
-  | PArithRRR Asmblock.Pandnw rd rs1 rs2      => Pandnw rd rs1 rs2
-  | PArithRRR Asmblock.Pornw rd rs1 rs2       => Pornw rd rs1 rs2
-  | PArithRRR Asmblock.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
-  | PArithRRR Asmblock.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
-  | PArithRRR Asmblock.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
+  | PArithRRR (Asmvliw.Pcompw it) rd rs1 rs2 => Pcompw it rd rs1 rs2
+  | PArithRRR (Asmvliw.Pcompl it) rd rs1 rs2 => Pcompl it rd rs1 rs2
+  | PArithRRR (Asmvliw.Pfcompw ft) rd rs1 rs2 => Pfcompw ft rd rs1 rs2
+  | PArithRRR (Asmvliw.Pfcompl ft) rd rs1 rs2 => Pfcompl ft rd rs1 rs2
+  | PArithRRR Asmvliw.Paddw rd rs1 rs2       => Paddw rd rs1 rs2
+  | PArithRRR Asmvliw.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
+  | PArithRRR Asmvliw.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2
+  | PArithRRR Asmvliw.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
+  | PArithRRR Asmvliw.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
+  | PArithRRR Asmvliw.Porw rd rs1 rs2        => Porw rd rs1 rs2
+  | PArithRRR Asmvliw.Pnorw rd rs1 rs2       => Pnorw rd rs1 rs2
+  | PArithRRR Asmvliw.Pxorw rd rs1 rs2       => Pxorw rd rs1 rs2
+  | PArithRRR Asmvliw.Pnxorw rd rs1 rs2      => Pnxorw rd rs1 rs2
+  | PArithRRR Asmvliw.Pandnw rd rs1 rs2      => Pandnw rd rs1 rs2
+  | PArithRRR Asmvliw.Pornw rd rs1 rs2       => Pornw rd rs1 rs2
+  | PArithRRR Asmvliw.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
+  | PArithRRR Asmvliw.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
+  | PArithRRR Asmvliw.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
 
-  | PArithRRR Asmblock.Paddl rd rs1 rs2       => Paddl rd rs1 rs2
-  | PArithRRR Asmblock.Psubl rd rs1 rs2       => Psubl rd rs1 rs2
-  | PArithRRR Asmblock.Pandl rd rs1 rs2       => Pandl rd rs1 rs2
-  | PArithRRR Asmblock.Pnandl rd rs1 rs2      => Pnandl rd rs1 rs2
-  | PArithRRR Asmblock.Porl rd rs1 rs2        => Porl rd rs1 rs2
-  | PArithRRR Asmblock.Pnorl rd rs1 rs2       => Pnorl rd rs1 rs2
-  | PArithRRR Asmblock.Pxorl rd rs1 rs2       => Pxorl rd rs1 rs2
-  | PArithRRR Asmblock.Pnxorl rd rs1 rs2      => Pnxorl rd rs1 rs2
-  | PArithRRR Asmblock.Pandnl rd rs1 rs2      => Pandnl rd rs1 rs2
-  | PArithRRR Asmblock.Pornl rd rs1 rs2       => Pornl rd rs1 rs2
-  | PArithRRR Asmblock.Pmull rd rs1 rs2       => Pmull rd rs1 rs2
-  | PArithRRR Asmblock.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
-  | PArithRRR Asmblock.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
-  | PArithRRR Asmblock.Psral rd rs1 rs2       => Psral rd rs1 rs2
+  | PArithRRR Asmvliw.Paddl rd rs1 rs2       => Paddl rd rs1 rs2
+  | PArithRRR Asmvliw.Psubl rd rs1 rs2       => Psubl rd rs1 rs2
+  | PArithRRR Asmvliw.Pandl rd rs1 rs2       => Pandl rd rs1 rs2
+  | PArithRRR Asmvliw.Pnandl rd rs1 rs2      => Pnandl rd rs1 rs2
+  | PArithRRR Asmvliw.Porl rd rs1 rs2        => Porl rd rs1 rs2
+  | PArithRRR Asmvliw.Pnorl rd rs1 rs2       => Pnorl rd rs1 rs2
+  | PArithRRR Asmvliw.Pxorl rd rs1 rs2       => Pxorl rd rs1 rs2
+  | PArithRRR Asmvliw.Pnxorl rd rs1 rs2      => Pnxorl rd rs1 rs2
+  | PArithRRR Asmvliw.Pandnl rd rs1 rs2      => Pandnl rd rs1 rs2
+  | PArithRRR Asmvliw.Pornl rd rs1 rs2       => Pornl rd rs1 rs2
+  | PArithRRR Asmvliw.Pmull rd rs1 rs2       => Pmull rd rs1 rs2
+  | PArithRRR Asmvliw.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
+  | PArithRRR Asmvliw.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
+  | PArithRRR Asmvliw.Psral rd rs1 rs2       => Psral rd rs1 rs2
 
-  | PArithRRR Asmblock.Pfaddd rd rs1 rs2      => Pfaddd rd rs1 rs2
-  | PArithRRR Asmblock.Pfaddw rd rs1 rs2      => Pfaddw rd rs1 rs2
-  | PArithRRR Asmblock.Pfsbfd rd rs1 rs2      => Pfsbfd rd rs1 rs2
-  | PArithRRR Asmblock.Pfsbfw rd rs1 rs2      => Pfsbfw rd rs1 rs2
-  | PArithRRR Asmblock.Pfmuld rd rs1 rs2      => Pfmuld rd rs1 rs2
-  | PArithRRR Asmblock.Pfmulw rd rs1 rs2      => Pfmulw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfaddd rd rs1 rs2      => Pfaddd rd rs1 rs2
+  | PArithRRR Asmvliw.Pfaddw rd rs1 rs2      => Pfaddw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfsbfd rd rs1 rs2      => Pfsbfd rd rs1 rs2
+  | PArithRRR Asmvliw.Pfsbfw rd rs1 rs2      => Pfsbfw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmuld rd rs1 rs2      => Pfmuld rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmulw rd rs1 rs2      => Pfmulw rd rs1 rs2
 
   (* RRI32 *)
-  | PArithRRI32 (Asmblock.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
-  | PArithRRI32 Asmblock.Paddiw rd rs imm       => Paddiw rd rs imm
-  | PArithRRI32 Asmblock.Pmuliw rd rs imm       => Pmuliw rd rs imm
-  | PArithRRI32 Asmblock.Pandiw rd rs imm       => Pandiw rd rs imm
-  | PArithRRI32 Asmblock.Pnandiw rd rs imm      => Pnandiw rd rs imm
-  | PArithRRI32 Asmblock.Poriw rd rs imm        => Poriw rd rs imm
-  | PArithRRI32 Asmblock.Pnoriw rd rs imm       => Pnoriw rd rs imm
-  | PArithRRI32 Asmblock.Pxoriw rd rs imm       => Pxoriw rd rs imm
-  | PArithRRI32 Asmblock.Pnxoriw rd rs imm      => Pnxoriw rd rs imm
-  | PArithRRI32 Asmblock.Pandniw rd rs imm      => Pandniw rd rs imm
-  | PArithRRI32 Asmblock.Porniw rd rs imm       => Porniw rd rs imm
-  | PArithRRI32 Asmblock.Psraiw rd rs imm       => Psraiw rd rs imm
-  | PArithRRI32 Asmblock.Psrliw rd rs imm       => Psrliw rd rs imm
-  | PArithRRI32 Asmblock.Pslliw rd rs imm       => Pslliw rd rs imm
-  | PArithRRI32 Asmblock.Proriw rd rs imm       => Proriw rd rs imm
-  | PArithRRI32 Asmblock.Psllil rd rs imm       => Psllil rd rs imm
-  | PArithRRI32 Asmblock.Psrlil rd rs imm       => Psrlil rd rs imm
-  | PArithRRI32 Asmblock.Psrail rd rs imm       => Psrail rd rs imm
+  | PArithRRI32 (Asmvliw.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
+  | PArithRRI32 Asmvliw.Paddiw rd rs imm       => Paddiw rd rs imm
+  | PArithRRI32 Asmvliw.Pmuliw rd rs imm       => Pmuliw rd rs imm
+  | PArithRRI32 Asmvliw.Pandiw rd rs imm       => Pandiw rd rs imm
+  | PArithRRI32 Asmvliw.Pnandiw rd rs imm      => Pnandiw rd rs imm
+  | PArithRRI32 Asmvliw.Poriw rd rs imm        => Poriw rd rs imm
+  | PArithRRI32 Asmvliw.Pnoriw rd rs imm       => Pnoriw rd rs imm
+  | PArithRRI32 Asmvliw.Pxoriw rd rs imm       => Pxoriw rd rs imm
+  | PArithRRI32 Asmvliw.Pnxoriw rd rs imm      => Pnxoriw rd rs imm
+  | PArithRRI32 Asmvliw.Pandniw rd rs imm      => Pandniw rd rs imm
+  | PArithRRI32 Asmvliw.Porniw rd rs imm       => Porniw rd rs imm
+  | PArithRRI32 Asmvliw.Psraiw rd rs imm       => Psraiw rd rs imm
+  | PArithRRI32 Asmvliw.Psrliw rd rs imm       => Psrliw rd rs imm
+  | PArithRRI32 Asmvliw.Pslliw rd rs imm       => Pslliw rd rs imm
+  | PArithRRI32 Asmvliw.Proriw rd rs imm       => Proriw rd rs imm
+  | PArithRRI32 Asmvliw.Psllil rd rs imm       => Psllil rd rs imm
+  | PArithRRI32 Asmvliw.Psrlil rd rs imm       => Psrlil rd rs imm
+  | PArithRRI32 Asmvliw.Psrail rd rs imm       => Psrail rd rs imm
 
   (* RRI64 *)
-  | PArithRRI64 (Asmblock.Pcompil it) rd rs imm => Pcompil it rd rs imm
-  | PArithRRI64 Asmblock.Paddil rd rs imm       => Paddil rd rs imm
-  | PArithRRI64 Asmblock.Pmulil rd rs imm       => Pmulil rd rs imm
-  | PArithRRI64 Asmblock.Pandil rd rs imm       => Pandil rd rs imm
-  | PArithRRI64 Asmblock.Pnandil rd rs imm      => Pnandil rd rs imm
-  | PArithRRI64 Asmblock.Poril rd rs imm        => Poril rd rs imm
-  | PArithRRI64 Asmblock.Pnoril rd rs imm       => Pnoril rd rs imm
-  | PArithRRI64 Asmblock.Pxoril rd rs imm       => Pxoril rd rs imm
-  | PArithRRI64 Asmblock.Pnxoril rd rs imm      => Pnxoril rd rs imm
-  | PArithRRI64 Asmblock.Pandnil rd rs imm      => Pandnil rd rs imm
-  | PArithRRI64 Asmblock.Pornil rd rs imm       => Pornil rd rs imm
+  | PArithRRI64 (Asmvliw.Pcompil it) rd rs imm => Pcompil it rd rs imm
+  | PArithRRI64 Asmvliw.Paddil rd rs imm       => Paddil rd rs imm
+  | PArithRRI64 Asmvliw.Pmulil rd rs imm       => Pmulil rd rs imm
+  | PArithRRI64 Asmvliw.Pandil rd rs imm       => Pandil rd rs imm
+  | PArithRRI64 Asmvliw.Pnandil rd rs imm      => Pnandil rd rs imm
+  | PArithRRI64 Asmvliw.Poril rd rs imm        => Poril rd rs imm
+  | PArithRRI64 Asmvliw.Pnoril rd rs imm       => Pnoril rd rs imm
+  | PArithRRI64 Asmvliw.Pxoril rd rs imm       => Pxoril rd rs imm
+  | PArithRRI64 Asmvliw.Pnxoril rd rs imm      => Pnxoril rd rs imm
+  | PArithRRI64 Asmvliw.Pandnil rd rs imm      => Pandnil rd rs imm
+  | PArithRRI64 Asmvliw.Pornil rd rs imm       => Pornil rd rs imm
 
   (** ARRR *)
-  | PArithARRR Asmblock.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
-  | PArithARRR Asmblock.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
+  | PArithARRR Asmvliw.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
+  | PArithARRR Asmvliw.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
 
   (** ARRI32 *)
-  | PArithARRI32 Asmblock.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
+  | PArithARRI32 Asmvliw.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
 
   (** ARRI64 *)
-  | PArithARRI64 Asmblock.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
+  | PArithARRI64 Asmvliw.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
                                                           
   (** Load *)
-  | PLoadRRO Asmblock.Plb rd ra ofs   => Plb rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Plbu rd ra ofs  => Plbu rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Plh rd ra ofs   => Plh rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Plhu rd ra ofs  => Plhu rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Plw rd ra ofs   => Plw rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Plw_a rd ra ofs => Plw_a rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Pld rd ra ofs   => Pld rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Pld_a rd ra ofs => Pld_a rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Pfls rd ra ofs  => Pfls rd ra (AOff ofs)
-  | PLoadRRO Asmblock.Pfld rd ra ofs  => Pfld rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plb rd ra ofs   => Plb rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plbu rd ra ofs  => Plbu rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plh rd ra ofs   => Plh rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plhu rd ra ofs  => Plhu rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plw rd ra ofs   => Plw rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Plw_a rd ra ofs => Plw_a rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Pld rd ra ofs   => Pld rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Pld_a rd ra ofs => Pld_a rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Pfls rd ra ofs  => Pfls rd ra (AOff ofs)
+  | PLoadRRO Asmvliw.Pfld rd ra ofs  => Pfld rd ra (AOff ofs)
 
-  | PLoadRRR Asmblock.Plb rd ra ro   => Plb rd ra (AReg ro)
-  | PLoadRRR Asmblock.Plbu rd ra ro  => Plbu rd ra (AReg ro)
-  | PLoadRRR Asmblock.Plh rd ra ro   => Plh rd ra (AReg ro)
-  | PLoadRRR Asmblock.Plhu rd ra ro  => Plhu rd ra (AReg ro)
-  | PLoadRRR Asmblock.Plw rd ra ro   => Plw rd ra (AReg ro)
-  | PLoadRRR Asmblock.Plw_a rd ra ro => Plw_a rd ra (AReg ro)
-  | PLoadRRR Asmblock.Pld rd ra ro   => Pld rd ra (AReg ro)
-  | PLoadRRR Asmblock.Pld_a rd ra ro => Pld_a rd ra (AReg ro)
-  | PLoadRRR Asmblock.Pfls rd ra ro  => Pfls rd ra (AReg ro)
-  | PLoadRRR Asmblock.Pfld rd ra ro  => Pfld rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plb rd ra ro   => Plb rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plbu rd ra ro  => Plbu rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plh rd ra ro   => Plh rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plhu rd ra ro  => Plhu rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plw rd ra ro   => Plw rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Plw_a rd ra ro => Plw_a rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Pld rd ra ro   => Pld rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Pld_a rd ra ro => Pld_a rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Pfls rd ra ro  => Pfls rd ra (AReg ro)
+  | PLoadRRR Asmvliw.Pfld rd ra ro  => Pfld rd ra (AReg ro)
 
   (** Store *)
-  | PStoreRRO Asmblock.Psb rd ra ofs  => Psb rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Psh rd ra ofs => Psh rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Psw rd ra ofs => Psw rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Psw_a rd ra ofs => Psw_a rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Psd rd ra ofs => Psd rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Psd_a rd ra ofs => Psd_a rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Pfss rd ra ofs => Pfss rd ra (AOff ofs)
-  | PStoreRRO Asmblock.Pfsd rd ra ofs => Pfsd rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psb rd ra ofs  => Psb rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psh rd ra ofs => Psh rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psw rd ra ofs => Psw rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psw_a rd ra ofs => Psw_a rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psd rd ra ofs => Psd rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Psd_a rd ra ofs => Psd_a rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Pfss rd ra ofs => Pfss rd ra (AOff ofs)
+  | PStoreRRO Asmvliw.Pfsd rd ra ofs => Pfsd rd ra (AOff ofs)
 
-  | PStoreRRR Asmblock.Psb rd ra ro  => Psb rd ra (AReg ro)
-  | PStoreRRR Asmblock.Psh rd ra ro => Psh rd ra (AReg ro)
-  | PStoreRRR Asmblock.Psw rd ra ro => Psw rd ra (AReg ro)
-  | PStoreRRR Asmblock.Psw_a rd ra ro => Psw_a rd ra (AReg ro)
-  | PStoreRRR Asmblock.Psd rd ra ro => Psd rd ra (AReg ro)
-  | PStoreRRR Asmblock.Psd_a rd ra ro => Psd_a rd ra (AReg ro)
-  | PStoreRRR Asmblock.Pfss rd ra ro => Pfss rd ra (AReg ro)
-  | PStoreRRR Asmblock.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psb rd ra ro  => Psb rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psh rd ra ro => Psh rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psw rd ra ro => Psw rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psw_a rd ra ro => Psw_a rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psd rd ra ro => Psd rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Psd_a rd ra ro => Psd_a rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Pfss rd ra ro => Pfss rd ra (AReg ro)
+  | PStoreRRR Asmvliw.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
 
   end.
 
@@ -449,7 +449,7 @@ Definition fundef := AST.fundef function.
 Definition program := AST.program fundef unit.
 Definition genv := Genv.t fundef unit.
 
-Definition function_proj (f: function) := Asmblock.mkfunction (fn_sig f) (fn_blocks f).
+Definition function_proj (f: function) := Asmvliw.mkfunction (fn_sig f) (fn_blocks f).
 
 (* 
 Definition fundef_proj (fu: fundef) : Asmblock.fundef := transf_fundef function_proj fu.
@@ -457,19 +457,19 @@ Definition fundef_proj (fu: fundef) : Asmblock.fundef := transf_fundef function_
 Definition program_proj (p: program) : Asmblock.program := transform_program fundef_proj p.
  *)
 
-Definition fundef_proj (fu: fundef) : Asmblock.fundef := 
+Definition fundef_proj (fu: fundef) : Asmvliw.fundef := 
   match fu with
   | Internal f => Internal (function_proj f)
   | External ef => External ef
   end.
 
-Definition globdef_proj (gd: globdef fundef unit) : globdef Asmblock.fundef unit :=
+Definition globdef_proj (gd: globdef fundef unit) : globdef Asmvliw.fundef unit :=
   match gd with
   | Gfun f => Gfun (fundef_proj f)
   | Gvar gu => Gvar gu
   end.
 
-Program Definition genv_trans (ge: genv) : Asmblock.genv :=
+Program Definition genv_trans (ge: genv) : Asmvliw.genv :=
   {|  Genv.genv_public := Genv.genv_public ge;
       Genv.genv_symb := Genv.genv_symb ge;
       Genv.genv_defs := PTree.map1 globdef_proj (Genv.genv_defs ge);
@@ -488,13 +488,13 @@ Qed. Next Obligation.
 Qed.
 
 Fixpoint prog_defs_proj (l: list (ident * globdef fundef unit))
-                          : list (ident * globdef Asmblock.fundef unit) :=
+                          : list (ident * globdef Asmvliw.fundef unit) :=
   match l with
   | nil => nil
   | (i, gd) :: l => (i, globdef_proj gd) :: prog_defs_proj l
   end.
 
-Definition program_proj (p: program) : Asmblock.program :=
+Definition program_proj (p: program) : Asmvliw.program :=
   {|  prog_defs := prog_defs_proj (prog_defs p);
       prog_public := prog_public p;
       prog_main := prog_main p
@@ -513,16 +513,16 @@ Qed.
 
 (** transf_program *)
 
-Program Definition transf_function (f: Asmblock.function) : function :=
-     {| fn_sig := Asmblock.fn_sig f; fn_blocks := Asmblock.fn_blocks f; 
-        fn_code := unfold (Asmblock.fn_blocks f) |}.
+Program Definition transf_function (f: Asmvliw.function) : function :=
+     {| fn_sig := Asmvliw.fn_sig f; fn_blocks := Asmvliw.fn_blocks f; 
+        fn_code := unfold (Asmvliw.fn_blocks f) |}.
 
 Lemma transf_function_proj: forall f, function_proj (transf_function f) = f.
 Proof.
   intros f. destruct f as [sig blks]. unfold function_proj. simpl. auto.
 Qed.
 
-Definition transf_fundef : Asmblock.fundef -> fundef := AST.transf_fundef transf_function.
+Definition transf_fundef : Asmvliw.fundef -> fundef := AST.transf_fundef transf_function.
 
 Lemma transf_fundef_proj: forall f, fundef_proj (transf_fundef f) = f.
 Proof.
@@ -559,7 +559,7 @@ Proof.
 Qed.
  *)
 
-Definition transf_program : Asmblock.program -> program := transform_program transf_fundef.
+Definition transf_program : Asmvliw.program -> program := transform_program transf_fundef.
 
 Lemma program_equals {A B: Type} : forall (p1 p2: AST.program A B),
   prog_defs p1 = prog_defs p2 ->
@@ -582,7 +582,7 @@ Proof.
     rewrite transf_fundef_proj. auto.
 Qed.
 
-Definition match_prog (p: Asmblock.program) (tp: program) :=
+Definition match_prog (p: Asmvliw.program) (tp: program) :=
   match_program (fun _ f tf => tf = transf_fundef f) eq p tp.
 
 Lemma transf_program_match:
@@ -615,7 +615,7 @@ Qed.
 
 Section PRESERVATION.
 
-Variable prog: Asmblock.program.
+Variable prog: Asmvliw.program.
 Variable tprog: program.
 Hypothesis TRANSF: match_prog prog tprog.
 Let ge := Genv.globalenv prog.

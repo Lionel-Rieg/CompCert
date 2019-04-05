@@ -19,9 +19,9 @@ Require Import Op Locations Machblock Conventions Asmblock.
 Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
 
 Module MB := Machblock.
-Module AB := Asmblock.
+Module AB := Asmvliw.
 
-Definition match_prog (p: Machblock.program) (tp: Asmblock.program) :=
+Definition match_prog (p: Machblock.program) (tp: Asmvliw.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
@@ -33,7 +33,7 @@ Qed.
 Section PRESERVATION.
 
 Variable prog: Machblock.program.
-Variable tprog: Asmblock.program.
+Variable tprog: Asmvliw.program.
 Hypothesis TRANSF: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
@@ -318,7 +318,7 @@ Proof.
   exploit preg_of_injective; eauto. intros; subst r; discriminate.
 Qed.
 
-Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
+Inductive match_states: Machblock.state -> Asmvliw.state -> Prop :=
   | match_states_intro:
       forall s fb sp c ep ms m m' rs f tf tc
         (STACKS: match_stack ge s)
@@ -328,7 +328,7 @@ Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
         (AG: agree ms sp rs)
         (DXP: ep = true -> rs#FP = parent_sp s),
       match_states (Machblock.State s fb sp c ms m)
-                   (Asmblock.State rs m')
+                   (Asmvliw.State rs m')
   | match_states_call:
       forall s fb ms m m' rs
         (STACKS: match_stack ge s)
@@ -337,7 +337,7 @@ Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
         (ATPC: rs PC = Vptr fb Ptrofs.zero)
         (ATLR: rs RA = parent_ra s),
       match_states (Machblock.Callstate s fb ms m)
-                   (Asmblock.State rs m')
+                   (Asmvliw.State rs m')
   | match_states_return:
       forall s ms m m' rs
         (STACKS: match_stack ge s)
@@ -345,7 +345,7 @@ Inductive match_states: Machblock.state -> Asmblock.state -> Prop :=
         (AG: agree ms (parent_sp s) rs)
         (ATPC: rs PC = parent_ra s),
       match_states (Machblock.Returnstate s ms m)
-                   (Asmblock.State rs m').
+                   (Asmvliw.State rs m').
 
 Record codestate :=
   Codestate {     pstate: state;
@@ -373,7 +373,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (DXP: (if MB.header bb then ep else false) = true -> rs0#FP = parent_sp s)
         ,
       match_codestate fb (Machblock.State s fb sp (bb::c) ms m)
-        {|  pstate := (Asmblock.State rs0 m0);
+        {|  pstate := (Asmvliw.State rs0 m0);
             pheader := (MB.header bb);
             pbody1 := tbc;
             pbody2 := (extract_basic tbi);
@@ -384,7 +384,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         |}
 .
 
-Inductive match_asmstate fb: codestate -> Asmblock.state -> Prop :=
+Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
   | match_asmstate_some:
       forall rs f tf tc m tbb ofs ep tbdy tex lhd
         (FIND: Genv.find_funct_ptr ge fb = Some (Internal f))
@@ -394,7 +394,7 @@ Inductive match_asmstate fb: codestate -> Asmblock.state -> Prop :=
 (*         (HDROK: header tbb = lhd) *)
         ,
       match_asmstate fb 
-        {|  pstate := (Asmblock.State rs m);
+        {|  pstate := (Asmvliw.State rs m);
             pheader := lhd;
             pbody1 := tbdy;
             pbody2 := extract_basic tex;
@@ -402,7 +402,7 @@ Inductive match_asmstate fb: codestate -> Asmblock.state -> Prop :=
             fpok := ep;
             rem := tc;
             cur := Some tbb |}
-        (Asmblock.State rs m)
+        (Asmvliw.State rs m)
 .
 
 Ltac exploreInst :=
@@ -716,11 +716,11 @@ Theorem step_simu_control:
   MB.body bb' = nil ->
   (forall ef args res, MB.exit bb' <> Some (MBbuiltin ef args res)) ->
   Genv.find_funct_ptr tge fb = Some (Internal fn) ->
-  pstate cs2 = (Asmblock.State rs2 m2) ->
+  pstate cs2 = (Asmvliw.State rs2 m2) ->
   pbody1 cs2 = nil -> pbody2 cs2 = tbdy2 -> pctl cs2 = tex ->
   cur cs2 = Some tbb ->
   match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2 ->
-  match_asmstate fb cs2 (Asmblock.State rs1 m1) ->
+  match_asmstate fb cs2 (Asmvliw.State rs1 m1) ->
   exit_step return_address_offset ge (MB.exit bb') (MB.State s fb sp (bb'::c) ms' m') E0 S'' ->
   (exists rs3 m3 rs4 m4,
       exec_body tge tbdy2 rs2 m2 = Next rs3 m3
@@ -1775,7 +1775,7 @@ Definition return_address_offset : Machblock.function -> Machblock.code -> ptrof
   Asmblockgenproof0.return_address_offset.
 
 Theorem transf_program_correct:
-  forward_simulation (MB.semantics return_address_offset prog) (AB.semantics tprog).
+  forward_simulation (MB.semantics return_address_offset prog) (Asmblock.semantics tprog).
 Proof.
   eapply forward_simulation_star with (measure := measure).
   - apply senv_preserved.

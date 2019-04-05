@@ -16,7 +16,7 @@ Require Import Asmblockgen.
 Require Import Conventions1.
 
 Module MB:=Machblock.
-Module AB:=Asmblock.
+Module AB:=Asmvliw.
 
 Hint Extern 2 (_ <> _) => congruence: asmgen.
 
@@ -311,9 +311,9 @@ Qed.
 Lemma agree_undef_caller_save_regs:
   forall ms sp rs,
   agree ms sp rs ->
-  agree (Mach.undef_caller_save_regs ms) sp (Asmblock.undef_caller_save_regs rs).
+  agree (Mach.undef_caller_save_regs ms) sp (Asmvliw.undef_caller_save_regs rs).
 Proof.
-  intros. destruct H. unfold Mach.undef_caller_save_regs, Asmblock.undef_caller_save_regs; split.
+  intros. destruct H. unfold Mach.undef_caller_save_regs, Asmvliw.undef_caller_save_regs; split.
 - unfold proj_sumbool; rewrite dec_eq_true. auto.
 - auto.
 - intros. unfold proj_sumbool. rewrite dec_eq_false by (apply preg_of_not_SP). 
