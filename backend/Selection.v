@@ -267,68 +267,6 @@ Definition sel_switch_long :=
     (fun arg ofs => subl arg (longconst (Int64.repr ofs)))
     lowlong.
 
-Definition sel_builtin_default optid ef args :=
-  OK (Sbuiltin (sel_builtin_res optid) ef
-               (sel_builtin_args args
-                                 (Machregs.builtin_constraints ef))).
-
-Definition sel_builtin optid ef args :=
-  match ef with
-    | EF_builtin name sign =>
-      (if String.string_dec name "__builtin_ternary_uint"
-       || String.string_dec name "__builtin_ternary_int"
-       then
-         match optid with
-           | None => OK Sskip
-           | Some id =>
-             match args with
-               | a1::a2::a3::nil =>
-                 OK (Sassign id (select (sel_expr a3) (sel_expr a2) (sel_expr a1)))
-               | _ => Error (msg "__builtin_ternary_(u)int: arguments")
-             end
-         end
-       else
-       if String.string_dec name "__builtin_ternary_ulong"
-       || String.string_dec name "__builtin_ternary_long"  
-       then
-         match optid with
-           | None => OK Sskip
-           | Some id =>
-             match args with
-               | a1::a2::a3::nil =>
-                 OK (Sassign id (selectl (sel_expr a3) (sel_expr a2) (sel_expr a1)))
-               | _ => Error (msg "__builtin_ternary_(u)long: arguments")
-             end
-         end
-       else
-       if String.string_dec name "__builtin_ternary_double"
-       then
-         match optid with
-           | None => OK Sskip
-           | Some id =>
-             match args with
-               | a1::a2::a3::nil =>
-                 OK (Sassign id (selectf (sel_expr a3) (sel_expr a2) (sel_expr a1)))
-               | _ => Error (msg "__builtin_ternary_double: arguments")
-             end
-         end
-       else
-       if String.string_dec name "__builtin_ternary_float"
-       then
-         match optid with
-           | None => OK Sskip
-           | Some id =>
-             match args with
-               | a1::a2::a3::nil =>
-                 OK (Sassign id (selectfs (sel_expr a3) (sel_expr a2) (sel_expr a1)))
-               | _ => Error (msg "__builtin_ternary_float: arguments")
-             end
-         end
-       else
-         sel_builtin_default optid ef args)
-    | _ => sel_builtin_default optid ef args
-  end.
-
 (** Conversion from Cminor statements to Cminorsel statements. *)
 
 Fixpoint sel_stmt (s: Cminor.stmt) : res stmt :=
@@ -337,10 +275,12 @@ Fixpoint sel_stmt (s: Cminor.stmt) : res stmt :=
   | Cminor.Sassign id e => OK (Sassign id (sel_expr e))
   | Cminor.Sstore chunk addr rhs => OK (store chunk (sel_expr addr) (sel_expr rhs))
   | Cminor.Scall optid sg fn args =>
-      (match classify_call fn with
-      | Call_default => OK (Scall optid sg (inl _ (sel_expr fn)) (sel_exprlist args))
-      | Call_imm id  => OK (Scall optid sg (inr _ id) (sel_exprlist args))
-      | Call_builtin ef => sel_builtin optid ef args
+      OK (match classify_call fn with
+      | Call_default => Scall optid sg (inl _ (sel_expr fn)) (sel_exprlist args)
+      | Call_imm id  => Scall optid sg (inr _ id) (sel_exprlist args)
+      | Call_builtin ef => Sbuiltin (sel_builtin_res optid) ef
+                                    (sel_builtin_args args
+                                       (Machregs.builtin_constraints ef))
       end)
   | Cminor.Sbuiltin optid ef args =>
       OK (Sbuiltin (sel_builtin_res optid) ef

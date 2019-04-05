@@ -2,7 +2,7 @@
 #include <string.h>
 #include "bs.h"
 
-#if defined(__K1C__) && defined(__COMPCERT__)
+#if 0 /* defined(__K1C__) && defined(__COMPCERT__) */
 #define TERNARY(x, v0, v1) __builtin_ternary_ulong((x)!=0, (v1), (v0))
 #else
 #define TERNARY(x, v0, v1) ((x) ? (v1) : (v0))

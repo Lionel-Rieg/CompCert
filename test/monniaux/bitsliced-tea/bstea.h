@@ -6,7 +6,7 @@
 
 #include "bstea_wordsize.h"
 
-#if defined(__K1C__) && defined(__COMPCERT__)
+#if 0 /* defined(__K1C__) && defined(__COMPCERT__) */
 #define TERNARY(x, v1, v0) __builtin_ternary_ulong((x)!=0, (v1), (v0))
 #else
 #define TERNARY(x, v1, v0) ((x) ? (v1) : (v0))
