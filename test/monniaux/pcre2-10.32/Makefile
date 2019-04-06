@@ -1,5 +1,8 @@
-CC=../../../ccomp
-CFLAGS=-O3 -Wall
+all:	pcre2test.gcc.k1c pcre2test.ccomp.k1c
+
+ALL_CFLAGS = -DHAVE_CONFIG_H -DPCRE2_CODE_UNIT_WIDTH=8 
+
+include ../rules.mk
 
 CFILES = \
        pcre2_auto_possess.c \
@@ -35,7 +38,19 @@ CFILES = \
 HFILES = config.h  pcre2_internal.h    pcre2posix.h \
 pcre2.h   pcre2_intmodedep.h  pcre2_ucp.h
 
-CFLAGS += -DHAVE_CONFIG_H
 
-pcre2test: $(CFILES) $(HFILES)
-	$(CC) $(CFLAGS) -o $@ -DPCRE2_CODE_UNIT_WIDTH=8 $(CFILES)
+K1C_GCC_OFILES=$(CFILES:.c=.gcc.k1c.o)
+K1C_CCOMP_OFILES=$(CFILES:.c=.ccomp.k1c.o)
+
+$(K1C_GCC_OFILES) $(K1C_CCOMP_OFILES): $(HFILES)
+
+pcre2test.gcc.k1c: $(K1C_GCC_OFILES)
+	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+
+
+pcre2test.ccomp.k1c: $(K1C_CCOMP_OFILES)
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+
+
+.PHONY: clean
+
+clean:
+	rm -f *.s *.o *.k1c
