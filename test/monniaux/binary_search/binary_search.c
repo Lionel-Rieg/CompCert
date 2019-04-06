@@ -43,7 +43,7 @@ int main () {
   timestamp1 = get_current_cycle()-timestamp1;
 
   cycle_t timestamp2 = get_current_cycle();
-  index pos = my_bsearch(buf, n, 1501);
+  index pos = my_bsearch(buf, n, 1502);
   timestamp2 = get_current_cycle()-timestamp2;
 
   printf("position: %d\nrandom fill cycles: %" PRIu64 "\nsearch cycles: %" PRIu64 "\n", pos, timestamp1, timestamp2);
