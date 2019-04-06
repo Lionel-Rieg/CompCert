@@ -58,12 +58,13 @@ int main () {
   random_ascending_fill(buf, n);
   timestamp0 = get_current_cycle()-timestamp0;
 
+  my_bsearch(buf, n, v);
   cycle_t timestamp1 = get_current_cycle();
   index pos1 = my_bsearch(buf, n, v);
   timestamp1 = get_current_cycle()-timestamp1;
 
   cycle_t timestamp2 = get_current_cycle();
-  index pos2 = my_bsearch(buf, n, v);
+  index pos2 = my_bsearch2(buf, n, v);
   timestamp2 = get_current_cycle()-timestamp2;
 
   printf("position1: %d\n"
