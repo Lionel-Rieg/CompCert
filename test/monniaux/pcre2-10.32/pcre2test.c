@@ -66,6 +66,8 @@ it references only the enabled library functions. */
 #include <locale.h>
 #include <errno.h>
 
+/* DM */
+#include "../clock.h"
 int fileno(FILE *stream);
 
 #if defined NATIVE_ZOS
@@ -8109,6 +8111,10 @@ char *arg_subject = NULL;
 char *arg_pattern = NULL;
 char *arg_error = NULL;
 
+/* DM */
+ clock_prepare();
+ clock_start();
+ 
 /* The offsets to the options and control bits fields of the pattern and data
 control blocks must be the same so that common options and controls such as
 "anchored" or "memory" can work for either of them from a single table entry.
@@ -8785,6 +8791,9 @@ FREECONTEXTS;
   yield = SS$_NORMAL;  /* Return values via DCL symbols */
 #endif
 
+  clock_stop();
+  print_total_clock();
+  
 return yield;
 }
 

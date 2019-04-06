@@ -1,6 +1,7 @@
-all:	pcre2test.gcc.k1c pcre2test.ccomp.k1c
+all:	pcre2test.gcc.k1c.out pcre2test.ccomp.k1c.out
 
 ALL_CFLAGS = -DHAVE_CONFIG_H -DPCRE2_CODE_UNIT_WIDTH=8 
+EXECUTE_ARGS = testdata/testinput6
 
 include ../rules.mk
 
@@ -45,10 +46,10 @@ K1C_CCOMP_OFILES=$(CFILES:.c=.ccomp.k1c.o)
 $(K1C_GCC_OFILES) $(K1C_CCOMP_OFILES): $(HFILES)
 
 pcre2test.gcc.k1c: $(K1C_GCC_OFILES)
-	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+
+	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
 
 pcre2test.ccomp.k1c: $(K1C_CCOMP_OFILES)
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+ ../clock.gcc.k1c.o
 
 .PHONY: clean
 
