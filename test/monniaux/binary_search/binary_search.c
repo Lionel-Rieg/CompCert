@@ -42,8 +42,10 @@ int my_bsearch3 (data *a, index n, data x) {
   index i = 0, j = n - 1, k;
   while (i <= j) {
     k = (i + j) / 2;
-    i = TERNARY32(a[k] < x, k+1, i);
-    j = TERNARY32(a[k] > x, k-1, j);
+    index kp1 = k+1, km1 = k-1;
+    _Bool lt = a[k] < x, gt = a[k] > x;
+    i = TERNARY32(lt, kp1, i);
+    j = TERNARY32(gt, km1, j);
     if (a[k] == x) {
       goto end;
     }
