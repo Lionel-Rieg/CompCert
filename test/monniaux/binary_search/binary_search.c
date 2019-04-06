@@ -38,6 +38,22 @@ int my_bsearch2 (data *a, index n, data x) {
     return -1;
 }
 
+int my_bsearch3 (data *a, index n, data x) {
+  index i = 0, j = n - 1, k;
+  while (i <= j) {
+    k = (i + j) / 2;
+    if (a[k] == x) {
+      goto end;
+      return k;
+    }
+    i = TERNARY32(a[k] < x, k+1, i);
+    j = TERNARY32(a[k] > x, k-1, j);
+  }
+  k=-1;
+ end:
+  return k;
+}
+
 void random_ascending_fill(data *a, index n) {
   unsigned r = 41;
   data v = 0;
@@ -67,12 +83,19 @@ int main () {
   index pos2 = my_bsearch2(buf, n, v);
   timestamp2 = get_current_cycle()-timestamp2;
 
+  cycle_t timestamp3 = get_current_cycle();
+  index pos3 = my_bsearch3(buf, n, v);
+  timestamp3 = get_current_cycle()-timestamp3;
+
   printf("position1: %d\n"
 	 "position2: %d\n"
+	 "position3: %d\n"
 	 "random fill cycles: %" PRIu64 "\n"
 	 "search1 cycles: %" PRIu64 "\n"
-	 "search2 cycles: %" PRIu64 "\n",
-	 pos1, pos2, timestamp0, timestamp1, timestamp2);
+	 "search2 cycles: %" PRIu64 "\n"
+	 "search3 cycles: %" PRIu64 "\n",
+	 pos1, pos2, pos3,
+	 timestamp0, timestamp1, timestamp2, timestamp3);
   
   free(buf);
 }
