@@ -62,7 +62,7 @@ void random_ascending_fill(data *a, index n) {
   for(index i=0; i<n; i++) {
     a[i] = v;
     v++;
-    if (r & 0x40000000) v++;
+    v = TERNARY32(r & 0x40000000, v+1, v);
     r = r * 97 + 5;
   }
 }
