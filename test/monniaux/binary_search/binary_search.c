@@ -4,7 +4,7 @@
 #include "../clock.h"
 
 typedef int data;
-typedef int index;
+typedef unsigned index;
 
 int my_bsearch (data *a, index n, data x) {
     index i = 0, j = n - 1;
