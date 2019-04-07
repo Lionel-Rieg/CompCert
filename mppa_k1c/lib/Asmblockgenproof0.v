@@ -14,6 +14,7 @@ Require Import Machblock.
 Require Import Asmblock.
 Require Import Asmblockgen.
 Require Import Conventions1.
+Require Import Machblockgenproof. (* FIXME: only use to import [is_tail_app] and [is_tail_app_inv] *)
 
 Module MB:=Machblock.
 Module AB:=Asmblock.
@@ -570,21 +571,6 @@ Definition return_address_offset (f: MB.function) (c: MB.code) (ofs: ptrofs) : P
   transf_function f = OK tf ->
   transl_blocks f c false = OK tc ->
   code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) tc.
-
-(* NB: these two lemma should go into [Coqlib.v] *) 
-Lemma is_tail_app A (l1: list A): forall l2, is_tail l2 (l1 ++ l2).
-Proof.
-  induction l1; simpl; auto with coqlib.
-Qed.
-Hint Resolve is_tail_app: coqlib.
-
-Lemma is_tail_app_inv A (l1: list A): forall l2 l3, is_tail (l1 ++ l2) l3 -> is_tail l2 l3.
-Proof.
-  induction l1; simpl; auto with coqlib.
-  intros l2 l3 H; inversion H; eauto with coqlib.
-Qed.
-Hint Resolve is_tail_app_inv: coqlib.
-
 
 Lemma transl_blocks_tail:
   forall f c1 c2, is_tail c1 c2 ->

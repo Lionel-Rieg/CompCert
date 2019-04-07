@@ -17,6 +17,11 @@ Require Import Machblock.
 Require Import Machblockgen.
 Require Import ForwardSimulationBlock.
 
+Ltac subst_is_trans_code H :=
+  rewrite is_trans_code_inv in H;
+  rewrite <- H in * |- *;
+  rewrite <- is_trans_code_inv in H.
+
 Definition inv_trans_rao (rao: function -> code -> ptrofs -> Prop) (f: Mach.function) (c: Mach.code) :=
   rao (transf_function f) (trans_code c).
 
@@ -198,11 +203,6 @@ Definition concat (h: list label) (c: code): code :=
   | nil =>  {| header := h; body := nil; exit := None |}::nil
   | b::c' => {| header := h ++ (header b); body := body b; exit := exit b |}::c'
   end.
-
-Ltac subst_is_trans_code H :=
-  rewrite is_trans_code_inv in H;
-  rewrite <- H in * |- *;
-  rewrite <- is_trans_code_inv in H.
 
 Lemma find_label_transcode_preserved:
   forall l c c',
@@ -650,3 +650,62 @@ Proof.
 Qed.
 
 End PRESERVATION.
+
+(** Auxiliary lemmas used in [Asmgenproof.return_address_exists] *)
+
+Lemma is_trans_code_monotonic i c b l:
+   is_trans_code c (b::l) ->
+   exists l' b', is_trans_code (i::c) (l' ++ (b'::l)).
+Proof.
+  intro H; destruct c as [|i' c]. { inversion H. }
+  remember (trans_inst i) as ti.
+  destruct ti as [lbl|bi|cfi].
+  - (*i=lbl *) cutrewrite (i = Mlabel lbl). 2:{ destruct i; simpl in * |- *; try congruence. }
+    exists nil; simpl; eexists. eapply Tr_add_label; eauto.
+Admitted. (* A FINIR *)
+
+Lemma trans_code_monotonic i c b l:
+   (b::l) = trans_code c ->
+   exists l' b', trans_code (i::c) = (l' ++ (b'::l)).
+Proof.
+    intro H; rewrite <- is_trans_code_inv in H.
+    destruct (is_trans_code_monotonic i c b l H) as (l' & b' & H0).
+    subst_is_trans_code H0.
+    eauto.
+Qed.
+
+(* FIXME: these two lemma should go into [Coqlib.v] *) 
+Lemma is_tail_app A (l1: list A): forall l2, is_tail l2 (l1 ++ l2).
+Proof.
+  induction l1; simpl; auto with coqlib.
+Qed.
+Hint Resolve is_tail_app: coqlib.
+
+Lemma is_tail_app_inv A (l1: list A): forall l2 l3, is_tail (l1 ++ l2) l3 -> is_tail l2 l3.
+Proof.
+  induction l1; simpl; auto with coqlib.
+  intros l2 l3 H; inversion H; eauto with coqlib.
+Qed.
+Hint Resolve is_tail_app_inv: coqlib.
+
+
+Lemma Mach_Machblock_tail sg ros c c1 c2: c1=(Mcall sg ros :: c) -> is_tail c1 c2 -> 
+  exists b, is_tail (b :: trans_code c) (trans_code c2).
+Proof.
+  intros H; induction 1.
+  - intros; subst.
+    remember (trans_code (Mcall _ _::c)) as tc2.
+    rewrite <- is_trans_code_inv in Heqtc2.
+    inversion Heqtc2; simpl in * |- *; subst; try congruence.
+    subst_is_trans_code H1.
+    eapply ex_intro; eauto with coqlib.
+  - intros; exploit IHis_tail; eauto. clear IHis_tail.
+    intros (b & Hb). inversion Hb; clear Hb.
+    * exploit (trans_code_monotonic i c2); eauto.
+      intros (l' & b' & Hl'); rewrite Hl'.
+      exists b'; simpl; eauto with coqlib.
+    * exploit (trans_code_monotonic i c2); eauto.
+      intros (l' & b' & Hl'); rewrite Hl'.
+      simpl; eapply ex_intro.
+      eapply is_tail_trans; eauto with coqlib.
+Qed.
