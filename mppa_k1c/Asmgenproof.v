@@ -42,17 +42,15 @@ Qed.
 
 (** Return Address Offset *)
 
-Definition return_address_offset (f: Mach.function) (c: Mach.code) (ofs: ptrofs) : Prop :=
-  Asmblockgenproof.return_address_offset (Machblockgen.transf_function f) (Machblockgen.trans_code c) ofs.
+Definition return_address_offset: Mach.function -> Mach.code -> ptrofs -> Prop :=
+  Mach_return_address_offset Asmblockgenproof.return_address_offset.
 
 Lemma return_address_exists:
   forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
   exists ra, return_address_offset f c ra.
 Proof.
-  intros.
-  exploit Mach_Machblock_tail; eauto.
-  destruct 1.
-  eapply Asmblockgenproof.return_address_exists; eauto.
+  intros; unfold return_address_offset; eapply Mach_return_address_exists; eauto.
+  intros; eapply Asmblockgenproof.return_address_exists; eauto.
 Qed.
 
 
@@ -72,7 +70,6 @@ Proof.
   eapply compose_forward_simulations. 
   exploit Machblockgenproof.transf_program_correct; eauto.
   unfold Machblockgenproof.inv_trans_rao. 
-  intros X; apply X.
   eapply compose_forward_simulations. apply Asmblockgenproof.transf_program_correct; eauto.
   apply Asm.transf_program_correct. eauto.
 Qed.

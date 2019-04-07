@@ -651,7 +651,9 @@ Qed.
 
 End PRESERVATION.
 
-(** Auxiliary lemmas used in [Asmgenproof.return_address_exists] *)
+
+
+(** Auxiliary lemmas used to prove existence of a Mach return adress from a Machblock return address. *)
 
 Lemma is_trans_code_monotonic i c b l:
    is_trans_code c (b::l) ->
@@ -709,3 +711,25 @@ Proof.
       simpl; eapply ex_intro.
       eapply is_tail_trans; eauto with coqlib.
 Qed.
+
+Section Mach_Return_Address.
+
+Variable return_address_offset: function -> code -> ptrofs -> Prop.
+
+Hypothesis ra_exists: forall (b: bblock) (f: function) (c : list bblock),
+       is_tail (b :: c) (fn_code f) -> exists ra : ptrofs, return_address_offset f c ra.
+
+Definition Mach_return_address_offset (f: Mach.function) (c: Mach.code) (ofs: ptrofs) : Prop :=
+ return_address_offset (transf_function f) (trans_code c) ofs.
+
+Lemma Mach_return_address_exists:
+  forall f sg ros c, is_tail (Mcall sg ros :: c) f.(Mach.fn_code) ->
+  exists ra, Mach_return_address_offset f c ra.
+Proof.
+  intros.
+  exploit Mach_Machblock_tail; eauto.
+  destruct 1.
+  eapply ra_exists; eauto.
+Qed.
+
+End Mach_Return_Address.
