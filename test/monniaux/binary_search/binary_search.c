@@ -29,11 +29,13 @@ int my_bsearch2 (data *a, index n, data x) {
     index i = 0, j = n - 1;
     while (i <= j) {
         index k = (i + j) / 2;
-        if (a[k] == x) {
+	index kp1 = k+1, km1 = k-1;
+	data ak = a[k];
+	i = TERNARY32(ak < x, kp1, i);
+	j = TERNARY32(ak > x, km1, j);
+        if (ak == x) {
             return k;
         }
-	i = TERNARY32(a[k] < x, k+1, i);
-	j = TERNARY32(a[k] > x, k-1, j);
     }
     return -1;
 }
@@ -43,10 +45,11 @@ int my_bsearch3 (data *a, index n, data x) {
   k = (i + j) / 2;
   while (i <= j) {
     index kp1 = k+1, km1 = k-1;
-    _Bool lt = a[k] < x, gt = a[k] > x;
+    data ak = a[k];
+    _Bool lt = ak < x, gt = ak > x;
     i = TERNARY32(lt, kp1, i);
     j = TERNARY32(gt, km1, j);
-    if (a[k] == x) {
+    if (ak == x) {
       goto end;
     }
     k = (i + j) / 2;
