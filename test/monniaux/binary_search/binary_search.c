@@ -41,6 +41,22 @@ int my_bsearch2 (data *a, index n, data x) {
 }
 
 int my_bsearch3 (data *a, index n, data x) {
+    index i = 0, j = n - 1;
+    while (i <= j) {
+        index k = (i + j) / 2;
+	index kp1 = k+1, km1 = k-1;
+	data ak = a[k];
+	_Bool lt = ak < x, gt = ak > x;
+	i = TERNARY32(lt, kp1, i);
+	j = TERNARY32(gt, km1, j);
+        if (ak == x) {
+            return k;
+        }
+    }
+    return -1;
+}
+
+int my_bsearch4 (data *a, index n, data x) {
   index i = 0, j = n - 1, k;
   k = (i + j) / 2;
   while (i <= j) {
@@ -71,7 +87,7 @@ void random_ascending_fill(data *a, index n) {
 }
 
 int main () {
-  index n=5000;
+  index n=25000;
   data v=1502;
   data *buf=malloc(n*sizeof(data));
   
@@ -92,15 +108,21 @@ int main () {
   index pos3 = my_bsearch3(buf, n, v);
   timestamp3 = get_current_cycle()-timestamp3;
 
+  cycle_t timestamp4 = get_current_cycle();
+  index pos4 = my_bsearch4(buf, n, v);
+  timestamp4 = get_current_cycle()-timestamp4;
+
   printf("position1: %d\n"
 	 "position2: %d\n"
 	 "position3: %d\n"
+	 "position4: %d\n"
 	 "random fill cycles: %" PRIu64 "\n"
 	 "search1 cycles: %" PRIu64 "\n"
 	 "search2 cycles: %" PRIu64 "\n"
-	 "search3 cycles: %" PRIu64 "\n",
-	 pos1, pos2, pos3,
-	 timestamp0, timestamp1, timestamp2, timestamp3);
+	 "search3 cycles: %" PRIu64 "\n"
+	 "search4 cycles: %" PRIu64 "\n",
+	 pos1, pos2, pos3, pos4,
+	 timestamp0, timestamp1, timestamp2, timestamp3, timestamp4);
   
   free(buf);
 }
