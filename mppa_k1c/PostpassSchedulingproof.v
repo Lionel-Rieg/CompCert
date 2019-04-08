@@ -227,7 +227,7 @@ Proof.
     unfold exec_bblock. rewrite EXEB1. rewrite EXA. simpl. eauto.
   split.
     exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H. auto.
-    unfold exec_bblock. unfold nextblock. rewrite regset_same_assign. erewrite exec_body_pc_var; eauto.
+    unfold exec_bblock. unfold nextblock, incrPC. rewrite regset_same_assign. erewrite exec_body_pc_var; eauto.
     rewrite <- H1. unfold nextblock in EXEB. rewrite regset_double_set_id.
     assert (size bb = size a + size b).
     { unfold size. rewrite H0. rewrite H1. rewrite app_length. rewrite EXA. simpl. rewrite Nat.add_0_r.
@@ -235,8 +235,8 @@ Proof.
     clear EXA H0 H1. rewrite H in EXEB.
     assert (rs1 PC = rs0 PC). { apply exec_body_pc in EXEB2. auto. }
     rewrite H0. rewrite <- pc_set_add; auto.
-    exploit AB.size_positive. instantiate (1 := a). intro. omega.
-    exploit AB.size_positive. instantiate (1 := b). intro. omega.
+    exploit size_positive. instantiate (1 := a). intro. omega.
+    exploit size_positive. instantiate (1 := b). intro. omega.
 Qed.
 
 Lemma concat_all_exec_bblock (ge: Genv.t fundef unit) (f: function) :
@@ -727,9 +727,9 @@ Proof.
   destruct bb as [h bdy ext H]; simpl.
   intros; subst. destruct i.
   generalize H.
-  rewrite <- AB.wf_bblock_refl in H.
+  rewrite <- wf_bblock_refl in H.
   destruct H as [H H0].
-  unfold AB.builtin_alone in H0. erewrite H0; eauto.
+  unfold builtin_alone in H0. erewrite H0; eauto.
 Qed.
 
 Local Hint Resolve verified_schedule_nob_checks_alls_bundles.

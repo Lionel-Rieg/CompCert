@@ -839,7 +839,7 @@ Proof.
       exploit find_label_goto_label.
         eauto. eauto.
         instantiate (2 := rs2').
-        { subst. unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. eauto. }
+        { subst. unfold nextblock, incrPC. Simpl. unfold Val.offset_ptr. rewrite PCeq. eauto. }
         eauto.
       intros (tc' & rs' & GOTO & AT2 & INV).
 
@@ -847,7 +847,7 @@ Proof.
         rewrite H6. simpl extract_basic. simpl. eauto.
         rewrite H7. simpl extract_ctl. simpl. rewrite <- Heqrs2'. eauto.
       econstructor; eauto.
-        rewrite Heqrs2' in INV. unfold nextblock in INV.
+        rewrite Heqrs2' in INV. unfold nextblock, incrPC in INV.
         eapply agree_exten; eauto with asmgen.
         assert (forall r : preg, r <> PC -> rs' r = rs2 r).
         { intros. destruct r.
@@ -886,7 +886,7 @@ Proof.
         econstructor; eauto.
           eapply agree_exten with rs2; eauto with asmgen.
           { intros. destruct r; try destruct g; try discriminate.
-            all: rewrite Hrs3; try discriminate; unfold nextblock; Simpl. }
+            all: rewrite Hrs3; try discriminate; unfold nextblock, incrPC; Simpl. }
         intros. discriminate.
 
       * (* MBcond false *)
@@ -912,10 +912,10 @@ Proof.
           rewrite H7. rewrite <- BTC. rewrite extract_ctl_basics_to_code. simpl extract_ctl. rewrite B. eauto.
 
         econstructor; eauto.
-          unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. econstructor; eauto.
+          unfold nextblock, incrPC. Simpl. unfold Val.offset_ptr. rewrite PCeq. econstructor; eauto.
           eapply agree_exten with rs2; eauto with asmgen.
           { intros. destruct r; try destruct g; try discriminate.
-            all: rewrite <- C; try discriminate; unfold nextblock; Simpl. }
+            all: rewrite <- C; try discriminate; unfold nextblock, incrPC; Simpl. }
         intros. discriminate.
     + (* MBjumptable *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
@@ -926,7 +926,7 @@ Proof.
       generalize (transf_function_no_overflow _ _ TRANSF0); intro NOOV.
       assert (f1 = f) by congruence. subst f1.
       exploit find_label_goto_label. 4: eapply H16. 1-2: eauto. instantiate (2 := (nextblock tbb rs2) # GPR62 <- Vundef # GPR63 <- Vundef).
-        unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq. reflexivity.
+        unfold nextblock, incrPC. Simpl. unfold Val.offset_ptr. rewrite PCeq. reflexivity.
       exploit functions_transl. eapply FIND0. eapply TRANSF0. intros FIND3. assert (fn = tf) by congruence. subst fn.
 
       intros [tc' [rs' [A [B C]]]].
@@ -959,7 +959,7 @@ Proof.
         rewrite H6. simpl extract_basic. eauto.
         rewrite H7. simpl extract_ctl. simpl. reflexivity.
       econstructor; eauto.
-        unfold nextblock. repeat apply agree_set_other; auto with asmgen.
+        unfold nextblock, incrPC. repeat apply agree_set_other; auto with asmgen.
 
   - inv MCS. inv MAS. simpl in *. subst. inv Hpstate. inv Hcur.
 (*     exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
@@ -969,7 +969,7 @@ Proof.
     monadInv TBC. monadInv TIC. simpl in *. rewrite H5. rewrite H6.
     simpl. repeat eexists.
     econstructor. 4: instantiate (3 := false). all:eauto.
-      unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite PCeq.
+      unfold nextblock, incrPC. Simpl. unfold Val.offset_ptr. rewrite PCeq.
       assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
         eapply transf_function_no_overflow; eauto.
       assert (f = f0) by congruence. subst f0. econstructor; eauto.
@@ -1398,7 +1398,7 @@ Proof.
     eapply exec_step_internal; eauto. eapply find_bblock_tail; eauto.
     unfold exec_bblock. simpl. eauto.
     econstructor. eauto. eauto. eauto.
-    unfold nextblock. Simpl. unfold Val.offset_ptr. rewrite <- H.
+    unfold nextblock, incrPC. Simpl. unfold Val.offset_ptr. rewrite <- H.
     assert (NOOV: size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto.
     econstructor; eauto.
@@ -1581,7 +1581,7 @@ Proof.
     eauto.
   econstructor; eauto.
     instantiate (2 := tf); instantiate (1 := x0).
-    unfold nextblock. rewrite Pregmap.gss.
+    unfold nextblock, incrPC. rewrite Pregmap.gss.
     rewrite set_res_other. rewrite undef_regs_other_2. rewrite Pregmap.gso by congruence. 
     rewrite <- H. simpl. econstructor; eauto.
     eapply code_tail_next_int; eauto.

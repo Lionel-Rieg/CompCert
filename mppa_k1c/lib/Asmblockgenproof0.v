@@ -1014,7 +1014,7 @@ Lemma exec_straight_through_singleinst:
 Proof.
   intros. subst. constructor 1. unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
   simpl. rewrite regset_same_assign. auto.
-  simpl; auto. unfold nextblock; simpl. Simpl. erewrite exec_straight_pc; eauto.
+  simpl; auto. unfold nextblock, incrPC; simpl. Simpl. erewrite exec_straight_pc; eauto.
 Qed.
 
 
