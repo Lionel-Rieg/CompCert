@@ -491,7 +491,15 @@ Coercion PExpand:   ex_instruction >-> control.
 Coercion PCtlFlow:  cf_instruction >-> control.
 
 
-(** * Definition of a bblock (ie a bundle) *)
+(** * Definition of a bblock (ie a bundle)
+
+A bundle/bblock must contain at least one instruction.
+
+This choice simplifies the definition of [find_bblock] below:
+indeed, each address of a code block identifies at most one bundle
+(which depends on the number of instructions in the bundles of lower addresses).
+
+*)
 
 Definition non_empty_body (body: list basic): bool :=
   match body with
@@ -544,7 +552,10 @@ Definition length_opt {A} (o: option A) : nat :=
 
 (* WARNING: the notion of size is not the same than in Machblock !
    We ignore labels here...
-   The result is in Z to be compatible with operations on PC
+
+   This notion of size induces the notion of "valid" code address given by [find_bblock]
+
+   The result is in Z to be compatible with operations on PC.
 *)
 Definition size (b:bblock): Z := Z.of_nat (length (body b) + length_opt (exit b)).
 
@@ -595,17 +606,7 @@ Definition set_pair (p: rpair preg) (v: val) (rs: regset) : regset :=
   | Twolong rhi rlo => rs#rhi <- (Val.hiword v) #rlo <- (Val.loword v)
   end.
 
-(* TODO: Is it still useful ?? *)
 
-
-(** Assigning multiple registers *)
-
-(* Fixpoint set_regs (rl: list preg) (vl: list val) (rs: regset) : regset :=
-  match rl, vl with
-  | r1 :: rl', v1 :: vl' => set_regs rl' vl' (rs#r1 <- v1)
-  | _, _ => rs
-  end.
- *)
 (** Assigning the result of a builtin *)
 
 Fixpoint set_res (res: builtin_res preg) (v: val) (rs: regset) : regset :=
@@ -625,11 +626,22 @@ Section RELSEM.
 
 Variable ge: genv.
 
-(** The semantics is purely small-step and defined as a function
-  from the current state (a register set + a memory state)
-  to either [Next rs' m'] where [rs'] and [m'] are the updated register
-  set and memory state after execution of the instruction at [rs#PC],
-  or [Stuck] if the processor is stuck. *)
+(** The parallel semantics on bundles is purely small-step and defined as a relation
+  from the current state (a register set + a memory state) to either [Next rs' m']
+  where [rs'] and [m'] are the updated register set and memory state after execution
+  of the instruction at [rs#PC], or [Stuck] if the processor is stuck.
+
+  The parallel semantics of each instructions handles two states in input:
+   - the actual input state of the bundle which is only read
+   - and the other on which every "write" is performed:
+     it represents a temporary "writes" buffer, from which the final state
+     of the bundle is computed.
+
+  NB: the sequential semantics defined in [Asmblock] is derived
+  from the parallel semantics of each instruction by identifying
+  the read state and the write state.
+
+*)
 
 Inductive outcome: Type :=
   | Next (rs:regset) (m:mem)
