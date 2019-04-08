@@ -186,10 +186,3 @@ Ltac wlp_xsimplify hint :=
 Create HintDb wlp discriminated.
 
 Ltac wlp_simplify := wlp_xsimplify ltac:(intuition eauto with wlp).
-
-(* impure lazy andb of booleans *)
-Definition iandb (k1 k2: ??bool): ?? bool :=
-  DO r1 <~ k1 ;;
-  if r1 then k2 else RET false.
-
-Extraction Inline iandb. (* Juste pour l'efficacité à l'extraction ! *)
