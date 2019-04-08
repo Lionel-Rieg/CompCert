@@ -154,6 +154,10 @@ let ais_annot_functions =
   else
     []
 
+let builtin_ternary suffix typ =
+  ("__builtin_ternary_" ^ suffix),
+  (typ, [TInt(IInt, []); typ; typ], false);;
+  
 let builtins_generic = {
   Builtins.typedefs = [];
   Builtins.functions =
@@ -180,7 +184,15 @@ let builtins_generic = {
             TPtr(TVoid [AConst], []);
             TInt(IULong, []);
             TInt(IULong, [])],
-          false);
+           false);
+    (* Ternary operator *)
+    builtin_ternary "uint" (TInt(IUInt, []));
+    builtin_ternary "ulong" (TInt(IULong, []));
+    builtin_ternary "int" (TInt(IInt, []));
+    builtin_ternary "long" (TInt(ILong, []));
+    builtin_ternary "double" (TFloat(FDouble, []));
+    builtin_ternary "float" (TFloat(FFloat, []));
+	    
     (* Annotations *)
     "__builtin_annot",
         (TVoid [],

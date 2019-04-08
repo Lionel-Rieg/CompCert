@@ -92,7 +92,7 @@ Let ge := Genv.globalenv prog.
 Variable sp: val.
 Variable e: env.
 Variable m: mem.
-
+  
 (* Helper lemmas - from SplitLongproof.v *)
 
 Ltac UseHelper := decompose [Logic.and] arith_helpers_correct; eauto.
@@ -162,7 +162,7 @@ Definition binary_constructor_sound (cstr: expr -> expr -> expr) (sem: val -> va
   eval_expr ge sp e m le a x ->
   eval_expr ge sp e m le b y ->
   exists v, eval_expr ge sp e m le (cstr a b) v /\ Val.lessdef (sem x y) v.
-
+       
 Theorem eval_addrsymbol:
   forall le id ofs,
   exists v, eval_expr ge sp e m le (addrsymbol id ofs) v /\ Val.lessdef (Genv.symbol_address ge id ofs) v.
@@ -526,6 +526,15 @@ Proof.
   discriminate.
 Qed.
 
+Lemma int_eq_commut: forall x y : int,
+    (Int.eq x y) = (Int.eq y x).
+Proof.
+  intros.
+  predSpec Int.eq Int.eq_spec x y;
+    predSpec Int.eq Int.eq_spec y x;
+    congruence.
+Qed.
+
 Theorem eval_or: binary_constructor_sound or Val.or.
 Proof.
   unfold or; red; intros.
@@ -553,6 +562,83 @@ Proof.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
   - (*orn*) TrivialExists; simpl; congruence.
   - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
+  - (* select *)
+    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
+    TrivialExists.
+    simpl in *.
+    unfold eval_select.
+    f_equal.
+    inv H6.
+    inv H7.
+    inv H9.
+    inv H11.
+    unfold same_expr_pure in PURE.
+    destruct y0; try congruence.
+    destruct y1; try congruence.
+    destruct (ident_eq i i0); try congruence.
+    rewrite <- e0 in *. clear e0. clear PURE.
+    inv H2. inv H5.
+    replace v8 with v4 in * by congruence.
+    rename v4 into vselect.
+    destruct vselect; simpl; trivial;
+    destruct v5; simpl; trivial; destruct v9; simpl; trivial;
+    destruct (Int.eq i1 Int.zero); simpl; trivial.
+    + rewrite Int.neg_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_mone.
+      rewrite Int.and_commut.
+      rewrite Int.and_zero.
+      rewrite Int.or_zero.
+      reflexivity.
+    + rewrite Int.neg_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_mone.
+      rewrite Int.or_commut.
+      rewrite Int.or_zero.
+      reflexivity.
+  - (* select unsigned *)
+    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
+    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
+    TrivialExists.
+    simpl in *.
+    unfold eval_select.
+    f_equal.
+    inv H6.
+    inv H7.
+    inv H9.
+    inv H11.
+    unfold same_expr_pure in PURE.
+    destruct y0; try congruence.
+    destruct y1; try congruence.
+    destruct (ident_eq i i0); try congruence.
+    rewrite <- e0 in *. clear e0. clear PURE.
+    inv H2. inv H5.
+    replace v8 with v4 in * by congruence.
+    rename v4 into vselect.
+    destruct vselect; simpl; trivial;
+    destruct v5; simpl; trivial;
+    destruct v9; simpl; trivial;
+    destruct (Int.eq i1 Int.zero); simpl; trivial.
+    + rewrite Int.neg_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_mone.
+      rewrite Int.and_commut.
+      rewrite Int.and_zero.
+      rewrite Int.or_zero.
+      reflexivity.
+    + rewrite Int.neg_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_zero.
+      rewrite Int.and_commut.
+      rewrite Int.and_mone.
+      rewrite Int.or_commut.
+      rewrite Int.or_zero.
+      reflexivity.
   - apply DEFAULT.
 Qed.
 

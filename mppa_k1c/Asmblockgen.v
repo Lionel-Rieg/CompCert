@@ -367,6 +367,28 @@ Definition transl_cond_op
       Error(msg "Asmblockgen.transl_cond_op")
 end.
 
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpuwz (c: comparison) :=
+  match c with
+  | Cne => OK BTwnez
+  | Ceq => OK BTweqz
+  | Clt => Error (msg "btest_for_compuwz: Clt")
+  | Cge => Error (msg "btest_for_compuwz: Cge")
+  | Cle => Error (msg "btest_for_compuwz: Cle")
+  | Cgt => Error (msg "btest_for_compuwz: Cgt")
+  end.
+
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpudz (c: comparison) :=
+  match c with
+  | Cne => OK BTdnez
+  | Ceq => OK BTdeqz
+  | Clt => Error (msg "btest_for_compudz: Clt")
+  | Cge => Error (msg "btest_for_compudz: Cge")
+  | Cle => Error (msg "btest_for_compudz: Cle")
+  | Cgt => Error (msg "btest_for_compudz: Cgt")
+  end.
+
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
 
@@ -728,6 +750,27 @@ Definition transl_op
   | Ocmp cmp, _ =>
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
+
+  | Oselect cond, a0 :: a1 :: aS :: nil
+  | Oselectl cond, a0 :: a1 :: aS :: nil
+  | Oselectf cond, a0 :: a1 :: aS :: nil
+  | Oselectfs cond, a0 :: a1 :: aS :: nil  =>
+    assertion (mreg_eq a0 res);
+      do r0 <- ireg_of a0;
+      do r1 <- ireg_of a1;
+      do rS <- ireg_of aS;
+      (match cond with
+       | Ccomp0 cmp =>
+         OK (Pcmove (btest_for_cmpswz cmp) r0 rS r1 ::i k)
+       | Ccompu0 cmp =>
+         do bt <- btest_for_cmpuwz cmp;
+           OK (Pcmoveu bt r0 rS r1 ::i k)
+       | Ccompl0 cmp =>
+         OK (Pcmove (btest_for_cmpsdz cmp) r0 rS r1 ::i k)
+       | Ccomplu0 cmp =>
+         do bt <- btest_for_cmpudz cmp;
+           OK (Pcmoveu bt r0 rS r1 ::i k)
+       end)
 
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")

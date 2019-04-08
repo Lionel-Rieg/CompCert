@@ -426,6 +426,8 @@ Inductive arith_name_rri64 : Type :=
 Inductive arith_name_arrr : Type :=
   | Pmaddw                                           (**r multiply add word *)
   | Pmaddl                                           (**r multiply add long *)
+  | Pcmove (bt: btest)                               (**r conditional move *)
+  | Pcmoveu (bt: btest)                              (**r conditional move, test on unsigned semantics *)
 .
 
 Inductive arith_name_arri32 : Type :=
@@ -990,6 +992,38 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
+  | Pcmove bt =>
+    match cmp_for_btest bt with
+    | (Some c, Int)  =>
+      match Val.cmp_bool c v2 (Vint Int.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
+    | (Some c, Long) =>
+      match Val.cmpl_bool c v2 (Vlong Int64.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
+    | (None, _) => Vundef
+    end
+  | Pcmoveu bt =>
+    match cmpu_for_btest bt with
+    | (Some c, Int)  =>
+      match Val_cmpu_bool c v2 (Vint Int.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
+    | (Some c, Long) =>
+      match Val_cmplu_bool c v2 (Vlong Int64.zero) with
+      | None => Vundef
+      | Some true => v3
+      | Some false => v1
+      end
+    | (None, _) => Vundef
+    end
   end.
 
 Definition arith_eval_arri32 n v1 v2 v3 :=

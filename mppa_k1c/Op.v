@@ -51,6 +51,18 @@ Inductive condition : Type :=
   | Ccompfs (c: comparison)     (**r 32-bit floating-point comparison *)
   | Cnotcompfs (c: comparison). (**r negation of a floating-point comparison *)
 
+Inductive condition0 : Type :=
+  | Ccomp0 (c: comparison) (**r signed integer comparison with 0 *)
+  | Ccompu0 (c: comparison) (**r unsigned integer comparison with 0 *)
+  | Ccompl0 (c: comparison) (**r signed 64-bit integer comparison with 0 *)
+  | Ccomplu0 (c: comparison). (**r unsigned 64-bit integer comparison with 0 *)
+
+Definition arg_type_of_condition0 (cond: condition0) :=
+  match cond with
+  | Ccomp0 _ | Ccompu0 _ => Tint
+  | Ccompl0 _ | Ccomplu0 _ => Tlong
+  end.
+
 (** Arithmetic and logical operations.  In the descriptions, [rd] is the
   result of the operation and [r1], [r2], etc, are the arguments. *)
 
@@ -181,7 +193,11 @@ Inductive operation : Type :=
   | Osingleoflong            (**r [rd = float32_of_signed_long(r1)] *)
   | Osingleoflongu           (**r [rd = float32_of_unsigned_int(r1)] *)
 (*c Boolean tests: *)
-  | Ocmp (cond: condition).  (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Ocmp (cond: condition)   (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Oselect (cond: condition0)    (**r [rd = if cond r3 then r2 else r1] *)
+  | Oselectl (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
+  | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
+  | Oselectfs (cond: condition0). (**r [rd = if cond r3 then r2 else r1] *)
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -201,6 +217,13 @@ Proof.
   decide equality.
 Defined.
 
+Definition eq_condition0 (x y: condition0) : {x=y} + {x<>y}.
+Proof.
+  generalize Int.eq_dec Int64.eq_dec; intro.
+  assert (forall (x y: comparison), {x=y}+{x<>y}). decide equality.
+  decide equality.
+Defined.
+
 Definition eq_addressing (x y: addressing) : {x=y} + {x<>y}.
 Proof.
   generalize ident_eq Ptrofs.eq_dec; intros.
@@ -209,7 +232,7 @@ Defined.
 
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition; intros.
+  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0; intros.
   decide equality.
 Defined.
 
@@ -233,7 +256,7 @@ Global Opaque eq_condition eq_addressing eq_operation.
   to lists of values.  Return [None] when the computation can trigger an
   error, e.g. integer division by zero.  [eval_condition] returns a boolean,
   [eval_operation] and [eval_addressing] return a value. *)
-
+ 
 Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool :=
   match cond, vl with
   | Ccomp c, v1 :: v2 :: nil => Val.cmp_bool c v1 v2
@@ -250,6 +273,98 @@ Definition eval_condition (cond: condition) (vl: list val) (m: mem): option bool
   | Cnotcompfs c, v1 :: v2 :: nil => option_map negb (Val.cmpfs_bool c v1 v2)
   | _, _ => None
   end.
+ 
+Definition eval_condition0 (cond: condition0) (v1: val) (m: mem): option bool :=
+  match cond with
+  | Ccomp0 c => Val.cmp_bool c v1 (Vint Int.zero)
+  | Ccompu0 c => Val.cmpu_bool (Mem.valid_pointer m) c v1 (Vint Int.zero)
+  | Ccompl0 c => Val.cmpl_bool c v1 (Vlong Int64.zero)
+  | Ccomplu0 c => Val.cmplu_bool (Mem.valid_pointer m) c v1 (Vlong Int64.zero)
+  end.
+
+Definition eval_select (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vint i0, Vint i1, Some bval => Vint (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Definition eval_select2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vint i0, Vint i1 => Vint (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_select_to2: forall cond v0 v1 vselect m,
+    (eval_select cond v0 v1 vselect m) =
+    (eval_select2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_select2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
+
+Definition eval_selectl (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vlong i0, Vlong i1, Some bval => Vlong (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Definition eval_selectl2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vlong i0, Vlong i1 => Vlong (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_selectl_to2: forall cond v0 v1 vselect m,
+    (eval_selectl cond v0 v1 vselect m) =
+    (eval_selectl2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_selectl2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
+
+Definition eval_selectf (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vfloat i0, Vfloat i1, Some bval => Vfloat (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Definition eval_selectf2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vfloat i0, Vfloat i1 => Vfloat (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_selectf_to2: forall cond v0 v1 vselect m,
+    (eval_selectf cond v0 v1 vselect m) =
+    (eval_selectf2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_selectf2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
+
+Definition eval_selectfs (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match v0, v1, (eval_condition0 cond vselect m) with
+    | Vsingle i0, Vsingle i1, Some bval => Vsingle (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Definition eval_selectfs2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
+  match (eval_condition0 cond vselect m), v0, v1 with
+    | Some bval, Vsingle i0, Vsingle i1 => Vsingle (if bval then i1 else i0)
+    | _,_,_ => Vundef
+  end.
+
+Lemma eval_selectfs_to2: forall cond v0 v1 vselect m,
+    (eval_selectfs cond v0 v1 vselect m) =
+    (eval_selectfs2 cond v0 v1 vselect m).
+Proof.
+  intros.
+  unfold eval_selectfs2.
+  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
+Qed.
 
 Definition eval_operation
     (F V: Type) (genv: Genv.t F V) (sp: val)
@@ -379,6 +494,10 @@ Definition eval_operation
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
+  | (Oselect cond), v0::v1::vselect::nil => Some (eval_select cond v0 v1 vselect m)
+  | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
+  | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
+  | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
   | _, _ => None
   end.
 
@@ -567,6 +686,11 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Osingleoflong => (Tlong :: nil, Tsingle)
   | Osingleoflongu => (Tlong :: nil, Tsingle)
   | Ocmp c => (type_of_condition c, Tint)
+                
+  | Oselect cond => (Tint :: Tint :: (arg_type_of_condition0 cond) :: nil, Tint)
+  | Oselectl cond => (Tlong :: Tlong :: (arg_type_of_condition0 cond) :: nil, Tlong)
+  | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
+  | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -802,6 +926,43 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl in H0; inv H0...
   (* cmp *)
   - destruct (eval_condition cond vl m)... destruct b...
+  (* select *)
+  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
+    destruct cond; destruct v2; simpl in *; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+  (* selectl *)
+  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
+    destruct cond; destruct v2; simpl in *; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+
+  (* selectf *)
+  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
+    destruct cond; destruct v2; simpl in *; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+  (* selectfs *)
+  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
+    destruct cond; destruct v2; simpl in *; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
+    + destruct Archi.ptr64; simpl; trivial.
+      destruct (_ && _); simpl; trivial.
+      destruct (Val.cmp_different_blocks _); simpl; trivial.
 Qed.
 
 End SOUNDNESS.
@@ -962,6 +1123,19 @@ Definition op_depends_on_memory (op: operation) : bool :=
   | Ocmp (Ccompuimm _ _) => negb Archi.ptr64
   | Ocmp (Ccomplu _) => Archi.ptr64
   | Ocmp (Ccompluimm _ _) => Archi.ptr64
+
+  | Oselect (Ccompu0 _) => negb Archi.ptr64
+  | Oselect (Ccomplu0 _) => Archi.ptr64
+
+  | Oselectl (Ccompu0 _) => negb Archi.ptr64
+  | Oselectl (Ccomplu0 _) => Archi.ptr64
+
+  | Oselectf (Ccompu0 _) => negb Archi.ptr64
+  | Oselectf (Ccomplu0 _) => Archi.ptr64
+
+  | Oselectfs (Ccompu0 _) => negb Archi.ptr64
+  | Oselectfs (Ccomplu0 _) => Archi.ptr64
+                                
   | _ => false
   end.
 
@@ -970,9 +1144,10 @@ Lemma op_depends_on_memory_correct:
   op_depends_on_memory op = false ->
   eval_operation ge sp op args m1 = eval_operation ge sp op args m2.
 Proof.
-  intros until m2. destruct op; simpl; try congruence.
+  intros until m2. destruct op; simpl; try congruence;
+                     
   destruct cond; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
-  unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  unfold eval_select, eval_selectl, eval_selectf, eval_selectfs, eval_condition0, Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
 Qed.
 
 (** Global variables mentioned in an operation or addressing mode *)
@@ -1098,6 +1273,19 @@ Proof.
 - inv H3; inv H2; simpl in H0; inv H0; auto.
 - inv H3; inv H2; simpl in H0; inv H0; auto.
 - inv H3; inv H2; simpl in H0; inv H0; auto.
+Qed.
+
+Lemma eval_condition0_inj:
+  forall cond v1 v2 b,
+  Val.inject f v1 v2 ->
+  eval_condition0 cond v1 m1 = Some b ->
+  eval_condition0 cond v2 m2 = Some b.
+Proof.
+  intros. destruct cond; simpl in H0; FuncInv; InvInject; simpl; auto.
+  - inv H; simpl in *; congruence.
+  - eauto 3 using Val.cmpu_bool_inject, Mem.valid_pointer_implies.
+  - inv H; simpl in *; congruence.
+  - eauto 3 using Val.cmplu_bool_inject, Mem.valid_pointer_implies.
 Qed.
 
 Ltac TrivialExists :=
@@ -1328,6 +1516,62 @@ Proof.
     exploit eval_condition_inj; eauto. intros EQ; rewrite EQ.
     destruct b; simpl; constructor.
     simpl; constructor.
+  (* select *)
+  - unfold eval_select.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
+  (* selectl *)
+  - unfold eval_selectl.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
+  (* selectf *)
+  - unfold eval_selectf.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
+  (* selectfs *)
+  - unfold eval_selectfs.
+    inv H4; trivial.
+    inv H2; trivial.
+    inv H3; trivial;
+      try (destruct cond; simpl; trivial; fail).
+    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
+    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
+    * eapply eval_condition0_inj.
+      eapply Val.inject_ptr.
+      eassumption.
+      reflexivity.
+      assumption.
+    * rewrite Hcond'. constructor.
 Qed.
 
 Lemma eval_addressing_inj:

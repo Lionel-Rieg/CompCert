@@ -1,0 +1,59 @@
+* bs_transpose_dst only
+** original
+==> test.ccomp.host.out <==
+cycles: 3080223
+
+==> test.ccomp.k1c.out <==
+cycles: 10145951
+
+==> test.gcc.host.out <==
+cycles: 1485887
+
+==> test.gcc.k1c.out <==
+cycles: 4078535
+
+** neg and
+==> test.ccomp.host.out <==
+cycles: 2905049
+
+==> test.ccomp.k1c.out <==
+cycles: 7995063
+
+==> test.gcc.host.out <==
+cycles: 1858263
+
+==> test.gcc.k1c.out <==
+cycles: 5255763
+
+** cmove mais mauvais scheduling de registres
+==> test.ccomp.host.out <==
+cycles: 4363682
+
+==> test.ccomp.k1c.out <==
+cycles: 7208629
+
+==> test.gcc.host.out <==
+cycles: 2916854
+
+==> test.gcc.k1c.out <==
+cycles: 5646730
+
+** cmove via match du and
+==> test.ccomp.host.out <==
+cycles: 2553732
+
+==> test.ccomp.k1c.out <==
+cycles: 7208629
+
+==> test.gcc.host.out <==
+cycles: 1849125
+
+==> test.gcc.k1c.out <==
+cycles: 5255763
+
+** hand optimized loads
+cycles: 6027072
+
+* both bs_transpose_dst and bs_transpose_rev
+** with both cmove
+6890902

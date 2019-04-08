@@ -1,6 +1,9 @@
 
 #include <string.h>
 #include "bs.h"
+#include "../ternary.h"
+
+#define TERNARY(x, v0, v1) TERNARY64(x, v1, v0)
 
 #if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) ||\
         defined(__amd64__) || defined(__amd32__)|| defined(__amd16__)
@@ -13,12 +16,6 @@
 #else
 #error "endianness not supported"
 #endif
-
-#if 1
-#define TERNARY_XY0(t, x) ((-((t) != 0)) & (x))
-#else
-#define TERNARY_XY0(t, x) (((t) != 0) ? (x) : (0))
-#endif	    
 
 void bs_addroundkey(word_t * B, word_t * rk)
 {
@@ -393,15 +390,23 @@ void bs_transpose_dst(word_t * transpose, word_t * blocks)
             int offset = i << MUL_SHIFT;
 
 #ifndef UNROLL_TRANSPOSE
-	    /* DM experiments */
-	    /* The normal ternary operator costs us a lot!
-               from 10145951 to 7995063 */
-            int j;
+	    int j;
+#ifdef __COMPCERT__
+	    word_t *transptr = transpose+offset;
+	    word_t bitmask = ONE;
+            for(j=0; j < WORD_SIZE; j++)
+            {
+ 	      word_t old = *transptr;
+	      *(transptr++) = TERNARY(w & bitmask, old, old|bitpos);
+	      bitmask <<= 1;
+            }
+#else
             for(j=0; j < WORD_SIZE; j++)
             {
                 // TODO make const time
-	      transpose[offset + j] |= TERNARY_XY0(w & (ONE << j), bitpos);
+	      transpose[offset + j] |= (w & (ONE << j)) ? bitpos : 0;
             }
+#endif
 #else
 
             transpose[(offset)+ 0 ] |= (w & (ONE << 0 )) ? (bitpos) : 0;
@@ -494,11 +499,23 @@ void bs_transpose_rev(word_t * blocks)
         word_t offset = k / WORD_SIZE;
 #ifndef UNROLL_TRANSPOSE
         int j;
+#ifdef __COMPCERT__
+	word_t *transptr = transpose + offset;
+	word_t bitmask = ONE;
         for(j=0; j < WORD_SIZE; j++)
         {
-	  word_t bit = TERNARY_XY0((w & (ONE << j)), (ONE << (k % WORD_SIZE)));
+	  word_t old = *transptr;
+	  *transptr = TERNARY(w & bitmask, old, old | bitpos);
+	  transptr += WORDS_PER_BLOCK;
+	  bitmask <<= 1;
+        }
+#else
+        for(j=0; j < WORD_SIZE; j++)
+        {
+	  word_t bit = (w & (ONE << j)) ? (ONE << (k % WORD_SIZE)) : 0;
             transpose[j * WORDS_PER_BLOCK + (offset)] |= bit;
         }
+#endif
 #else
         transpose[0  * WORDS_PER_BLOCK + (offset )] |= (w & (ONE << 0 )) ? bitpos : 0;
         transpose[1  * WORDS_PER_BLOCK + (offset )] |= (w & (ONE << 1 )) ? bitpos : 0;

@@ -529,6 +529,10 @@ module Target (*: TARGET*) =
       | Pmaddil (rd, rs, imm) ->
          fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
+      | Pcmove (bt, rd, rcond, rs) | Pcmoveu (bt, rd, rcond, rs) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd ireg rs
+        
     let get_section_names name =
       let (text, lit) =
         match C2C.atom_sections name with
