@@ -1067,14 +1067,14 @@ Definition transl_function (f: Machblock.function) :=
          Pget GPRA RA ::b
          storeind_ptr GPRA SP f.(fn_retaddr_ofs) ::b lb)).
 
-Definition transf_function (f: Machblock.function) : res Asmblock.function :=
+Definition transf_function (f: Machblock.function) : res Asmvliw.function :=
   do tf <- transl_function f;
   if zlt Ptrofs.max_unsigned (size_blocks tf.(fn_blocks))
   then Error (msg "code size exceeded")
   else OK tf.
 
-Definition transf_fundef (f: Machblock.fundef) : res Asmblock.fundef :=
+Definition transf_fundef (f: Machblock.fundef) : res Asmvliw.fundef :=
   transf_partial_fundef transf_function f.
 
-Definition transf_program (p: Machblock.program) : res Asmblock.program :=
+Definition transf_program (p: Machblock.program) : res Asmvliw.program :=
   transform_partial_program transf_fundef p.

@@ -1,3 +1,4 @@
+open Asmvliw
 open Asmblock
 open Printf
 open Camlcoq
@@ -7,7 +8,7 @@ open TargetPrinter.Target
 let debug = false
 
 (**
- * Extracting infos from Asmblock instructions
+ * Extracting infos from Asmvliw instructions
  *)
 
 type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int | Off of offset
@@ -22,7 +23,7 @@ type ab_inst_rec = {
   is_control : bool;
 }
 
-(** Asmblock constructor to string functions *)
+(** Asmvliw constructor to string functions *)
 
 exception OpaqueInstruction
 

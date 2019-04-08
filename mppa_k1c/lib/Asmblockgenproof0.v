@@ -14,9 +14,10 @@ Require Import Machblock.
 Require Import Asmblock.
 Require Import Asmblockgen.
 Require Import Conventions1.
+Require Import Axioms.
 
 Module MB:=Machblock.
-Module AB:=Asmblock.
+Module AB:=Asmvliw.
 
 Hint Extern 2 (_ <> _) => congruence: asmgen.
 
@@ -311,9 +312,9 @@ Qed.
 Lemma agree_undef_caller_save_regs:
   forall ms sp rs,
   agree ms sp rs ->
-  agree (Mach.undef_caller_save_regs ms) sp (Asmblock.undef_caller_save_regs rs).
+  agree (Mach.undef_caller_save_regs ms) sp (Asmvliw.undef_caller_save_regs rs).
 Proof.
-  intros. destruct H. unfold Mach.undef_caller_save_regs, Asmblock.undef_caller_save_regs; split.
+  intros. destruct H. unfold Mach.undef_caller_save_regs, Asmvliw.undef_caller_save_regs; split.
 - unfold proj_sumbool; rewrite dec_eq_true. auto.
 - auto.
 - intros. unfold proj_sumbool. rewrite dec_eq_false by (apply preg_of_not_SP). 
@@ -943,10 +944,10 @@ Lemma exec_basic_instr_pc:
 Proof.
   intros. destruct b; try destruct i; try destruct i.
   all: try (inv H; Simpl).
-  1-10: try (unfold exec_load_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold exec_load_reg in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold exec_store_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
-  1-10: try (unfold exec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
+  1-10: try (unfold parexec_load_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
+  1-10: try (unfold parexec_load_reg in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
+  1-10: try (unfold parexec_store_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
+  1-10: try (unfold parexec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
   - destruct (Mem.alloc _ _ _). destruct (Mem.store _ _ _ _ _). inv H1. Simpl. discriminate.
   - destruct (Mem.loadv _ _ _); try discriminate. destruct (rs1 _); try discriminate.
     destruct (Mem.free _ _ _ _). inv H1. Simpl. discriminate.
@@ -997,6 +998,13 @@ Proof.
     + rewrite <- (exec_straight_pc (i ::i c) nil rs1 m1 rs2 m2'); auto.
 Qed.
  *)
+
+Lemma regset_same_assign (rs: regset) r:
+  rs # r <- (rs r) = rs.
+Proof.
+  apply functional_extensionality. intros x. destruct (preg_eq x r); subst; Simpl.
+Qed.
+
 Lemma exec_straight_through_singleinst:
   forall a b rs1 m1 rs2 m2 rs2' m2' lb,
   bblock_single_inst (PBasic a) = b ->
@@ -1005,9 +1013,11 @@ Lemma exec_straight_through_singleinst:
   exec_straight_blocks (b::lb) rs1 m1 lb rs2' m2'.
 Proof.
   intros. subst. constructor 1. unfold exec_bblock. simpl body. erewrite exec_straight_body; eauto.
-  simpl. auto.
-  simpl; auto. unfold nextblock; simpl. Simpl. erewrite exec_straight_pc; eauto.
+  simpl. rewrite regset_same_assign. auto.
+  simpl; auto. unfold nextblock, incrPC; simpl. Simpl. erewrite exec_straight_pc; eauto.
 Qed.
+
+
 
 (** The following lemmas show that straight-line executions
   (predicate [exec_straight_blocks]) correspond to correct Asm executions. *)

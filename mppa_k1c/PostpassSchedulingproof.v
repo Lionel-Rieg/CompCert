@@ -21,7 +21,7 @@ Require Import Axioms.
 
 Local Open Scope error_monad_scope.
 
-Definition match_prog (p tp: Asmblock.program) :=
+Definition match_prog (p tp: Asmvliw.program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
@@ -100,7 +100,7 @@ Lemma exec_load_offset_pc_var:
   exec_load_offset ge t rs m rd ra ofs = Next rs' m' ->
   exec_load_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
+  intros. unfold exec_load_offset in *. unfold parexec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -111,7 +111,7 @@ Lemma exec_load_reg_pc_var:
   exec_load_reg t rs m rd ra ro = Next rs' m' ->
   exec_load_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load_reg in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_load_reg in *. unfold parexec_load_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -122,7 +122,7 @@ Lemma exec_store_offset_pc_var:
   exec_store_offset ge t rs m rd ra ofs = Next rs' m' ->
   exec_store_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store_offset in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_store_offset in *. unfold parexec_store_offset in *. rewrite Pregmap.gso; try discriminate.
   destruct (eval_offset ge ofs); try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
@@ -134,7 +134,7 @@ Lemma exec_store_reg_pc_var:
   exec_store_reg t rs m rd ra ro = Next rs' m' ->
   exec_store_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_store_reg in *. rewrite Pregmap.gso; try discriminate.
+  intros. unfold exec_store_reg in *. unfold parexec_store_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
   - discriminate.
@@ -145,13 +145,13 @@ Lemma exec_basic_instr_pc_var:
   exec_basic_instr ge i rs m = Next rs' m' ->
   exec_basic_instr ge i (rs # PC <- v) m = Next (rs' # PC <- v) m'.
 Proof.
-  intros. unfold exec_basic_instr in *. destruct i.
+  intros. unfold exec_basic_instr in *. unfold parexec_basic_instr in *. destruct i.
   - unfold exec_arith_instr in *. destruct i; destruct i.
       all: try (exploreInst; inv H; apply next_eq; auto;
       apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
-
+(* 
       (* Some cases treated seperately because exploreInst destructs too much *)
-      all: try (inv H; apply next_eq; auto; apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
+      all: try (inv H; apply next_eq; auto; apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate). *)
   - destruct i.
     + exploreInst; apply exec_load_offset_pc_var; auto.
     + exploreInst; apply exec_load_reg_pc_var; auto.
@@ -223,10 +223,11 @@ Proof.
   exploit concat2_decomp; eauto. intros. inv H.
   unfold exec_bblock in EXEB. destruct (exec_body ge (body bb) rs m) eqn:EXEB'; try discriminate.
   rewrite H0 in EXEB'. apply exec_body_app in EXEB'. destruct EXEB' as (rs1 & m1 & EXEB1 & EXEB2).
-  repeat eexists.
+  eexists; eexists. split.
     unfold exec_bblock. rewrite EXEB1. rewrite EXA. simpl. eauto.
+  split.
     exploit exec_body_pc. eapply EXEB1. intros. rewrite <- H. auto.
-    unfold exec_bblock. unfold nextblock. erewrite exec_body_pc_var; eauto.
+    unfold exec_bblock. unfold nextblock, incrPC. rewrite regset_same_assign. erewrite exec_body_pc_var; eauto.
     rewrite <- H1. unfold nextblock in EXEB. rewrite regset_double_set_id.
     assert (size bb = size a + size b).
     { unfold size. rewrite H0. rewrite H1. rewrite app_length. rewrite EXA. simpl. rewrite Nat.add_0_r.
@@ -234,8 +235,8 @@ Proof.
     clear EXA H0 H1. rewrite H in EXEB.
     assert (rs1 PC = rs0 PC). { apply exec_body_pc in EXEB2. auto. }
     rewrite H0. rewrite <- pc_set_add; auto.
-    exploit AB.size_positive. instantiate (1 := a). intro. omega.
-    exploit AB.size_positive. instantiate (1 := b). intro. omega.
+    exploit size_positive. instantiate (1 := a). intro. omega.
+    exploit size_positive. instantiate (1 := b). intro. omega.
 Qed.
 
 Lemma concat_all_exec_bblock (ge: Genv.t fundef unit) (f: function) :
@@ -571,13 +572,8 @@ Proof.
   assert (ge = Genv.globalenv prog). auto.
   assert (tge = Genv.globalenv tprog). auto.
   pose symbol_address_preserved.
-  exploreInst; simpl; auto; try congruence.
-  - unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
-  - unfold eval_branch. unfold goto_label. erewrite label_pos_preserved_blocks; eauto.
+  exploreInst; simpl; auto; try congruence;
+    unfold par_goto_label; unfold par_eval_branch; unfold par_goto_label; erewrite label_pos_preserved_blocks; eauto.
 Qed.
 
 Lemma eval_offset_preserved:
@@ -589,21 +585,21 @@ Qed.
 Lemma transf_exec_load_offset:
   forall t rs m rd ra ofs, exec_load_offset ge t rs m rd ra ofs = exec_load_offset tge t rs m rd ra ofs.
 Proof.
-  intros. unfold exec_load_offset. rewrite eval_offset_preserved. reflexivity.
+  intros. unfold exec_load_offset. unfold parexec_load_offset. rewrite eval_offset_preserved. reflexivity.
 Qed.
 
 Lemma transf_exec_store_offset:
   forall t rs m rs0 ra ofs, exec_store_offset ge t rs m rs0 ra ofs = exec_store_offset tge t rs m rs0 ra ofs.
 Proof.
-  intros. unfold exec_store_offset. rewrite eval_offset_preserved. reflexivity.
+  intros. unfold exec_store_offset. unfold parexec_store_offset. rewrite eval_offset_preserved. reflexivity.
 Qed.
 
 Lemma transf_exec_basic_instr:
   forall i rs m, exec_basic_instr ge i rs m = exec_basic_instr tge i rs m.
 Proof.
   intros. pose symbol_address_preserved.
-  unfold exec_basic_instr. exploreInst; simpl; auto; try congruence.
-  - unfold exec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
+  unfold exec_basic_instr. unfold parexec_basic_instr. exploreInst; simpl; auto; try congruence.
+  - unfold parexec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
   - apply transf_exec_load_offset.
   - apply transf_exec_store_offset.
 Qed.
@@ -731,9 +727,9 @@ Proof.
   destruct bb as [h bdy ext H]; simpl.
   intros; subst. destruct i.
   generalize H.
-  rewrite <- AB.wf_bblock_refl in H.
+  rewrite <- wf_bblock_refl in H.
   destruct H as [H H0].
-  unfold AB.builtin_alone in H0. erewrite H0; eauto.
+  unfold builtin_alone in H0. erewrite H0; eauto.
 Qed.
 
 Local Hint Resolve verified_schedule_nob_checks_alls_bundles.
@@ -826,7 +822,7 @@ Qed.
 Theorem transf_program_correct_Asmvliw: 
   forward_simulation (Asmblock.semantics tprog) (Asmvliw.semantics tprog).
 Proof.
-  eapply forward_simulation_step with (match_states:=fun (s1:Asmblock.state) s2 => s1=s2); eauto.
+  eapply forward_simulation_step with (match_states:=fun (s1:Asmvliw.state) s2 => s1=s2); eauto.
   - intros; subst; auto.
   - intros s1 t s1' H s2 H0; subst; inversion H; clear H; subst; eexists; split; eauto.
     + eapply exec_step_internal; eauto.

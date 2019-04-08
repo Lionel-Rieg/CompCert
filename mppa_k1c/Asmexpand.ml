@@ -41,7 +41,7 @@ let wordsize = if Archi.ptr64 then 8 else 4
 
 let align n a = (n + a - 1) land (-a)
 
-let stack_pointer = Asmblock.GPR12
+let stack_pointer = Asmvliw.GPR12
                   
 (* Emit instruction sequences that set or offset a register by a constant. *)
 (*
@@ -49,7 +49,7 @@ let stack_pointer = Asmblock.GPR12
   List.iter emit (Asmgen.loadimm32 dst n [])
 *)
 let expand_addptrofs dst src n =
-  List.iter emit (basic_to_instruction (Asmblock.PArith (Asmblockgen.addptrofs dst src n)) :: [])
+  List.iter emit (basic_to_instruction (Asmvliw.PArith (Asmblockgen.addptrofs dst src n)) :: [])
 let expand_storeind_ptr src base ofs =
   List.iter emit (basic_to_instruction (Asmblockgen.storeind_ptr src base ofs) :: [])
 let expand_loadind_ptr dst base ofs =
@@ -65,7 +65,7 @@ let expand_loadind_ptr dst base ofs =
 (* Fix-up code around calls to variadic functions.  Floating-point arguments
    residing in FP registers need to be moved to integer registers. *)
 
-let int_param_regs   = let open Asmblock in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7; GPR8; GPR9; GPR10; GPR11 |]
+let int_param_regs   = let open Asmvliw in [| GPR0; GPR1; GPR2; GPR3; GPR4; GPR5; GPR6; GPR7; GPR8; GPR9; GPR10; GPR11 |]
 (* let float_param_regs = [| F10; F11; F12; F13; F14; F15; F16; F17 |] *)
 let float_param_regs = [| |]
 
@@ -131,7 +131,7 @@ let emit_move dst r =
 (* FIXME DMonniaux this is probably not complete *)
 let get_builtin_arg dst arg =
   match arg with
-  | BA (Asmblock.IR reg) -> emit_move dst reg
+  | BA (Asmvliw.IR reg) -> emit_move dst reg
   | BA (ireg) ->  failwith "get_builtin_arg: BA_int(not ireg)"
   | BA_int _ -> failwith "get_builtin_arg: BA_int"
   | BA_long _ -> failwith "get_builtin_arg: BA_long"
@@ -147,9 +147,9 @@ let get_builtin_arg dst arg =
 (* FIXME DMonniaux this is really suboptimal (byte per byte) *)
 let expand_builtin_memcpy_big sz al src dst =
   assert (sz > Z.zero);
-  let dstptr = Asmblock.GPR62
-  and srcptr = Asmblock.GPR63
-  and tmpbuf = Asmblock.GPR61 in
+  let dstptr = Asmvliw.GPR62
+  and srcptr = Asmvliw.GPR63
+  and tmpbuf = Asmvliw.GPR61 in
   get_builtin_arg dstptr dst;
   get_builtin_arg srcptr src;
   emit (Pmake (tmpbuf, sz));
@@ -157,10 +157,10 @@ let expand_builtin_memcpy_big sz al src dst =
   let lbl = new_label() in
   emit (Ploopdo (tmpbuf, lbl));
   emit Psemi;
-  emit (Plb (tmpbuf, srcptr, AOff (Asmblock.Ofsimm Z.zero)));
+  emit (Plb (tmpbuf, srcptr, AOff (Asmvliw.Ofsimm Z.zero)));
   emit (Paddil (srcptr, srcptr, Z.one));
   emit Psemi;
-  emit (Psb (tmpbuf, dstptr, AOff (Asmblock.Ofsimm Z.zero)));
+  emit (Psb (tmpbuf, dstptr, AOff (Asmvliw.Ofsimm Z.zero)));
   emit (Paddil (dstptr, dstptr, Z.one));
   emit Psemi;
   emit (Plabel lbl);;
@@ -175,41 +175,41 @@ let expand_builtin_memcpy  sz al args =
 (* FIXME probably need to check for size of displacement *)
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
-  | Mint8unsigned, BR(Asmblock.IR res) ->
-     emit (Plbu (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint8signed, BR(Asmblock.IR res) ->
-     emit (Plb  (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint16unsigned, BR(Asmblock.IR res) ->
-     emit (Plhu (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint16signed, BR(Asmblock.IR res) ->
-     emit (Plh  (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint32, BR(Asmblock.IR res) ->
-     emit (Plw  (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint64, BR(Asmblock.IR res) ->
-     emit (Pld  (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint64, BR_splitlong(BR(Asmblock.IR res1), BR(Asmblock.IR res2)) ->
+  | Mint8unsigned, BR(Asmvliw.IR res) ->
+     emit (Plbu (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint8signed, BR(Asmvliw.IR res) ->
+     emit (Plb  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint16unsigned, BR(Asmvliw.IR res) ->
+     emit (Plhu (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint16signed, BR(Asmvliw.IR res) ->
+     emit (Plh  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint32, BR(Asmvliw.IR res) ->
+     emit (Plw  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint64, BR(Asmvliw.IR res) ->
+     emit (Pld  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint64, BR_splitlong(BR(Asmvliw.IR res1), BR(Asmvliw.IR res2)) ->
      let ofs' = Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, AOff (Asmblock.Ofsimm ofs)));
-         emit (Plw (res1, base, AOff (Asmblock.Ofsimm ofs')))
+         emit (Plw (res2, base, AOff (Asmvliw.Ofsimm ofs)));
+         emit (Plw (res1, base, AOff (Asmvliw.Ofsimm ofs')))
        end else begin
-         emit (Plw (res1, base, AOff (Asmblock.Ofsimm ofs')));
-         emit (Plw (res2, base, AOff (Asmblock.Ofsimm ofs)))
+         emit (Plw (res1, base, AOff (Asmvliw.Ofsimm ofs')));
+         emit (Plw (res2, base, AOff (Asmvliw.Ofsimm ofs)))
        end
-  | Mfloat32, BR(Asmblock.IR res) ->
-     emit (Pfls (res, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mfloat64, BR(Asmblock.IR res) ->
-     emit (Pfld (res, base, AOff (Asmblock.Ofsimm ofs)))
+  | Mfloat32, BR(Asmvliw.IR res) ->
+     emit (Pfls (res, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mfloat64, BR(Asmvliw.IR res) ->
+     emit (Pfld (res, base, AOff (Asmvliw.Ofsimm ofs)))
   | _ ->
      assert false
 
 let expand_builtin_vload chunk args res =
   match args with
-  | [BA(Asmblock.IR addr)] ->
+  | [BA(Asmvliw.IR addr)] ->
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
      expand_builtin_vload_common chunk stack_pointer ofs res
-  | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs))] ->
+  | [BA_addptr(BA(Asmvliw.IR addr), (BA_int ofs | BA_long ofs))] ->
      expand_builtin_vload_common chunk addr ofs res
   | _ ->
       assert false
@@ -217,32 +217,32 @@ let expand_builtin_vload chunk args res =
 
 let expand_builtin_vstore_common chunk base ofs src =
   match chunk, src with
-  | (Mint8signed | Mint8unsigned), BA(Asmblock.IR src) ->
-     emit (Psb (src, base, AOff (Asmblock.Ofsimm ofs)))
-  | (Mint16signed | Mint16unsigned), BA(Asmblock.IR src) ->
-     emit (Psh (src, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint32, BA(Asmblock.IR src) ->
-     emit (Psw (src, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint64, BA(Asmblock.IR src) ->
-     emit (Psd (src, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mint64, BA_splitlong(BA(Asmblock.IR src1), BA(Asmblock.IR src2)) ->
+  | (Mint8signed | Mint8unsigned), BA(Asmvliw.IR src) ->
+     emit (Psb (src, base, AOff (Asmvliw.Ofsimm ofs)))
+  | (Mint16signed | Mint16unsigned), BA(Asmvliw.IR src) ->
+     emit (Psh (src, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint32, BA(Asmvliw.IR src) ->
+     emit (Psw (src, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint64, BA(Asmvliw.IR src) ->
+     emit (Psd (src, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mint64, BA_splitlong(BA(Asmvliw.IR src1), BA(Asmvliw.IR src2)) ->
      let ofs' = Ptrofs.add ofs _4 in
-     emit (Psw (src2, base, AOff (Asmblock.Ofsimm ofs)));
-     emit (Psw (src1, base, AOff (Asmblock.Ofsimm ofs')))
-  | Mfloat32, BA(Asmblock.IR src) ->
-     emit (Pfss (src, base, AOff (Asmblock.Ofsimm ofs)))
-  | Mfloat64, BA(Asmblock.IR src) ->
-     emit (Pfsd (src, base, AOff (Asmblock.Ofsimm ofs)))
+     emit (Psw (src2, base, AOff (Asmvliw.Ofsimm ofs)));
+     emit (Psw (src1, base, AOff (Asmvliw.Ofsimm ofs')))
+  | Mfloat32, BA(Asmvliw.IR src) ->
+     emit (Pfss (src, base, AOff (Asmvliw.Ofsimm ofs)))
+  | Mfloat64, BA(Asmvliw.IR src) ->
+     emit (Pfsd (src, base, AOff (Asmvliw.Ofsimm ofs)))
   | _ ->
      assert false
 
 let expand_builtin_vstore chunk args =
   match args with
-  | [BA(Asmblock.IR addr); src] ->
+  | [BA(Asmvliw.IR addr); src] ->
       expand_builtin_vstore_common chunk addr _0 src
   | [BA_addrstack ofs; src] ->
      expand_builtin_vstore_common chunk stack_pointer ofs src
-  | [BA_addptr(BA(Asmblock.IR addr), (BA_int ofs | BA_long ofs)); src] ->
+  | [BA_addptr(BA(Asmvliw.IR addr), (BA_int ofs | BA_long ofs)); src] ->
      expand_builtin_vstore_common chunk addr ofs src
   | _ ->
       assert false
@@ -265,7 +265,7 @@ let arguments_size sg =
 let _nbregargs_ = 12
 let _alignment_ = 8
 
-let save_arguments first_reg base_ofs = let open Asmblock in
+let save_arguments first_reg base_ofs = let open Asmvliw in
   for i = first_reg to (_nbregargs_ - 1) do begin
     expand_storeind_ptr
       int_param_regs.(i)
@@ -281,9 +281,9 @@ match !vararg_start_ofs with
   | None ->
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
-      expand_addptrofs Asmblock.GPR32 stack_pointer (Ptrofs.repr ofs);
+      expand_addptrofs Asmvliw.GPR32 stack_pointer (Ptrofs.repr ofs);
       emit Psemi;
-      expand_storeind_ptr Asmblock.GPR32 r Ptrofs.zero
+      expand_storeind_ptr Asmvliw.GPR32 r Ptrofs.zero
 
 (* Auxiliary for 64-bit integer arithmetic built-ins.  They expand to
    two instructions, one computing the low 32 bits of the result,
@@ -348,7 +348,7 @@ let expand_bswap64 d s = assert false
 
 (* Handling of compiler-inlined builtins *)
 
-let expand_builtin_inline name args res = let open Asmblock in
+let expand_builtin_inline name args res = let open Asmvliw in
   match name, args, res with
   (* Synchronization *)
   | "__builtin_membar", [], _ ->
@@ -376,14 +376,14 @@ let expand_instruction instr =
   match instr with
   | Pallocframe (sz, ofs) ->
       let sg = get_current_function_sig() in
-      emit (Pmv (Asmblock.GPR17, stack_pointer));
+      emit (Pmv (Asmvliw.GPR17, stack_pointer));
       if sg.sig_cc.cc_vararg then begin
         let n = arguments_size sg in
         let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
         expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
         emit Psemi;
-        expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
+        expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
             sz in
@@ -393,7 +393,7 @@ let expand_instruction instr =
       end else begin
         expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
         emit Psemi;
-        expand_storeind_ptr Asmblock.GPR17 stack_pointer ofs;
+        expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
         vararg_start_ofs := None
       end
@@ -476,7 +476,7 @@ let expand_instruction instr =
 
 (* NOTE: Dwarf register maps for RV32G are not yet specified
    officially.  This is just a placeholder.  *)
-let int_reg_to_dwarf = let open Asmblock in function
+let int_reg_to_dwarf = let open Asmvliw in function
    | GPR0  -> 1   | GPR1  -> 2   | GPR2  -> 3   | GPR3  -> 4   | GPR4  -> 5
    | GPR5  -> 6   | GPR6  -> 7   | GPR7  -> 8   | GPR8  -> 9   | GPR9  -> 10
    | GPR10 -> 11  | GPR11 -> 12  | GPR12 -> 13  | GPR13 -> 14  | GPR14 -> 15
@@ -491,7 +491,7 @@ let int_reg_to_dwarf = let open Asmblock in function
    | GPR55 -> 56  | GPR56 -> 57  | GPR57 -> 58  | GPR58 -> 59  | GPR59 -> 60
    | GPR60 -> 61  | GPR61 -> 62  | GPR62 -> 63  | GPR63 -> 64
 
-let preg_to_dwarf = let open Asmblock in function
+let preg_to_dwarf = let open Asmvliw in function
    | IR r -> int_reg_to_dwarf r
    | RA   -> 65 (* FIXME - No idea what is $ra DWARF number in k1-gdb *)
    | _ -> assert false
