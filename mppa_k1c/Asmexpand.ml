@@ -111,16 +111,13 @@ let fixup_call sg =
 
 (* Handling of annotations *)
 
-let expand_annot_val kind txt targ args res = assert false
-(*emit (Pbuiltin (EF_annot(kind,txt,[targ]), args, BR_none));
+let expand_annot_val kind txt targ args res =
+  emit (Pbuiltin (EF_annot(kind,txt,[targ]), args, BR_none));
   match args, res with
-  | [BA(IR src)], BR(IR dst) ->
+  | [BA(Asmvliw.IR src)], BR(Asmvliw.IR dst) ->
      if dst <> src then emit (Pmv (dst, src))
-  | [BA(FR src)], BR(FR dst) ->
-     if dst <> src then emit (Pfmv (dst, src))
   | _, _ ->
      raise (Error "ill-formed __builtin_annot_val")
-*)
 
 (* Handling of memcpy *)
 
@@ -465,10 +462,10 @@ let expand_instruction instr =
      | EF_malloc -> failwith "asmexpand: malloc"
      | EF_free -> failwith "asmexpand: free"
      | EF_debug _ -> failwith "asmexpand: debug"
-     | EF_annot _ -> failwith "asmexpand: annot"
-     | EF_annot_val _ -> failwith "asmexpand: annot_val"
+     | EF_annot _ -> emit instr
+     | EF_annot_val (kind, txt, targ) -> expand_annot_val kind txt targ args res
      | EF_external _ -> failwith "asmexpand: external"
-     | EF_inline_asm _ -> failwith "asmexpand: inline asm"
+     | EF_inline_asm _ -> emit instr
      | EF_runtime _ -> failwith "asmexpand: runtime"
      end
   | _ ->
