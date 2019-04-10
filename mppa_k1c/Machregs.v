@@ -218,7 +218,10 @@ Definition two_address_op (op: operation) : bool :=
 Definition builtin_constraints (ef: external_function) :
                                        list builtin_arg_constraint :=
   match ef with
-  | EF_builtin id sg => nil
+  | EF_builtin id sg =>
+    if string_dec id "__builtin_k1_get" then OK_const :: nil
+    else if string_dec id "__builtin_k1_set" then OK_const :: OK_default :: nil
+         else nil
   | EF_vload _ => OK_addressing :: nil
   | EF_vstore _ => OK_addressing :: OK_default :: nil
   | EF_memcpy _ _ => OK_addrstack :: OK_addrstack :: nil

@@ -357,6 +357,11 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pclzll(res, a))
   | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
      emit (Pstsud(res, a1, a2))
+  | "__builtin_k1_get", [BA_int(n)], BR(IR res) ->
+     emit (Pgetn(n, res))
+  | "__builtin_k1_set", [BA_int(n); BA(IR src)], _ ->
+     emit (Psetn(n, src))
+    
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1

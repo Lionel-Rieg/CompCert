@@ -72,7 +72,10 @@ Inductive instruction : Type :=
   | Pcb     (bt: btest) (r: ireg) (l: label)        (**r branch based on btest *)
   | Pcbu    (bt: btest) (r: ireg) (l: label)        (**r branch based on btest with unsigned semantics *)
   | Pjumptable (r: ireg) (labels: list label)
+               
   | Ploopdo (count: ireg) (loopend: label)
+  | Pgetn   (n: int) (dst: ireg)
+  | Psetn   (n: int) (src: ireg)
 
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)

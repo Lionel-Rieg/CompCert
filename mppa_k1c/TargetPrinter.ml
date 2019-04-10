@@ -274,8 +274,14 @@ module Target (*: TARGET*) =
          fprintf oc "	goto	%a\n" print_label s
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
          fprintf oc "	cb.%a	%a? %a\n" bcond bt ireg r print_label lbl
+
       | Ploopdo (r, lbl) ->
-         fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl        
+         fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl
+      | Pgetn(n, dst) ->
+         fprintf oc "	get	%a = $s%ld\n" ireg dst (camlint_of_coqint n)
+      | Psetn(n, dst) ->
+         fprintf oc "	set	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
+        
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
          (* jumptables := (lbl, tbl) :: !jumptables; *)
