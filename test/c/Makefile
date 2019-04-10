@@ -13,8 +13,8 @@ TIME=xtime -o /dev/null -mintime 2.0     # Xavier's hack
 PROGS=fib qsort fftw sha1 sha3 aes \
   lists binarytrees fannkuch \
   nsieve nsievebits vmach \
-  chomp perlin siphash24
-# FIXME - Omitted tests: integr fft fftsp almabench knucleotide mandelbrot nbody spectral bisect
+  chomp perlin siphash24\
+  integr fft fftsp almabench knucleotide mandelbrot nbody spectral bisect
 
 all: $(PROGS:%=%.compcert)
 
