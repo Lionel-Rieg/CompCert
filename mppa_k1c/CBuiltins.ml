@@ -27,8 +27,8 @@ let builtins = {
       "__builtin_k1_await", (TVoid [], [], false);
       "__builtin_k1_barrier", (TVoid [], [], false);
       "__builtin_k1_doze", (TVoid [], [], false);
-      "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
-      "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
+      "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
+      "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
       "__builtin_k1_invaldtlb", (TVoid [], [], false);
       "__builtin_k1_invalitlb", (TVoid [], [], false);
       "__builtin_k1_probetlb", (TVoid [], [], false);
@@ -38,8 +38,8 @@ let builtins = {
       "__builtin_k1_syncgroup", (TVoid [], [TInt(IUInt, [])], false);
       "__builtin_k1_tlbwrite", (TVoid [], [], false);
       
-      "__builtin_k1_get", (TInt(IULongLong, []), [TInt(IInt, [])], false);
-      "__builtin_k1_set", (TVoid [], [TInt(IInt, []); TInt(IULongLong, [])], false);
+      "__builtin_k1_get", (TInt(IULongLong, []), [TInt(IInt, [])], false); (* DONE *)
+      "__builtin_k1_set", (TVoid [], [TInt(IInt, []); TInt(IULongLong, [])], false); (* DONE *)
       
       (* LSU Instructions *)
         (* No ACWS - __int128 *)
@@ -55,7 +55,7 @@ let builtins = {
       "__builtin_k1_itouchl", (TVoid [], [TPtr(TVoid [], [])], false);
       "__builtin_k1_lbsu", (TInt(IChar, []), [TPtr(TVoid [], [])], false);
       "__builtin_k1_lbzu", (TInt(IUChar, []), [TPtr(TVoid [], [])], false);
-      "__builtin_k1_ldu", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false);
+      "__builtin_k1_ldu", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_lhsu", (TInt(IShort, []), [TPtr(TVoid [], [])], false);
       "__builtin_k1_lhzu", (TInt(IUShort, []), [TPtr(TVoid [], [])], false);
       "__builtin_k1_lwzu", (TInt(IUInt, []), [TPtr(TVoid [], [])], false);

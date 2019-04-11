@@ -379,7 +379,9 @@ let expand_builtin_inline name args res = let open Asmvliw in
      (if not_system_register cn
       then failwith (Printf.sprintf "__builtin_k1_wfxm(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Pwfxm(n, src)))
-    
+  | "__builtin_k1_ldu", [BA(IR addr)], BR(IR res) ->
+     emit (Pldu(res, addr))
+	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
      expand_bswap16 res a1

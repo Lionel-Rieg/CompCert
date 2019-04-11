@@ -6,3 +6,7 @@ void test_system_regs(void) {
   __builtin_k1_get(K1_SFR_EV4);
   __builtin_k1_set(K1_SFR_EV4, 0x4000ULL);
 }
+
+void test_loads(void *addr) {
+  __builtin_k1_ldu(addr);
+}

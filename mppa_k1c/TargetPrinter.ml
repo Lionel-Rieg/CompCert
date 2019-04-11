@@ -275,6 +275,7 @@ module Target (*: TARGET*) =
       | Pcb (bt, r, lbl) | Pcbu (bt, r, lbl) ->
          fprintf oc "	cb.%a	%a? %a\n" bcond bt ireg r print_label lbl
 
+      (* For builtins *)
       | Ploopdo (r, lbl) ->
          fprintf oc "	loopdo	%a, %a\n" ireg r print_label lbl
       | Pgetn(n, dst) ->
@@ -285,7 +286,9 @@ module Target (*: TARGET*) =
          fprintf oc "	wfxl	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
       | Pwfxm(n, dst) ->
          fprintf oc "	wfxm	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
-        
+      | Pldu(dst, addr) ->
+	 fprintf oc "	ld.u	%a = 0[%a]\n" ireg dst ireg addr
+		 
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
          (* jumptables := (lbl, tbl) :: !jumptables; *)
