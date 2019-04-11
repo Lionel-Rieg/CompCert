@@ -366,6 +366,45 @@ Inductive is_exit: option control_flow_inst -> Mach.code -> Mach.code -> Prop :=
   | exit_is_cfi i c cfi: (trans_inst i) = MB_cfi cfi -> is_exit (Some cfi) (i::c) c
  .
 
+Lemma Mlabel_is_not_basic i:
+  forall bi, trans_inst i = MB_basic bi -> forall l, i <> Mlabel l.
+Proof.
+intros.
+unfold trans_inst in H. 
+destruct i; congruence. 
+Qed.
+
+Lemma Mlabel_is_not_cfi i:
+  forall cfi, trans_inst i = MB_cfi cfi -> forall l, i <> Mlabel l.
+Proof.
+intros.
+unfold trans_inst in H. 
+destruct i; congruence. 
+Qed.
+
+Lemma MBbasic_is_not_cfi i:
+  forall cfi, trans_inst i = MB_cfi cfi -> forall bi, trans_inst i <> MB_basic bi.
+Proof.
+intros.
+unfold trans_inst in H.
+unfold trans_inst. 
+destruct i; congruence. 
+Qed.
+
+Lemma add_to_new_block_is_label i:
+  header (add_to_new_bblock (trans_inst i)) <> nil -> exists l, i = Mlabel l.
+Proof.
+  intros.
+  unfold add_to_new_bblock in H.
+  destruct (trans_inst i) eqn : H1. 
+  + exists lbl. 
+    unfold trans_inst in H1. 
+    destruct i; congruence.
+  + unfold add_basic in H; simpl in H; congruence.
+  + unfold cfi_bblock in H; simpl in H; congruence.
+Qed.
+
+
 Lemma trans_code_decompose c: forall b bl,
   is_trans_code c (b::bl) ->
   exists c0 c1 c2, is_header (header b) c c0 /\ is_body (body b) c0 c1 /\ is_exit (exit b) c1 c2 /\ is_trans_code c2 bl.
@@ -386,7 +425,53 @@ Proof.
     intros (c0 & c1 & c2 & H1 & H2 & H3 & H4).
     repeat econstructor; eauto.
   + (* basic at end block *)
-Admitted. (* A FINIR *)
+    inversion H1; subst.
+      lapply (Mlabel_is_not_basic i bi); auto.
+      intro H2.
+    - inversion H0; subst.
+      assert (X:(trans_inst i) = MB_basic bi ). { repeat econstructor; congruence. }
+      repeat econstructor; congruence.
+    - exists (i::c), c, c.
+      repeat econstructor; eauto.
+      * lapply (Mlabel_is_not_basic i bi); auto.
+      * inversion H0; subst; repeat econstructor.
+        inversion H1.
+        subst.
+        exploit (add_to_new_block_is_label i0); eauto.
+        intro H8; destruct H8.
+        rewrite H2. unfold trans_inst. congruence.
+        unfold trans_inst. congruence.
+        exploit H3. 
+        unfold add_basic; eauto. 
+        intro F; destruct F.
+      * inversion H0; subst; econstructor. 
+        exploit (add_to_new_block_is_label i0); eauto.
+        intros H8. destruct H8.
+        rewrite H2.
+        unfold trans_inst; congruence.
+        unfold trans_inst; congruence.
+        rewrite H7. congruence.
+  + unfold trans_inst in Heqti. congruence.
+  + (* basic at mid block *)
+    inversion H1. symmetry in H4. subst.
+    exploit IHc; eauto.
+    intros (c0 & c1 & c2 & H3 & H4 & H5 & H6).
+    exists (i::c0), c1, c2.
+    repeat econstructor; eauto.
+    rewrite H2 in H3.
+    inversion H3; econstructor; apply (Mlabel_is_not_basic i bi); eauto.
+  + (* cfi at end block *)
+    inversion H1; subst. inversion H0; subst.
+    repeat econstructor; eauto.
+    apply (Mlabel_is_not_cfi i cfi); eauto.
+    apply (MBbasic_is_not_cfi i cfi); eauto.
+    exists (i::c), (i::c), c.
+    repeat econstructor; eauto.
+    apply (Mlabel_is_not_cfi i cfi); eauto.
+    apply (MBbasic_is_not_cfi i cfi); eauto.
+  + unfold trans_inst in Heqti. congruence.
+Qed.
+
 
 Lemma step_simu_header st f sp rs m s c h c' t: 
  is_header h c c' ->
