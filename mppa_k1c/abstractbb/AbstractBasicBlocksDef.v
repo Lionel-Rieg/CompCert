@@ -211,7 +211,33 @@ Proof.
   intros; eapply res_eq_trans. eapply alt_bblock_equiv_refl; eauto.
   eauto.
 Qed.
- 
+
+
+Lemma run_app p1: forall m1 p2,
+   run (p1++p2) m1 = 
+     match run p1 m1 with 
+     | Some m2 => run p2 m2 
+     | None => None
+     end.
+Proof.
+   induction p1; simpl; try congruence.
+   intros; destruct (inst_run _ _ _); simpl; auto.
+Qed.
+
+Lemma run_app_None p1 m1 p2:
+   run p1 m1 = None ->
+   run (p1++p2) m1 = None.
+Proof.
+   intro H; rewrite run_app. rewrite H; auto.
+Qed.
+
+Lemma run_app_Some p1 m1 m2 p2:
+   run p1 m1 = Some m2 ->
+   run (p1++p2) m1 = run p2 m2.
+Proof.
+   intros H; rewrite run_app. rewrite H; auto.
+Qed.
+
 End SEQLANG.
 
 End MkSeqLanguage.
