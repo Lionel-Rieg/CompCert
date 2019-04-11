@@ -74,4 +74,13 @@ __compcert_va_composite:
 	addd	$r12 = $r12, 16
 ;;
 	ret
-;;
+	;;
+	
+# FIXME this assumes pass-by-reference
+	.globl __compcert_acswapd
+__compcert_acswapd:
+	acswapd	0[$r1] = $r2r3
+	;;
+	sq	0[$r0] = $r2r3
+	ret
+	;;
