@@ -24,8 +24,8 @@ let builtins = {
   (* The builtin list is inspired from the GCC file builtin_k1.h *)
   Builtins.functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
       (* BCU Instructions *)
-      "__builtin_k1_await", (TVoid [], [], false);
-      "__builtin_k1_barrier", (TVoid [], [], false);
+      "__builtin_k1_await", (TVoid [], [], false); (* DONE *)
+      "__builtin_k1_barrier", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_doze", (TVoid [], [], false);
       "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
       "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
@@ -33,8 +33,8 @@ let builtins = {
       "__builtin_k1_invalitlb", (TVoid [], [], false);
       "__builtin_k1_probetlb", (TVoid [], [], false);
       "__builtin_k1_readtlb", (TVoid [], [], false);
-      "__builtin_k1_sleep", (TVoid [], [], false);
-      "__builtin_k1_stop", (TVoid [], [], false);
+      "__builtin_k1_sleep", (TVoid [], [], false); (* DONE *)
+      "__builtin_k1_stop", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_syncgroup", (TVoid [], [TInt(IUInt, [])], false);
       "__builtin_k1_tlbwrite", (TVoid [], [], false);
       
@@ -49,7 +49,7 @@ let builtins = {
       "__builtin_k1_dinvall", (TVoid [], [TPtr(TVoid [], [])], false);
       "__builtin_k1_dtouchl", (TVoid [], [TPtr(TVoid [], [])], false);
       "__builtin_k1_dzerol", (TVoid [], [TPtr(TVoid [], [])], false);
-      "__builtin_k1_fence", (TVoid [], [], false);
+      "__builtin_k1_fence", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_iinval", (TVoid [], [], false);
       "__builtin_k1_iinvals", (TVoid [], [TPtr(TVoid [], [])], false);
       "__builtin_k1_itouchl", (TVoid [], [TPtr(TVoid [], [])], false);

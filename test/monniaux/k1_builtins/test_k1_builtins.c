@@ -10,3 +10,11 @@ void test_system_regs(void) {
 void test_loads(void *addr) {
   __builtin_k1_ldu(addr);
 }
+
+void test_stops(void) {
+  __builtin_k1_await();
+  __builtin_k1_sleep();
+  __builtin_k1_stop();
+  __builtin_k1_barrier();
+  __builtin_k1_fence();
+}

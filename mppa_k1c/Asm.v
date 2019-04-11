@@ -80,6 +80,11 @@ Inductive instruction : Type :=
   | Pwfxl   (n: int) (src: ireg)
   | Pwfxm   (n: int) (src: ireg)
   | Pldu    (dst: ireg) (addr: ireg)
+  | Pawait
+  | Psleep
+  | Pstop
+  | Pbarrier
+  | Pfence
             
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)

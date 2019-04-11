@@ -288,6 +288,16 @@ module Target (*: TARGET*) =
          fprintf oc "	wfxm	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
       | Pldu(dst, addr) ->
 	 fprintf oc "	ld.u	%a = 0[%a]\n" ireg dst ireg addr
+      | Pawait ->
+	 fprintf oc "	await\n"
+      | Psleep ->
+	 fprintf oc "	sleep\n"
+      | Pstop ->
+	 fprintf oc "	stop\n"
+      | Pbarrier ->
+	 fprintf oc "	barrier\n"
+      | Pfence ->
+	 fprintf oc "	fence\n"
 		 
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in

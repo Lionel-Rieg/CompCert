@@ -381,6 +381,16 @@ let expand_builtin_inline name args res = let open Asmvliw in
       else emit (Pwfxm(n, src)))
   | "__builtin_k1_ldu", [BA(IR addr)], BR(IR res) ->
      emit (Pldu(res, addr))
+  | "__builtin_k1_await", [], _ ->
+     emit Pawait
+  | "__builtin_k1_sleep", [], _ ->
+     emit Psleep
+  | "__builtin_k1_stop", [], _ ->
+     emit Pstop
+  | "__builtin_k1_barrier", [], _ ->
+     emit Pbarrier
+  | "__builtin_k1_fence", [], _ ->
+     emit Pfence
 	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
