@@ -41,6 +41,9 @@ LIB=libcompcert.a
 INCLUDES=include/float.h include/stdarg.h include/stdbool.h \
   include/stddef.h include/varargs.h include/stdalign.h \
   include/stdnoreturn.h
+ifeq ($(ARCH),mppa_k1c)
+INCLUDES += include/ccomp_k1c_fixes.h
+endif
 
 VPATH=$(ARCH)
 
