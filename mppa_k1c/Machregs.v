@@ -184,6 +184,7 @@ Definition mregs_for_operation (op: operation): list (option mreg) * option mreg
 
 (* FIXME DMonniaux this seems to be the place for preferred registers for arguments *)
 Definition mregs_for_builtin (ef: external_function): list (option mreg) * list(option mreg) := (nil, nil).
+
   (* match ef with
   | EF_builtin name sg =>
       if (negb Archi.ptr64) && string_dec name "__builtin_bswap64" then

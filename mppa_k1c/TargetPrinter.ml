@@ -312,6 +312,10 @@ module Target (*: TARGET*) =
 	 fprintf oc "	itouchl	0[%a]\n" ireg addr
       | Pdzerol addr ->
 	 fprintf oc "	dzerol	0[%a]\n" ireg addr
+      | Pafaddd(addr, incr_res) ->
+	 fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
+      | Pafaddw(addr, incr_res) ->
+	 fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res
 		 
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
