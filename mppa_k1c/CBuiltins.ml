@@ -29,14 +29,14 @@ let builtins = {
       "__builtin_k1_doze", (TVoid [], [], false); (* opcode not supported in assembly, not in documentation *)
       "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
       "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
-      "__builtin_k1_invaldtlb", (TVoid [], [], false);
-      "__builtin_k1_invalitlb", (TVoid [], [], false);
-      "__builtin_k1_probetlb", (TVoid [], [], false);
-      "__builtin_k1_readtlb", (TVoid [], [], false);
       "__builtin_k1_sleep", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_stop", (TVoid [], [], false); (* DONE *)
-      "__builtin_k1_syncgroup", (TVoid [], [TInt(IUInt, [])], false);
+      "__builtin_k1_syncgroup", (TVoid [], [TInt(IULongLong, [])], false);
+      "__builtin_k1_tlbread", (TVoid [], [], false);
       "__builtin_k1_tlbwrite", (TVoid [], [], false);
+      "__builtin_k1_tlbprobe", (TVoid [], [], false);
+      "__builtin_k1_tlbdinval", (TVoid [], [], false);
+      "__builtin_k1_tlbiinval", (TVoid [], [], false);
       
       "__builtin_k1_get", (TInt(IULongLong, []), [TInt(IInt, [])], false); (* DONE *)
       "__builtin_k1_set", (TVoid [], [TInt(IInt, []); TInt(IULongLong, [])], false); (* DONE *)
