@@ -346,10 +346,11 @@ Hint Resolve arith_op_eq_correct: wlp.
 Opaque arith_op_eq_correct.
 
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
-  match o1, o2 with
-  | OLoadRRO n1 ofs1, OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
-  | OLoadRRR n1, OLoadRRR n2 => phys_eq n1 n2
-  | _, _ => RET false
+  match o1 with
+  | OLoadRRO n1 ofs1 =>
+     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
+  | OLoadRRR n1 =>
+     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma load_op_eq_correct o1 o2:
@@ -364,10 +365,11 @@ Opaque load_op_eq_correct.
 
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
-  match o1, o2 with
-  | OStoreRRO n1 ofs1, OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2)
-  | OStoreRRR n1, OStoreRRR n2 => phys_eq n1 n2
-  | _, _ => RET false
+  match o1 with
+  | OStoreRRO n1 ofs1 =>
+     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
+  | OStoreRRR n1 =>
+     match o2 with OStoreRRR n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma store_op_eq_correct o1 o2:
