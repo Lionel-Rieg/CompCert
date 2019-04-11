@@ -76,6 +76,8 @@ Inductive instruction : Type :=
   | Ploopdo (count: ireg) (loopend: label)
   | Pgetn   (n: int) (dst: ireg)
   | Psetn   (n: int) (src: ireg)
+  | Pwfxl   (n: int) (src: ireg)
+  | Pwfxm   (n: int) (src: ireg)
 
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)

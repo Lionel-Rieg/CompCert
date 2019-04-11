@@ -220,8 +220,13 @@ Definition builtin_constraints (ef: external_function) :
   match ef with
   | EF_builtin id sg =>
     if string_dec id "__builtin_k1_get" then OK_const :: nil
-    else if string_dec id "__builtin_k1_set" then OK_const :: OK_default :: nil
-         else nil
+    else if string_dec id "__builtin_k1_set"
+    then OK_const :: OK_default :: nil
+    else if string_dec id "__builtin_k1_wfxl"
+    then OK_const :: OK_default :: nil                 
+    else if string_dec id "__builtin_k1_wfxm"
+    then OK_const :: OK_default :: nil
+    else nil
   | EF_vload _ => OK_addressing :: nil
   | EF_vstore _ => OK_addressing :: OK_default :: nil
   | EF_memcpy _ _ => OK_addrstack :: OK_addrstack :: nil

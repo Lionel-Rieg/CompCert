@@ -27,7 +27,6 @@ let builtins = {
       "__builtin_k1_await", (TVoid [], [], false);
       "__builtin_k1_barrier", (TVoid [], [], false);
       "__builtin_k1_doze", (TVoid [], [], false);
-        (* No __builtin_k1_get - not compatible with the Asm model *)
       "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
       "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false);
       "__builtin_k1_invaldtlb", (TVoid [], [], false);

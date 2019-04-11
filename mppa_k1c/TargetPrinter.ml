@@ -281,6 +281,10 @@ module Target (*: TARGET*) =
          fprintf oc "	get	%a = $s%ld\n" ireg dst (camlint_of_coqint n)
       | Psetn(n, dst) ->
          fprintf oc "	set	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
+      | Pwfxl(n, dst) ->
+         fprintf oc "	wfxl	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
+      | Pwfxm(n, dst) ->
+         fprintf oc "	wfxm	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
         
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in

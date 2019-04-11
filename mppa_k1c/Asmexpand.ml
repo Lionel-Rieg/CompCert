@@ -345,7 +345,8 @@ let expand_bswap64 d s = assert false
 
 (* Handling of compiler-inlined builtins *)
 let last_system_register = 511l
-                         
+let not_system_register cn  =cn<0l || cn>last_system_register
+  
 let expand_builtin_inline name args res = let open Asmvliw in
   match name, args, res with
   (* Synchronization *)
@@ -360,14 +361,24 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pstsud(res, a1, a2))
   | "__builtin_k1_get", [BA_int(n)], BR(IR res) ->
      let cn = camlint_of_coqint n in
-     (if cn<0l || cn>last_system_register
+     (if not_system_register cn
       then failwith (Printf.sprintf "__builtin_k1_get(n): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Pgetn(n, res)))
   | "__builtin_k1_set", [BA_int(n); BA(IR src)], _ ->
      let cn = camlint_of_coqint n in
-     (if cn<0l || cn>last_system_register
+     (if not_system_register cn
       then failwith (Printf.sprintf "__builtin_k1_set(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Psetn(n, src)))
+  | "__builtin_k1_wfxl", [BA_int(n); BA(IR src)], _ ->
+     let cn = camlint_of_coqint n in
+     (if not_system_register cn
+      then failwith (Printf.sprintf "__builtin_k1_wfxl(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
+      else emit (Pwfxl(n, src)))
+  | "__builtin_k1_wfxm", [BA_int(n); BA(IR src)], _ ->
+     let cn = camlint_of_coqint n in
+     (if not_system_register cn
+      then failwith (Printf.sprintf "__builtin_k1_wfxm(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
+      else emit (Pwfxm(n, src)))
     
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
