@@ -92,6 +92,8 @@ Inductive instruction : Type :=
   | Piinvals (addr: ireg)
   | Pitouchl (addr: ireg)
   | Pdzerol (addr: ireg)
+  | Pafaddd (addr: ireg) (incr_res: ireg)
+  | Pafaddw (addr: ireg) (incr_res: ireg)
             
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)
