@@ -298,6 +298,14 @@ module Target (*: TARGET*) =
 	 fprintf oc "	barrier\n"
       | Pfence ->
 	 fprintf oc "	fence\n"
+      | Pdinval ->
+	 fprintf oc "	dinval\n"
+      | Pdinvall addr ->
+	 fprintf oc "	dinvall	0[%a]\n" ireg addr
+      | Pdtouchl addr ->
+	 fprintf oc "	dtouchl	0[%a]\n" ireg addr
+      | Pdzerol addr ->
+	 fprintf oc "	dzerol	0[%a]\n" ireg addr
 		 
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in

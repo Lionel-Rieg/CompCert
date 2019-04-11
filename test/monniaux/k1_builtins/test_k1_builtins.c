@@ -9,6 +9,9 @@ void test_system_regs(void) {
 
 void test_loads(void *addr) {
   __builtin_k1_ldu(addr);
+  __builtin_k1_dinvall(addr);
+  __builtin_k1_dtouchl(addr);
+  __builtin_k1_dzerol(addr);
 }
 
 void test_stops(void) {

@@ -85,6 +85,10 @@ Inductive instruction : Type :=
   | Pstop
   | Pbarrier
   | Pfence
+  | Pdinval
+  | Pdinvall (addr: ireg)
+  | Pdtouchl (addr: ireg)
+  | Pdzerol (addr: ireg)
             
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)

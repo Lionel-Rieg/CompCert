@@ -26,7 +26,7 @@ let builtins = {
       (* BCU Instructions *)
       "__builtin_k1_await", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_barrier", (TVoid [], [], false); (* DONE *)
-      "__builtin_k1_doze", (TVoid [], [], false);
+      "__builtin_k1_doze", (TVoid [], [], false); (* opcode not supported in assembly, not in documentation *)
       "__builtin_k1_wfxl", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
       "__builtin_k1_wfxm", (TVoid [], [TInt(IUChar, []); TInt(ILongLong, [])], false); (* DONE *)
       "__builtin_k1_invaldtlb", (TVoid [], [], false);
@@ -45,10 +45,10 @@ let builtins = {
         (* No ACWS - __int128 *)
       "__builtin_k1_afda", (TInt(IULongLong, []), [TPtr(TVoid [], []); TInt(ILongLong, [])], false);
       "__builtin_k1_aldc", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false);
-      "__builtin_k1_dinval", (TVoid [], [], false);
-      "__builtin_k1_dinvall", (TVoid [], [TPtr(TVoid [], [])], false);
-      "__builtin_k1_dtouchl", (TVoid [], [TPtr(TVoid [], [])], false);
-      "__builtin_k1_dzerol", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_dinval", (TVoid [], [], false); (* DONE *)
+      "__builtin_k1_dinvall", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
+      "__builtin_k1_dtouchl", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
+      "__builtin_k1_dzerol", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_fence", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_iinval", (TVoid [], [], false);
       "__builtin_k1_iinvals", (TVoid [], [TPtr(TVoid [], [])], false);

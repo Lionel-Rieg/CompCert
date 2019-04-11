@@ -391,6 +391,14 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit Pbarrier
   | "__builtin_k1_fence", [], _ ->
      emit Pfence
+  | "__builtin_k1_dinval", [], _ ->
+     emit Pdinval
+  | "__builtin_k1_dinvall", [BA(IR addr)], _ ->
+     emit (Pdinvall addr)
+  | "__builtin_k1_dtouchl", [BA(IR addr)], _ ->
+     emit (Pdtouchl addr)
+  | "__builtin_k1_dzerol", [BA(IR addr)], _ ->
+     emit (Pdzerol addr)
 	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
