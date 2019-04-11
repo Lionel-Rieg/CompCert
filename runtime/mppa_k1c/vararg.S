@@ -84,3 +84,10 @@ __compcert_acswapd:
 	sq	0[$r0] = $r2r3
 	ret
 	;;
+	.globl __compcert_acswapw
+__compcert_acswapw:
+	acswapw	0[$r1] = $r2r3
+	;;
+	sq	0[$r0] = $r2r3
+	ret
+	;;

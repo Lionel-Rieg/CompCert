@@ -11,6 +11,10 @@
 struct __int128_ccomp { long __int128_ccomp_low; long __int128_ccomp_high; };
 
 #define __int128 struct __int128_ccomp
+
 #define __builtin_k1_acswapd __compcert_acswapd
-extern __int128 __compcert_acswapd(unsigned long long *address, unsigned long long new_value, unsigned long long old_value);
+extern __int128 __compcert_acswapd(void *address, unsigned long long new_value, unsigned long long old_value);
+
+#define __builtin_k1_acswapw __compcert_acswapw
+extern __int128 __compcert_acswapw(void *address, unsigned long long new_value, unsigned long long old_value);
 #endif
