@@ -39,8 +39,8 @@ let builtins = {
       "__builtin_k1_syncgroup", (TVoid [], [TInt(IUInt, [])], false);
       "__builtin_k1_tlbwrite", (TVoid [], [], false);
       
-      "__builtin_k1_get", (TInt(IULong, []), [TInt(IUInt, [])], false);
-      "__builtin_k1_set", (TVoid [], [TInt(IUInt, []); TInt(IULong, [])], false);
+      "__builtin_k1_get", (TInt(IULongLong, []), [TInt(IInt, [])], false);
+      "__builtin_k1_set", (TVoid [], [TInt(IInt, []); TInt(IULongLong, [])], false);
       
       (* LSU Instructions *)
         (* No ACWS - __int128 *)
