@@ -397,6 +397,12 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pdinvall addr)
   | "__builtin_k1_dtouchl", [BA(IR addr)], _ ->
      emit (Pdtouchl addr)
+  | "__builtin_k1_iinval", [], _ ->
+     emit Piinval
+  | "__builtin_k1_iinvals", [BA(IR addr)], _ ->
+     emit (Piinvals addr)
+  | "__builtin_k1_itouchl", [BA(IR addr)], _ ->
+     emit (Pitouchl addr)
   | "__builtin_k1_dzerol", [BA(IR addr)], _ ->
      emit (Pdzerol addr)
 	  

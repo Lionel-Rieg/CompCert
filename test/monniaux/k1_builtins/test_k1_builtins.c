@@ -12,6 +12,9 @@ void test_loads(void *addr) {
   __builtin_k1_dinvall(addr);
   __builtin_k1_dtouchl(addr);
   __builtin_k1_dzerol(addr);
+  __builtin_k1_iinvals(addr);
+  /* __builtin_k1_itouchl(addr); */
+  __builtin_k1_dzerol(addr);
 }
 
 void test_stops(void) {
@@ -20,4 +23,6 @@ void test_stops(void) {
   __builtin_k1_stop();
   __builtin_k1_barrier();
   __builtin_k1_fence();
+  __builtin_k1_dinval();
+  __builtin_k1_iinval();
 }

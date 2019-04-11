@@ -88,6 +88,9 @@ Inductive instruction : Type :=
   | Pdinval
   | Pdinvall (addr: ireg)
   | Pdtouchl (addr: ireg)
+  | Piinval
+  | Piinvals (addr: ireg)
+  | Pitouchl (addr: ireg)
   | Pdzerol (addr: ireg)
             
   (** Loads **)

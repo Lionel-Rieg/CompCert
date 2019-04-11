@@ -50,9 +50,9 @@ let builtins = {
       "__builtin_k1_dtouchl", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_dzerol", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_fence", (TVoid [], [], false); (* DONE *)
-      "__builtin_k1_iinval", (TVoid [], [], false);
-      "__builtin_k1_iinvals", (TVoid [], [TPtr(TVoid [], [])], false);
-      "__builtin_k1_itouchl", (TVoid [], [TPtr(TVoid [], [])], false);
+      "__builtin_k1_iinval", (TVoid [], [], false); (* DONE *)
+      "__builtin_k1_iinvals", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE *)
+      "__builtin_k1_itouchl", (TVoid [], [TPtr(TVoid [], [])], false); (* DONE [not supported by assembler but in documentation] *)
       "__builtin_k1_lbsu", (TInt(IChar, []), [TPtr(TVoid [], [])], false);
       "__builtin_k1_lbzu", (TInt(IUChar, []), [TPtr(TVoid [], [])], false);
       "__builtin_k1_ldu", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false); (* DONE *)

@@ -304,6 +304,12 @@ module Target (*: TARGET*) =
 	 fprintf oc "	dinvall	0[%a]\n" ireg addr
       | Pdtouchl addr ->
 	 fprintf oc "	dtouchl	0[%a]\n" ireg addr
+      | Piinval ->
+	 fprintf oc "	iinval\n"
+      | Piinvals addr ->
+	 fprintf oc "	iinvals	0[%a]\n" ireg addr
+      | Pitouchl addr ->
+	 fprintf oc "	itouchl	0[%a]\n" ireg addr
       | Pdzerol addr ->
 	 fprintf oc "	dzerol	0[%a]\n" ireg addr
 		 
