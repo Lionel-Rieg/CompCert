@@ -80,6 +80,9 @@ Inductive instruction : Type :=
   | Pwfxl   (n: int) (src: ireg)
   | Pwfxm   (n: int) (src: ireg)
   | Pldu    (dst: ireg) (addr: ireg)
+  | Plbzu    (dst: ireg) (addr: ireg)
+  | Plhzu    (dst: ireg) (addr: ireg)
+  | Plwzu    (dst: ireg) (addr: ireg)
   | Pawait
   | Psleep
   | Pstop
@@ -94,6 +97,8 @@ Inductive instruction : Type :=
   | Pdzerol (addr: ireg)
   | Pafaddd (addr: ireg) (incr_res: ireg)
   | Pafaddw (addr: ireg) (incr_res: ireg)
+  | Palclrd (dst: ireg) (addr: ireg)
+  | Palclrw (dst: ireg) (addr: ireg)
             
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)

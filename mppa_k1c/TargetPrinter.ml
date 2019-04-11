@@ -288,6 +288,12 @@ module Target (*: TARGET*) =
          fprintf oc "	wfxm	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
       | Pldu(dst, addr) ->
 	 fprintf oc "	ld.u	%a = 0[%a]\n" ireg dst ireg addr
+      | Plbzu(dst, addr) ->
+	 fprintf oc "	lbz.u	%a = 0[%a]\n" ireg dst ireg addr
+      | Plhzu(dst, addr) ->
+	 fprintf oc "	lhz.u	%a = 0[%a]\n" ireg dst ireg addr
+      | Plwzu(dst, addr) ->
+	 fprintf oc "	lwz.u	%a = 0[%a]\n" ireg dst ireg addr
       | Pawait ->
 	 fprintf oc "	await\n"
       | Psleep ->
@@ -316,7 +322,10 @@ module Target (*: TARGET*) =
 	 fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
       | Pafaddw(addr, incr_res) ->
 	 fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res
-		 
+      | Palclrd(res, addr) ->
+	 fprintf oc "	alclrd	%a = 0[%a]\n" ireg res ireg addr
+      | Palclrw(res, addr) ->
+	 fprintf oc "	alclrw	%a = 0[%a]\n" ireg res ireg addr
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
          (* jumptables := (lbl, tbl) :: !jumptables; *)

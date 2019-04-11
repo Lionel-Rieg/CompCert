@@ -381,6 +381,16 @@ let expand_builtin_inline name args res = let open Asmvliw in
       else emit (Pwfxm(n, src)))
   | "__builtin_k1_ldu", [BA(IR addr)], BR(IR res) ->
      emit (Pldu(res, addr))
+  | "__builtin_k1_lbzu", [BA(IR addr)], BR(IR res) ->
+     emit (Plbzu(res, addr))
+  | "__builtin_k1_lhzu", [BA(IR addr)], BR(IR res) ->
+     emit (Plhzu(res, addr))
+  | "__builtin_k1_lwzu", [BA(IR addr)], BR(IR res) ->
+     emit (Plwzu(res, addr))
+  | "__builtin_k1_alclrd", [BA(IR addr)], BR(IR res) ->
+     emit (Palclrd(res, addr))
+  | "__builtin_k1_alclrw", [BA(IR addr)], BR(IR res) ->
+     emit (Palclrw(res, addr))
   | "__builtin_k1_await", [], _ ->
      emit Pawait
   | "__builtin_k1_sleep", [], _ ->
@@ -413,6 +423,10 @@ let expand_builtin_inline name args res = let open Asmvliw in
      (if res <> incr_res
       then (emit (Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddw(addr, res))
+  | "__builtin_alclrd", [BA(IR addr)], BR(IR res) ->
+     emit (Palclrd(res, addr))
+  | "__builtin_alclrw", [BA(IR addr)], BR(IR res) ->
+     emit (Palclrw(res, addr))
 	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->

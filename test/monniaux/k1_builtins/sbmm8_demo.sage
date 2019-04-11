@@ -14,3 +14,8 @@ matA=mat_from_uint64(0x12345678ABCDEF)
 matB=mat_from_uint64(0x12345118ABCD32)
 
 print hex(uint64_from_mat(matB * matA))
+
+matA=mat_from_uint64(0x0201040810208040)
+matB=mat_from_uint64(0x0102011701010133)
+
+print matA*matB
