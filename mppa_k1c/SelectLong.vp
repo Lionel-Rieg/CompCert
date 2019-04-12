@@ -276,6 +276,7 @@ Nondetfunction orlimm (n1: int64) (e2: expr) :=
   match e2 with
   | Eop (Olongconst n2) Enil => longconst (Int64.or n1 n2)
   | Eop (Oorlimm n2) (t2:::Enil) => Eop (Oorlimm (Int64.or n1 n2)) (t2:::Enil)
+  | Eop Onotl (t2:::Enil) => Eop (Oornlimm n1) (t2:::Enil)
   | _ => Eop (Oorlimm n1) (e2:::Enil)
   end.
 

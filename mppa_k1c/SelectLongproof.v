@@ -439,6 +439,7 @@ Proof.
   destruct (orlimm_match a); InvEval; subst.
 - econstructor; split. apply eval_longconst. simpl. rewrite Int64.or_commut; auto.
 - TrivialExists. simpl. rewrite Val.orl_assoc. rewrite Int64.or_commut; auto.
+- InvEval. TrivialExists.
 - TrivialExists.
 Qed.
 
