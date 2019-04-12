@@ -42,7 +42,7 @@ INCLUDES=include/float.h include/stdarg.h include/stdbool.h \
   include/stddef.h include/varargs.h include/stdalign.h \
   include/stdnoreturn.h
 ifeq ($(ARCH),mppa_k1c)
-INCLUDES += include/ccomp_k1c_fixes.h
+INCLUDES += include/ccomp_k1c_fixes.h include/math.h
 endif
 
 VPATH=$(ARCH)
