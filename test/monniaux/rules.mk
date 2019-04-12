@@ -8,7 +8,7 @@ K1C_CC=k1-mbr-gcc
 K1C_CFLAGS =-g -std=c99 -O2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CCOMP = ../../../ccomp
-K1C_CCOMPFLAGS=-O3 -Wall -Wno-c11-extensions $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass-ilp
+K1C_CCOMPFLAGS=-O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass-ilp
 
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --

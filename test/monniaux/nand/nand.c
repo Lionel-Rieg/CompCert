@@ -34,6 +34,14 @@ scalar orn2(scalar x, scalar y) {
   return x | ~y;
 }
 
+scalar nandimm(scalar x) {
+  return ~x & 45;
+}
+
+scalar notnot(scalar x) {
+  return ~ ~ x;
+}
+
 int main() {
   scalar x = 0xF4, y = 0x33;
   printf("%X\n", nxor(x, y));
