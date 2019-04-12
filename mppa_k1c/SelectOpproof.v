@@ -680,9 +680,25 @@ Proof.
     - TrivialExists; simpl; congruence.
     - TrivialExists; simpl; congruence.
     - TrivialExists; simpl; congruence.
-    - rewrite <- H0.
-      exists v1.
-      split; auto.
+    - subst x. exists (Val.and v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.and v1 (Vint n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    - subst x. exists (Val.or v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.or v1 (Vint n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    - subst x. exists (Val.xor v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.xor v1 (Vint n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    - subst x. exists v1; split; trivial.
     - TrivialExists.
     - TrivialExists.
 Qed.
