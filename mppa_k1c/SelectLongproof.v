@@ -566,6 +566,52 @@ Proof.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
   - TrivialExists; simpl; congruence.
+    - subst x. exists (Val.andl v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.andl v1 (Vlong n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    - subst x. exists (Val.orl v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.orl v1 (Vlong n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    - subst x. exists (Val.xorl v1 v0); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      eassumption. constructor. simpl. reflexivity.
+    - subst x. exists (Val.xorl v1 (Vlong n)); split; trivial.
+      econstructor. constructor. eassumption. constructor.
+      simpl. reflexivity.
+    (* andn *)
+    - subst x. TrivialExists. simpl.
+      destruct v0; destruct v1; simpl; trivial.
+      f_equal. f_equal.
+      rewrite Int64.not_and_or_not.
+      rewrite Int64.not_involutive.
+      apply Int64.or_commut.
+    - subst x. TrivialExists. simpl.
+      destruct v1; simpl; trivial.
+      f_equal. f_equal.
+      rewrite Int64.not_and_or_not.
+      rewrite Int64.not_involutive.
+      reflexivity.
+    (* orn *)
+    - subst x. TrivialExists. simpl.
+      destruct v0; destruct v1; simpl; trivial.
+      f_equal. f_equal.
+      rewrite Int64.not_or_and_not.
+      rewrite Int64.not_involutive.
+      apply Int64.and_commut.
+    - subst x. TrivialExists. simpl.
+      destruct v1; simpl; trivial.
+      f_equal. f_equal.
+      rewrite Int64.not_or_and_not.
+      rewrite Int64.not_involutive.
+      reflexivity.
+    - subst x. exists v1; split; trivial.
+    - TrivialExists.
   - TrivialExists.
 Qed.
 
