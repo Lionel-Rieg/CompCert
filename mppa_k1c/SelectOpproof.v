@@ -704,6 +704,12 @@ Proof.
       rewrite Int.not_and_or_not.
       rewrite Int.not_involutive.
       apply Int.or_commut.
+    - subst x. TrivialExists. simpl.
+      destruct v0; destruct v1; simpl; trivial.
+      f_equal. f_equal.
+      rewrite Int.not_or_and_not.
+      rewrite Int.not_involutive.
+      apply Int.and_commut.
     - subst x. exists v1; split; trivial.
     - TrivialExists.
     - TrivialExists.
