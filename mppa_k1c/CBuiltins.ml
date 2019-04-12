@@ -42,7 +42,9 @@ let builtins = {
       "__builtin_k1_set", (TVoid [], [TInt(IInt, []); TInt(IULongLong, [])], false); (* DONE *)
       
       (* LSU Instructions *)
-      (* afaddd and afaddw done using headers and assembly *)
+      (* acswapd and acswapw done using headers and assembly *)
+       "__builtin_k1_afaddd", (TInt(IULongLong, []), [TPtr(TVoid [], []); TInt(ILongLong, [])], false);
+       "__builtin_k1_afaddw", (TInt(IUInt, []), [TPtr(TVoid [], []); TInt(IInt, [])], false);
       "__builtin_k1_alclrd", (TInt(IULongLong, []), [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_alclrw", (TInt(IUInt, []), [TPtr(TVoid [], [])], false); (* DONE *)
       "__builtin_k1_dinval", (TVoid [], [], false); (* DONE *)
