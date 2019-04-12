@@ -327,7 +327,12 @@ Nondetfunction or (e1: expr) (e2: expr) :=
   end.
 
 Nondetfunction xorimm (n1: int) (e2: expr) :=
-  if Int.eq n1 Int.zero then e2 else
+  if Int.eq n1 Int.zero
+  then e2
+  else
+  if Int.eq n1 Int.mone
+  then Eop Onot (e2:::Enil)
+  else
   match e2 with
   | Eop (Ointconst n2) Enil => Eop (Ointconst (Int.xor n1 n2)) Enil
   | Eop (Oxorimm n2) (t2:::Enil) =>

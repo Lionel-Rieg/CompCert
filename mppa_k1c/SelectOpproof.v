@@ -648,16 +648,17 @@ Proof.
   intros; red; intros until x. unfold xorimm.
 
   predSpec Int.eq Int.eq_spec n Int.zero.
-  intros. exists x; split. auto.
-  destruct x; simpl; auto. subst n. rewrite Int.xor_zero. auto.
-
-  intros. destruct (xorimm_match a); intros; InvEval.
-  - TrivialExists. simpl. rewrite Int.xor_commut; auto.
-  - subst. rewrite Val.xor_assoc. simpl. rewrite Int.xor_commut. 
-    predSpec Int.eq Int.eq_spec (Int.xor n2 n) Int.zero.
-    + exists v1; split; auto. destruct v1; simpl; auto. rewrite H0, Int.xor_zero; auto.  
-    + TrivialExists.
-  - TrivialExists.
+  - intros. exists x; split. auto.
+    destruct x; simpl; auto. subst n. rewrite Int.xor_zero. auto.
+  - predSpec Int.eq Int.eq_spec n Int.mone.
+    -- subst n. intros. rewrite <- Val.not_xor. TrivialExists.
+    -- intros. destruct (xorimm_match a); intros; InvEval.
+       + TrivialExists. simpl. rewrite Int.xor_commut; auto.
+       + subst. rewrite Val.xor_assoc. simpl. rewrite Int.xor_commut. 
+         predSpec Int.eq Int.eq_spec (Int.xor n2 n) Int.zero.
+         * exists v1; split; auto. destruct v1; simpl; auto. rewrite H1, Int.xor_zero; auto.  
+         * TrivialExists.
+       + TrivialExists.
 Qed.
 
 Theorem eval_xor: binary_constructor_sound xor Val.xor.
