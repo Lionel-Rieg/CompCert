@@ -534,14 +534,16 @@ Theorem eval_xorlimm: forall n, unary_constructor_sound (xorlimm n) (fun v => Va
 Proof.
   unfold xorlimm; intros; red; intros.
   predSpec Int64.eq Int64.eq_spec n Int64.zero.
-  exists x; split; auto. subst. destruct x; simpl; auto. rewrite Int64.xor_zero; auto.
-  destruct (xorlimm_match a); InvEval; subst.
-- econstructor; split. apply eval_longconst. simpl. rewrite Int64.xor_commut; auto.
-- rewrite Val.xorl_assoc. simpl. rewrite (Int64.xor_commut n2).
-  predSpec Int64.eq Int64.eq_spec (Int64.xor n n2) Int64.zero.
-+ rewrite H. exists v1; split; auto. destruct v1; simpl; auto. rewrite Int64.xor_zero; auto. 
-+ TrivialExists.
-- TrivialExists.
+  - exists x; split; auto. subst. destruct x; simpl; auto. rewrite Int64.xor_zero; auto.
+  - predSpec Int64.eq Int64.eq_spec n Int64.mone.
+    -- subst n. intros. rewrite <- Val.notl_xorl. TrivialExists.
+    -- destruct (xorlimm_match a); InvEval; subst.
+    + econstructor; split. apply eval_longconst. simpl. rewrite Int64.xor_commut; auto.
+    + rewrite Val.xorl_assoc. simpl. rewrite (Int64.xor_commut n2).
+      predSpec Int64.eq Int64.eq_spec (Int64.xor n n2) Int64.zero.
+      * rewrite H. exists v1; split; auto. destruct v1; simpl; auto. rewrite Int64.xor_zero; auto. 
+      * TrivialExists.
+    + TrivialExists.
 Qed.
 
 Theorem eval_xorl: binary_constructor_sound xorl Val.xorl.

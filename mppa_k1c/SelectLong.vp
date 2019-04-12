@@ -302,6 +302,9 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
 
 Nondetfunction xorlimm (n1: int64) (e2: expr) :=
   if Int64.eq n1 Int64.zero then e2 else
+  if Int64.eq n1 Int64.mone
+  then Eop Onotl (e2:::Enil)
+  else
   match e2 with
   | Eop (Olongconst n2) Enil => longconst (Int64.xor n1 n2)
   | Eop (Oxorlimm n2) (t2:::Enil) =>
