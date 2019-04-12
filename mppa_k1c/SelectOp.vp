@@ -353,6 +353,8 @@ Nondetfunction notint (e: expr) :=
   | Eop (Oorimm n) (e1:::Enil) => Eop (Onorimm n) (e1:::Enil)
   | Eop Oxor (e1:::e2:::Enil) => Eop Onxor (e1:::e2:::Enil)
   | Eop (Oxorimm n) (e1:::Enil) => Eop (Onxorimm n) (e1:::Enil)
+  | Eop Onot (e1:::Enil) => e1
+  | Eop (Ointconst k) Enil => Eop (Ointconst (Int.not k)) Enil
   | _ => Eop Onot (e:::Enil)
   end.
 

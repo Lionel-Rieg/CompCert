@@ -679,6 +679,10 @@ Proof.
     - TrivialExists; simpl; congruence.
     - TrivialExists; simpl; congruence.
     - TrivialExists; simpl; congruence.
+    - rewrite <- H0.
+      exists v1.
+      split; auto.
+    - TrivialExists.
     - TrivialExists.
 Qed.
 
