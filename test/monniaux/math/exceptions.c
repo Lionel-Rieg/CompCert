@@ -4,7 +4,7 @@
 
 #pragma STDC FENV_ACCESS ON
 
-#ifdef __GNUC__
+#if defined(__K1C__) && !defined(__COMPCERT__)
 int fetestexcept(int excepts) {
   int mask = (K1_SFR_CS_IO_MASK | K1_SFR_CS_DZ_MASK | K1_SFR_CS_OV_MASK | K1_SFR_CS_UN_MASK | K1_SFR_CS_IN_MASK) & excepts;
   unsigned long long cs = __builtin_k1_get(K1_SFR_CS);
@@ -77,6 +77,8 @@ int main() {
   // +41F.307672C5496EF
   double d8 = 0x1.307672C5496EFp32;
   unsigned v8 = double2uint(d8);
-  printf("%g %x %x\n", d8, v8, fetestexcept(FE_ALL_EXCEPT)); // BUG reports 307672C5 and inexact, but should report overflow
+  printf("%g %x %x\n", d8, v8, fetestexcept(FE_ALL_EXCEPT));
+  // BUG reports 307672C5 and inexact, but should report overflow
+  // bug comes from x86 https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89175
   feclearexcept(FE_ALL_EXCEPT);
 }
