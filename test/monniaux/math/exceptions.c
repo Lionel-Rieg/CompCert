@@ -73,4 +73,10 @@ int main() {
   unsigned v7 = double2uint(-0.25); // softfloat says "0 and inexact" but here we have "0 and overflow" (due to negative input for unsigned?)
   printf("%u %x\n", v7, fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_ALL_EXCEPT);
+
+  // +41F.307672C5496EF
+  double d8 = 0x1.307672C5496EFp32;
+  unsigned v8 = double2uint(d8);
+  printf("%g %x %x\n", d8, v8, fetestexcept(FE_ALL_EXCEPT)); // BUG reports 307672C5 and inexact, but should report overflow
+  feclearexcept(FE_ALL_EXCEPT);
 }
