@@ -391,6 +391,10 @@ unfold trans_inst.
 destruct i; congruence. 
 Qed.
 
+
+Local Hint Resolve Mlabel_is_not_cfi.
+Local Hint Resolve MBbasic_is_not_cfi.
+
 Lemma add_to_new_block_is_label i:
   header (add_to_new_bblock (trans_inst i)) <> nil -> exists l, i = Mlabel l.
 Proof.
@@ -461,14 +465,8 @@ Proof.
     rewrite H2 in H3.
     inversion H3; econstructor; apply (Mlabel_is_not_basic i bi); eauto.
   + (* cfi at end block *)
-    inversion H1; subst. inversion H0; subst.
+    inversion H1; subst;
     repeat econstructor; eauto.
-    apply (Mlabel_is_not_cfi i cfi); eauto.
-    apply (MBbasic_is_not_cfi i cfi); eauto.
-    exists (i::c), (i::c), c.
-    repeat econstructor; eauto.
-    apply (Mlabel_is_not_cfi i cfi); eauto.
-    apply (MBbasic_is_not_cfi i cfi); eauto.
   + unfold trans_inst in Heqti. congruence.
 Qed.
 
@@ -478,8 +476,11 @@ Lemma step_simu_header st f sp rs m s c h c' t:
  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> 
  s = Mach.State st f sp c' rs m /\ t = E0.
 Proof.
-  induction 1; simpl. (* A FINIR *)
-Admitted.
+  induction 1; simpl; intros hs. 
+  - inversion hs. split; reflexivity.
+  - inversion hs. split; reflexivity.
+  - inversion hs. inversion H1. subst. eauto. 
+Qed.
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
    induction c as [ | i c]; simpl; intros h c' t H.
    - inversion_clear H. simpl; intros H; inversion H; auto.
