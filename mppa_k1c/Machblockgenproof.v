@@ -408,6 +408,7 @@ Proof.
   + unfold cfi_bblock in H; simpl in H; congruence.
 Qed.
 
+Local Hint Resolve Mlabel_is_not_basic.
 
 Lemma trans_code_decompose c: forall b bl,
   is_trans_code c (b::bl) ->
@@ -418,7 +419,7 @@ Proof.
   intros b bl H; remember (trans_inst i) as ti.
   destruct ti as [lbl|bi|cfi];
   inversion H as [|d0 d1 d2 H0 H1| |]; subst;
-  try (rewrite <- Heqti in * |- *); simpl;
+  try (rewrite <- Heqti in * |- *); simpl in * |- *;
   try congruence.
   + (* label at end block *)
     inversion H1; subst. inversion H0; subst.
@@ -430,44 +431,29 @@ Proof.
     repeat econstructor; eauto.
   + (* basic at end block *)
     inversion H1; subst.
-      lapply (Mlabel_is_not_basic i bi); auto.
-      intro H2.
+    lapply (Mlabel_is_not_basic i bi); auto.
+    intro H2.
     - inversion H0; subst.
       assert (X:(trans_inst i) = MB_basic bi ). { repeat econstructor; congruence. }
       repeat econstructor; congruence.
     - exists (i::c), c, c.
-      repeat econstructor; eauto.
-      * lapply (Mlabel_is_not_basic i bi); auto.
-      * inversion H0; subst; repeat econstructor.
-        inversion H1.
-        subst.
-        exploit (add_to_new_block_is_label i0); eauto.
-        intro H8; destruct H8.
-        rewrite H2. unfold trans_inst. congruence.
-        unfold trans_inst. congruence.
-        exploit H3. 
-        unfold add_basic; eauto. 
-        intro F; destruct F.
-      * inversion H0; subst; econstructor. 
-        exploit (add_to_new_block_is_label i0); eauto.
-        intros H8. destruct H8.
-        rewrite H2.
-        unfold trans_inst; congruence.
-        unfold trans_inst; congruence.
-        rewrite H7. congruence.
-  + unfold trans_inst in Heqti. congruence.
+      repeat econstructor; eauto; inversion H0; subst; repeat econstructor; simpl; try congruence.
+      * exploit (add_to_new_block_is_label i0); eauto.
+        intros (l & H8); subst; simpl; congruence.
+      * exploit H3; eauto.
+      * exploit (add_to_new_block_is_label i0); eauto.
+        intros (l & H8); subst; simpl; congruence.
   + (* basic at mid block *)
-    inversion H1. symmetry in H4. subst.
+    inversion H1; subst.
     exploit IHc; eauto.
     intros (c0 & c1 & c2 & H3 & H4 & H5 & H6).
     exists (i::c0), c1, c2.
     repeat econstructor; eauto.
     rewrite H2 in H3.
-    inversion H3; econstructor; apply (Mlabel_is_not_basic i bi); eauto.
+    inversion H3; econstructor; eauto.
   + (* cfi at end block *)
     inversion H1; subst;
     repeat econstructor; eauto.
-  + unfold trans_inst in Heqti. congruence.
 Qed.
 
 
@@ -476,21 +462,9 @@ Lemma step_simu_header st f sp rs m s c h c' t:
  starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length h) (Mach.State st f sp c rs m) t s -> 
  s = Mach.State st f sp c' rs m /\ t = E0.
 Proof.
-  induction 1; simpl; intros hs. 
-  - inversion hs. split; reflexivity.
-  - inversion hs. split; reflexivity.
-  - inversion hs. inversion H1. subst. eauto. 
+  induction 1; simpl; intros hs; try (inversion hs; tauto).
+  inversion hs as [|n1 s1 t1 t2 s2 t3 s3 H1]. inversion H1. subst. auto. 
 Qed.
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-   induction c as [ | i c]; simpl; intros h c' t H.
-   - inversion_clear H. simpl; intros H; inversion H; auto.
-   - destruct i; try (injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst; auto).
-     remember (to_bblock_header c) as bhc. destruct bhc as [h0 c0].
-     injection H; clear H; intros H H2; subst; simpl; intros H; inversion H; subst.
-     inversion H1; clear H1; subst; auto. autorewrite with trace_rewrite.
-     exploit IHc; eauto.
-Qed.
-*)
 
 Lemma step_simu_basic_step (i: Mach.instruction) (bi: basic_inst) (c: Mach.code) s f sp rs m (t:trace) (s':Mach.state):
   trans_inst i = MB_basic bi ->
@@ -546,34 +520,22 @@ Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_M
 Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
 
 
-Axiom TODO: False. (* a éliminer *)
 Lemma match_states_concat_trans_code st f sp c rs m h: 
   match_states (Mach.State st f sp c rs m) (State (trans_stack st) f sp (concat h (trans_code c)) rs m).
 Proof.
-  intros; remember (trans_code _) as bl.
-  rewrite <- is_trans_code_inv in * |-.
-  constructor 1; simpl.
+  intros; constructor 1; simpl.
   + intros (t0 & s1' & H0) t s'. 
-    inversion Heqbl as [| | |]; subst; simpl;  (* inversion vs induction ?? *)
-    elim TODO. (* A FAIRE *)
+    remember (trans_code _) as bl.
+    destruct bl as [|bh bl]. 
+    { rewrite <- is_trans_code_inv in Heqbl; inversion Heqbl; inversion H0; congruence. } 
+    clear H0.
+    simpl; constructor 1; 
+    intros X; inversion X as [d1 d2 d3 d4 d5 d6 d7 rs' m' d10 d11 X1 X2| | | ]; subst; simpl in * |- *; 
+    eapply exec_bblock; eauto; simpl;
+    inversion X2 as [cfi d1 d2 d3 H1|]; subst; eauto;
+    inversion H1; subst; eauto.
   + intros H r; constructor 1; intro X; inversion X.
 Qed.
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-  constructor 1; simpl.
-  + intros (t0 & s1' & H0) t s'. 
-    rewrite! trans_code_equation.
-    destruct c as [| i c]. { inversion H0. }
-    remember (to_bblock (i :: c)) as bic. destruct bic as [b c0].
-    simpl.
-    constructor 1; intros H; inversion H; subst; simpl in * |- *;
-    eapply exec_bblock; eauto.
-    - inversion H11; subst; eauto.
-      inversion H2; subst; eauto.
-    - inversion H11; subst; simpl; eauto.
-      inversion H2; subst; simpl; eauto.
-  + intros H r; constructor 1; intro X; inversion X.
-Qed.
-*)
 
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Lemma step_simu_cfi_step:
@@ -702,6 +664,8 @@ Proof.
     inversion_clear H0; simpl.
     eapply exec_return.
 Qed.
+
+Axiom TODO: False. (* A ELIMINER *)
 
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
