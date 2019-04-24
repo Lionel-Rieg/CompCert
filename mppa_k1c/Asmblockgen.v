@@ -1060,12 +1060,15 @@ Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) (ep:
   end
 .
 
+Definition make_prologue (f:  Machblock.function) lb :=
+  (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::b
+         Pget GPRA RA ::b
+         storeind_ptr GPRA SP f.(fn_retaddr_ofs) ::b lb).
+
 Definition transl_function (f: Machblock.function) :=
   do lb <- transl_blocks f f.(Machblock.fn_code) true;
   OK (mkfunction f.(Machblock.fn_sig)
-        (Pallocframe f.(fn_stacksize) f.(fn_link_ofs) ::b
-         Pget GPRA RA ::b
-         storeind_ptr GPRA SP f.(fn_retaddr_ofs) ::b lb)).
+        (make_prologue f lb)).
 
 Definition transf_function (f: Machblock.function) : res Asmvliw.function :=
   do tf <- transl_function f;

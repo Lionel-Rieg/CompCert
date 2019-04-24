@@ -234,7 +234,7 @@ Lemma transl_find_label:
   end.
 Proof.
   intros. monadInv H. destruct (zlt Ptrofs.max_unsigned (size_blocks (fn_blocks x))); inv EQ0. clear g.
-  monadInv EQ. simpl fn_blocks. repeat (rewrite find_label_nil); simpl; auto.
+  monadInv EQ. unfold make_prologue. simpl fn_blocks. repeat (rewrite find_label_nil); simpl; auto.
   eapply transl_blocks_label; eauto.
 Qed.
 
@@ -1686,11 +1686,11 @@ Proof.
     - eexact W'.
     - eexact W. }
   exploit exec_straight_steps_2; eauto using functions_transl.
-  simpl fn_blocks. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega. constructor.
+  simpl fn_blocks. unfold make_prologue in g. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega. constructor.
   intros (ofs' & X & Y).                    
   left; exists (State rs3' m3'); split.
   eapply exec_straight_steps_1; eauto.
-  simpl fn_blocks. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega.
+  simpl fn_blocks. unfold make_prologue in g. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega.
   constructor.
   econstructor; eauto.
   rewrite X; econstructor; eauto. 
