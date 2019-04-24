@@ -766,6 +766,21 @@ Definition rolml (v: val) (amount: int) (mask: int64): val :=
   | _ => Vundef
   end.
 
+
+Definition extfz stop start v :=
+  if (Int.cmp Cle start stop)
+       && (Int.cmp Cge start Int.zero)
+       && (Int.cmp Clt stop Int.iwordsize)
+  then
+    let stop' := Int.add stop Int.one in
+    match v with
+    | Vint w =>
+      Vint (Int.shr (Int.shl w (Int.sub Int.iwordsize stop')) (Int.sub Int.iwordsize (Int.sub stop' start)))
+    | _ => Vundef
+    end
+  else Vundef.
+
+
 (** Comparisons *)
 
 Section COMPARISONS.
