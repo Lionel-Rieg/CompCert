@@ -199,7 +199,9 @@ Inductive operation : Type :=
   | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
   | Oextfz (stop : Z) (start : Z)
-  | Oextfs (stop : Z) (start : Z).
+  | Oextfs (stop : Z) (start : Z)
+  | Oextfzl (stop : Z) (start : Z)
+  | Oextfsl (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -502,6 +504,8 @@ Definition eval_operation
   | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
   | (Oextfz stop start), v0::nil => Some (Val.extfz stop start v0)
   | (Oextfs stop start), v0::nil => Some (Val.extfs stop start v0)
+  | (Oextfzl stop start), v0::nil => Some (Val.extfzl stop start v0)
+  | (Oextfsl stop start), v0::nil => Some (Val.extfsl stop start v0)
   | _, _ => None
   end.
 
@@ -696,6 +700,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
   | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
   | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
+  | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -975,6 +980,16 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
     + constructor.
  (* extfs *)
   - unfold Val.extfs.
+    destruct (_ && _ && _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfzl *)
+  - unfold Val.extfzl.
+    destruct (_ && _ && _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfsl *)
+  - unfold Val.extfsl.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
@@ -1596,6 +1611,18 @@ Proof.
 
  (* extfs *)
   - unfold Val.extfs.
+    destruct (_ && _ && _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfzl *)
+  - unfold Val.extfzl.
+    destruct (_ && _ && _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfsl *)
+  - unfold Val.extfsl.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.
