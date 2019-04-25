@@ -334,6 +334,15 @@ Proof.
     rewrite Int.add_commut. rewrite Int.shr_shr; auto. rewrite Int.add_commut; auto.
     subst. TrivialExists. econstructor. EvalOp. simpl; eauto. constructor.
     simpl. auto.
+  - subst x.
+    destruct (_ && _ && _) eqn:BOUNDS.
+    + exists (Val.extfz (Int.sub Int.iwordsize (Int.add n1 Int.one))
+            (Int.sub
+               (Int.add
+                  (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
+                  Int.one) Int.iwordsize) v1).
+      split.
+      ++ constructor.
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     auto.
