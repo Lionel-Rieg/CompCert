@@ -342,7 +342,23 @@ Proof.
                   (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
                   Int.one) Int.iwordsize) v1).
       split.
-      ++ constructor.
+      ++ EvalOp.
+      ++ unfold Val.extfz.
+      * simpl. rewrite BOUNDS.
+        destruct v1; simpl; trivial.
+        destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
+        destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
+        replace (Int.sub Int.iwordsize
+                         (Int.add (Int.sub Int.iwordsize (Int.add n1 Int.one)) Int.one)) with n1.
+        replace (Int.sub Int.iwordsize
+             (Int.sub
+                (Int.add (Int.sub Int.iwordsize (Int.add n1 Int.one)) Int.one)
+                (Int.sub
+                   (Int.add
+                      (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
+                      Int.one) Int.iwordsize))) with n.
+        constructor.
+        ** 
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     auto.
