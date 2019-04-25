@@ -35,6 +35,7 @@ let arith_rr_str = function
   | Psxwd -> "Psxwd"
   | Pzxwd -> "Pzxwd"
   | Pextfz(_,_) -> "Pextfz"
+  | Pextfs(_,_) -> "Pextfs"
   | Pfabsw -> "Pfabsw"
   | Pfabsd -> "Pfabsd"
   | Pfnegw -> "Pfnegw"

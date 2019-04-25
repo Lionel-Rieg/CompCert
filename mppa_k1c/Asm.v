@@ -131,6 +131,8 @@ Inductive instruction : Type :=
   | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
 
   | Pextfz  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
+  | Pextfs  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
+
   | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
   | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
   | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
@@ -283,6 +285,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Psxwd rd rs  => Psxwd rd rs
   | PArithRR Asmvliw.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR (Asmvliw.Pextfz stop start) rd rs => Pextfz rd rs stop start
+  | PArithRR (Asmvliw.Pextfs stop start) rd rs => Pextfs rd rs stop start
   | PArithRR Asmvliw.Pfabsd rd rs => Pfabsd rd rs
   | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs

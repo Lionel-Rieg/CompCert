@@ -118,7 +118,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Olongofsingle | Olonguofsingle | Osingleoflong | Osingleoflongu => op1 (default nv)
   | Ocmp c => needs_of_condition c
   | Oselect _ | Oselectl _ | Oselectf _ | Oselectfs _ => op3 (default nv)
-  | Oextfz _ _ => op1 (default nv)
+  | Oextfz _ _ | Oextfs _ _ => op1 (default nv)
   end.
 
 Definition operation_is_redundant (op: operation) (nv: nval): bool :=

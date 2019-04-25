@@ -775,6 +775,20 @@ Definition extfz stop start v :=
     let stop' := Z.add stop Z.one in
     match v with
     | Vint w =>
+      Vint (Int.shru (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
+    | _ => Vundef
+    end
+  else Vundef.
+
+
+Definition extfs stop start v :=
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int.zwordsize)
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | Vint w =>
       Vint (Int.shr (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
     | _ => Vundef
     end

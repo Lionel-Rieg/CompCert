@@ -75,7 +75,7 @@ Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : ava
   end.
   
 
-Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
+Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
   if (Z.leb start stop)
        && (Z.geb start Z.zero)
        && (Z.ltb stop Int.zwordsize)
@@ -84,6 +84,19 @@ Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
     match v with
     | I w =>
       I (Int.shr (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
+    | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int.zwordsize)
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | I w =>
+      I (Int.shru (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
     | _ => Vtop
     end
   else Vtop.
@@ -217,6 +230,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oselectf cond), v0::v1::vselect::nil => eval_static_selectf cond v0 v1 vselect
   | (Oselectfs cond), v0::v1::vselect::nil => eval_static_selectfs cond v0 v1 vselect
   | (Oextfz stop start), v0::nil => eval_static_extfz stop start v0
+  | (Oextfs stop start), v0::nil => eval_static_extfs stop start v0
   | _, _ => Vbot
   end.
 
@@ -345,6 +359,12 @@ Proof.
 
   (* extfz *)
   - unfold Val.extfz, eval_static_extfz.
+    destruct (_ && _ && _).
+    + inv H1; constructor.
+    + constructor.
+
+  (* extfs *)
+  - unfold Val.extfs, eval_static_extfs.
     destruct (_ && _ && _).
     + inv H1; constructor.
     + constructor.

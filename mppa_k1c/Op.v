@@ -198,7 +198,8 @@ Inductive operation : Type :=
   | Oselectl (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
-  | Oextfz (stop : Z) (start : Z).
+  | Oextfz (stop : Z) (start : Z)
+  | Oextfs (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -500,6 +501,7 @@ Definition eval_operation
   | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
   | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
   | (Oextfz stop start), v0::nil => Some (Val.extfz stop start v0)
+  | (Oextfs stop start), v0::nil => Some (Val.extfs stop start v0)
   | _, _ => None
   end.
 
@@ -693,7 +695,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oselectl cond => (Tlong :: Tlong :: (arg_type_of_condition0 cond) :: nil, Tlong)
   | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
   | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
-  | Oextfz _ _ => (Tint :: nil, Tint)
+  | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -968,6 +970,11 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
   - unfold Val.extfz.
+    destruct (_ && _ && _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfs *)
+  - unfold Val.extfs.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
@@ -1583,6 +1590,12 @@ Proof.
 
  (* extfz *)
   - unfold Val.extfz.
+    destruct (_ && _ && _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfs *)
+  - unfold Val.extfs.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.

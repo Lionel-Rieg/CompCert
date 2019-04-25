@@ -308,6 +308,7 @@ Inductive arith_name_rr : Type :=
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
 (*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
   | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
+  | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
            
   | Pfabsd                                          (**r float absolute double *)
   | Pfabsw                                          (**r float absolute word *)
@@ -881,6 +882,7 @@ Definition arith_eval_rr n v :=
   | Psxwd => Val.longofint v
   | Pzxwd => Val.longofintu v
   | Pextfz stop start => Val.extfz stop start v
+  | Pextfs stop start => Val.extfs stop start v
   | Pfnegd => Val.negf v
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v

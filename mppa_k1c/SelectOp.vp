@@ -186,6 +186,14 @@ Nondetfunction shruimm (e1: expr) (n: int) :=
         if Int.ltu (Int.add n n1) Int.iwordsize
         then Eop (Oshruimm (Int.add n n1)) (t1:::Enil)
         else Eop (Oshruimm n) (e1:::Enil)
+    | Eop (Oshlimm n1) (t1:::Enil) =>
+        let stop := Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one) in
+	let start := Z.sub (Z.add (Z.add (Int.unsigned n) stop) Z.one) Int.zwordsize in
+	if (Z.leb start stop)
+         && (Z.geb start Z.zero)
+         && (Z.ltb stop Int.zwordsize)
+        then Eop (Oextfz stop start) (t1:::Enil)
+	else Eop (Oshruimm n) (e1:::Enil)
     | _ =>
         Eop (Oshruimm n) (e1:::Enil)
     end.
@@ -208,7 +216,7 @@ Nondetfunction shrimm (e1: expr) (n: int) :=
 	if (Z.leb start stop)
          && (Z.geb start Z.zero)
          && (Z.ltb stop Int.zwordsize)
-        then Eop (Oextfz stop start) (t1:::Enil)
+        then Eop (Oextfs stop start) (t1:::Enil)
 	else Eop (Oshrimm n) (e1:::Enil)
     | _ =>
         Eop (Oshrimm n) (e1:::Enil)

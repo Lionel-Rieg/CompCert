@@ -1214,6 +1214,7 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Psxwd => "Psxwd"
   | Pzxwd => "Pzxwd"
   | Pextfz _ _ => "Pextfz"
+  | Pextfs _ _ => "Pextfs"
   | Pfabsd => "Pfabsd"
   | Pfabsw => "Pfabsw"
   | Pfnegd => "Pfnegd"

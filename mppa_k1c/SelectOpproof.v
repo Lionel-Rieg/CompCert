@@ -295,7 +295,7 @@ Proof.
   predSpec Int.eq Int.eq_spec n Int.zero.
   intros; subst. exists x; split; auto. destruct x; simpl; auto. rewrite Int.shru_zero; auto.
 
-  destruct (Int.ltu n Int.iwordsize) eqn:LT; simpl.
+  destruct (Int.ltu n Int.iwordsize) eqn:LT.
   destruct (shruimm_match a); intros; InvEval.
   - exists (Vint (Int.shru n1 n)); split. EvalOp.
     simpl. rewrite LT; auto.
@@ -307,6 +307,38 @@ Proof.
     rewrite LT. rewrite Int.add_commut. rewrite Int.shru_shru; auto. rewrite Int.add_commut; auto.
     subst. TrivialExists. econstructor. EvalOp. simpl; eauto. constructor.
     simpl. auto.
+  - subst x.
+    simpl negb.
+    cbn iota.
+    destruct (_ && _ && _) eqn:BOUNDS.
+    + exists (Val.extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+            (Z.sub
+               (Z.add
+                  (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                  Z.one) Int.zwordsize) v1).
+      split.
+      ++ EvalOp.
+      ++ unfold Val.extfz.
+         rewrite BOUNDS.
+         destruct v1; try (simpl; apply Val.lessdef_undef).
+        replace (Z.sub Int.zwordsize
+                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1).
+        replace (Z.sub Int.zwordsize
+             (Z.sub
+                (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
+                (Z.sub
+                   (Z.add
+                      (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                      Z.one) Int.zwordsize))) with (Int.unsigned n).
+        * rewrite Int.repr_unsigned.
+          rewrite Int.repr_unsigned.
+          simpl.
+          destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
+          simpl.
+          destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
+        * omega.
+        * omega.
+    + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     auto.
@@ -338,14 +370,14 @@ Proof.
     simpl negb.
     cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    + exists (Val.extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfz.
+      ++ unfold Val.extfs.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
