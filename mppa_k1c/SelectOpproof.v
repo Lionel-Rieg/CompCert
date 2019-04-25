@@ -322,22 +322,20 @@ Proof.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
-                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1).
+                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1) by omega.
         replace (Z.sub Int.zwordsize
              (Z.sub
                 (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
                 (Z.sub
                    (Z.add
                       (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
-                      Z.one) Int.zwordsize))) with (Int.unsigned n).
-        * rewrite Int.repr_unsigned.
-          rewrite Int.repr_unsigned.
-          simpl.
-          destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
-          simpl.
-          destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
-        * omega.
-        * omega.
+                      Z.one) Int.zwordsize))) with (Int.unsigned n) by omega.
+        rewrite Int.repr_unsigned.
+        rewrite Int.repr_unsigned.
+        simpl.
+        destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
+        simpl.
+        destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
     + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
@@ -381,22 +379,20 @@ Proof.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
-                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1).
+                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1) by omega.
         replace (Z.sub Int.zwordsize
              (Z.sub
                 (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
                 (Z.sub
                    (Z.add
                       (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
-                      Z.one) Int.zwordsize))) with (Int.unsigned n).
-        * rewrite Int.repr_unsigned.
-          rewrite Int.repr_unsigned.
-          simpl.
-          destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
-          simpl.
-          destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
-        * omega.
-        * omega.
+                      Z.one) Int.zwordsize))) with (Int.unsigned n) by omega.
+        rewrite Int.repr_unsigned.
+        rewrite Int.repr_unsigned.
+        simpl.
+        destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
+        simpl.
+        destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
     + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
