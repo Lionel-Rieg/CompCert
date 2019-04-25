@@ -358,7 +358,11 @@ Proof.
                       (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
                       Int.one) Int.iwordsize))) with n.
         constructor.
-        ** 
+        ** repeat (try rewrite Int.add_signed; try rewrite Int.sub_signed; try rewrite Int.signed_repr).
+           rewrite <- (Int.repr_signed n) at 1.
+           f_equal.
+           omega.
+           
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     auto.
