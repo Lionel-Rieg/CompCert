@@ -307,7 +307,7 @@ Inductive arith_name_rr : Type :=
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
 (*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
-  | Pextfz (stop : int) (start : int)               (**r extract bit field, unsigned *)
+  | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
            
   | Pfabsd                                          (**r float absolute double *)
   | Pfabsw                                          (**r float absolute word *)

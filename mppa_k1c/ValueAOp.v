@@ -75,15 +75,15 @@ Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : ava
   end.
   
 
-Definition eval_static_extfz (stop : int) (start : int) (v : aval) :=
-  if (Int.cmp Cle start stop)
-       && (Int.cmp Cge start Int.zero)
-       && (Int.cmp Clt stop Int.iwordsize)
+Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int.zwordsize)
   then
-    let stop' := Int.add stop Int.one in
+    let stop' := Z.add stop Z.one in
     match v with
     | I w =>
-      I (Int.shr (Int.shl w (Int.sub Int.iwordsize stop')) (Int.sub Int.iwordsize (Int.sub stop' start)))
+      I (Int.shr (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
     | _ => Vtop
     end
   else Vtop.

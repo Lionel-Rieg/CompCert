@@ -321,7 +321,7 @@ Proof.
   predSpec Int.eq Int.eq_spec n Int.zero.
   intros; subst. exists x; split; auto. destruct x; simpl; auto. rewrite Int.shr_zero; auto.
 
-  destruct (Int.ltu n Int.iwordsize) eqn:LT; simpl.
+  destruct (Int.ltu n Int.iwordsize) eqn:LT.
   destruct (shrimm_match a); intros; InvEval.
   - exists (Vint (Int.shr n1 n)); split. EvalOp.
     simpl. rewrite LT; auto.
@@ -335,34 +335,37 @@ Proof.
     subst. TrivialExists. econstructor. EvalOp. simpl; eauto. constructor.
     simpl. auto.
   - subst x.
+    simpl negb.
+    cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfz (Int.sub Int.iwordsize (Int.add n1 Int.one))
-            (Int.sub
-               (Int.add
-                  (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
-                  Int.one) Int.iwordsize) v1).
+    + exists (Val.extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+            (Z.sub
+               (Z.add
+                  (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                  Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
       ++ unfold Val.extfz.
-      * simpl. rewrite BOUNDS.
-        destruct v1; simpl; trivial.
-        destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
-        destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
-        replace (Int.sub Int.iwordsize
-                         (Int.add (Int.sub Int.iwordsize (Int.add n1 Int.one)) Int.one)) with n1.
-        replace (Int.sub Int.iwordsize
-             (Int.sub
-                (Int.add (Int.sub Int.iwordsize (Int.add n1 Int.one)) Int.one)
-                (Int.sub
-                   (Int.add
-                      (Int.add n (Int.sub Int.iwordsize (Int.add n1 Int.one)))
-                      Int.one) Int.iwordsize))) with n.
-        constructor.
-        ** repeat (try rewrite Int.add_signed; try rewrite Int.sub_signed; try rewrite Int.signed_repr).
-           rewrite <- (Int.repr_signed n) at 1.
-           f_equal.
-           omega.
-           
+         rewrite BOUNDS.
+         destruct v1; try (simpl; apply Val.lessdef_undef).
+        replace (Z.sub Int.zwordsize
+                         (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1).
+        replace (Z.sub Int.zwordsize
+             (Z.sub
+                (Z.add (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
+                (Z.sub
+                   (Z.add
+                      (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                      Z.one) Int.zwordsize))) with (Int.unsigned n).
+        * rewrite Int.repr_unsigned.
+          rewrite Int.repr_unsigned.
+          simpl.
+          destruct (Int.ltu n1 Int.iwordsize) eqn:Hltu_n1; simpl; trivial.
+          simpl.
+          destruct (Int.ltu n Int.iwordsize) eqn:Hltu_n; simpl; trivial.
+        * omega.
+        * omega.
+    + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
   - TrivialExists.
   - intros; TrivialExists. constructor. eauto. constructor. EvalOp. simpl; eauto. constructor.
     auto.

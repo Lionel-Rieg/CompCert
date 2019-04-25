@@ -130,7 +130,7 @@ Inductive instruction : Type :=
   | Psxwd   (rd rs: ireg)                           (**r Sign Extend Word to Double Word *)
   | Pzxwd   (rd rs: ireg)                           (**r Zero Extend Word to Double Word *)
 
-  | Pextfz  (rd : ireg) (rs : ireg) (stop : int) (start : int) (**r extract bitfields unsigned *)
+  | Pextfz  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
   | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
   | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
   | Pfnegd  (rd rs: ireg)                           (**r float negate double *)

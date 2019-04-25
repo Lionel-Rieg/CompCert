@@ -768,14 +768,14 @@ Definition rolml (v: val) (amount: int) (mask: int64): val :=
 
 
 Definition extfz stop start v :=
-  if (Int.cmp Cle start stop)
-       && (Int.cmp Cge start Int.zero)
-       && (Int.cmp Clt stop Int.iwordsize)
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int.zwordsize)
   then
-    let stop' := Int.add stop Int.one in
+    let stop' := Z.add stop Z.one in
     match v with
     | Vint w =>
-      Vint (Int.shr (Int.shl w (Int.sub Int.iwordsize stop')) (Int.sub Int.iwordsize (Int.sub stop' start)))
+      Vint (Int.shr (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
     | _ => Vundef
     end
   else Vundef.

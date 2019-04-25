@@ -198,7 +198,7 @@ Inductive operation : Type :=
   | Oselectl (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
-  | Oextfz (stop : int) (start : int).
+  | Oextfz (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -233,7 +233,7 @@ Defined.
 
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0; intros.
+  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec; intros.
   decide equality.
 Defined.
 
