@@ -794,6 +794,33 @@ Definition extfs stop start v :=
     end
   else Vundef.
 
+Definition extfzl stop start v :=
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int64.zwordsize)
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | Vlong w =>
+      Vlong (Int64.shru (Int64.shl w (Int64.repr (Z.sub Int64.zwordsize stop'))) (Int64.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
+    | _ => Vundef
+    end
+  else Vundef.
+
+
+Definition extfsl stop start v :=
+  if (Z.leb start stop)
+       && (Z.geb start Z.zero)
+       && (Z.ltb stop Int64.zwordsize)
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | Vlong w =>
+      Vlong (Int64.shr (Int64.shl w (Int64.repr (Z.sub Int64.zwordsize stop'))) (Int64.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
+    | _ => Vundef
+    end
+  else Vundef.
+
 
 (** Comparisons *)
 
