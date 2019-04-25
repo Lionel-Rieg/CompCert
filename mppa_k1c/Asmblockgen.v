@@ -772,6 +772,20 @@ Definition transl_op
            OK (Pcmoveu bt r0 rS r1 ::i k)
        end)
 
+  | Oextfz stop start, a1 :: nil =>
+    assertion ((Z.leb start stop)
+                 && (Z.geb start Z.zero)
+                 && (Z.ltb stop Int.zwordsize));
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfz stop start rd rs ::i k)
+
+  | Oextfs stop start, a1 :: nil =>
+    assertion ((Z.leb start stop)
+                 && (Z.geb start Z.zero)
+                 && (Z.ltb stop Int.zwordsize));
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfs stop start rd rs ::i k)
+    
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.

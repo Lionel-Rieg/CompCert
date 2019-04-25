@@ -426,7 +426,7 @@ type real_instruction =
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Maddw | Maddd | Cmoved
-  | Make | Nop  | Sxwd  | Zxwd
+  | Make | Nop | Extfz | Extfs
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
@@ -476,8 +476,10 @@ let ab_inst_to_real = function
   | "Pmaddl" -> Maddd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
-  | "Psxwd" -> Sxwd
-  | "Pzxwd" -> Zxwd
+  | "Psxwd" -> Extfs
+  | "Pzxwd" -> Extfz
+  | "Pextfz" -> Extfz
+  | "Pextfs" -> Extfs
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
@@ -572,7 +574,7 @@ let rec_to_usage r =
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
-  | Sxwd | Zxwd -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
+  | Extfz | Extfs -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
@@ -595,7 +597,7 @@ let real_inst_to_latency = function
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
-  | Sxwd | Zxwd | Fcompw | Fcompd | Cmoved
+  | Extfs | Extfz | Fcompw | Fcompd | Cmoved
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
