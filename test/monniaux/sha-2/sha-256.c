@@ -8,6 +8,7 @@
 
 #include "sha-256.h"
 
+#define USE_ORIGINAL 1
 #define AUTOINCREMENT 1
 
 #define CHUNK_SIZE 64
