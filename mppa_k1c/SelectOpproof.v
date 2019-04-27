@@ -23,6 +23,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Globalenvs.
 Require Import Cminor.
@@ -311,14 +312,14 @@ Proof.
     simpl negb.
     cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    + exists (extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfz.
+      ++ unfold extfz.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
@@ -368,14 +369,14 @@ Proof.
     simpl negb.
     cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    + exists (extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfs.
+      ++ unfold extfs.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize

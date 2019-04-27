@@ -12,7 +12,7 @@
 
 Require Import Coqlib Compopts.
 Require Import AST Integers Floats Values Memory Globalenvs.
-Require Import Op RTL ValueDomain.
+Require Import Op ExtValues RTL ValueDomain.
 
 (** Value analysis for RISC V operators *)
 
@@ -386,25 +386,25 @@ Proof.
       constructor.
 
   (* extfz *)
-  - unfold Val.extfz, eval_static_extfz.
+  - unfold extfz, eval_static_extfz.
     destruct (_ && _ && _).
     + inv H1; constructor.
     + constructor.
 
   (* extfs *)
-  - unfold Val.extfs, eval_static_extfs.
+  - unfold extfs, eval_static_extfs.
     destruct (_ && _ && _).
     + inv H1; constructor.
     + constructor.
 
   (* extfzl *)
-  - unfold Val.extfzl, eval_static_extfzl.
+  - unfold extfzl, eval_static_extfzl.
     destruct (_ && _ && _).
     + inv H1; constructor.
     + constructor.
 
   (* extfsl *)
-  - unfold Val.extfsl, eval_static_extfsl.
+  - unfold extfsl, eval_static_extfsl.
     destruct (_ && _ && _).
     + inv H1; constructor.
     + constructor.

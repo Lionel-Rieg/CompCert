@@ -19,7 +19,7 @@
 
 Require Import String Coqlib Maps Integers Floats Errors.
 Require Archi.
-Require Import AST Values Memory Globalenvs Events.
+Require Import AST Values ExtValues Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
 Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof.
@@ -252,14 +252,14 @@ Proof.
     simpl negb.
     cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfzl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    + exists (extfzl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int64.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfzl.
+      ++ unfold extfzl.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int64.zwordsize
@@ -304,14 +304,14 @@ Proof.
     simpl negb.
     cbn iota.
     destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfsl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    + exists (extfsl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int64.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfsl.
+      ++ unfold extfsl.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int64.zwordsize

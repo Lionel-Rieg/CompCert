@@ -25,6 +25,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Events.
 Require Import Globalenvs.
@@ -883,10 +884,10 @@ Definition arith_eval_rr n v :=
   | Pcvtl2w => Val.loword v
   | Psxwd => Val.longofint v
   | Pzxwd => Val.longofintu v
-  | Pextfz stop start => Val.extfz stop start v
-  | Pextfs stop start => Val.extfs stop start v
-  | Pextfzl stop start => Val.extfzl stop start v
-  | Pextfsl stop start => Val.extfsl stop start v
+  | Pextfz stop start => extfz stop start v
+  | Pextfs stop start => extfs stop start v
+  | Pextfzl stop start => extfzl stop start v
+  | Pextfsl stop start => extfsl stop start v
   | Pfnegd => Val.negf v
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v

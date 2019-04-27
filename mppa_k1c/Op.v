@@ -31,7 +31,7 @@
 
 Require Import BoolEqual Coqlib.
 Require Import AST Integers Floats.
-Require Import Values Memory Globalenvs Events.
+Require Import Values ExtValues Memory Globalenvs Events.
 
 Set Implicit Arguments.
 
@@ -502,10 +502,10 @@ Definition eval_operation
   | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
   | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
   | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
-  | (Oextfz stop start), v0::nil => Some (Val.extfz stop start v0)
-  | (Oextfs stop start), v0::nil => Some (Val.extfs stop start v0)
-  | (Oextfzl stop start), v0::nil => Some (Val.extfzl stop start v0)
-  | (Oextfsl stop start), v0::nil => Some (Val.extfsl stop start v0)
+  | (Oextfz stop start), v0::nil => Some (extfz stop start v0)
+  | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
+  | (Oextfzl stop start), v0::nil => Some (extfzl stop start v0)
+  | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
   | _, _ => None
   end.
 
@@ -974,22 +974,22 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (_ && _); simpl; trivial.
       destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
-  - unfold Val.extfz.
+  - unfold extfz.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfs *)
-  - unfold Val.extfs.
+  - unfold extfs.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfzl *)
-  - unfold Val.extfzl.
+  - unfold extfzl.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfsl *)
-  - unfold Val.extfsl.
+  - unfold extfsl.
     destruct (_ && _ && _).
     + destruct v0; simpl; trivial.
     + constructor.
@@ -1604,25 +1604,25 @@ Proof.
     * rewrite Hcond'. constructor.
 
  (* extfz *)
-  - unfold Val.extfz.
+  - unfold extfz.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.
 
  (* extfs *)
-  - unfold Val.extfs.
+  - unfold extfs.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.
 
  (* extfzl *)
-  - unfold Val.extfzl.
+  - unfold extfzl.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.
 
  (* extfsl *)
-  - unfold Val.extfsl.
+  - unfold extfsl.
     destruct (_ && _ && _).
     + inv H4; trivial.
     + trivial.
