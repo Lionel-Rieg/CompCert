@@ -793,6 +793,18 @@ Definition transl_op
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pextfsl stop start rd rs ::i k)
     
+  | Oinsf stop start, a0 :: a1 :: nil =>
+    assertion (ExtValues.is_bitfield stop start);
+    assertion (mreg_eq a0 res);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pinsf stop start rd rs ::i k)
+    
+  | Oinsfl stop start, a0 :: a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+    assertion (mreg_eq a0 res);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pinsfl stop start rd rs ::i k)
+
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.
