@@ -82,3 +82,13 @@ Definition insfl stop start prev fld :=
     Val.orl (Val.andl prev (Val.notl mask))
             (Val.andl (Val.shll fld (Vint (Int.repr start))) mask)
   else Vundef.
+
+Fixpoint highest_bit (x : Z) (n : nat) : N :=
+  match n with
+  | O => 0%N
+  | S n1 =>
+    let n' := N_of_nat n in
+    if Z.testbit x (Z.of_N n')
+    then n'
+    else highest_bit x n1
+  end.
