@@ -23,6 +23,7 @@ Require Import AST Integers Floats.
 Require Import Op CminorSel.
 Require Import OpHelpers.
 Require Import SelectOp SplitLong.
+Require Import ExtValues.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -158,9 +159,7 @@ Nondetfunction shrluimm (e1: expr) (n: int) :=
     | Eop (Oshllimm n1) (t1:::Enil) =>
         let stop := Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one) in
 	let start := Z.sub (Z.add (Z.add (Int.unsigned n) stop) Z.one) Int64.zwordsize in
-	if (Z.leb start stop)
-         && (Z.geb start Z.zero)
-         && (Z.ltb stop Int64.zwordsize)
+	if is_bitfieldl stop start
         then Eop (Oextfzl stop start) (t1:::Enil)
 	else Eop (Oshrluimm n) (e1:::Enil)
     | _ =>
@@ -183,9 +182,7 @@ Nondetfunction shrlimm (e1: expr) (n: int) :=
   | Eop (Oshllimm n1) (t1:::Enil) =>
         let stop := Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one) in
 	let start := Z.sub (Z.add (Z.add (Int.unsigned n) stop) Z.one) Int64.zwordsize in
-	if (Z.leb start stop)
-         && (Z.geb start Z.zero)
-         && (Z.ltb stop Int64.zwordsize)
+	if is_bitfieldl stop start
         then Eop (Oextfsl stop start) (t1:::Enil)
 	else Eop (Oshrlimm n) (e1:::Enil)
   | _ =>

@@ -76,9 +76,7 @@ Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : ava
   
 
 Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -89,9 +87,7 @@ Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
   else Vtop.
 
 Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -102,9 +98,7 @@ Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
   else Vtop.
 
 Definition eval_static_extfsl (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int64.zwordsize)
+  if is_bitfieldl stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -115,9 +109,7 @@ Definition eval_static_extfsl (stop : Z) (start : Z) (v : aval) :=
   else Vtop.
 
 Definition eval_static_extfzl (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int64.zwordsize)
+  if is_bitfieldl stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -387,25 +379,25 @@ Proof.
 
   (* extfz *)
   - unfold extfz, eval_static_extfz.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + inv H1; constructor.
     + constructor.
 
   (* extfs *)
   - unfold extfs, eval_static_extfs.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + inv H1; constructor.
     + constructor.
 
   (* extfzl *)
   - unfold extfzl, eval_static_extfzl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + inv H1; constructor.
     + constructor.
 
   (* extfsl *)
   - unfold extfsl, eval_static_extfsl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + inv H1; constructor.
     + constructor.
 Qed.

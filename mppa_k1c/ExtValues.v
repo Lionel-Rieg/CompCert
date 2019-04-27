@@ -2,10 +2,13 @@ Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
 
+Definition is_bitfield stop start :=
+  (Z.leb start stop)
+    && (Z.geb start Z.zero)
+    && (Z.ltb stop Int.zwordsize).
+
 Definition extfz stop start v :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start 
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -17,9 +20,7 @@ Definition extfz stop start v :=
 
 
 Definition extfs stop start v :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -29,10 +30,13 @@ Definition extfs stop start v :=
     end
   else Vundef.
 
+Definition is_bitfieldl stop start :=
+  (Z.leb start stop)
+    && (Z.geb start Z.zero)
+    && (Z.ltb stop Int64.zwordsize).
+
 Definition extfzl stop start v :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int64.zwordsize)
+  if is_bitfieldl stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -44,9 +48,7 @@ Definition extfzl stop start v :=
 
 
 Definition extfsl stop start v :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int64.zwordsize)
+  if is_bitfieldl stop start
   then
     let stop' := Z.add stop Z.one in
     match v with

@@ -311,7 +311,7 @@ Proof.
   - subst x.
     simpl negb.
     cbn iota.
-    destruct (_ && _ && _) eqn:BOUNDS.
+    destruct (is_bitfield _ _) eqn:BOUNDS.
     + exists (extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
@@ -368,7 +368,7 @@ Proof.
   - subst x.
     simpl negb.
     cbn iota.
-    destruct (_ && _ && _) eqn:BOUNDS.
+    destruct (is_bitfield _ _) eqn:BOUNDS.
     + exists (extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add

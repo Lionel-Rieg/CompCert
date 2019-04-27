@@ -975,22 +975,22 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
   - unfold extfz.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfs *)
   - unfold extfs.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfzl *)
   - unfold extfzl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfsl *)
   - unfold extfsl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + destruct v0; simpl; trivial.
     + constructor.
 Qed.
@@ -1605,25 +1605,25 @@ Proof.
 
  (* extfz *)
   - unfold extfz.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + inv H4; trivial.
     + trivial.
 
  (* extfs *)
   - unfold extfs.
-    destruct (_ && _ && _).
+    destruct (is_bitfield _ _).
     + inv H4; trivial.
     + trivial.
 
  (* extfzl *)
   - unfold extfzl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + inv H4; trivial.
     + trivial.
 
  (* extfsl *)
   - unfold extfsl.
-    destruct (_ && _ && _).
+    destruct (is_bitfieldl _ _).
     + inv H4; trivial.
     + trivial.
 Qed.
