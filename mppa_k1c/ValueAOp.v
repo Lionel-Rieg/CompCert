@@ -119,6 +119,34 @@ Definition eval_static_extfzl (stop : Z) (start : Z) (v : aval) :=
     end
   else Vtop.
 
+Definition eval_static_insf stop start prev fld :=
+  let mask := Int.repr (zbitfield_mask stop start) in
+  if is_bitfield stop start
+  then
+    match prev, fld with
+    | (I prevI), (I fldI) =>
+      if Int.ltu (Int.repr start) Int.iwordsize
+      then I (Int.or (Int.and prevI (Int.not mask))
+                     (Int.and (Int.shl fldI (Int.repr start)) mask))
+      else Vtop
+    | _, _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_insfl stop start prev fld :=
+  let mask := Int64.repr (zbitfield_mask stop start) in
+  if is_bitfieldl stop start
+  then
+    match prev, fld with
+    | (L prevL), (L fldL) =>
+      if Int.ltu (Int.repr start) Int64.iwordsize'
+      then L (Int64.or (Int64.and prevL (Int64.not mask))
+                       (Int64.and (Int64.shl' fldL (Int.repr start)) mask))
+      else Vtop
+    | _,_ => Vtop
+    end
+  else Vtop.
+
 Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   match op, vl with
   | Omove, v1::nil => v1
@@ -251,6 +279,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oextfs stop start), v0::nil => eval_static_extfs stop start v0
   | (Oextfzl stop start), v0::nil => eval_static_extfzl stop start v0
   | (Oextfsl stop start), v0::nil => eval_static_extfsl stop start v0
+  | (Oinsf stop start), v0::v1::nil => eval_static_insf stop start v0 v1
+  | (Oinsfl stop start), v0::v1::nil => eval_static_insfl stop start v0 v1
   | _, _ => Vbot
   end.
 
@@ -399,6 +429,17 @@ Proof.
   - unfold extfsl, eval_static_extfsl.
     destruct (is_bitfieldl _ _).
     + inv H1; constructor.
+    + constructor.
+      
+  (* insf *)
+  - unfold insf, eval_static_insf.
+    destruct (is_bitfield _ _).
+    + inv H1; inv H0; simpl; try constructor; destruct (Int.ltu _ _); simpl; constructor.
+    + constructor.
+  (* insfl *)
+  - unfold insfl, eval_static_insfl.
+    destruct (is_bitfieldl _ _).
+    + inv H1; inv H0; simpl; try constructor; destruct (Int.ltu _ _); simpl; constructor.
     + constructor.
 Qed.
 

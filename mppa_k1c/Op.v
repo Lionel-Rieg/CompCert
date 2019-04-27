@@ -201,7 +201,9 @@ Inductive operation : Type :=
   | Oextfz (stop : Z) (start : Z)
   | Oextfs (stop : Z) (start : Z)
   | Oextfzl (stop : Z) (start : Z)
-  | Oextfsl (stop : Z) (start : Z).
+  | Oextfsl (stop : Z) (start : Z)
+  | Oinsf (stop : Z) (start : Z)
+  | Oinsfl (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -506,6 +508,8 @@ Definition eval_operation
   | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
   | (Oextfzl stop start), v0::nil => Some (extfzl stop start v0)
   | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
+  | (Oinsf stop start), v0::v1::nil => Some (insf stop start v0 v1)
+  | (Oinsfl stop start), v0::v1::nil => Some (insfl stop start v0 v1)
   | _, _ => None
   end.
 
@@ -701,6 +705,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
   | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
   | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
+  | Oinsf _ _ => (Tint :: Tint :: nil, Tint)
+  | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -992,6 +998,18 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - unfold extfsl.
     destruct (is_bitfieldl _ _).
     + destruct v0; simpl; trivial.
+    + constructor.
+ (* insf *)
+  - unfold insf, bitfield_mask.
+    destruct (is_bitfield _ _).
+    + destruct v0; destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+    + constructor.
+ (* insf *)
+  - unfold insfl, bitfield_mask.
+    destruct (is_bitfieldl _ _).
+    + destruct v0; destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
     + constructor.
 Qed.
 
@@ -1625,6 +1643,22 @@ Proof.
   - unfold extfsl.
     destruct (is_bitfieldl _ _).
     + inv H4; trivial.
+    + trivial.
+
+ (* insf *)
+  - unfold insf.
+    destruct (is_bitfield _ _).
+    + inv H4; inv H2; trivial.
+      simpl. destruct (Int.ltu _ _); trivial.
+      simpl. trivial.
+    + trivial.
+
+ (* insfl *)
+  - unfold insfl.
+    destruct (is_bitfieldl _ _).
+    + inv H4; inv H2; trivial.
+      simpl. destruct (Int.ltu _ _); trivial.
+      simpl. trivial.
     + trivial.
 Qed.
 
