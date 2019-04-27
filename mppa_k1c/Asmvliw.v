@@ -312,7 +312,7 @@ Inductive arith_name_rr : Type :=
   | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
   | Pextfzl (stop : Z) (start : Z)              (**r extract bit field, unsigned *)
   | Pextfsl (stop : Z) (start : Z)              (**r extract bit field, signed *)
-           
+          
   | Pfabsd                                          (**r float absolute double *)
   | Pfabsw                                          (**r float absolute word *)
   | Pfnegd                                          (**r float negate double *)
@@ -444,6 +444,11 @@ Inductive arith_name_arri64 : Type :=
   | Pmaddil                                           (**r multiply add long *)
 .
 
+Inductive arith_name_arr : Type :=
+  | Pinsf (stop : Z) (start : Z)                (**r insert bit field *)
+  | Pinsfl (stop : Z) (start : Z)               (**r insert bit field *)
+.
+
 Inductive ar_instruction : Type :=
   | PArithR     (i: arith_name_r)     (rd: ireg)
   | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
@@ -455,6 +460,7 @@ Inductive ar_instruction : Type :=
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
   | PArithARRR   (i: arith_name_arrr)   (rd rs1 rs2: ireg)
+  | PArithARR   (i: arith_name_arr) (rd rs: ireg)
   | PArithARRI32 (i: arith_name_arri32) (rd rs: ireg) (imm: int)
   | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
@@ -468,7 +474,8 @@ Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
-Coercion PArithARRR:     arith_name_arrr      >-> Funclass.
+Coercion PArithARRR:    arith_name_arrr     >-> Funclass.
+Coercion PArithARR:     arith_name_arr      >-> Funclass.
 Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
 Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
 
@@ -1048,6 +1055,12 @@ Definition arith_eval_arrr n v1 v2 v3 :=
     end
   end.
 
+Definition arith_eval_arr n v1 v2 :=
+  match n with
+  | Pinsf stop start => ExtValues.insf stop start v1 v2
+  | Pinsfl stop start => ExtValues.insfl stop start v1 v2
+  end.
+
 Definition arith_eval_arri32 n v1 v2 v3 :=
   match n with
   | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
@@ -1074,6 +1087,7 @@ Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
   | PArithRRI64 n d s i => rsw#d <- (arith_eval_rri64 n rsr#s i)
 
   | PArithARRR n d s1 s2 => rsw#d <- (arith_eval_arrr n rsr#d rsr#s1 rsr#s2)
+  | PArithARR n d s => rsw#d <- (arith_eval_arr n rsr#d rsr#s)
   | PArithARRI32 n d s i => rsw#d <- (arith_eval_arri32 n rsr#d rsr#s i)
   | PArithARRI64 n d s i => rsw#d <- (arith_eval_arri64 n rsr#d rsr#s i)
   end.
