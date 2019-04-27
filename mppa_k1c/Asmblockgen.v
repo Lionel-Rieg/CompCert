@@ -21,6 +21,7 @@ Require Archi.
 Require Import Coqlib Errors.
 Require Import AST Integers Floats Memdata.
 Require Import Op Locations Machblock Asmblock.
+Require ExtValues.
 
 Local Open Scope string_scope.
 Local Open Scope error_monad_scope.
@@ -773,18 +774,24 @@ Definition transl_op
        end)
 
   | Oextfz stop start, a1 :: nil =>
-    assertion ((Z.leb start stop)
-                 && (Z.geb start Z.zero)
-                 && (Z.ltb stop Int.zwordsize));
+    assertion (ExtValues.is_bitfield stop start);
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pextfz stop start rd rs ::i k)
 
   | Oextfs stop start, a1 :: nil =>
-    assertion ((Z.leb start stop)
-                 && (Z.geb start Z.zero)
-                 && (Z.ltb stop Int.zwordsize));
+    assertion (ExtValues.is_bitfield stop start);
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pextfs stop start rd rs ::i k)
+
+  | Oextfzl stop start, a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfzl stop start rd rs ::i k)
+
+  | Oextfsl stop start, a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfsl stop start rd rs ::i k)
     
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
