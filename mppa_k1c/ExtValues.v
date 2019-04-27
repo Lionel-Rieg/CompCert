@@ -30,6 +30,20 @@ Definition extfs stop start v :=
     end
   else Vundef.
 
+Definition zbitfield_mask stop start :=
+  (Z.shiftl 1 (Z.succ stop)) - (Z.shiftl 1 start).
+
+Definition bitfield_mask stop start :=
+  Vint(Int.repr (zbitfield_mask stop start)).
+
+Definition bitfield_maskl stop start :=
+  Vlong(Int64.repr (zbitfield_mask stop start)).
+
+Definition insf stop start prev fld :=
+  let mask := bitfield_mask stop start in
+  Val.or (Val.and prev (Val.notint mask))
+         (Val.and (Val.shl fld (Vint (Int.repr start))) mask).
+
 Definition is_bitfieldl stop start :=
   (Z.leb start stop)
     && (Z.geb start Z.zero)
@@ -57,3 +71,8 @@ Definition extfsl stop start v :=
     | _ => Vundef
     end
   else Vundef.
+
+Definition insfl stop start prev fld :=
+  let mask := bitfield_maskl stop start in
+  Val.orl (Val.andl prev (Val.notl mask))
+          (Val.andl (Val.shll fld (Vint (Int.repr start))) mask).
