@@ -2,10 +2,10 @@ ALL_CCOMPFLAGS=-fno-unprototyped
 CCOMP=ccomp
 CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
 
-CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+CFLAGS=-g -std=c99 -O0 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CC=k1-mbr-gcc
-K1C_CFLAGS =-g -std=c99 -O2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+K1C_CFLAGS =-g -std=c99 -O0 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CCOMP = ../../../ccomp
 K1C_CCOMPFLAGS=-O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass-ilp

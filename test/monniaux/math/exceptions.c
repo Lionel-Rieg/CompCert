@@ -18,11 +18,15 @@ int feclearexcept(int excepts) {
 }
 #endif
 
-double add(double x, double y) {
+double add_double(double x, double y) {
   return x+y;
 }
 
-double mul(double x, double y) {
+double mul_double(double x, double y) {
+  return x*y;
+}
+
+float mul_float(float x, float y) {
   return x*y;
 }
 
@@ -45,16 +49,16 @@ unsigned double2uint(double x) {
 int main() {
   printf("%x\n", fetestexcept(FE_ALL_EXCEPT));
 
-  double v1 = add(3.0, 0.1);
+  double v1 = add_double(3.0, 0.1);
   printf("%x\n", fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_INEXACT);
 
   printf("%x\n", fetestexcept(FE_ALL_EXCEPT));
-  double v2 = mul(DBL_MAX, DBL_MAX);
+  double v2 = mul_double(DBL_MAX, DBL_MAX);
   printf("%g %x\n", v2, fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_ALL_EXCEPT);
 
-  double v3 = mul(DBL_MIN, DBL_MIN);
+  double v3 = mul_double(DBL_MIN, DBL_MIN);
   printf("%g %x\n", v3, fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_ALL_EXCEPT);
 
@@ -67,18 +71,42 @@ int main() {
   feclearexcept(FE_ALL_EXCEPT);
 
   double v6 = ulong2double(0x11217763AFF77C7CUL);
-  printf("%g %x\n", v6, fetestexcept(FE_ALL_EXCEPT)); // BUG 0 should have INEXACT
+  printf("%a %x\n", v6, fetestexcept(FE_ALL_EXCEPT)); // BUG 0 should have INEXACT; correct on x86
+  feclearexcept(FE_ALL_EXCEPT);
+
+  double v6b = ulong2double(0xFFFFFFFFFFFFFFFFUL);
+  printf("%a %x\n", v6b, fetestexcept(FE_ALL_EXCEPT)); // BUG 0 should have INEXACT; correct on x86
   feclearexcept(FE_ALL_EXCEPT);
 
   unsigned v7 = double2uint(-0.25); // softfloat says "0 and inexact" but here we have "0 and overflow" (due to negative input for unsigned?)
+  // unsure if (unsigned) (-0.25) should be 0 or an error
+  // BUG C99 annex F says that the error is invalid op not overflow
   printf("%u %x\n", v7, fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_ALL_EXCEPT);
 
-  // +41F.307672C5496EF
+  // +41F.307672C5496EF in Berkeley Soft Float test
   double d8 = 0x1.307672C5496EFp32;
   unsigned v8 = double2uint(d8);
   printf("%g %x %x\n", d8, v8, fetestexcept(FE_ALL_EXCEPT));
   // BUG reports 307672C5 and inexact, but should report overflow
   // bug comes from x86 https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89175
+  feclearexcept(FE_ALL_EXCEPT);
+  // all f64_to_ui32_rx_minMag errors explained by
+  // 1) round to uin64 2) take 32 low order bits no precautions
+
+  double d8b = 0x1.307672C5496EFp70;
+  unsigned v8b = double2uint(d8b);
+  printf("d8b %g %x %x\n", d8b, v8b, fetestexcept(FE_ALL_EXCEPT));
+  feclearexcept(FE_ALL_EXCEPT);
+
+  // +380.FFFFFFFFFFFFF  => +01.000000 ...ux  expected +01.000000 ....x
+  // Bug in soft float?
+  double v9 = double2float(0x1.FFFFFFFFFFFFFp-127);
+  printf("%a %x\n", v9, fetestexcept(FE_ALL_EXCEPT));
+  feclearexcept(FE_ALL_EXCEPT);
+
+  // +00.7FFFFF  +7F.000001  => +01.000000 ...ux  expected +01.000000 ....x
+  float v10 = mul_float(0x0.7FFFFFp-126, 0x1.000001p+0);
+  printf("%a %x\n", v10, fetestexcept(FE_ALL_EXCEPT));
   feclearexcept(FE_ALL_EXCEPT);
 }
