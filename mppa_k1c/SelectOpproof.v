@@ -722,6 +722,37 @@ Proof.
         reflexivity.
       * apply DEFAULT.
     + apply DEFAULT.
+  - set (zstop := (int_highest_bit mask)).
+    set (zstart := 0).
+    destruct (is_bitfield _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * subst y. subst x.
+        TrivialExists. simpl. f_equal.
+        unfold insf.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        rewrite Rnmask.
+        simpl.
+        unfold bitfield_mask.
+        subst zstart.
+        rewrite (Val.or_commut (Val.and v1 _)).
+        rewrite (Val.or_commut (Val.and v1 _)).
+        destruct v0; simpl; trivial.
+        unfold Int.ltu, Int.iwordsize, Int.zwordsize.
+        rewrite Int.unsigned_repr.
+        ** rewrite Int.unsigned_repr.
+        *** simpl.
+            rewrite Int.shl_zero.
+            reflexivity.
+        *** simpl.
+            unfold Int.max_unsigned, Int.modulus.
+            simpl.
+            omega.
+        ** unfold Int.max_unsigned, Int.modulus.
+           simpl.
+           omega.
+      * apply DEFAULT.
+    + apply DEFAULT.
   - apply DEFAULT.
 Qed.
 
