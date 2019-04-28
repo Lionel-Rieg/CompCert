@@ -130,6 +130,11 @@ let arith_rri64_str = function
   | Pandnil -> "Pandnil"
   | Pornil -> "Pornil"
 
+
+let arith_arr_str = function
+  | Pinsf (_, _) -> "Pinsf"
+  | Pinsfl (_, _) -> "Pinsfl"
+
 let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
   | Pmaddl -> "Pmaddl"
@@ -179,6 +184,8 @@ let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; 
 
 let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
 
+let arith_arr_rec i rd rs = { inst = arith_arr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
+
 let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
 
 let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
@@ -192,6 +199,7 @@ let arith_rec i =
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
+  | PArithARR (i, rd, rs) -> arith_arr_rec i (IR rd) (IR rs)
   (* Seems like single constant constructor types are elided *)
   | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
   | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
@@ -428,7 +436,7 @@ type real_instruction =
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Maddw | Maddd | Cmoved
-  | Make | Nop | Extfz | Extfs
+  | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
   | Sb | Sh | Sw | Sd 
@@ -480,6 +488,7 @@ let ab_inst_to_real = function
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
   | "Pextfs" | "Pextfsl" | "Psxwd" -> Extfs
+  | "Pinsf" | "Pinsfl" -> Insf
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
@@ -574,7 +583,7 @@ let rec_to_usage r =
   | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
-  | Extfz | Extfs -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
+  | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
@@ -597,7 +606,7 @@ let real_inst_to_latency = function
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
-  | Extfs | Extfz | Fcompw | Fcompd | Cmoved
+  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)

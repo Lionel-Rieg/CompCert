@@ -381,6 +381,8 @@ module Target (*: TARGET*) =
          fprintf oc "	extfz	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
       | Pextfs(rd, rs, stop, start) | Pextfsl(rd, rs, stop, start) ->
          fprintf oc "	extfs	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
+      | Pinsf(rd, rs, stop, start) | Pinsfl(rd, rs, stop, start) ->
+         fprintf oc "	insf	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
       | Pfabsd(rd, rs) ->
          fprintf oc "	fabsd	%a = %a\n" ireg rd ireg rs
       | Pfabsw(rd, rs) ->

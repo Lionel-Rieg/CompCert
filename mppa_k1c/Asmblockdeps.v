@@ -57,6 +57,7 @@ Inductive arith_op :=
   | OArithRRI32 (n: arith_name_rri32) (imm: int)
   | OArithRRI64 (n: arith_name_rri64) (imm: int64)
   | OArithARRR (n: arith_name_arrr)
+  | OArithARR (n: arith_name_arr)
   | OArithARRI32 (n: arith_name_arri32) (imm: int)
   | OArithARRI64 (n: arith_name_arri64) (imm: int64)
 .
@@ -121,6 +122,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | OArithRRI32 n i, [Val v] => Some (Val (arith_eval_rri32 n v i))
   | OArithRRI64 n i, [Val v] => Some (Val (arith_eval_rri64 n v i))
 
+  | OArithARR n, [Val v1; Val v2] => Some (Val (arith_eval_arr n v1 v2))
   | OArithARRR n, [Val v1; Val v2; Val v3] => Some (Val (arith_eval_arrr n v1 v2 v3))
   | OArithARRI32 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri32 n v1 v2 i))
   | OArithARRI64 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri64 n v1 v2 i))
@@ -329,6 +331,8 @@ Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
      match o2 with OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   | OArithARRR n1 =>
      match o2 with OArithARRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithARR n1 =>
+     match o2 with OArithARR n2 => phys_eq n1 n2 | _ => RET false end
   | OArithARRI32 n1 i1 =>
      match o2 with OArithARRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   | OArithARRI64 n1 i1 =>
@@ -597,6 +601,7 @@ Definition trans_arith (ai: ar_instruction) : inst :=
   | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (PReg(#s) @ Enil))]
   | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (PReg(#s) @ Enil))]
   | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (PReg(#d) @ PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithARR n d s => [(#d, Op (Arith (OArithARR n)) (PReg(#d) @ PReg(#s) @ Enil))]
   | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   end.
@@ -776,6 +781,12 @@ Proof.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARR *)
+  -  eexists; split; [|split].
+    * simpl. rewrite (H0 rd).  rewrite (H0 rs). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.      
 (* PArithARRI32 *)
   - eexists; split; [|split].
     * simpl. rewrite (H0 rd).  rewrite (H0 rs). reflexivity.
@@ -1344,6 +1355,12 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   | Pcmoveu _ => "Pcmoveu"
   end.
 
+Definition string_of_name_arr (n: arith_name_arr): pstring :=
+  match n with
+  | Pinsf _ _ => "Pinsf"
+  | Pinsfl _ _ => "Pinsfl"
+  end.
+
 Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
   match n with
   | Pmaddiw => "Pmaddw"
@@ -1366,6 +1383,7 @@ Definition string_of_arith (op: arith_op): pstring :=
   | OArithRRI32 n _ => string_of_name_rri32 n
   | OArithRRI64 n _ => string_of_name_rri64 n
   | OArithARRR n => string_of_name_arrr n
+  | OArithARR n => string_of_name_arr n
   | OArithARRI32 n _ => string_of_name_arri32 n
   | OArithARRI64 n _ => string_of_name_arri64 n
   end.
@@ -1468,7 +1486,5 @@ Definition bblock_equivb: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bbloc
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT_BBLOCK_EQUIV.
-
-
 
 

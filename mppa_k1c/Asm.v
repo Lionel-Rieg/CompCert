@@ -137,6 +137,9 @@ Inductive instruction : Type :=
   | Pextfzl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
   | Pextfsl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
 
+  | Pinsf  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r insert bitfield *)
+  | Pinsfl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r insert bitfield *)
+
   | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
   | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
   | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
@@ -403,6 +406,10 @@ Definition basic_to_instruction (b: basic) :=
   | PArithARRR Asmvliw.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmove cond) rd rs1 rs2=> Pcmove cond rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmoveu cond) rd rs1 rs2=> Pcmoveu cond rd rs1 rs2
+
+  (** ARR *)
+  | PArithARR (Asmvliw.Pinsf stop start) rd rs  => Pinsf rd rs stop start
+  | PArithARR (Asmvliw.Pinsfl stop start) rd rs  => Pinsfl rd rs stop start
 
   (** ARRI32 *)
   | PArithARRI32 Asmvliw.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm

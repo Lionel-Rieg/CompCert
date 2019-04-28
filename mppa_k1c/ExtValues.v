@@ -41,8 +41,11 @@ Definition bitfield_maskl stop start :=
 
 Definition insf stop start prev fld :=
   let mask := bitfield_mask stop start in
-  Val.or (Val.and prev (Val.notint mask))
-         (Val.and (Val.shl fld (Vint (Int.repr start))) mask).
+  if is_bitfield stop start
+  then
+    Val.or (Val.and prev (Val.notint mask))
+           (Val.and (Val.shl fld (Vint (Int.repr start))) mask)
+  else Vundef.
 
 Definition is_bitfieldl stop start :=
   (Z.leb start stop)
@@ -74,5 +77,25 @@ Definition extfsl stop start v :=
 
 Definition insfl stop start prev fld :=
   let mask := bitfield_maskl stop start in
-  Val.orl (Val.andl prev (Val.notl mask))
-          (Val.andl (Val.shll fld (Vint (Int.repr start))) mask).
+  if is_bitfieldl stop start
+  then
+    Val.orl (Val.andl prev (Val.notl mask))
+            (Val.andl (Val.shll fld (Vint (Int.repr start))) mask)
+  else Vundef.
+
+Fixpoint highest_bit (x : Z) (n : nat) : Z :=
+  match n with
+  | O => 0
+  | S n1 =>
+    let n' := Z.of_N (N_of_nat n) in
+    if Z.testbit x n'
+    then n'
+    else highest_bit x n1
+  end.
+
+Definition int_highest_bit (x : int) : Z :=
+  highest_bit (Int.unsigned x) (31%nat).
+
+
+Definition int64_highest_bit (x : int64) : Z :=
+  highest_bit (Int64.unsigned x) (63%nat).
