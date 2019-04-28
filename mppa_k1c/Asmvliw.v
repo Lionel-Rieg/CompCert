@@ -25,6 +25,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Events.
 Require Import Globalenvs.
@@ -309,6 +310,8 @@ Inductive arith_name_rr : Type :=
 (*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
   | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
   | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
+  | Pextfzl (stop : Z) (start : Z)              (**r extract bit field, unsigned *)
+  | Pextfsl (stop : Z) (start : Z)              (**r extract bit field, signed *)
            
   | Pfabsd                                          (**r float absolute double *)
   | Pfabsw                                          (**r float absolute word *)
@@ -881,8 +884,10 @@ Definition arith_eval_rr n v :=
   | Pcvtl2w => Val.loword v
   | Psxwd => Val.longofint v
   | Pzxwd => Val.longofintu v
-  | Pextfz stop start => Val.extfz stop start v
-  | Pextfs stop start => Val.extfs stop start v
+  | Pextfz stop start => extfz stop start v
+  | Pextfs stop start => extfs stop start v
+  | Pextfzl stop start => extfzl stop start v
+  | Pextfsl stop start => extfsl stop start v
   | Pfnegd => Val.negf v
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v

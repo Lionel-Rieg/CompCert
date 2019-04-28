@@ -36,6 +36,8 @@ let arith_rr_str = function
   | Pzxwd -> "Pzxwd"
   | Pextfz(_,_) -> "Pextfz"
   | Pextfs(_,_) -> "Pextfs"
+  | Pextfzl(_,_) -> "Pextfzl"
+  | Pextfsl(_,_) -> "Pextfsl"
   | Pfabsw -> "Pfabsw"
   | Pfabsd -> "Pfabsd"
   | Pfnegw -> "Pfnegw"
@@ -476,10 +478,8 @@ let ab_inst_to_real = function
   | "Pmaddl" -> Maddd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
-  | "Psxwd" -> Extfs
-  | "Pzxwd" -> Extfz
-  | "Pextfz" -> Extfz
-  | "Pextfs" -> Extfs
+  | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
+  | "Pextfs" | "Pextfsl" | "Psxwd" -> Extfs
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz

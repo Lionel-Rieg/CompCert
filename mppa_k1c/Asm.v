@@ -23,6 +23,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Events.
 Require Import Globalenvs.
@@ -132,6 +133,9 @@ Inductive instruction : Type :=
 
   | Pextfz  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
   | Pextfs  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
+
+  | Pextfzl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
+  | Pextfsl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
 
   | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
   | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
@@ -286,6 +290,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR (Asmvliw.Pextfz stop start) rd rs => Pextfz rd rs stop start
   | PArithRR (Asmvliw.Pextfs stop start) rd rs => Pextfs rd rs stop start
+  | PArithRR (Asmvliw.Pextfzl stop start) rd rs => Pextfzl rd rs stop start
+  | PArithRR (Asmvliw.Pextfsl stop start) rd rs => Pextfsl rd rs stop start
   | PArithRR Asmvliw.Pfabsd rd rs => Pfabsd rd rs
   | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs

@@ -51,6 +51,7 @@ Require Import Floats.
 Require Import Op.
 Require Import CminorSel.
 Require Import OpHelpers.
+Require Import ExtValues.
 
 Local Open Scope cminorsel_scope.
 
@@ -189,9 +190,7 @@ Nondetfunction shruimm (e1: expr) (n: int) :=
     | Eop (Oshlimm n1) (t1:::Enil) =>
         let stop := Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one) in
 	let start := Z.sub (Z.add (Z.add (Int.unsigned n) stop) Z.one) Int.zwordsize in
-	if (Z.leb start stop)
-         && (Z.geb start Z.zero)
-         && (Z.ltb stop Int.zwordsize)
+	if is_bitfield stop start
         then Eop (Oextfz stop start) (t1:::Enil)
 	else Eop (Oshruimm n) (e1:::Enil)
     | _ =>
@@ -213,9 +212,7 @@ Nondetfunction shrimm (e1: expr) (n: int) :=
     | Eop (Oshlimm n1) (t1:::Enil) =>
         let stop := Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one) in
 	let start := Z.sub (Z.add (Z.add (Int.unsigned n) stop) Z.one) Int.zwordsize in
-	if (Z.leb start stop)
-         && (Z.geb start Z.zero)
-         && (Z.ltb stop Int.zwordsize)
+	if is_bitfield stop start
         then Eop (Oextfs stop start) (t1:::Enil)
 	else Eop (Oshrimm n) (e1:::Enil)
     | _ =>

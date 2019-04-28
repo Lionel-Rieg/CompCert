@@ -12,7 +12,7 @@
 
 Require Import Coqlib Compopts.
 Require Import AST Integers Floats Values Memory Globalenvs.
-Require Import Op RTL ValueDomain.
+Require Import Op ExtValues RTL ValueDomain.
 
 (** Value analysis for RISC V operators *)
 
@@ -76,9 +76,7 @@ Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : ava
   
 
 Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -89,14 +87,34 @@ Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
   else Vtop.
 
 Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
     | I w =>
       I (Int.shru (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
+    | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_extfsl (stop : Z) (start : Z) (v : aval) :=
+  if is_bitfieldl stop start
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | L w =>
+      L (Int64.shr' (Int64.shl' w (Int.repr (Z.sub Int64.zwordsize stop'))) (Int.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
+    | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_extfzl (stop : Z) (start : Z) (v : aval) :=
+  if is_bitfieldl stop start
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | L w =>
+      L (Int64.shru' (Int64.shl' w (Int.repr (Z.sub Int64.zwordsize stop'))) (Int.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
     | _ => Vtop
     end
   else Vtop.
@@ -231,6 +249,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oselectfs cond), v0::v1::vselect::nil => eval_static_selectfs cond v0 v1 vselect
   | (Oextfz stop start), v0::nil => eval_static_extfz stop start v0
   | (Oextfs stop start), v0::nil => eval_static_extfs stop start v0
+  | (Oextfzl stop start), v0::nil => eval_static_extfzl stop start v0
+  | (Oextfsl stop start), v0::nil => eval_static_extfsl stop start v0
   | _, _ => Vbot
   end.
 
@@ -358,14 +378,26 @@ Proof.
       constructor.
 
   (* extfz *)
-  - unfold Val.extfz, eval_static_extfz.
-    destruct (_ && _ && _).
+  - unfold extfz, eval_static_extfz.
+    destruct (is_bitfield _ _).
     + inv H1; constructor.
     + constructor.
 
   (* extfs *)
-  - unfold Val.extfs, eval_static_extfs.
-    destruct (_ && _ && _).
+  - unfold extfs, eval_static_extfs.
+    destruct (is_bitfield _ _).
+    + inv H1; constructor.
+    + constructor.
+
+  (* extfzl *)
+  - unfold extfzl, eval_static_extfzl.
+    destruct (is_bitfieldl _ _).
+    + inv H1; constructor.
+    + constructor.
+
+  (* extfsl *)
+  - unfold extfsl, eval_static_extfsl.
+    destruct (is_bitfieldl _ _).
     + inv H1; constructor.
     + constructor.
 Qed.

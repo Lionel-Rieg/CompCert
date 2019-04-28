@@ -31,7 +31,7 @@
 
 Require Import BoolEqual Coqlib.
 Require Import AST Integers Floats.
-Require Import Values Memory Globalenvs Events.
+Require Import Values ExtValues Memory Globalenvs Events.
 
 Set Implicit Arguments.
 
@@ -199,7 +199,9 @@ Inductive operation : Type :=
   | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
   | Oextfz (stop : Z) (start : Z)
-  | Oextfs (stop : Z) (start : Z).
+  | Oextfs (stop : Z) (start : Z)
+  | Oextfzl (stop : Z) (start : Z)
+  | Oextfsl (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -500,8 +502,10 @@ Definition eval_operation
   | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
   | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
   | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
-  | (Oextfz stop start), v0::nil => Some (Val.extfz stop start v0)
-  | (Oextfs stop start), v0::nil => Some (Val.extfs stop start v0)
+  | (Oextfz stop start), v0::nil => Some (extfz stop start v0)
+  | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
+  | (Oextfzl stop start), v0::nil => Some (extfzl stop start v0)
+  | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
   | _, _ => None
   end.
 
@@ -696,6 +700,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
   | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
   | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
+  | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
   end.
 
 Definition type_of_addressing (addr: addressing) : list typ :=
@@ -969,13 +974,23 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (_ && _); simpl; trivial.
       destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
-  - unfold Val.extfz.
-    destruct (_ && _ && _).
+  - unfold extfz.
+    destruct (is_bitfield _ _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfs *)
-  - unfold Val.extfs.
-    destruct (_ && _ && _).
+  - unfold extfs.
+    destruct (is_bitfield _ _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfzl *)
+  - unfold extfzl.
+    destruct (is_bitfieldl _ _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfsl *)
+  - unfold extfsl.
+    destruct (is_bitfieldl _ _).
     + destruct v0; simpl; trivial.
     + constructor.
 Qed.
@@ -1589,14 +1604,26 @@ Proof.
     * rewrite Hcond'. constructor.
 
  (* extfz *)
-  - unfold Val.extfz.
-    destruct (_ && _ && _).
+  - unfold extfz.
+    destruct (is_bitfield _ _).
     + inv H4; trivial.
     + trivial.
 
  (* extfs *)
-  - unfold Val.extfs.
-    destruct (_ && _ && _).
+  - unfold extfs.
+    destruct (is_bitfield _ _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfzl *)
+  - unfold extfzl.
+    destruct (is_bitfieldl _ _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfsl *)
+  - unfold extfsl.
+    destruct (is_bitfieldl _ _).
     + inv H4; trivial.
     + trivial.
 Qed.
