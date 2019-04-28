@@ -488,7 +488,7 @@ let ab_inst_to_real = function
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
   | "Pextfs" | "Pextfsl" | "Psxwd" -> Extfs
-  | "Insf" | "Insfl" -> Insf
+  | "Pinsf" | "Pinsfl" -> Insf
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
