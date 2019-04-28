@@ -342,10 +342,13 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       ((Eop (Oshlimm start) (fld:::Enil)):::Enil)) =>
       let zstart := Int.unsigned start in
       let zstop := int_highest_bit mask in
-      let mask' := Int.repr (zbitfield_mask zstop zstart) in
-      if and_dec (Int.eq_dec mask mask')
-                 (Int.eq_dec nmask (Int.not mask'))
-      then Eop Oor (e1:::e2:::Enil)
+      if is_bitfield zstop zstart
+      then
+        let mask' := Int.repr (zbitfield_mask zstop zstart) in
+          if and_dec (Int.eq_dec mask mask')
+                     (Int.eq_dec nmask (Int.not mask'))
+          then Eop Oor (e1:::e2:::Enil)
+          else Eop Oor (e1:::e2:::Enil)
       else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.

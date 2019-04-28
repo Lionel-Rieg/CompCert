@@ -701,7 +701,9 @@ Proof.
       rewrite Int.or_commut.
       rewrite Int.or_zero.
       reflexivity.
-  - destruct (and_dec _ _); apply DEFAULT.
+  - destruct (is_bitfield _ _).
+    + destruct (and_dec _ _); apply DEFAULT.
+    + apply DEFAULT.
   - apply DEFAULT.
 Qed.
 
