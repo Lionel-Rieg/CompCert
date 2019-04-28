@@ -701,6 +701,7 @@ Proof.
       rewrite Int.or_zero.
       reflexivity.
   - apply DEFAULT.
+  - apply DEFAULT.
 Qed.
 
 Theorem eval_xorimm:

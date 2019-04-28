@@ -336,6 +336,10 @@ Nondetfunction or (e1: expr) (e2: expr) :=
      && Int.eq zero1 Int.zero                 
      then select_base v0 v1 y0
      else Eop Oor (e1:::e2:::Enil)
+  | (Eop (Oandimm nmask) (prev:::Enil)),
+    (Eop (Oandimm mask)
+      ((Eop (Oshlimm start) (fld:::Enil)):::Enil)) =>
+      Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)
   end.
 
