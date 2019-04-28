@@ -52,6 +52,7 @@ Require Import Op.
 Require Import CminorSel.
 Require Import OpHelpers.
 Require Import ExtValues.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 
@@ -342,7 +343,8 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       let zstart := Int.unsigned start in
       let zstop := int_highest_bit mask in
       let mask' := Int.repr (zbitfield_mask zstop zstart) in
-      if Int.eq_dec mask mask'
+      if and_dec (Int.eq_dec mask mask')
+                 (Int.eq_dec nmask (Int.not mask'))
       then Eop Oor (e1:::e2:::Enil)
       else Eop Oor (e1:::e2:::Enil)
   | _, _ => Eop Oor (e1:::e2:::Enil)

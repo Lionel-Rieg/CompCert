@@ -33,6 +33,7 @@ Require Import SelectOp.
 Require Import Events.
 Require Import OpHelpers.
 Require Import OpHelpersproof.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -700,7 +701,7 @@ Proof.
       rewrite Int.or_commut.
       rewrite Int.or_zero.
       reflexivity.
-  - destruct (Int.eq_dec _ _); apply DEFAULT.
+  - destruct (and_dec _ _); apply DEFAULT.
   - apply DEFAULT.
 Qed.
 
