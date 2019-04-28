@@ -604,3 +604,7 @@ Definition divfs_base (e1: expr) (e2: expr) :=
   (* Eop Odivf (e1 ::: e2 ::: Enil). *)
   Eexternal f32_div sig_ss_s (e1 ::: e2 ::: Enil).
 End SELECT.
+
+(* Local Variables: *)
+(* mode: coq *)
+(* End: *)
