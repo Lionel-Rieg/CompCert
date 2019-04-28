@@ -700,7 +700,7 @@ Proof.
       rewrite Int.or_commut.
       rewrite Int.or_zero.
       reflexivity.
-  - apply DEFAULT.
+  - destruct (Int.eq_dec _ _); apply DEFAULT.
   - apply DEFAULT.
 Qed.
 
