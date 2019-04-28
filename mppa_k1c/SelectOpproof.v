@@ -701,8 +701,26 @@ Proof.
       rewrite Int.or_commut.
       rewrite Int.or_zero.
       reflexivity.
-  - destruct (is_bitfield _ _).
-    + destruct (and_dec _ _); apply DEFAULT.
+  - set (zstop := (int_highest_bit mask)).
+    set (zstart := (Int.unsigned start)).
+    destruct (is_bitfield _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * simpl in H6.
+        injection H6.
+        clear H6.
+        intro. subst y. subst x.
+        TrivialExists. simpl. f_equal.
+        unfold insf.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        rewrite Rnmask.
+        simpl.
+        unfold bitfield_mask.
+        subst v0.
+        subst zstart.
+        rewrite Int.repr_unsigned.
+        reflexivity.
+      * apply DEFAULT.
     + apply DEFAULT.
   - apply DEFAULT.
 Qed.
