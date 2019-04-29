@@ -1593,31 +1593,16 @@ Opaque Int.eq.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A. 
   apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Oshrximm *)
-  clear H. exploit Val.shrx_shr_2; eauto. intros E; subst v; clear EV.
-  destruct (Int.eq n Int.zero).
-+ econstructor; split. apply exec_straight_one. simpl; eauto.
-  split; intros; Simpl. 
-+ change (Int.repr 32) with Int.iwordsize. set (n' := Int.sub Int.iwordsize n).
   econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity.
-  eapply exec_straight_step. simpl; reflexivity.
-  eapply exec_straight_step. simpl; reflexivity.
-  apply exec_straight_one. simpl; reflexivity.
-  split; intros; Simpl.
-(* - (* Ocast32signed *)
-  exploit cast32signed_correct; eauto. intros (rs' & A & B & C).
-  exists rs'; split; eauto. split. apply B.
-  intros. assert (r <> PC). { destruct r; auto; contradict H; discriminate. }
-  apply C; auto.
- *)(* - (* longofintu *)
-  econstructor; split.
-  eapply exec_straight_three. simpl; eauto. simpl; eauto. simpl; eauto.
-  split; intros; Simpl. (* unfold Pregmap.set; Simpl. *) destruct (PregEq.eq x0 x0).
-  + destruct (rs x0); auto. simpl. 
-    assert (A: Int.ltu (Int.repr 32) Int64.iwordsize' = true) by auto.
-    rewrite A; simpl. rewrite A. apply Val.lessdef_same. f_equal.
-    rewrite cast32unsigned_from_cast32signed. apply Int64.zero_ext_shru_shl. compute; auto.
-  + contradict n. auto. *)
+  + apply exec_straight_one. simpl. eauto.
+  + split.
+    * rewrite Pregmap.gss.
+      subst v.
+      destruct (rs x0); simpl; trivial.
+      unfold Val.maketotal.
+      destruct (Int.ltu _ _); simpl; trivial.
+    * intros.
+      rewrite Pregmap.gso; trivial.
 - (* Oshrxlimm *)
   clear H. exploit Val.shrxl_shrl_2; eauto. intros E; subst v; clear EV.
   destruct (Int.eq n Int.zero).

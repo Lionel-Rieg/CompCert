@@ -519,11 +519,7 @@ Definition transl_op
       OK (Psrliw rd rs n ::i k)
   | Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs ::i k else
-          Psraiw RTMP rs (Int.repr 31) ::i
-          Psrliw RTMP RTMP (Int.sub Int.iwordsize n) ::i
-          Paddw RTMP rs RTMP ::i
-          Psraiw rd RTMP n ::i k)
+      OK (Psrxiw rd rs n ::i k)
   | Ororimm n, a1 :: nil =>
     do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Proriw rd rs n ::i k)
