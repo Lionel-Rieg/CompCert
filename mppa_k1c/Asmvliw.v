@@ -322,9 +322,7 @@ Inductive arith_name_rr : Type :=
   | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
   | Pfloatuwrnsz                                    (**r Floating Point conversion from integer (unsigned int -> SINGLE) *)
   | Pfloatudrnsz                                    (**r Floating Point Conversion from integer (unsigned long -> float) *)
-  | Pfloatudrnsz_i32                                (**r Floating Point Conversion from integer (unsigned int -> float) *)
   | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (long -> float) *)
-  | Pfloatdrnsz_i32                                 (**r Floating Point Conversion from integer (int -> float) *)
   | Pfixedwrzz                                      (**r Integer conversion from floating point (single -> int) *)
   | Pfixeduwrzz                                     (**r Integer conversion from floating point (single -> unsigned int) *)
   | Pfixeddrzz                                      (**r Integer conversion from floating point (float -> long) *)
@@ -909,8 +907,6 @@ Definition arith_eval_rr n v :=
   | Pfloatuwrnsz => match Val.singleofintu v with Some f => f | _ => Vundef end
   | Pfloatudrnsz => match Val.floatoflongu v with Some f => f | _ => Vundef end
   | Pfloatdrnsz => match Val.floatoflong v with Some f => f | _ => Vundef end
-  | Pfloatudrnsz_i32 => match Val.floatofintu v with Some f => f | _ => Vundef end
-  | Pfloatdrnsz_i32 => match Val.floatofint v with Some f => f | _ => Vundef end
   | Pfixedwrzz => match Val.intofsingle v with Some i => i | _ => Vundef end
   | Pfixeduwrzz => match Val.intuofsingle v with Some i => i | _ => Vundef end
   | Pfixeddrzz => match Val.longoffloat v with Some i => i | _ => Vundef end

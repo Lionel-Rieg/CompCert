@@ -401,12 +401,8 @@ module Target (*: TARGET*) =
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatudrnsz(rd, rs) ->
          fprintf oc "	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatudrnsz_i32(rd, rs) ->
-         fprintf oc "	zxwd %a = %a\n # FIXME\n	;;\n	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs ireg rd ireg rd
       | Pfloatdrnsz(rd, rs) ->
           fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatdrnsz_i32(rd, rs) ->
-         fprintf oc "	sxwd %a = %a\n # FIXME\n	;;\n	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs ireg rd ireg rd
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
       | Pfixeduwrzz(rd, rs) ->

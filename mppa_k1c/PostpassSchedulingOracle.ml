@@ -46,10 +46,8 @@ let arith_rr_str = function
   | Pfwidenlwd -> "Pfwidenlwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
   | Pfloatuwrnsz -> "Pfloatuwrnsz"
-  | Pfloatudrnsz_i32 -> "Pfloatudrnsz_i32"
   | Pfloatudrnsz -> "Pfloatudrnsz"
   | Pfloatdrnsz -> "Pfloatdrnsz"
-  | Pfloatdrnsz_i32 -> "Pfloatdrnsz_i32"
   | Pfixedwrzz -> "Pfixedwrzz"
   | Pfixeduwrzz -> "Pfixeduwrzz"
   | Pfixeddrzz -> "Pfixeddrzz"
@@ -500,9 +498,7 @@ let ab_inst_to_real = function
   | "Pfloatwrnsz" -> Floatwz
   | "Pfloatuwrnsz" -> Floatuwz
   | "Pfloatdrnsz" -> Floatdz
-  | "Pfloatdrnsz_i32" -> Floatdz
   | "Pfloatudrnsz" -> Floatudz
-  | "Pfloatudrnsz_i32" -> Floatudz
   | "Pfixedwrzz" -> Fixedwz
   | "Pfixeduwrzz" -> Fixeduwz
   | "Pfixeddrzz" -> Fixeddz

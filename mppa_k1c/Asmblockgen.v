@@ -696,12 +696,6 @@ Definition transl_op
   | Ofloatoflongu, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatudrnsz rd rs ::i k)
-  | Ofloatofint, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfloatdrnsz_i32 rd rs ::i k)
-  | Ofloatofintu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfloatudrnsz_i32 rd rs ::i k)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)

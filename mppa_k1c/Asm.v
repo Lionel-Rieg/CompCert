@@ -149,9 +149,7 @@ Inductive instruction : Type :=
   | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 -> 32) *)
   | Pfloatuwrnsz (rd rs: ireg)                      (**r Floating Point Conversion from integer (u32 -> 32) *)
   | Pfloatudrnsz (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (64 bits) *)
-  | Pfloatudrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (32 bits) *)
   | Pfloatdrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (64 bits) *)
-  | Pfloatdrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 bits) *)
   | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
   | Pfixeduwrzz (rd rs: ireg)                        (**r Integer conversion from floating point (f32 -> 32 bits unsigned *)
   | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (i64 -> 64 bits) *)
@@ -309,8 +307,6 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
   | PArithRR Asmvliw.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
   | PArithRR Asmvliw.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
-  | PArithRR Asmvliw.Pfloatudrnsz_i32 rd rs => Pfloatudrnsz_i32 rd rs
-  | PArithRR Asmvliw.Pfloatdrnsz_i32 rd rs => Pfloatdrnsz_i32 rd rs
   | PArithRR Asmvliw.Pfixedwrzz rd rs => Pfixedwrzz rd rs
   | PArithRR Asmvliw.Pfixeduwrzz rd rs => Pfixeduwrzz rd rs
   | PArithRR Asmvliw.Pfixeddrzz rd rs => Pfixeddrzz rd rs
