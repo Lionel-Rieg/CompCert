@@ -558,7 +558,7 @@ Definition intuoffloat (e: expr) := Eop Ointuoffloat (e ::: Enil).
 Nondetfunction floatofintu (e: expr) :=
   match e with
   | Eop (Ointconst n) Enil => Eop (Ofloatconst (Float.of_intu n)) Enil
-  | _ => Eop Ofloatofintu (e ::: Enil)
+  | _ => Eop Ofloatoflongu ((Eop Ocast32unsigned (e ::: Enil)) ::: Enil)
   end.
 
 Nondetfunction floatofint (e: expr) :=
