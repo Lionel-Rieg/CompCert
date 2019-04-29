@@ -367,6 +367,7 @@ Inductive arith_name_rrr : Type :=
   | Pandnw                                          (**r andn word *)
   | Pornw                                           (**r orn word *)
   | Psraw                                           (**r shift right arithmetic word *)
+  | Psrxw                                           (**r shift right arithmetic word round to 0*)
   | Psrlw                                           (**r shift right logical word *)
   | Psllw                                           (**r shift left logical word *)
 
@@ -383,6 +384,7 @@ Inductive arith_name_rrr : Type :=
   | Pmull                                           (**r mul long (low part) *)
   | Pslll                                           (**r shift left logical long *)
   | Psrll                                           (**r shift right logical long *)
+  | Psrxl                                           (**r shift right logical long round to 0*)
   | Psral                                           (**r shift right arithmetic long *)
 
   | Pfaddd                                          (**r float add double *)
@@ -407,12 +409,14 @@ Inductive arith_name_rri32 : Type :=
   | Pandniw                                         (**r andn word *)
   | Porniw                                          (**r orn word *)
   | Psraiw                                          (**r shift right arithmetic imm word *)
+  | Psrxiw                                          (**r shift right arithmetic imm word round to 0*)
   | Psrliw                                          (**r shift right logical imm word *)
   | Pslliw                                          (**r shift left logical imm word *)
   | Proriw                                          (**r rotate right imm word *)
   | Psllil                                          (**r shift left logical immediate long *)
   | Psrlil                                          (**r shift right logical immediate long *)
   | Psrail                                          (**r shift right arithmetic immediate long *)
+  | Psrxil                                          (**r shift right arithmetic immediate long round to 0*)
 .
 
 Inductive arith_name_rri64 : Type :=
@@ -956,6 +960,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Psrlw  => Val.shru v1 v2
   | Psraw  => Val.shr  v1 v2
   | Psllw  => Val.shl  v1 v2
+  | Psrxw  => ExtValues.val_shrx  v1 v2
 
   | Paddl => Val.addl v1 v2
   | Psubl => Val.subl v1 v2
@@ -971,6 +976,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pslll => Val.shll v1 v2
   | Psrll => Val.shrlu v1 v2
   | Psral => Val.shrl v1 v2
+  | Psrxl  => ExtValues.val_shrxl v1 v2
 
   | Pfaddd => Val.addf v1 v2
   | Pfaddw => Val.addfs v1 v2
@@ -994,10 +1000,12 @@ Definition arith_eval_rri32 n v i :=
   | Pandniw => Val.and (Val.notint v) (Vint i)
   | Porniw  => Val.or (Val.notint v) (Vint i)
   | Psraiw  => Val.shr   v (Vint i)
+  | Psrxiw  => ExtValues.val_shrx v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)
   | Pslliw  => Val.shl   v (Vint i)
   | Proriw  => Val.ror   v (Vint i)
   | Psllil  => Val.shll  v (Vint i)
+  | Psrxil  => ExtValues.val_shrxl v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
   end.

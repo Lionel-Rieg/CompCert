@@ -99,3 +99,21 @@ Definition int_highest_bit (x : int) : Z :=
 
 Definition int64_highest_bit (x : int64) : Z :=
   highest_bit (Int64.unsigned x) (63%nat).
+
+Definition val_shrx (v1 v2: val): val :=
+  match v1, v2 with
+  | Vint n1, Vint n2 =>
+     if Int.ltu n2 (Int.repr 31)
+     then Vint(Int.shrx n1 n2)
+     else Vundef
+  | _, _ => Vundef
+  end.
+
+Definition val_shrxl (v1 v2: val): val :=
+  match v1, v2 with
+  | Vlong n1, Vint n2 =>
+     if Int.ltu n2 (Int.repr 63)
+     then Vlong(Int64.shrx' n1 n2)
+     else Vundef
+  | _, _ => Vundef
+  end.

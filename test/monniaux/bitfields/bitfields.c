@@ -4,7 +4,17 @@ struct fields {
   unsigned f0 : 3;
   unsigned f1 : 5;
   signed f2 : 3;
+  unsigned toto1: 16;
+  unsigned toto2: 16;
 };
+
+unsigned get_toto1(struct fields x) {
+  return x.toto1;
+}
+
+unsigned get_toto2(struct fields x) {
+  return x.toto2;
+}
 
 int get_f1(struct fields x) {
   return x.f1;

@@ -189,6 +189,7 @@ Inductive instruction : Type :=
   | Pandnw              (rd rs1 rs2: ireg)          (**r andn word *)
   | Pornw               (rd rs1 rs2: ireg)          (**r orn word *)
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
+  | Psrxw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word round to 0*)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
   | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
@@ -207,6 +208,7 @@ Inductive instruction : Type :=
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
+  | Psrxl               (rd rs1 rs2: ireg)          (**r shift right arithmetic long round to 0*)
   | Pmaddl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
 
   | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
@@ -230,11 +232,13 @@ Inductive instruction : Type :=
   | Pandniw             (rd rs: ireg) (imm: int)    (**r andn imm word *)
   | Porniw              (rd rs: ireg) (imm: int)    (**r orn imm word *)
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
+  | Psrxiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word round to 0*)
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
   | Proriw              (rd rs: ireg) (imm: int)    (**r rotate right imm word *) 
   | Pmaddiw             (rd rs: ireg) (imm: int)    (**r multiply add imm word *)
   | Psllil              (rd rs: ireg) (imm: int)    (**r shift left logical immediate long *)
+  | Psrxil              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word round to 0*)
   | Psrlil              (rd rs: ireg) (imm: int)    (**r shift right logical immediate long *)
   | Psrail              (rd rs: ireg) (imm: int)    (**r shift right arithmetic immediate long *)
 
@@ -343,6 +347,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pandnw rd rs1 rs2      => Pandnw rd rs1 rs2
   | PArithRRR Asmvliw.Pornw rd rs1 rs2       => Pornw rd rs1 rs2
   | PArithRRR Asmvliw.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
+  | PArithRRR Asmvliw.Psrxw rd rs1 rs2       => Psrxw rd rs1 rs2
   | PArithRRR Asmvliw.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
   | PArithRRR Asmvliw.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
 
@@ -360,6 +365,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
   | PArithRRR Asmvliw.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
   | PArithRRR Asmvliw.Psral rd rs1 rs2       => Psral rd rs1 rs2
+  | PArithRRR Asmvliw.Psrxl rd rs1 rs2       => Psrxl rd rs1 rs2
 
   | PArithRRR Asmvliw.Pfaddd rd rs1 rs2      => Pfaddd rd rs1 rs2
   | PArithRRR Asmvliw.Pfaddw rd rs1 rs2      => Pfaddw rd rs1 rs2
@@ -381,11 +387,13 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 Asmvliw.Pandniw rd rs imm      => Pandniw rd rs imm
   | PArithRRI32 Asmvliw.Porniw rd rs imm       => Porniw rd rs imm
   | PArithRRI32 Asmvliw.Psraiw rd rs imm       => Psraiw rd rs imm
+  | PArithRRI32 Asmvliw.Psrxiw rd rs imm       => Psrxiw rd rs imm
   | PArithRRI32 Asmvliw.Psrliw rd rs imm       => Psrliw rd rs imm
   | PArithRRI32 Asmvliw.Pslliw rd rs imm       => Pslliw rd rs imm
   | PArithRRI32 Asmvliw.Proriw rd rs imm       => Proriw rd rs imm
   | PArithRRI32 Asmvliw.Psllil rd rs imm       => Psllil rd rs imm
   | PArithRRI32 Asmvliw.Psrlil rd rs imm       => Psrlil rd rs imm
+  | PArithRRI32 Asmvliw.Psrxil rd rs imm       => Psrxil rd rs imm
   | PArithRRI32 Asmvliw.Psrail rd rs imm       => Psrail rd rs imm
 
   (* RRI64 *)

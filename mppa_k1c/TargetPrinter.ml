@@ -471,6 +471,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psraw (rd, rs1, rs2) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Psrxw (rd, rs1, rs2) ->
+         fprintf oc "	srsw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrlw (rd, rs1, rs2) ->
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psllw (rd, rs1, rs2) ->
@@ -504,6 +506,8 @@ module Target (*: TARGET*) =
          fprintf oc "	slld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrll  (rd, rs1, rs2) ->
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Psrxl  (rd, rs1, rs2) ->
+         fprintf oc "	srsd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psral   (rd, rs1, rs2) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddl (rd, rs1, rs2) ->
@@ -547,6 +551,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psraiw (rd, rs, imm) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Psrxiw (rd, rs, imm) ->
+         fprintf oc "	srsw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psrliw (rd, rs, imm) ->
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pslliw (rd, rs, imm) ->
@@ -562,6 +568,8 @@ module Target (*: TARGET*) =
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrail (rd, rs, imm) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Psrxil (rd, rs, imm) ->
+         fprintf oc "	srsd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     (* Arith RRI64 instructions *)
       | Pcompil (it, rd, rs, imm) ->

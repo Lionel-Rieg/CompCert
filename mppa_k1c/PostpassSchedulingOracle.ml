@@ -75,6 +75,7 @@ let arith_rrr_str = function
   | Pornw -> "Pornw"
   | Psraw -> "Psraw"
   | Psrlw -> "Psrlw"
+  | Psrxw -> "Psrxw"
   | Psllw -> "Psllw"
   | Paddl -> "Paddl"
   | Psubl -> "Psubl"
@@ -89,6 +90,7 @@ let arith_rrr_str = function
   | Pmull -> "Pmull"
   | Pslll -> "Pslll"
   | Psrll -> "Psrll"
+  | Psrxl -> "Psrxl"
   | Psral -> "Psral"
   | Pfaddd -> "Pfaddd"
   | Pfaddw -> "Pfaddw"
@@ -110,12 +112,14 @@ let arith_rri32_str = function
   | Pandniw -> "Pandniw"
   | Porniw -> "Porniw"
   | Psraiw -> "Psraiw"
+  | Psrxiw -> "Psrxiw"
   | Psrliw -> "Psrliw"
   | Pslliw -> "Pslliw"
   | Proriw -> "Proriw"
   | Psllil -> "Psllil"
   | Psrlil -> "Psrlil"
   | Psrail -> "Psrail"
+  | Psrxil -> "Psrxil"
 
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
@@ -432,8 +436,8 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 type real_instruction = 
   (* ALU *) 
-  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
-  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
+  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
+  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Srsd | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Maddw | Maddd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
@@ -580,7 +584,7 @@ let rec_to_usage r =
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Srsw | Sllw | Srad | Srld | Slld | Srsd -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
@@ -601,11 +605,11 @@ let rec_to_usage r =
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
-  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srsw | Srlw | Sllw | Xorw
     (* TODO check rorw *)
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
-  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
+  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srsd | Srld | Slld | Xord | Make
   | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
