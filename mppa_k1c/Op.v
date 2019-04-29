@@ -178,8 +178,6 @@ Inductive operation : Type :=
 (*c Conversions between int and float: *)
   | Ointoffloat              (**r [rd = signed_int_of_float64(r1)] *)
   | Ointuoffloat             (**r [rd = unsigned_int_of_float64(r1)] *)
-  | Ofloatofint              (**r [rd = float64_of_signed_int(r1)] *)
-  | Ofloatofintu             (**r [rd = float64_of_unsigned_int(r1)] *)
   | Ointofsingle             (**r [rd = signed_int_of_float32(r1)] *)
   | Ointuofsingle            (**r [rd = unsigned_int_of_float32(r1)] *)
   | Osingleofint             (**r [rd = float32_of_signed_int(r1)] *)
@@ -485,8 +483,6 @@ Definition eval_operation
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
   | Ointoffloat, v1::nil => Val.intoffloat v1
   | Ointuoffloat, v1::nil => Val.intuoffloat v1
-  | Ofloatofint, v1::nil => Val.floatofint v1
-  | Ofloatofintu, v1::nil => Val.floatofintu v1
   | Ointofsingle, v1::nil => Val.intofsingle v1
   | Ointuofsingle, v1::nil => Val.intuofsingle v1
   | Osingleofint, v1::nil => Val.singleofint v1
@@ -683,8 +679,6 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ofloatofsingle => (Tsingle :: nil, Tfloat)
   | Ointoffloat => (Tfloat :: nil, Tint)
   | Ointuoffloat => (Tfloat :: nil, Tint)
-  | Ofloatofint => (Tint :: nil, Tfloat)
-  | Ofloatofintu => (Tint :: nil, Tfloat)
   | Ointofsingle => (Tsingle :: nil, Tint)
   | Ointuofsingle => (Tsingle :: nil, Tint)
   | Osingleofint => (Tint :: nil, Tsingle)
@@ -919,9 +913,6 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* intoffloat, intuoffloat *)
   - destruct v0; simpl in H0; inv H0. destruct (Float.to_int f); inv H2...
   - destruct v0; simpl in H0; inv H0. destruct (Float.to_intu f); inv H2...
-  (* floatofint, floatofintu *)
-  - destruct v0; simpl in H0; inv H0...
-  - destruct v0; simpl in H0; inv H0...
   (* intofsingle, intuofsingle *)
   - destruct v0; simpl in H0; inv H0. destruct (Float32.to_int f); inv H2...
   - destruct v0; simpl in H0; inv H0. destruct (Float32.to_intu f); inv H2...
@@ -1532,9 +1523,6 @@ Proof.
     exists (Vint i); auto.
   - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_intu f0); simpl in H2; inv H2.
     exists (Vint i); auto.
-  (* floatofint, floatofintu *)
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
   (* intofsingle, intuofsingle *)
   - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_int f0); simpl in H2; inv H2.
     exists (Vint i); auto.
