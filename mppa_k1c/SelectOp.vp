@@ -564,7 +564,7 @@ Nondetfunction floatofintu (e: expr) :=
 Nondetfunction floatofint (e: expr) :=
   match e with
   | Eop (Ointconst n) Enil => Eop (Ofloatconst (Float.of_int n)) Enil
-  | _ => Eop Ofloatofint (e ::: Enil)
+  | _ => Eop Ofloatoflong ((Eop Ocast32signed (e ::: Enil)) ::: Enil)
   end.
 
 Definition intofsingle (e: expr) := Eop Ointofsingle (e ::: Enil).

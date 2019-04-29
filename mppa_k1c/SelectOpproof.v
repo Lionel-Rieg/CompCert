@@ -1180,9 +1180,22 @@ Theorem eval_floatofint:
   Val.floatofint x = Some y ->
   exists v, eval_expr ge sp e m le (floatofint a) v /\ Val.lessdef y v.
 Proof.
-  intros until y; unfold floatofint. case (floatofint_match a); intros.
-  InvEval. simpl in H0. TrivialExists.
-  TrivialExists.
+  intros.
+  unfold floatofint.
+  destruct (floatofint_match a).
+  - InvEval.
+    TrivialExists.
+  - InvEval.
+    TrivialExists.
+    constructor. econstructor. constructor. eassumption. constructor.
+    simpl. f_equal. constructor.
+    simpl.
+    destruct x; simpl; trivial.
+    f_equal.
+    inv H0.
+    f_equal.
+    rewrite Float.of_int_of_long.
+    reflexivity.
 Qed.
 
 Theorem eval_intofsingle:
