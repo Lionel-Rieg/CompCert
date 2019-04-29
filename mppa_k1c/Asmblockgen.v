@@ -641,11 +641,7 @@ Definition transl_op
       OK (Psrlil rd rs n ::i k)
   | Oshrxlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs ::i k else
-          Psrail RTMP rs (Int.repr 63) ::i
-          Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
-          Paddl RTMP rs RTMP ::i
-          Psrail rd RTMP n ::i k)
+      OK (Psrxil rd rs n ::i k)
   | Omaddl, a1 :: a2 :: a3 :: nil =>
     assertion (mreg_eq a1 res);
       do r1 <- ireg_of a1;

@@ -1604,18 +1604,16 @@ Opaque Int.eq.
     * intros.
       rewrite Pregmap.gso; trivial.
 - (* Oshrxlimm *)
-  clear H. exploit Val.shrxl_shrl_2; eauto. intros E; subst v; clear EV.
-  destruct (Int.eq n Int.zero).
-+ econstructor; split. apply exec_straight_one. simpl; eauto.
-  split; intros; Simpl. 
-+ change (Int.repr 64) with Int64.iwordsize'. set (n' := Int.sub Int64.iwordsize' n).
   econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity.
-  eapply exec_straight_step. simpl; reflexivity.
-  eapply exec_straight_step. simpl; reflexivity.
-  apply exec_straight_one. simpl; reflexivity.
-
-  split; intros; Simpl.
+  + apply exec_straight_one. simpl. eauto.
+  + split.
+    * rewrite Pregmap.gss.
+      subst v.
+      destruct (rs x0); simpl; trivial.
+      unfold Val.maketotal.
+      destruct (Int.ltu _ _); simpl; trivial.
+    * intros.
+      rewrite Pregmap.gso; trivial.
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
