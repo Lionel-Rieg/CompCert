@@ -264,6 +264,10 @@ let num_input_files = ref 0
 let cmdline_actions =
   let f_opt name ref =
     [Exact("-f" ^ name), Set ref; Exact("-fno-" ^ name), Unset ref] in
+  let f_opt_postpass name ref =
+    [Exact("-f" ^ name), String 
+      (fun s -> (option_fpostpass_sched := (if s == "" then "list" else s)); ref := true);
+     Exact("-fno-" ^ name), Unset ref] in
   [
 (* Getting help *)
   Exact "-help", Unit print_usage_and_exit;
@@ -363,8 +367,7 @@ let cmdline_actions =
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
-  @ f_opt "postpass" option_fpostpass
-  @ f_opt "postpass-ilp" option_fpostpass_ilp
+  @ f_opt_postpass "postpass" option_fpostpass
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
 (* Code generation options *)
