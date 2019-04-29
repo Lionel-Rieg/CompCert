@@ -24,6 +24,7 @@ Require Import Op CminorSel.
 Require Import OpHelpers.
 Require Import SelectOp SplitLong.
 Require Import ExtValues.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -311,6 +312,31 @@ Nondetfunction orl (e1: expr) (e2: expr) :=
      && Int64.eq zero1 Int64.zero                 
      then Eop (Oselectl (Ccompl0 Cne)) (v0:::v1:::y0:::Enil)
      else Eop Oorl (e1:::e2:::Enil)
+  | (Eop (Oandlimm nmask) (prev:::Enil)),
+    (Eop (Oandlimm mask)
+      ((Eop (Oshllimm start) (fld:::Enil)):::Enil)) =>
+      let zstart := Int.unsigned start in
+      let zstop := int64_highest_bit mask in
+      if is_bitfieldl zstop zstart
+      then
+        let mask' := Int64.repr (zbitfield_mask zstop zstart) in
+          if and_dec (Int64.eq_dec mask mask')
+                     (Int64.eq_dec nmask (Int64.not mask'))
+          then Eop (Oinsfl zstop zstart) (prev:::fld:::Enil)
+          else Eop Oorl (e1:::e2:::Enil)
+      else Eop Oorl (e1:::e2:::Enil)
+  | (Eop (Oandlimm nmask) (prev:::Enil)),
+    (Eop (Oandlimm mask) (fld:::Enil)) =>
+      let zstart := 0 in
+      let zstop := int64_highest_bit mask in
+      if is_bitfieldl zstop zstart
+      then
+        let mask' := Int64.repr (zbitfield_mask zstop zstart) in
+          if and_dec (Int64.eq_dec mask mask')
+                     (Int64.eq_dec nmask (Int64.not mask'))
+          then Eop (Oinsfl zstop zstart) (prev:::fld:::Enil)
+          else Eop Oorl (e1:::e2:::Enil)
+      else Eop Oorl (e1:::e2:::Enil)
   | _, _ => Eop Oorl (e1:::e2:::Enil)
   end.
 
@@ -421,3 +447,7 @@ Definition singleoflong (e: expr) := SplitLong.singleoflong e.
 Definition singleoflongu (e: expr) := SplitLong.singleoflongu e.
 
 End SELECT.
+
+(* Local Variables: *)
+(* mode: coq *)
+(* End: *)
