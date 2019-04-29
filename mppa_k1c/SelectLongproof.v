@@ -24,6 +24,7 @@ Require Import Cminor Op CminorSel.
 Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof.
 Require Import SelectLong.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -588,6 +589,61 @@ Proof.
       rewrite Int64.and_zero.
       rewrite Int64.or_zero.
       reflexivity.
+
+  - (*insfl first case*)
+    destruct (is_bitfieldl _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * rewrite Rnmask in *.
+        inv H. inv H0. inv H4. inv H3. inv H9. inv H8.
+        simpl in H6, H7.
+        inv H6. inv H7.
+        inv H4. inv H3. inv H7.
+        simpl in H6.
+        inv H6.
+        set (zstop := (int64_highest_bit mask)) in *.
+        set (zstart := (Int.unsigned start)) in *.
+        
+        TrivialExists.
+        simpl. f_equal.
+        
+        unfold insfl.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        simpl.
+        unfold bitfield_maskl.
+        subst zstart.
+        rewrite Int.repr_unsigned.
+        reflexivity.
+      * TrivialExists.
+    + TrivialExists.
+  - destruct (is_bitfieldl _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * rewrite Rnmask in *.
+        inv H. inv H0. inv H4. inv H6. inv H8. inv H3. inv H8.
+        inv H0. simpl in H7. inv H7.
+        set (zstop := (int64_highest_bit mask)) in *.
+        set (zstart := 0) in *.
+    
+        TrivialExists. simpl. f_equal.
+        unfold insfl.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        simpl.
+        subst zstart.
+        f_equal.
+        destruct v0; simpl; trivial.
+        unfold Int.ltu, Int64.iwordsize', Int64.zwordsize, Int64.wordsize.
+        rewrite Int.unsigned_repr.
+        ** rewrite Int.unsigned_repr.
+           *** simpl.
+               rewrite Int64.shl'_zero.
+               reflexivity.
+           *** simpl. unfold Int.max_unsigned. unfold Int.modulus.
+               simpl. omega.
+        ** unfold Int.max_unsigned. unfold Int.modulus.
+               simpl. omega.
+      * TrivialExists.
+    + TrivialExists.
 - TrivialExists.
 Qed.
 
