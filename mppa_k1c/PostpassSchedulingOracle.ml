@@ -473,6 +473,8 @@ let ab_inst_to_real = function
   | "Psubl" | "Pnegl" -> Sbfd
   | "Psraw" | "Psraiw" -> Sraw
   | "Psral" | "Psrail" -> Srad
+  | "Psrxw" | "Psrxiw" -> Srsw
+  | "Psrxl" | "Psrxil" -> Srsd
   | "Psrlw" | "Psrliw" -> Srlw
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
