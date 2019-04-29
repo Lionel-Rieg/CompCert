@@ -756,10 +756,11 @@ let print_bb oc bb =
 
 let do_schedule bb =
   let problem = build_problem bb
-  in let solution = validated_scheduler
+  (* in let solution = validated_scheduler
                       (if !Clflags.option_fpostpass_ilp
                        then cascaded_scheduler
-                       else dumb_scheduler) problem
+                       else dumb_scheduler) problem *)
+  in let solution = dumb_scheduler problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> let bundles = bundlize_solution bb sol in 

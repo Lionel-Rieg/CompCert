@@ -332,6 +332,8 @@ let dependency_check problem bundle index =
 
 let rec make_bundle problem resources bundle index =
   let resources_copy = Array.copy resources in
+  let nr_instructions = get_nr_instructions problem in
+  if (index >= nr_instructions) then (bundle, index+1) else
   let inst_usage = problem.instruction_usages.(index) in
   try match vector_less_equal inst_usage resources with
   | false -> raise InvalidBundle
@@ -351,7 +353,7 @@ let rec make_bundles problem index : bundle list =
 
 let bundles_to_schedule problem bundles : solution =
   let nr_instructions = get_nr_instructions problem in
-  let schedule = Array.make nr_instructions (-1) in
+  let schedule = Array.make (nr_instructions+1) (nr_instructions+4) in
   let time = ref 0 in
   List.iter (fun bundle ->
     begin
