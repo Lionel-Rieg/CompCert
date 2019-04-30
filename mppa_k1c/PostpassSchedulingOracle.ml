@@ -761,7 +761,7 @@ let do_schedule bb =
                     else if !Clflags.option_fpostpass_sched = "list" then
                       validated_scheduler list_scheduler
                     else if !Clflags.option_fpostpass_sched = "dumb" then
-                      dumb_scheduler else failwith "No scheduler provided") problem
+                      dumb_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
   (* in let solution = validated_scheduler
                       (if !Clflags.option_fpostpass_ilp
                        then cascaded_scheduler
