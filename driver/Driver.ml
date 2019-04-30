@@ -194,7 +194,8 @@ Processing options:
   -fcse          Perform common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
-  -fpostpass-ilp Use integer linear programming for postpass scheduling [off]
+  -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
+                   (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=dumb: just packing bundles)
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
@@ -264,6 +265,10 @@ let num_input_files = ref 0
 let cmdline_actions =
   let f_opt name ref =
     [Exact("-f" ^ name), Set ref; Exact("-fno-" ^ name), Unset ref] in
+  let f_opt_str name ref strref =
+    [Exact("-f" ^ name ^ "="), String 
+      (fun s -> (strref := (if s == "" then "list" else s)); ref := true)
+     ] in
   [
 (* Getting help *)
   Exact "-help", Unit print_usage_and_exit;
@@ -364,7 +369,7 @@ let cmdline_actions =
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
-  @ f_opt "postpass-ilp" option_fpostpass_ilp
+  @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
 (* Code generation options *)

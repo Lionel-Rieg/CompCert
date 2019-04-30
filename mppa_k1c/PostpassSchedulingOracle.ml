@@ -767,10 +767,17 @@ let print_bb oc bb =
 
 let do_schedule bb =
   let problem = build_problem bb
-  in let solution = validated_scheduler
+  in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
+                      validated_scheduler cascaded_scheduler
+                    else if !Clflags.option_fpostpass_sched = "list" then
+                      validated_scheduler list_scheduler
+                    else if !Clflags.option_fpostpass_sched = "dumb" then
+                      dumb_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
+  (* in let solution = validated_scheduler
                       (if !Clflags.option_fpostpass_ilp
                        then cascaded_scheduler
-                       else list_scheduler) problem
+                       else dumb_scheduler) problem *)
+  (* in let solution = dumb_scheduler problem *)
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> let bundles = bundlize_solution bb sol in 
