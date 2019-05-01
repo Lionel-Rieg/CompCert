@@ -705,9 +705,10 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
   end.
 
+(* FIXME: two Tptr ?! *)
 Definition type_of_addressing (addr: addressing) : list typ :=
   match addr with
-  | Aindexed2XS _ => Tptr :: Tptr :: Tptr :: nil
+  | Aindexed2XS _ => Tptr :: Tptr :: nil
   | Aindexed2 => Tptr :: Tptr :: nil
   | Aindexed _ => Tptr :: nil
   | Aglobal _ _ => nil
