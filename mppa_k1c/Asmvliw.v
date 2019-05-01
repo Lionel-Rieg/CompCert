@@ -270,6 +270,7 @@ Inductive load_name : Type :=
 Inductive ld_instruction : Type :=
   | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
   | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
 .
 
 Coercion PLoadRRO:       load_name        >-> Funclass.
@@ -1123,6 +1124,27 @@ Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
   | Some v => Next (rsw#d <- v) mw
   end.
 
+Definition scale_of_chunk (chunk: memory_chunk) :=
+  Vint (Int.repr
+  (match chunk with
+  | Mint8signed => 0
+  | Mint8unsigned => 0
+  | Mint16signed => 1
+  | Mint16unsigned => 1
+  | Mint32 => 2
+  | Mint64 => 3
+  | Mfloat32 => 2
+  | Mfloat64 => 3
+  | Many32 => 2
+  | Many64 => 3
+  end)).
+
+Definition parexec_load_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+  match Mem.loadv chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) with
+  | None => Stuck
+  | Some v => Next (rsw#d <- v) mw
+  end.
+
 Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
   | OK ptr => match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
@@ -1172,6 +1194,7 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
 
   | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
   | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
+  | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro

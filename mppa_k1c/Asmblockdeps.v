@@ -75,6 +75,7 @@ Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 Inductive load_op :=
   | OLoadRRO (n: load_name) (ofs: offset)
   | OLoadRRR (n: load_name)
+  | OLoadRRRXS (n: load_name)
 .
 
 Coercion OLoadRRO: load_name >-> Funclass.
@@ -146,10 +147,17 @@ Definition exec_load_deps_reg (chunk: memory_chunk) (m: mem) (v vo: val) :=
   | Some vl => Some (Val vl)
   end.
 
+Definition exec_load_deps_regxs (chunk: memory_chunk) (m: mem) (v vo: val) :=
+  match Mem.loadv chunk m (Val.addl v (Val.shll vo (scale_of_chunk chunk))) with
+  | None => None
+  | Some vl => Some (Val vl)
+  end.
+
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
   | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps_offset (load_chunk n) m v ofs
   | OLoadRRR n, [Val v; Val vo; Memstate m] => exec_load_deps_reg (load_chunk n) m v vo
+  | OLoadRRRXS n, [Val v; Val vo; Memstate m] => exec_load_deps_regxs (load_chunk n) m v vo
   | _, _ => None
   end.
 
@@ -355,12 +363,15 @@ Definition load_op_eq (o1 o2: load_op): ?? bool :=
      match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
   | OLoadRRR n1 =>
      match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRRXS n1 =>
+     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
+  - congruence.
   - congruence.
   - congruence.
 Qed.
@@ -612,6 +623,7 @@ Definition trans_basic (b: basic) : inst :=
   | PArith ai => trans_arith ai
   | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg (#a) @ PReg pmem @ Enil))]
   | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
@@ -824,6 +836,13 @@ Proof.
     (* Load Reg *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_reg; simpl; unfold exec_load_deps_reg; rewrite H, H0; rewrite (H0 rofs);
+      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
+
+    (* Load Reg XS *)
+    + destruct i; simpl load_chunk. all:
+      unfold parexec_load_regxs; simpl; unfold exec_load_deps_regxs; rewrite H, H0; rewrite (H0 rofs);
       destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
@@ -1408,6 +1427,7 @@ Definition string_of_load (op: load_op): pstring :=
   match op with
   | OLoadRRO n _ => string_of_load_name n
   | OLoadRRR n => string_of_load_name n
+  | OLoadRRRXS n => string_of_load_name n
   end.
 
 Definition string_of_store_name (n: store_name) : pstring :=
