@@ -514,6 +514,7 @@ Definition eval_addressing
     (F V: Type) (genv: Genv.t F V) (sp: val)
     (addr: addressing) (vl: list val) : option val :=
   match addr, vl with
+  | Aindexed2XS scale, v1 :: v2 :: nil => Some (Val.addl v1 (Val.shll v2 (Vint (Int.repr scale))))
   | Aindexed2, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Aindexed n, v1 :: nil => Some (Val.offset_ptr v1 n)
   | Aglobal s ofs, nil => Some (Genv.symbol_address genv s ofs)
@@ -1663,6 +1664,9 @@ Lemma eval_addressing_inj:
   exists v2, eval_addressing ge2 sp2 addr vl2 = Some v2 /\ Val.inject f v1 v2.
 Proof.
   intros. destruct addr; simpl in H2; simpl; FuncInv; InvInject; TrivialExists.
+  - apply Val.addl_inject; trivial.
+    destruct v0; destruct v'0; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial; inv H3.
+    apply Val.inject_long.
   - apply Val.addl_inject; auto.
   - apply Val.offset_ptr_inject; auto.
   - apply H; simpl; auto.
