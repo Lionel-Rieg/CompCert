@@ -849,14 +849,14 @@ Definition transl_memory_access2
 Definition transl_memory_access2XS
      (chunk: memory_chunk)
      (mk_instr: ireg -> ireg -> basic)
-     (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
-  match addr, args with
-  | (Aindexed2XS scale), (a1 :: a2 :: nil) =>
+     scale (args: list mreg) (k: bcode) : res bcode :=
+  match args with
+  | (a1 :: a2 :: nil) =>
       assertion (Z.eqb (zscale_of_chunk chunk) scale);
       do rs1 <- ireg_of a1;
       do rs2 <- ireg_of a2;
       OK (mk_instr rs1 rs2 ::i k)
-  | _, _ => Error (msg "Asmblockgen.transl_memory_access2XS")
+  | _ => Error (msg "Asmblockgen.transl_memory_access2XS")
   end.
 
 Definition transl_memory_access
@@ -898,15 +898,15 @@ Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
   do r <- ireg_of dst;
   transl_memory_access2 (PLoadRRR (chunk2load chunk) r) addr args k.
 
-Definition transl_load_rrrXS (chunk: memory_chunk) (addr: addressing)
+Definition transl_load_rrrXS (chunk: memory_chunk) (scale : Z)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access2XS chunk (PLoadRRR (chunk2load chunk) r) addr args k.
+  transl_memory_access2XS chunk (PLoadRRR (chunk2load chunk) r) scale args k.
 
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   match addr with
-  | Aindexed2XS _ => transl_load_rrrXS chunk addr args dst k
+  | Aindexed2XS scale => transl_load_rrrXS chunk scale args dst k
   | Aindexed2 => transl_load_rrr chunk addr args dst k
   | _ => transl_load_rro chunk addr args dst k
   end.
