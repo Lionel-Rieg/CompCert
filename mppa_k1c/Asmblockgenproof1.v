@@ -2168,7 +2168,12 @@ Lemma transl_load_memory_access_ok:
 Proof.
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
-  - (* Indexed2XS*) monadInv TR.
+  - monadInv TR.
+    destruct chunk;
+    simpl in EQ0;
+    ArgsInv;
+    try discriminate;
+    econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
     [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity

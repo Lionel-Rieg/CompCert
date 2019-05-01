@@ -1124,9 +1124,8 @@ Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
   | Some v => Next (rsw#d <- v) mw
   end.
 
-Definition scale_of_chunk (chunk: memory_chunk) :=
-  Vint (Int.repr
-  (match chunk with
+Definition zscale_of_chunk (chunk: memory_chunk) :=
+  match chunk with
   | Mint8signed => 0
   | Mint8unsigned => 0
   | Mint16signed => 1
@@ -1137,7 +1136,8 @@ Definition scale_of_chunk (chunk: memory_chunk) :=
   | Mfloat64 => 3
   | Many32 => 2
   | Many64 => 3
-  end)).
+  end.
+Definition scale_of_chunk chunk := Vint (Int.repr (zscale_of_chunk chunk)).
 
 Definition parexec_load_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) with
