@@ -2156,7 +2156,7 @@ Qed.
 
 Lemma transl_load_memory_access_ok:
   forall addr chunk args dst k c rs a v m,
-  addr <> Aindexed2 ->
+  (match addr with Aindexed2XS _ | Aindexed2 => False | _ => True end) ->
   transl_load chunk addr args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
@@ -2168,12 +2168,7 @@ Lemma transl_load_memory_access_ok:
 Proof.
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
-  - monadInv TR.
-    destruct chunk;
-    simpl in EQ0;
-    ArgsInv;
-    try discriminate;
-    econstructor; (esplit; eauto).
+  - admit.
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
     [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
