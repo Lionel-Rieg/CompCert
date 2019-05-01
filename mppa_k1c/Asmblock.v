@@ -274,6 +274,8 @@ Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: i
 
 Definition exec_store_reg (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) := parexec_store_reg chunk rs rs m m s a ro.
 
+Definition exec_store_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro: ireg) := parexec_store_regxs chunk rs rs m m s a ro.
+
 (** * basic instructions *)
 
 Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := parexec_basic_instr ge bi rs rs m m.

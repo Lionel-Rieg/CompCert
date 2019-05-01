@@ -807,31 +807,31 @@ end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
   match ty, preg_of dst with
-  | Tint,    IR rd => OK (indexed_memory_access (Plw rd) base ofs ::i k)
-  | Tlong,   IR rd => OK (indexed_memory_access (Pld rd) base ofs ::i k)
-  | Tsingle, IR rd => OK (indexed_memory_access (Pfls rd) base ofs ::i k)
-  | Tfloat,  IR rd => OK (indexed_memory_access (Pfld rd) base ofs ::i k)
-  | Tany32,  IR rd => OK (indexed_memory_access (Plw_a rd) base ofs ::i k)
-  | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs ::i k)
+  | Tint,    IR rd => OK (indexed_memory_access (PLoadRRO Plw rd) base ofs ::i k)
+  | Tlong,   IR rd => OK (indexed_memory_access (PLoadRRO Pld rd) base ofs ::i k)
+  | Tsingle, IR rd => OK (indexed_memory_access (PLoadRRO Pfls rd) base ofs ::i k)
+  | Tfloat,  IR rd => OK (indexed_memory_access (PLoadRRO Pfld rd) base ofs ::i k)
+  | Tany32,  IR rd => OK (indexed_memory_access (PLoadRRO Plw_a rd) base ofs ::i k)
+  | Tany64,  IR rd => OK (indexed_memory_access (PLoadRRO Pld_a rd) base ofs ::i k)
   | _, _           => Error (msg "Asmblockgen.loadind")
   end.
 
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: bcode) :=
   match ty, preg_of src with
-  | Tint,    IR rd => OK (indexed_memory_access (Psw rd) base ofs ::i k)
-  | Tlong,   IR rd => OK (indexed_memory_access (Psd rd) base ofs ::i k)
-  | Tsingle, IR rd => OK (indexed_memory_access (Pfss rd) base ofs ::i k)
-  | Tfloat,  IR rd => OK (indexed_memory_access (Pfsd rd) base ofs ::i k)
-  | Tany32,  IR rd => OK (indexed_memory_access (Psw_a rd) base ofs ::i k)
-  | Tany64,  IR rd => OK (indexed_memory_access (Psd_a rd) base ofs ::i k)
+  | Tint,    IR rd => OK (indexed_memory_access (PStoreRRO Psw rd) base ofs ::i k)
+  | Tlong,   IR rd => OK (indexed_memory_access (PStoreRRO Psd rd) base ofs ::i k)
+  | Tsingle, IR rd => OK (indexed_memory_access (PStoreRRO Pfss rd) base ofs ::i k)
+  | Tfloat,  IR rd => OK (indexed_memory_access (PStoreRRO Pfsd rd) base ofs ::i k)
+  | Tany32,  IR rd => OK (indexed_memory_access (PStoreRRO Psw_a rd) base ofs ::i k)
+  | Tany64,  IR rd => OK (indexed_memory_access (PStoreRRO Psd_a rd) base ofs ::i k)
   | _, _           => Error (msg "Asmblockgen.storeind")
   end.
 
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) :=
-  indexed_memory_access (Pld dst) base ofs.
+  indexed_memory_access (PLoadRRO Pld dst) base ofs.
 
 Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) :=
-  indexed_memory_access (Psd src) base ofs.
+  indexed_memory_access (PStoreRRO Psd src) base ofs.
 
 (** Translation of memory accesses: loads, and stores. *)
 
@@ -901,7 +901,7 @@ Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
 Definition transl_load_rrrXS (chunk: memory_chunk) (scale : Z)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access2XS chunk (PLoadRRR (chunk2load chunk) r) scale args k.
+  transl_memory_access2XS chunk (PLoadRRRXS (chunk2load chunk) r) scale args k.
 
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
@@ -933,10 +933,16 @@ Definition transl_store_rrr (chunk: memory_chunk) (addr: addressing)
   do r <- ireg_of src;
   transl_memory_access2 (PStoreRRR (chunk2store chunk) r) addr args k.
 
+Definition transl_store_rrrxs (chunk: memory_chunk) (scale: Z)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of src;
+  transl_memory_access2XS chunk (PStoreRRRXS (chunk2store chunk) r) scale args k.
+
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
   match addr with
   | Aindexed2 => transl_store_rrr chunk addr args src k
+  | Aindexed2XS scale => transl_store_rrrxs chunk scale args src k
   | _ => transl_store_rro chunk addr args src k
   end.
 

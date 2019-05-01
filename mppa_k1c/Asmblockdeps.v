@@ -83,6 +83,7 @@ Coercion OLoadRRO: load_name >-> Funclass.
 Inductive store_op :=
   | OStoreRRO (n: store_name) (ofs: offset)
   | OStoreRRR (n: store_name)
+  | OStoreRRRXS (n: store_name)
 .
 
 Coercion OStoreRRO: store_name >-> Funclass.
@@ -177,10 +178,17 @@ Definition exec_store_deps_reg (chunk: memory_chunk) (m: mem) (vs va vo: val) :=
   | Some m' => Some (Memstate m')
   end.
 
+Definition exec_store_deps_regxs (chunk: memory_chunk) (m: mem) (vs va vo: val) :=
+  match Mem.storev chunk m (Val.addl va (Val.shll vo (scale_of_chunk chunk))) vs with
+  | None => None
+  | Some m' => Some (Memstate m')
+  end.
+
 Definition store_eval (so: store_op) (l: list value) :=
   match so, l with
   | OStoreRRO n ofs, [Val vs; Val va; Memstate m] => exec_store_deps_offset (store_chunk n) m vs va ofs
   | OStoreRRR n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_reg (store_chunk n) m vs va vo
+  | OStoreRRRXS n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_regxs (store_chunk n) m vs va vo
   | _, _ => None
   end.
 
@@ -385,12 +393,15 @@ Definition store_op_eq (o1 o2: store_op): ?? bool :=
      match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
   | OStoreRRR n1 =>
      match o2 with OStoreRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OStoreRRRXS n1 =>
+     match o2 with OStoreRRRXS n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
+  - congruence.
   - congruence.
   - congruence.
 Qed.
@@ -626,6 +637,7 @@ Definition trans_basic (b: basic) : inst :=
   | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));
@@ -860,6 +872,13 @@ Proof.
     (* Store Reg *)
     + destruct i; simpl store_chunk. all:
       unfold parexec_store_reg; simpl; unfold exec_store_deps_reg; rewrite H, H0; rewrite (H0 ra); rewrite (H0 rofs);
+      destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl.
+
+    (* Store Reg XS *)
+    + destruct i; simpl store_chunk. all:
+      unfold parexec_store_regxs; simpl; unfold exec_store_deps_regxs; rewrite H, H0; rewrite (H0 ra); rewrite (H0 rofs);
       destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
@@ -1446,6 +1465,7 @@ Definition string_of_store (op: store_op) : pstring :=
   match op with
   | OStoreRRO n _ => string_of_store_name n
   | OStoreRRR n => string_of_store_name n
+  | OStoreRRRXS n => string_of_store_name n
   end.
 
 Definition string_of_control (op: control_op) : pstring :=

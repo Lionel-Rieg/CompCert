@@ -273,9 +273,6 @@ Inductive ld_instruction : Type :=
   | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
 .
 
-Coercion PLoadRRO:       load_name        >-> Funclass.
-Coercion PLoadRRR:       load_name        >-> Funclass.
-
 (** Stores **)
 Inductive store_name : Type :=
   | Psb                                             (**r store byte *)
@@ -291,10 +288,8 @@ Inductive store_name : Type :=
 Inductive st_instruction : Type :=
   | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
   | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreRRRXS(i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
 .
-
-Coercion PStoreRRO:       store_name        >-> Funclass.
-Coercion PStoreRRR:       store_name        >-> Funclass.
 
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
@@ -1160,6 +1155,12 @@ Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem
   | Some m' => Next rsw m'
   end.
 
+Definition parexec_store_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
+  match Mem.storev chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) (rsr s) with
+  | None => Stuck
+  | Some m' => Next rsw m'
+  end.
+
 Definition load_chunk n :=
   match n with
   | Plb => Mint8signed
@@ -1198,6 +1199,7 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
+  | PStoreRRRXS n s a ro => parexec_store_regxs (store_chunk n) rsr rsw mr mw s a ro
 
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in

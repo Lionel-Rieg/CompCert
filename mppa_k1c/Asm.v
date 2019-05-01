@@ -475,6 +475,15 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRR Asmvliw.Pfss rd ra ro => Pfss rd ra (AReg ro)
   | PStoreRRR Asmvliw.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
 
+  | PStoreRRRXS Asmvliw.Psb rd ra ro  => Psb rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psh rd ra ro => Psh rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw rd ra ro => Psw rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw_a rd ra ro => Psw_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd rd ra ro => Psd rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd_a rd ra ro => Psd_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfss rd ra ro => Pfss rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfsd rd ra ro => Pfsd rd ra (ARegXS ro)
+
   end.
 
 Section RELSEM.

@@ -224,7 +224,7 @@ let load_rec i = match i with
 let store_rec i = match i with
   | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
                                       ; is_control = false}
-  | PStoreRRR (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
+  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
 
 let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
