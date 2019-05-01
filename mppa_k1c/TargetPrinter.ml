@@ -359,13 +359,13 @@ module Target (*: TARGET*) =
          fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
     
       | Psb(rd, ra, adr) ->
-         fprintf oc "	sb	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sb%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psh(rd, ra, adr) ->
-         fprintf oc "	sh	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sh%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psw(rd, ra, adr) | Psw_a(rd, ra, adr) | Pfss(rd, ra, adr) ->
-         fprintf oc "	sw	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sw%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sd%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
 
       (* Arith R instructions *)
 
