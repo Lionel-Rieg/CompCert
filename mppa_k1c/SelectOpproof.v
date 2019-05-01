@@ -1265,6 +1265,11 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
+  - destruct (Z.eq_dec _ _).
+    + exists (v1 :: v2 :: nil); split. repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
+    + exists (v1 :: v0 :: nil); split. repeat (constructor; auto). econstructor.
+      repeat (constructor; auto). eassumption. simpl. congruence.
+      simpl. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.

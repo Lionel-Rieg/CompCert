@@ -13,6 +13,7 @@ Require Import ImpDep.
 Require Import Axioms.
 Require Import Parallelizability.
 Require Import Asmvliw Permutation.
+Require Import Chunks.
 
 Open Scope impure.
 

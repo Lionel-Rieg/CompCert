@@ -22,6 +22,7 @@ Require Import Coqlib Errors.
 Require Import AST Integers Floats Memdata.
 Require Import Op Locations Machblock Asmblock.
 Require ExtValues.
+Require Import Chunks.
 
 Local Open Scope string_scope.
 Local Open Scope error_monad_scope.
