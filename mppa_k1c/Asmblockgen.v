@@ -888,6 +888,7 @@ Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   match addr with
+  | Aindexed2XS _ => Error (msg "transl_load Aindexed2XS")
   | Aindexed2 => transl_load_rrr chunk addr args dst k
   | _ => transl_load_rro chunk addr args dst k
   end.

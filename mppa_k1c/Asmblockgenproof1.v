@@ -2168,6 +2168,7 @@ Lemma transl_load_memory_access_ok:
 Proof.
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
+  - (* Indexed2XS*) monadInv TR.
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
     [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
@@ -2210,6 +2211,7 @@ Lemma transl_load_correct:
   /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
   intros until v; intros TR EV LOAD. destruct addr.
+  1: (* Aindexed2XS *) discriminate.
   2-4: exploit transl_load_memory_access_ok; eauto; try discriminate;
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
     eapply transl_load_access_correct; eauto with asmgen.
@@ -2293,6 +2295,7 @@ Lemma transl_store_memory_access_ok:
 Proof.
   intros until m'. intros ? TR ? ?.
   unfold transl_store in TR. destruct addr; try contradiction.
+  - (* Aindex2XS *) discriminate.
   - monadInv TR. destruct chunk. all:
     ArgsInv; eexists; eexists; eexists; split; try split; [
       repeat (destruct args; try discriminate); eassumption
@@ -2362,6 +2365,7 @@ Lemma transl_store_correct:
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
   intros until m'; intros TR EV STORE. destruct addr.
+  1: (* AIndexed2XS *) discriminate.
   2-4: exploit transl_store_memory_access_ok; eauto; try discriminate; intro A;
     destruct A as (mk_instr & chunk' & rr & rrEq & B & C & D);
     rewrite D in STORE; clear D; 

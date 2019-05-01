@@ -207,7 +207,8 @@ Inductive operation : Type :=
   addressing. *)
 
 Inductive addressing: Type :=
-  | Aindexed2: addressing                  (**r Address is [r1 + r2] *)
+  | Aindexed2XS (scale : Z) : addressing (**r Address is [r1 + r2 << scale] *)
+  | Aindexed2 : addressing (**r Address is [r1 + r2] *)
   | Aindexed: ptrofs -> addressing    (**r Address is [r1 + offset] *)
   | Aglobal: ident -> ptrofs -> addressing  (**r Address is global plus offset *)
   | Ainstack: ptrofs -> addressing.   (**r Address is [stack_pointer + offset] *)
@@ -230,7 +231,7 @@ Defined.
 
 Definition eq_addressing (x y: addressing) : {x=y} + {x<>y}.
 Proof.
-  generalize ident_eq Ptrofs.eq_dec; intros.
+  generalize ident_eq Ptrofs.eq_dec Z.eq_dec; intros.
   decide equality.
 Defined.
 
@@ -705,6 +706,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
 
 Definition type_of_addressing (addr: addressing) : list typ :=
   match addr with
+  | Aindexed2XS _ => Tptr :: Tptr :: Tptr :: nil
   | Aindexed2 => Tptr :: Tptr :: nil
   | Aindexed _ => Tptr :: nil
   | Aglobal _ _ => nil
@@ -1117,7 +1119,7 @@ Qed.
 
 Definition offset_addressing (addr: addressing) (delta: Z) : option addressing :=
   match addr with
-  | Aindexed2 => None
+  | Aindexed2 | Aindexed2XS _ => None
   | Aindexed n => Some(Aindexed (Ptrofs.add n (Ptrofs.repr delta)))
   | Aglobal id n => Some(Aglobal id (Ptrofs.add n (Ptrofs.repr delta)))
   | Ainstack n => Some(Ainstack (Ptrofs.add n (Ptrofs.repr delta)))
