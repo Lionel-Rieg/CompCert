@@ -730,7 +730,7 @@ Proof.
   intros until res. unfold addr_strength_reduction.
   destruct (addr_strength_reduction_match addr args vl); simpl;
   intros VL EA; InvApproxRegs; SimplVM; try (inv EA).
-- destruct (Archi.pic_code tt).
+- destruct (orb _ _).
 + exists (Val.offset_ptr e#r1 n); auto.
 + simpl. rewrite Genv.shift_symbol_address. econstructor; split; eauto. 
   inv H0; simpl; auto.

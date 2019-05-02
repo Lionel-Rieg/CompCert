@@ -117,6 +117,17 @@ Proof.
   - discriminate.
 Qed.
 
+Lemma exec_load_regxs_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_load_regxs t rs m rd ra ro = Next rs' m' ->
+  exec_load_regxs t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_regxs in *. unfold parexec_load_regxs in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - discriminate.
+Qed.
+
 Lemma exec_store_offset_pc_var:
   forall ge t rs m rd ra ofs rs' m' v,
   exec_store_offset ge t rs m rd ra ofs = Next rs' m' ->
@@ -140,6 +151,17 @@ Proof.
   - discriminate.
 Qed.
 
+Lemma exec_store_regxs_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_store_regxs t rs m rd ra ro = Next rs' m' ->
+  exec_store_regxs t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_regxs in *. unfold parexec_store_regxs in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
 Lemma exec_basic_instr_pc_var:
   forall ge i rs m rs' m' v,
   exec_basic_instr ge i rs m = Next rs' m' ->
@@ -155,9 +177,11 @@ Proof.
   - destruct i.
     + exploreInst; apply exec_load_offset_pc_var; auto.
     + exploreInst; apply exec_load_reg_pc_var; auto.
+    + exploreInst; apply exec_load_regxs_pc_var; auto.
   - destruct i.
     + exploreInst; apply exec_store_offset_pc_var; auto.
     + exploreInst; apply exec_store_reg_pc_var; auto.
+    + exploreInst; apply exec_store_regxs_pc_var; auto.
   - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
     destruct (Mem.storev _ _ _ _); try discriminate.
     inv H. apply next_eq; auto. apply functional_extensionality. intros.

@@ -42,6 +42,7 @@ Definition preg := preg.
 Inductive addressing : Type :=
   | AOff (ofs: offset)
   | AReg (ro: ireg)
+  | ARegXS (ro: ireg)
 .
 
 (** Syntax *)
@@ -444,6 +445,17 @@ Definition basic_to_instruction (b: basic) :=
   | PLoadRRR Asmvliw.Pfls rd ra ro  => Pfls rd ra (AReg ro)
   | PLoadRRR Asmvliw.Pfld rd ra ro  => Pfld rd ra (AReg ro)
 
+  | PLoadRRRXS Asmvliw.Plb rd ra ro   => Plb rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plbu rd ra ro  => Plbu rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plh rd ra ro   => Plh rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plhu rd ra ro  => Plhu rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plw rd ra ro   => Plw rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plw_a rd ra ro => Plw_a rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pld rd ra ro   => Pld rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pld_a rd ra ro => Pld_a rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pfls rd ra ro  => Pfls rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pfld rd ra ro  => Pfld rd ra (ARegXS ro)
+
   (** Store *)
   | PStoreRRO Asmvliw.Psb rd ra ofs  => Psb rd ra (AOff ofs)
   | PStoreRRO Asmvliw.Psh rd ra ofs => Psh rd ra (AOff ofs)
@@ -462,6 +474,15 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRR Asmvliw.Psd_a rd ra ro => Psd_a rd ra (AReg ro)
   | PStoreRRR Asmvliw.Pfss rd ra ro => Pfss rd ra (AReg ro)
   | PStoreRRR Asmvliw.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
+
+  | PStoreRRRXS Asmvliw.Psb rd ra ro  => Psb rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psh rd ra ro => Psh rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw rd ra ro => Psw rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw_a rd ra ro => Psw_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd rd ra ro => Psd rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd_a rd ra ro => Psd_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfss rd ra ro => Pfss rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfsd rd ra ro => Pfsd rd ra (ARegXS ro)
 
   end.
 

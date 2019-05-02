@@ -216,15 +216,15 @@ let arith_rec i =
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
-  | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm))
-                                      ; is_control = false}
-  | PLoadRRR (i, rs1, rs2, rs3) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None 
-                                      ; is_control = false}
+  | PLoadRRO (i, rs1, rs2, imm) ->
+     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+  | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
+     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
 let store_rec i = match i with
   | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
                                       ; is_control = false}
-  | PStoreRRR (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
+  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
 
 let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }

@@ -37,6 +37,7 @@ Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
   match addr, vl with
   | Aindexed n, v1::nil => offset_ptr v1 n
   | Aindexed2, v1::v2::nil => addl v1 v2
+  | Aindexed2XS scale, v1::v2::nil => addl v1 (shll v2 (I (Int.repr scale)))
   | Aglobal s ofs, nil => Ptr (Gl s ofs)
   | Ainstack ofs, nil => Ptr (Stk ofs)
   | _, _ => Vbot

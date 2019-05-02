@@ -166,7 +166,11 @@ module Target (*: TARGET*) =
 
     let addressing oc = function
     | AOff ofs -> offset oc ofs
-    | AReg ro -> ireg oc ro
+    | AReg ro | ARegXS ro -> ireg oc ro
+
+    let xscale oc = function
+    | ARegXS _ -> fprintf oc ".xs"
+    | _ -> ()
 
     let icond_name = let open Asmvliw in function
       | ITne | ITneu -> "ne"
@@ -342,26 +346,26 @@ module Target (*: TARGET*) =
 
       (* Load/Store instructions *)
       | Plb(rd, ra, adr) ->
-         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lbs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plbu(rd, ra, adr) ->
-         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lbz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plh(rd, ra, adr) ->
-         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lhs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plhu(rd, ra, adr) ->
-         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lhz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
-         fprintf oc "	lws	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lws%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
     
       | Psb(rd, ra, adr) ->
-         fprintf oc "	sb	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sb%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psh(rd, ra, adr) ->
-         fprintf oc "	sh	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sh%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psw(rd, ra, adr) | Psw_a(rd, ra, adr) | Pfss(rd, ra, adr) ->
-         fprintf oc "	sw	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sw%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sd%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
 
       (* Arith R instructions *)
 
