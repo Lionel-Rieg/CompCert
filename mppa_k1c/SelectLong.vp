@@ -70,7 +70,10 @@ Nondetfunction addlimm (n: int64) (e: expr) :=
   if Int64.eq n Int64.zero then e else
   match e with
   | Eop (Olongconst m) Enil => longconst (Int64.add n m)
-  | Eop (Oaddrsymbol s m) Enil   => Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
+  | Eop (Oaddrsymbol s m) Enil   =>
+    (if Compopts.optim_fglobaladdroffset tt
+     then Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
+     else Eop (Oaddlimm n) (e ::: Enil))
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
   | Eop (Oaddlimm m) (t ::: Enil) => Eop (Oaddlimm(Int64.add n m)) (t ::: Enil)
   | _ => Eop (Oaddlimm n) (e ::: Enil)

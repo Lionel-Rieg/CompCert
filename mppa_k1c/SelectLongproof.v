@@ -127,9 +127,11 @@ Proof.
   destruct x; simpl; rewrite ?Int64.add_zero, ?Ptrofs.add_zero; auto.
   destruct (addlimm_match a); InvEval.
 - econstructor; split. apply eval_longconst. rewrite Int64.add_commut; auto.
-- econstructor; split. EvalOp. simpl; eauto. 
-  unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
-  destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto. 
+- destruct (Compopts.optim_fglobaladdroffset _).
+  + econstructor; split. EvalOp. simpl; eauto. 
+    unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
+    destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto.
+  + TrivialExists. repeat econstructor. simpl. trivial.
 - econstructor; split. EvalOp. simpl; eauto. 
   destruct sp; simpl; auto. destruct Archi.ptr64; auto. 
   rewrite Ptrofs.add_assoc, (Ptrofs.add_commut m0). auto. 
