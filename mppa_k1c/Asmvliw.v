@@ -66,11 +66,62 @@ Inductive gpreg: Type :=
 Definition ireg := gpreg.
 Definition freg := gpreg.
 
+Lemma gpreg_eq: forall (x y: gpreg), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
 Lemma ireg_eq: forall (x y: ireg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
 Lemma freg_eq: forall (x y: freg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
+
+Inductive gpreg_q : Type :=
+| R0R1 | R2R3 | R4R5 | R6R7 | R8R9
+| R10R11 | R12R13 | R14R15 | R16R17 | R18R19
+| R20R21 | R22R23 | R24R25 | R26R27 | R28R29
+| R30R31 | R32R33 | R34R35 | R36R37 | R38R39
+| R40R41 | R42R43 | R44R45 | R46R47 | R48R49
+| R50R51 | R52R53 | R54R55 | R56R57 | R58R59
+| R60R61 | R62R63.
+
+Lemma gpreg_q_eq : forall (x y : gpreg_q), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
+Definition gpreg_q_expand (x : gpreg_q) : gpreg * gpreg :=
+  match x with
+  | R0R1 => (GPR0, GPR1)
+  | R2R3 => (GPR2, GPR3)
+  | R4R5 => (GPR4, GPR5)
+  | R6R7 => (GPR6, GPR7)
+  | R8R9 => (GPR8, GPR9)
+  | R10R11 => (GPR10, GPR11)
+  | R12R13 => (GPR12, GPR13)
+  | R14R15 => (GPR14, GPR15)
+  | R16R17 => (GPR16, GPR17)
+  | R18R19 => (GPR18, GPR19)
+  | R20R21 => (GPR20, GPR21)
+  | R22R23 => (GPR22, GPR23)
+  | R24R25 => (GPR24, GPR25)
+  | R26R27 => (GPR26, GPR27)
+  | R28R29 => (GPR28, GPR29)
+  | R30R31 => (GPR30, GPR31)
+  | R32R33 => (GPR32, GPR33)
+  | R34R35 => (GPR34, GPR35)
+  | R36R37 => (GPR36, GPR37)
+  | R38R39 => (GPR38, GPR39)
+  | R40R41 => (GPR40, GPR41)
+  | R42R43 => (GPR42, GPR43)
+  | R44R45 => (GPR44, GPR45)
+  | R46R47 => (GPR46, GPR47)
+  | R48R49 => (GPR48, GPR49)
+  | R50R51 => (GPR50, GPR51)
+  | R52R53 => (GPR52, GPR53)
+  | R54R55 => (GPR54, GPR55)
+  | R56R57 => (GPR56, GPR57)
+  | R58R59 => (GPR58, GPR59)
+  | R60R61 => (GPR60, GPR61)
+  | R62R63 => (GPR62, GPR63)
+  end.
 
 (** We model the following registers of the RISC-V architecture. *)
 
