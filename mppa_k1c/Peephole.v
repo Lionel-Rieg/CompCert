@@ -14,8 +14,12 @@ Fixpoint optimize_body (insns : list basic) : list basic :=
         match h0, h1 with
         | (PStoreRRO Psd_a rs0 ra0 (Ofsimm ofs0)),
           (PStoreRRO Psd_a rs1 ra1 (Ofsimm ofs1)) =>
-          let h0' := print_found_store basic (Ptrofs.signed ofs0) h0 in
-          h0' :: (optimize_body t0)
+          let zofs0 := Ptrofs.signed ofs0 in
+          let zofs1 := Ptrofs.signed ofs1 in
+          if zofs1 =? zofs0 + 8
+          then let h0' := print_found_store basic zofs0 h0 in
+               h0' :: (optimize_body t0)
+          else h0 :: (optimize_body t0)
         | _, _ => h0 :: (optimize_body t0)
         end   
     | nil => h0 :: nil
