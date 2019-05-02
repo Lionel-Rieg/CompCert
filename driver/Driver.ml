@@ -367,6 +367,9 @@ let cmdline_actions =
   @ f_opt "postpass-ilp" option_fpostpass_ilp
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
+  @ f_opt "globaladdrtmp" option_fglobaladdrtmp
+  @ f_opt "globaladdroffset" option_fglobaladdroffset
+  @ f_opt "xsaddr" option_fxsaddr
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)

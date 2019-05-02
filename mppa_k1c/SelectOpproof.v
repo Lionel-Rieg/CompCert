@@ -1256,7 +1256,7 @@ Theorem eval_addressing:
 Proof.
   intros until v. unfold addressing; case (addressing_match a); intros; InvEval.
   - exists (@nil val);  split. eauto with evalexpr. simpl. auto.
-  - destruct (Archi.pic_code tt).
+  - destruct (orb _ _).
   + exists (Vptr b ofs0 :: nil); split.
     constructor. EvalOp. simpl. congruence. constructor. simpl. rewrite Ptrofs.add_zero. congruence.
   + exists (@nil val); split. constructor. simpl; auto.
@@ -1265,11 +1265,18 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
-  - destruct (Z.eq_dec _ _).
-    + exists (v1 :: v2 :: nil); split. repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
-    + exists (v1 :: v0 :: nil); split. repeat (constructor; auto). econstructor.
-      repeat (constructor; auto). eassumption. simpl. congruence.
-      simpl. congruence.
+  - destruct (Compopts.optim_fxsaddr tt).
+    + destruct (Z.eq_dec _ _).
+      * exists (v1 :: v2 :: nil); split.
+        repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
+      * exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
+    + exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.

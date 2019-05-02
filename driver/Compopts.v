@@ -42,6 +42,15 @@ Parameter optim_redundancy: unit -> bool.
 (** Flag -fpostpass. Postpass scheduling for K1 architecture *)
 Parameter optim_postpass: unit -> bool.
 
+(** FIXME TEMPORARY Flag -fglobaladdrtmp. Use a temporary register for loading the address of global variables (default false) *)
+Parameter optim_fglobaladdrtmp: unit -> bool.
+
+(** FIXME TEMPORARY Flag -fglobaladdroffset. Fold offsets into global addresses  (default false) *)
+Parameter optim_fglobaladdroffset: unit -> bool.
+
+(** FIXME TEMPORARY Flag -fxsaddr. Use .xs addressing mode (default true) *)
+Parameter optim_fxsaddr: unit -> bool.
+
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.
 
