@@ -34,8 +34,8 @@ Fixpoint optimize_body (insns : list basic) : list basic :=
     match t0 with
     | h1 :: t1 =>
         match h0, h1 with
-        | (PStoreRRO Psd_a rs0 ra0 (Ofsimm ofs0)),
-          (PStoreRRO Psd_a rs1 ra1 (Ofsimm ofs1)) =>
+        | (PStoreRRO Psd_a rs0 ra0 ofs0),
+          (PStoreRRO Psd_a rs1 ra1 ofs1) =>
           match gpreg_q_search rs0 rs1 with
           | Some rs0rs1 =>
             let zofs0 := Ptrofs.signed ofs0 in

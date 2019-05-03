@@ -222,7 +222,12 @@ let load_rec i = match i with
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+  | PStoreRRO (i, rs1, rs2, imm) ->
+     { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+                                      ; is_control = false}
+  | PStoreQRRO (rs, ra, imm) ->
+     let (rs0, rs1) = gpreg_q_expand rs in
+     { inst = "Psq"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
                                       ; is_control = false}
   | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
