@@ -950,6 +950,13 @@ Proof.
   1-10: try (unfold parexec_store_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
   1-10: try (unfold parexec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
   1-10: try (unfold parexec_store_regxs in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
+  - (* PStoreQRRO *)
+    unfold  parexec_store_q_offset in H1.
+    destruct (gpreg_q_expand _) as [r0 r1] in H1.
+    destruct (eval_offset _ _) in H1; try discriminate.
+    destruct (Mem.storev _ _ _) in H1; try discriminate.
+    destruct (Mem.storev _ _ _) in H1; try discriminate.
+    inv H1. Simpl. reflexivity.
   - destruct (Mem.alloc _ _ _). destruct (Mem.store _ _ _ _ _). inv H1. Simpl. discriminate.
   - destruct (Mem.loadv _ _ _); try discriminate. destruct (rs1 _); try discriminate.
     destruct (Mem.free _ _ _ _). inv H1. Simpl. discriminate.

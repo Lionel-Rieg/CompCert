@@ -639,6 +639,10 @@ Definition trans_basic (b: basic) : inst :=
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreQRRO qs a ofs =>
+    let (s0, s1) := gpreg_q_expand qs in 
+    [(pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s0) @ PReg (#a) @ PReg pmem @ Enil));
+     (pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s1) @ PReg (#a) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));
@@ -884,7 +888,10 @@ Proof.
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
 
-(* Allocframe *)
+    + unfold parexec_store_q_offset.
+      destruct (gpreg_q_expand rs) as [s0 s1].
+      simpl.
+  (* Allocframe *)
   - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
     * eexists; repeat split.
       { Simpl. erewrite !H0, H, MEMAL, MEMS. Simpl.
@@ -1529,5 +1536,3 @@ Definition bblock_equivb: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bbloc
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT_BBLOCK_EQUIV.
-
-

@@ -122,7 +122,9 @@ Inductive instruction : Type :=
   | Psd     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store int64 *)
   | Psd_a   (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store any64 *)
   | Pfss    (rs: freg) (ra: ireg) (ofs: addressing)     (**r store float *)
-  | Pfsd     (rd: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
+  | Pfsd    (rs: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
+
+  | Psq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r store 64-bit float *)
 
   (** Arith RR *)
   | Pmv     (rd rs: ireg)                           (**r register move *)
@@ -484,6 +486,7 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRRXS Asmvliw.Pfss rd ra ro => Pfss rd ra (ARegXS ro)
   | PStoreRRRXS Asmvliw.Pfsd rd ra ro => Pfsd rd ra (ARegXS ro)
 
+  | PStoreQRRO qrs ra ofs => Psq qrs ra (AOff ofs)
   end.
 
 Section RELSEM.

@@ -236,9 +236,6 @@ Definition label := positive.
 *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
-(*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
-  | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
-
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
@@ -341,6 +338,7 @@ Inductive st_instruction : Type :=
   | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
   | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
   | PStoreRRRXS(i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreQRRO (rs: gpreg_q) (ra: ireg) (ofs: offset)
 .
 
 (** Arithmetic instructions **)
@@ -355,7 +353,6 @@ Inductive arith_name_rr : Type :=
   | Pcvtl2w                                         (**r Convert Long to Word *)
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
-(*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
   | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
   | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
   | Pextfzl (stop : Z) (start : Z)              (**r extract bit field, unsigned *)
@@ -693,7 +690,7 @@ Variable ge: genv.
   from the current state (a register set + a memory state) to either [Next rs' m']
   where [rs'] and [m'] are the updated register set and memory state after execution
   of the instruction at [rs#PC], or [Stuck] if the processor is stuck.
-
+ 
   The parallel semantics of each instructions handles two states in input:
    - the actual input state of the bundle which is only read
    - and the other on which every "write" is performed:
@@ -1198,6 +1195,23 @@ Definition parexec_store_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: m
   | Some m' => Next rsw m'
   end.
 
+Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (a: ireg) (ofs: offset) :=
+  let (s0, s1) := gpreg_q_expand s in
+  match eval_offset ofs with
+  | OK eofs =>
+    let base := Val.offset_ptr (rsr a) eofs in
+    match Mem.storev Many64 mr base (rsr s0) with
+    | None => Stuck
+    | Some m1 =>
+      match Mem.storev Many64 m1 base (rsr s1) with
+      | None => Stuck
+      | Some m2 => Next rsw m2
+      end
+    end
+  | _ => Stuck
+  end.
+  
+
 Definition load_chunk n :=
   match n with
   | Plb => Mint8signed
@@ -1237,7 +1251,8 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
   | PStoreRRRXS n s a ro => parexec_store_regxs (store_chunk n) rsr rsw mr mw s a ro
-
+  | PStoreQRRO s a ofs => 
+    parexec_store_q_offset rsr rsw mr mw s a ofs
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in
       let sp := (Vptr stk Ptrofs.zero) in
