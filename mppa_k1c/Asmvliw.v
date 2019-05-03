@@ -203,9 +203,7 @@ Inductive ftest: Type :=
 (** Offsets for load and store instructions.  An offset is either an
   immediate integer or the low part of a symbol. *)
 
-Inductive offset : Type :=
-  | Ofsimm (ofs: ptrofs)
-  | Ofslow (id: ident) (ofs: ptrofs).
+Definition offset : Type := ptrofs.
 
 (** We model a subset of the K1c instruction set. In particular, we do not
   support floats yet.
@@ -1141,15 +1139,7 @@ Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
   | PArithARRI64 n d s i => rsw#d <- (arith_eval_arri64 n rsr#d rsr#s i)
   end.
 
-Definition eval_offset (ofs: offset) : res ptrofs :=
-  match ofs with
-  | Ofsimm n => OK n
-  | Ofslow id delta => 
-      match (Genv.symbol_address ge id delta) with
-      | Vptr b ofs => OK ofs
-      | _ => Error (msg "Asmblock.eval_offset")
-      end
-  end.
+Definition eval_offset (ofs: offset) : res ptrofs := OK ofs.
 
 (** * load/store *)
 

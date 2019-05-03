@@ -944,10 +944,10 @@ Lemma exec_basic_instr_pc:
 Proof.
   intros. destruct b; try destruct i; try destruct i.
   all: try (inv H; Simpl).
-  1-10: try (unfold parexec_load_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
+  1-10: try (unfold parexec_load_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
   1-10: try (unfold parexec_load_reg in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
   1-10: try (unfold parexec_load_regxs in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold parexec_store_offset in H1; destruct (eval_offset ge ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
+  1-10: try (unfold parexec_store_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
   1-10: try (unfold parexec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
   1-10: try (unfold parexec_store_regxs in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
   - (* PStoreQRRO *)

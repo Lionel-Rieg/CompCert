@@ -135,7 +135,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
 Definition exec_load_deps_offset (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
   let (ge, fn) := Ge in
-  match (eval_offset ge ofs) with
+  match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk m (Val.offset_ptr v ptr) with 
               | None => None
               | Some vl => Some (Val vl)
@@ -165,7 +165,7 @@ Definition load_eval (lo: load_op) (l: list value) :=
 
 Definition exec_store_deps_offset (chunk: memory_chunk) (m: mem) (vs va: val) (ofs: offset) :=
   let (ge, fn) := Ge in
-  match (eval_offset ge ofs) with
+  match (eval_offset ofs) with
   | OK ptr => match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
               | None => None
               | Some m' => Some (Memstate m')
@@ -845,7 +845,8 @@ Proof.
     (* Load Offset *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_offset; simpl; unfold exec_load_deps_offset; erewrite GENV, H, H0;
-      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      unfold eval_offset;
+      simpl; auto;
       destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
@@ -869,7 +870,7 @@ Proof.
     (* Store Offset *)
     + destruct i; simpl store_chunk. all:
       unfold parexec_store_offset; simpl; unfold exec_store_deps_offset; erewrite GENV, H, H0; rewrite (H0 ra);
-      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      unfold eval_offset; simpl; auto;
       destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
