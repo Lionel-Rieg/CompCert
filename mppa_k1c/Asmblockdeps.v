@@ -890,8 +890,35 @@ Proof.
       intros rr; destruct rr; Simpl.
 
     + unfold parexec_store_q_offset.
+      simpl.
       destruct (gpreg_q_expand rs) as [s0 s1].
       simpl.
+      unfold exec_store_deps_offset.
+      repeat rewrite H0.
+      repeat rewrite H.
+      destruct Ge.
+      destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ] eqn:MEML0; simpl.
+      ++ rewrite MEML0.
+         destruct (Mem.storev _ _ _ (rsr s1)) as [mem1 | ] eqn:MEML1; simpl.
+         * rewrite (assign_diff sr _ (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr _ (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           eexists; split.
+           reflexivity.
+           rewrite (assign_eq _ pmem).
+           split; trivial.
+           intro r.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           congruence.
+         * rewrite (assign_diff sr pmem (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr pmem (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           reflexivity.
+     ++ rewrite MEML0.
+        reflexivity.
   (* Allocframe *)
   - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
     * eexists; repeat split.
