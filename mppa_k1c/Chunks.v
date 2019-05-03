@@ -1,10 +1,12 @@
 Require Import AST.
 Require Import Values.
 Require Import Integers.
+Require Import Coq.ZArith.BinIntDef.
+Require Import BinNums.
 
 Local Open Scope Z_scope.
 
-Definition zscale_of_chunk (chunk: memory_chunk) :=
+Definition zscale_of_chunk (chunk: memory_chunk) : Z :=
   match chunk with
   | Mint8signed => 0
   | Mint8unsigned => 0

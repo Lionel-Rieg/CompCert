@@ -779,13 +779,8 @@ let do_schedule bb =
                       validated_scheduler cascaded_scheduler
                     else if !Clflags.option_fpostpass_sched = "list" then
                       validated_scheduler list_scheduler
-                    else if !Clflags.option_fpostpass_sched = "dumb" then
-                      dumb_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
-  (* in let solution = validated_scheduler
-                      (if !Clflags.option_fpostpass_ilp
-                       then cascaded_scheduler
-                       else dumb_scheduler) problem *)
-  (* in let solution = dumb_scheduler problem *)
+                    else if !Clflags.option_fpostpass_sched = "greedy" then
+                      greedy_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> let bundles = bundlize_solution bb sol in 
