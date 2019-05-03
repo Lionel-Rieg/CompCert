@@ -218,6 +218,9 @@ let arith_rec i =
 let load_rec i = match i with
   | PLoadRRO (i, rs1, rs2, imm) ->
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+  | PLoadQRRO(rs, ra, imm) ->
+     let (rs0, rs1) = gpreg_q_expand rs in
+     { inst = "Plq"; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 

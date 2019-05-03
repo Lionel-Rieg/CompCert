@@ -392,6 +392,8 @@ module Target (*: TARGET*) =
          fprintf oc "	lws%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
          fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
+      | Plq(rd, ra, adr) ->
+         fprintf oc "	lq%a	%a = %a[%a]\n" xscale adr gpreg_q rd addressing adr ireg ra
     
       | Psb(rd, ra, adr) ->
          fprintf oc "	sb%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
