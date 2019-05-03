@@ -96,11 +96,11 @@ Proof.
 Qed.
 
 Lemma exec_load_offset_pc_var:
-  forall ge t rs m rd ra ofs rs' m' v,
-  exec_load_offset ge t rs m rd ra ofs = Next rs' m' ->
-  exec_load_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+  forall t rs m rd ra ofs rs' m' v,
+  exec_load_offset t rs m rd ra ofs = Next rs' m' ->
+  exec_load_offset t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
-  intros. unfold exec_load_offset in *. unfold parexec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ge ofs); try discriminate.
+  intros. unfold exec_load_offset in *. unfold parexec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
   - discriminate.
@@ -129,12 +129,12 @@ Proof.
 Qed.
 
 Lemma exec_store_offset_pc_var:
-  forall ge t rs m rd ra ofs rs' m' v,
-  exec_store_offset ge t rs m rd ra ofs = Next rs' m' ->
-  exec_store_offset ge t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+  forall t rs m rd ra ofs rs' m' v,
+  exec_store_offset t rs m rd ra ofs = Next rs' m' ->
+  exec_store_offset t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
   intros. unfold exec_store_offset in *. unfold parexec_store_offset in *. rewrite Pregmap.gso; try discriminate.
-  destruct (eval_offset ge ofs); try discriminate.
+  destruct (eval_offset ofs); try discriminate.
   destruct (Mem.storev _ _ _).
   - inv H. apply next_eq; auto.
   - discriminate.
@@ -600,32 +600,12 @@ Proof.
     unfold par_goto_label; unfold par_eval_branch; unfold par_goto_label; erewrite label_pos_preserved_blocks; eauto.
 Qed.
 
-Lemma eval_offset_preserved:
-  forall ofs, eval_offset ge ofs = eval_offset tge ofs.
-Proof.
-  intros. unfold eval_offset. destruct ofs; auto. erewrite symbol_address_preserved; eauto.
-Qed.
-
-Lemma transf_exec_load_offset:
-  forall t rs m rd ra ofs, exec_load_offset ge t rs m rd ra ofs = exec_load_offset tge t rs m rd ra ofs.
-Proof.
-  intros. unfold exec_load_offset. unfold parexec_load_offset. rewrite eval_offset_preserved. reflexivity.
-Qed.
-
-Lemma transf_exec_store_offset:
-  forall t rs m rs0 ra ofs, exec_store_offset ge t rs m rs0 ra ofs = exec_store_offset tge t rs m rs0 ra ofs.
-Proof.
-  intros. unfold exec_store_offset. unfold parexec_store_offset. rewrite eval_offset_preserved. reflexivity.
-Qed.
-
 Lemma transf_exec_basic_instr:
   forall i rs m, exec_basic_instr ge i rs m = exec_basic_instr tge i rs m.
 Proof.
   intros. pose symbol_address_preserved.
   unfold exec_basic_instr. unfold parexec_basic_instr. exploreInst; simpl; auto; try congruence.
-  - unfold parexec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
-  - apply transf_exec_load_offset.
-  - apply transf_exec_store_offset.
+  unfold parexec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
 Qed.
 
 Lemma transf_exec_body:

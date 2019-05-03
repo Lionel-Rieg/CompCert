@@ -154,10 +154,10 @@ let expand_builtin_memcpy_big sz al src dst =
   let lbl = new_label() in
   emit (Ploopdo (tmpbuf, lbl));
   emit Psemi;
-  emit (Plb (tmpbuf, srcptr, AOff (Asmvliw.Ofsimm Z.zero)));
+  emit (Plb (tmpbuf, srcptr, AOff Z.zero));
   emit (Paddil (srcptr, srcptr, Z.one));
   emit Psemi;
-  emit (Psb (tmpbuf, dstptr, AOff (Asmvliw.Ofsimm Z.zero)));
+  emit (Psb (tmpbuf, dstptr, AOff Z.zero));
   emit (Paddil (dstptr, dstptr, Z.one));
   emit Psemi;
   emit (Plabel lbl);;
@@ -173,30 +173,30 @@ let expand_builtin_memcpy  sz al args =
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
   | Mint8unsigned, BR(Asmvliw.IR res) ->
-     emit (Plbu (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Plbu (res, base, AOff ofs))
   | Mint8signed, BR(Asmvliw.IR res) ->
-     emit (Plb  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Plb  (res, base, AOff ofs))
   | Mint16unsigned, BR(Asmvliw.IR res) ->
-     emit (Plhu (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Plhu (res, base, AOff ofs))
   | Mint16signed, BR(Asmvliw.IR res) ->
-     emit (Plh  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Plh  (res, base, AOff ofs))
   | Mint32, BR(Asmvliw.IR res) ->
-     emit (Plw  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Plw  (res, base, AOff ofs))
   | Mint64, BR(Asmvliw.IR res) ->
-     emit (Pld  (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Pld  (res, base, AOff ofs))
   | Mint64, BR_splitlong(BR(Asmvliw.IR res1), BR(Asmvliw.IR res2)) ->
      let ofs' = Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, AOff (Asmvliw.Ofsimm ofs)));
-         emit (Plw (res1, base, AOff (Asmvliw.Ofsimm ofs')))
+         emit (Plw (res2, base, AOff ofs));
+         emit (Plw (res1, base, AOff ofs'))
        end else begin
-         emit (Plw (res1, base, AOff (Asmvliw.Ofsimm ofs')));
-         emit (Plw (res2, base, AOff (Asmvliw.Ofsimm ofs)))
+         emit (Plw (res1, base, AOff ofs'));
+         emit (Plw (res2, base, AOff ofs))
        end
   | Mfloat32, BR(Asmvliw.IR res) ->
-     emit (Pfls (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Pfls (res, base, AOff ofs))
   | Mfloat64, BR(Asmvliw.IR res) ->
-     emit (Pfld (res, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Pfld (res, base, AOff ofs))
   | _ ->
      assert false
 
@@ -215,21 +215,21 @@ let expand_builtin_vload chunk args res =
 let expand_builtin_vstore_common chunk base ofs src =
   match chunk, src with
   | (Mint8signed | Mint8unsigned), BA(Asmvliw.IR src) ->
-     emit (Psb (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Psb (src, base, AOff ofs))
   | (Mint16signed | Mint16unsigned), BA(Asmvliw.IR src) ->
-     emit (Psh (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Psh (src, base, AOff ofs))
   | Mint32, BA(Asmvliw.IR src) ->
-     emit (Psw (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Psw (src, base, AOff ofs))
   | Mint64, BA(Asmvliw.IR src) ->
-     emit (Psd (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Psd (src, base, AOff ofs))
   | Mint64, BA_splitlong(BA(Asmvliw.IR src1), BA(Asmvliw.IR src2)) ->
      let ofs' = Ptrofs.add ofs _4 in
-     emit (Psw (src2, base, AOff (Asmvliw.Ofsimm ofs)));
-     emit (Psw (src1, base, AOff (Asmvliw.Ofsimm ofs')))
+     emit (Psw (src2, base, AOff ofs));
+     emit (Psw (src1, base, AOff ofs'))
   | Mfloat32, BA(Asmvliw.IR src) ->
-     emit (Pfss (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Pfss (src, base, AOff ofs))
   | Mfloat64, BA(Asmvliw.IR src) ->
-     emit (Pfsd (src, base, AOff (Asmvliw.Ofsimm ofs)))
+     emit (Pfsd (src, base, AOff ofs))
   | _ ->
      assert false
 

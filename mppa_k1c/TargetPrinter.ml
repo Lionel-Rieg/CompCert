@@ -160,9 +160,7 @@ module Target (*: TARGET*) =
   *)
 (* Offset part of a load or store *)
 
-    let offset oc = let open Asmvliw in function
-    | Ofsimm n -> ptrofs oc n
-    | Ofslow(id, ofs) -> fprintf oc "%%lo(%a)" symbol_offset (id, ofs)
+    let offset oc n = ptrofs oc n 
 
     let addressing oc = function
     | AOff ofs -> offset oc ofs

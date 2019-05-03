@@ -803,7 +803,7 @@ Definition indexed_memory_access
         (base: ireg) (ofs: ptrofs) :=
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
-      mk_instr base (Ofsimm (Ptrofs.of_int64 imm))
+      mk_instr base (Ptrofs.of_int64 imm)
 end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
@@ -868,7 +868,7 @@ Definition transl_memory_access
       do rs <- ireg_of a1;
       OK (indexed_memory_access mk_instr rs ofs ::i k)
   | Aglobal id ofs, nil =>
-      OK (Ploadsymbol id ofs RTMP ::i (mk_instr RTMP (Ofsimm Ptrofs.zero) ::i k))
+      OK (Ploadsymbol id ofs RTMP ::i (mk_instr RTMP Ptrofs.zero ::i k))
   | Ainstack ofs, nil =>
       OK (indexed_memory_access mk_instr SP ofs ::i k)
   | _, _ =>

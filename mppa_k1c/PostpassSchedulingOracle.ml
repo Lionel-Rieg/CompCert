@@ -544,9 +544,8 @@ exception InvalidEncoding
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm @@ Z.to_int64 i)
-                                  | Some (Off (Ofsimm ptr)) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
-                                  | Some (Off (Ofslow (_, _))) -> Some E27U27L10 (* FIXME *) 
-                                  (* I do not know yet in which context Ofslow can be used by CompCert *)
+                                  | Some (Off ptr) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
+
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw

@@ -1872,7 +1872,7 @@ Lemma indexed_memory_access_correct:
   exists base' ofs' rs' ptr',
      exec_straight_opt (indexed_memory_access mk_instr base ofs ::g k) rs m
                        (mk_instr base' ofs' ::g k) rs' m
-  /\ eval_offset ge ofs' = OK ptr'
+  /\ eval_offset ofs' = OK ptr'
   /\ Val.offset_ptr rs'#base' ptr' = Val.offset_ptr rs#base ofs
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
@@ -1917,7 +1917,7 @@ Qed.
 Lemma indexed_load_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) rd m,
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset ge chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
   forall (base: ireg) ofs k (rs: regset) v,
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
   base <> RTMP ->
@@ -1938,7 +1938,7 @@ Qed.
 Lemma indexed_store_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) r1 m,
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk rs m r1 base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset chunk rs m r1 base ofs) ->
   forall (base: ireg) ofs k (rs: regset) m',
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
   base <> RTMP -> r1 <> RTMP ->
@@ -1974,7 +1974,7 @@ Proof.
              /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_load_offset ge (chunk_of_type ty) rs' m rd base' ofs').
+                   exec_load_offset (chunk_of_type ty) rs' m rd base' ofs').
   { unfold loadind in TR.
     destruct ty, (preg_of dst); inv TR; econstructor; esplit; eauto. }
   destruct A as (mk_instr & rd & rdEq & B & C). subst c. rewrite rdEq.
@@ -1996,7 +1996,7 @@ Proof.
              /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_store_offset ge (chunk_of_type ty) rs' m rr base' ofs').
+                   exec_store_offset (chunk_of_type ty) rs' m rr base' ofs').
   { unfold storeind in TR. destruct ty, (preg_of src); inv TR; econstructor; esplit; eauto. }
   destruct A as (mk_instr & rr & rsEq & B & C). subst c.
   eapply indexed_store_access_correct; eauto with asmgen.
@@ -2066,7 +2066,7 @@ Lemma transl_memory_access_correct:
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   exists base ofs rs' ptr,
      exec_straight_opt (basics_to_code c) rs m (mk_instr base ofs ::g (basics_to_code k)) rs' m
-  /\ eval_offset ge ofs = OK ptr
+  /\ eval_offset ofs = OK ptr
   /\ Val.offset_ptr rs'#base ptr = v
   /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
 Proof.
@@ -2183,7 +2183,7 @@ Qed.
 Lemma transl_load_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset ge chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -2211,7 +2211,7 @@ Lemma transl_load_memory_access_ok:
      preg_of dst = IR rd
   /\ transl_memory_access mk_instr addr args k = OK c
   /\ forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset ge chunk rs m rd base ofs.
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs.
 Proof.
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
@@ -2347,7 +2347,7 @@ Qed.
 Lemma transl_store_access_correct:
   forall chunk (mk_instr: ireg -> offset -> basic) addr args k c r1 (rs: regset) m v m',
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk rs m r1 base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset chunk rs m r1 base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.storev chunk m v rs#r1 = Some m' ->
@@ -2368,16 +2368,16 @@ Qed.
 
 
 Remark exec_store_offset_8_sign rs m x base ofs:
-  exec_store_offset ge Mint8unsigned rs m x base ofs = exec_store_offset ge Mint8signed rs m x base ofs.
+  exec_store_offset Mint8unsigned rs m x base ofs = exec_store_offset Mint8signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. unfold parexec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
+  unfold exec_store_offset. unfold parexec_store_offset. unfold eval_offset; auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_8. reflexivity.
 Qed.
 
 Remark exec_store_offset_16_sign rs m x base ofs:
-  exec_store_offset ge Mint16unsigned rs m x base ofs = exec_store_offset ge Mint16signed rs m x base ofs.
+  exec_store_offset Mint16unsigned rs m x base ofs = exec_store_offset Mint16signed rs m x base ofs.
 Proof.
-  unfold exec_store_offset. unfold parexec_store_offset. destruct (eval_offset _ _); auto. unfold Mem.storev.
+  unfold exec_store_offset. unfold parexec_store_offset. unfold eval_offset; auto. unfold Mem.storev.
   destruct (Val.offset_ptr _ _); auto. erewrite <- Mem.store_signed_unsigned_16. reflexivity.
 Qed.
 
@@ -2391,7 +2391,7 @@ Lemma transl_store_memory_access_ok:
      preg_of src = IR rr
   /\ transl_memory_access mk_instr addr args k = OK c
   /\ (forall base ofs rs,
-       exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset ge chunk' rs m rr base ofs)
+       exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset chunk' rs m rr base ofs)
   /\ Mem.storev chunk m a rs#(preg_of src) = Mem.storev chunk' m a rs#(preg_of src).
 Proof.
   intros until m'. intros ? TR ? ?.
