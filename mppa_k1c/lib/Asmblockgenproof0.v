@@ -953,7 +953,7 @@ Proof.
   - (* PStoreQRRO *)
     unfold  parexec_store_q_offset in H1.
     destruct (gpreg_q_expand _) as [r0 r1] in H1.
-    destruct (eval_offset _ _) in H1; try discriminate.
+    unfold eval_offset in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
     inv H1. Simpl. reflexivity.
