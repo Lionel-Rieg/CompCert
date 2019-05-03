@@ -364,7 +364,7 @@ let bundles_to_schedule problem bundles : solution =
     end
   ) bundles; schedule;;
 
-let dumb_scheduler (problem : problem) : solution option =
+let greedy_scheduler (problem : problem) : solution option =
   let bundles = make_bundles problem 0 in
   Some (bundles_to_schedule problem bundles);;
 

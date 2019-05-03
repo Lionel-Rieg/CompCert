@@ -63,7 +63,7 @@ Once a clock tick is full go to the next.
 val list_scheduler : problem -> solution option
 
 (** Schedule the problem using the order of instructions without any reordering *)
-val dumb_scheduler : problem -> solution option
+val greedy_scheduler : problem -> solution option
 
 (** Schedule a problem using a scheduler applied in the opposite direction, e.g. for list scheduling from the end instead of the start. BUGGY *)
 val schedule_reversed : scheduler -> problem -> int array option
