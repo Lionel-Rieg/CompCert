@@ -66,11 +66,62 @@ Inductive gpreg: Type :=
 Definition ireg := gpreg.
 Definition freg := gpreg.
 
+Lemma gpreg_eq: forall (x y: gpreg), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
 Lemma ireg_eq: forall (x y: ireg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
 Lemma freg_eq: forall (x y: freg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
+
+Inductive gpreg_q : Type :=
+| R0R1 | R2R3 | R4R5 | R6R7 | R8R9
+| R10R11 | R12R13 | R14R15 | R16R17 | R18R19
+| R20R21 | R22R23 | R24R25 | R26R27 | R28R29
+| R30R31 | R32R33 | R34R35 | R36R37 | R38R39
+| R40R41 | R42R43 | R44R45 | R46R47 | R48R49
+| R50R51 | R52R53 | R54R55 | R56R57 | R58R59
+| R60R61 | R62R63.
+
+Lemma gpreg_q_eq : forall (x y : gpreg_q), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
+Definition gpreg_q_expand (x : gpreg_q) : gpreg * gpreg :=
+  match x with
+  | R0R1 => (GPR0, GPR1)
+  | R2R3 => (GPR2, GPR3)
+  | R4R5 => (GPR4, GPR5)
+  | R6R7 => (GPR6, GPR7)
+  | R8R9 => (GPR8, GPR9)
+  | R10R11 => (GPR10, GPR11)
+  | R12R13 => (GPR12, GPR13)
+  | R14R15 => (GPR14, GPR15)
+  | R16R17 => (GPR16, GPR17)
+  | R18R19 => (GPR18, GPR19)
+  | R20R21 => (GPR20, GPR21)
+  | R22R23 => (GPR22, GPR23)
+  | R24R25 => (GPR24, GPR25)
+  | R26R27 => (GPR26, GPR27)
+  | R28R29 => (GPR28, GPR29)
+  | R30R31 => (GPR30, GPR31)
+  | R32R33 => (GPR32, GPR33)
+  | R34R35 => (GPR34, GPR35)
+  | R36R37 => (GPR36, GPR37)
+  | R38R39 => (GPR38, GPR39)
+  | R40R41 => (GPR40, GPR41)
+  | R42R43 => (GPR42, GPR43)
+  | R44R45 => (GPR44, GPR45)
+  | R46R47 => (GPR46, GPR47)
+  | R48R49 => (GPR48, GPR49)
+  | R50R51 => (GPR50, GPR51)
+  | R52R53 => (GPR52, GPR53)
+  | R54R55 => (GPR54, GPR55)
+  | R56R57 => (GPR56, GPR57)
+  | R58R59 => (GPR58, GPR59)
+  | R60R61 => (GPR60, GPR61)
+  | R62R63 => (GPR62, GPR63)
+  end.
 
 (** We model the following registers of the RISC-V architecture. *)
 
@@ -183,9 +234,6 @@ Definition label := positive.
 *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
-(*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
-  | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
-
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
@@ -288,6 +336,7 @@ Inductive st_instruction : Type :=
   | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
   | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
   | PStoreRRRXS(i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreQRRO (rs: gpreg_q) (ra: ireg) (ofs: offset)
 .
 
 (** Arithmetic instructions **)
@@ -302,7 +351,6 @@ Inductive arith_name_rr : Type :=
   | Pcvtl2w                                         (**r Convert Long to Word *)
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
-(*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
   | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
   | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
   | Pextfzl (stop : Z) (start : Z)              (**r extract bit field, unsigned *)
@@ -640,7 +688,7 @@ Variable ge: genv.
   from the current state (a register set + a memory state) to either [Next rs' m']
   where [rs'] and [m'] are the updated register set and memory state after execution
   of the instruction at [rs#PC], or [Stuck] if the processor is stuck.
-
+ 
   The parallel semantics of each instructions handles two states in input:
    - the actual input state of the bundle which is only read
    - and the other on which every "write" is performed:
@@ -1137,6 +1185,22 @@ Definition parexec_store_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: m
   | Some m' => Next rsw m'
   end.
 
+Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (a: ireg) (ofs: offset) :=
+  let (s0, s1) := gpreg_q_expand s in
+  match eval_offset ofs with
+  | OK eofs =>
+    match Mem.storev Many64 mr (Val.offset_ptr (rsr a) eofs) (rsr s0) with
+    | None => Stuck
+    | Some m1 =>
+      match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add eofs (Ptrofs.repr 8))) (rsr s1) with
+      | None => Stuck
+      | Some m2 => Next rsw m2
+      end
+    end
+  | _ => Stuck
+  end.
+  
+
 Definition load_chunk n :=
   match n with
   | Plb => Mint8signed
@@ -1176,7 +1240,8 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
   | PStoreRRRXS n s a ro => parexec_store_regxs (store_chunk n) rsr rsw mr mw s a ro
-
+  | PStoreQRRO s a ofs => 
+    parexec_store_q_offset rsr rsw mr mw s a ofs
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in
       let sp := (Vptr stk Ptrofs.zero) in

@@ -70,3 +70,4 @@ let use_standard_headers =  ref Configuration.has_standard_headers
 let option_fglobaladdrtmp = ref false
 let option_fglobaladdroffset = ref false
 let option_fxsaddr = ref true  
+let option_coalesce_mem = ref true  

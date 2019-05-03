@@ -51,6 +51,9 @@ Parameter optim_fglobaladdroffset: unit -> bool.
 (** FIXME TEMPORARY Flag -fxsaddr. Use .xs addressing mode (default true) *)
 Parameter optim_fxsaddr: unit -> bool.
 
+(** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
+Parameter optim_coalesce_mem: unit -> bool.
+
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.
 

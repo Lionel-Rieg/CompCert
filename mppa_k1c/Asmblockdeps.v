@@ -387,11 +387,23 @@ Qed.
 Hint Resolve load_op_eq_correct: wlp.
 Opaque load_op_eq_correct.
 
+Definition offset_eq (ofs1 ofs2 : offset): ?? bool :=
+  RET (Ptrofs.eq ofs1 ofs2).
+
+Lemma offset_eq_correct ofs1 ofs2:
+  WHEN offset_eq ofs1 ofs2 ~> b THEN b = true -> ofs1 = ofs2.
+Proof.
+  wlp_simplify.
+  pose (Ptrofs.eq_spec ofs1 ofs2).
+  rewrite H in *.
+  trivial.
+Qed.
+Hint Resolve offset_eq_correct: wlp.
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1 with
   | OStoreRRO n1 ofs1 =>
-     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
+     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
   | OStoreRRR n1 =>
      match o2 with OStoreRRR n2 => phys_eq n1 n2 | _ => RET false end
   | OStoreRRRXS n1 =>
@@ -402,7 +414,8 @@ Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - congruence.
+  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial.
   - congruence.
   - congruence.
 Qed.
@@ -639,6 +652,10 @@ Definition trans_basic (b: basic) : inst :=
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreQRRO qs a ofs =>
+    let (s0, s1) := gpreg_q_expand qs in 
+    [(pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s0) @ PReg (#a) @ PReg pmem @ Enil));
+     (pmem, Op (Store (OStoreRRO Psd_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#s1) @ PReg (#a) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));
@@ -885,7 +902,37 @@ Proof.
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
 
-(* Allocframe *)
+    + unfold parexec_store_q_offset.
+      simpl.
+      destruct (gpreg_q_expand rs) as [s0 s1].
+      simpl.
+      unfold exec_store_deps_offset.
+      repeat rewrite H0.
+      repeat rewrite H.
+      destruct Ge.
+      destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ] eqn:MEML0; simpl.
+      ++ rewrite MEML0.
+         destruct (Mem.storev _ _ _ (rsr s1)) as [mem1 | ] eqn:MEML1; simpl.
+         * rewrite (assign_diff sr _ (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr _ (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           eexists; split.
+           reflexivity.
+           rewrite (assign_eq _ pmem).
+           split; trivial.
+           intro r.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           congruence.
+         * rewrite (assign_diff sr pmem (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr pmem (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           reflexivity.
+     ++ rewrite MEML0.
+        reflexivity.
+  (* Allocframe *)
   - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
     * eexists; repeat split.
       { Simpl. erewrite !H0, H, MEMAL, MEMS. Simpl.
@@ -1530,5 +1577,3 @@ Definition bblock_equivb: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bbloc
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT_BBLOCK_EQUIV.
-
-

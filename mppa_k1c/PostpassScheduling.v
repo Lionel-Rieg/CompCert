@@ -13,6 +13,7 @@
 Require Import Coqlib Errors AST Integers.
 Require Import Asmblock Axioms Memory Globalenvs.
 Require Import Asmblockdeps Asmblockgenproof0.
+Require Peephole.
 
 Local Open Scope error_monad_scope.
 
@@ -347,8 +348,9 @@ Fixpoint verify_par (lbb: list bblock) :=
   end.
 
 Definition verified_schedule_nob (bb : bblock) : res (list bblock) :=
-  let bb' := no_header bb in
-  let lbb := do_schedule bb' in
+  let bb'  := no_header bb in
+  let bb'' := Peephole.optimize_bblock bb' in
+  let lbb := do_schedule bb'' in
   do tbb <- concat_all lbb;
   do sizecheck <- verify_size bb lbb;
   do schedcheck <- verify_schedule bb' tbb;

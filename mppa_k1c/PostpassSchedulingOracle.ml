@@ -222,7 +222,12 @@ let load_rec i = match i with
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+  | PStoreRRO (i, rs1, rs2, imm) ->
+     { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+                                      ; is_control = false}
+  | PStoreQRRO (rs, ra, imm) ->
+     let (rs0, rs1) = gpreg_q_expand rs in
+     { inst = "Psq"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
                                       ; is_control = false}
   | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
@@ -441,7 +446,7 @@ type real_instruction =
   | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
-  | Sb | Sh | Sw | Sd 
+  | Sb | Sh | Sw | Sd | Sq
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
   (* FPU *)
@@ -518,6 +523,7 @@ let ab_inst_to_real = function
   | "Psh" -> Sh 
   | "Psw" | "Psw_a" | "Pfss" -> Sw
   | "Psd" | "Psd_a" | "Pfsd" -> Sd
+  | "Psq" -> Sq
 
   | "Pcb" | "Pcbu" -> Cb
   | "Pcall" | "Pdiv" | "Pdivu" -> Call
@@ -538,6 +544,9 @@ let ab_inst_to_real = function
   | "Pfsbfw" -> Fsbfw
   | "Pfmuld" -> Fmuld
   | "Pfmulw" -> Fmulw
+
+  | "nop" -> Nop
+           
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
               
 exception InvalidEncoding
@@ -590,7 +599,7 @@ let rec_to_usage r =
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
                           | Some E27U27L10 -> lsu_data_y)
-  | Sb | Sh | Sw | Sd ->
+  | Sb | Sh | Sw | Sd | Sq ->
       (match encoding with None | Some U6 | Some S10 -> lsu_acc 
                           | Some U27L5 | Some U27L10 -> lsu_acc_x 
                           | Some E27U27L10 -> lsu_acc_y)
@@ -612,7 +621,7 @@ let real_inst_to_latency = function
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
-  | Sb | Sh | Sw | Sd -> 1 (* See k1c-Optimization.pdf page 19 *)
+  | Sb | Sh | Sw | Sd | Sq -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)

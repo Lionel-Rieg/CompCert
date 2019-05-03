@@ -41,6 +41,7 @@ module Target (*: TARGET*) =
     let print_label oc lbl = label oc (transl_label lbl)
 
     let int_reg_name = let open Asmvliw in function
+                                          
       | GPR0  -> "$r0"  | GPR1  -> "$r1"  | GPR2  -> "$r2"  | GPR3  -> "$r3"
       | GPR4  -> "$r4"  | GPR5  -> "$r5"  | GPR6  -> "$r6"  | GPR7  -> "$r7"
       | GPR8  -> "$r8"  | GPR9  -> "$r9"  | GPR10 -> "$r10" | GPR11 -> "$r11"
@@ -60,7 +61,43 @@ module Target (*: TARGET*) =
 
     let ireg oc r = output_string oc (int_reg_name r)
 
-    let ireg = ireg
+    let int_gpreg_q_name =
+      let open Asmvliw in
+      function
+      | R0R1 -> "$r0r1"
+      | R2R3 -> "$r2r3"
+      | R4R5 -> "$r4r5"
+      | R6R7 -> "$r6r7"
+      | R8R9 -> "$r8r9"
+      | R10R11 -> "$r10r11"
+      | R12R13 -> "$r12r13"
+      | R14R15 -> "$r14r15"
+      | R16R17 -> "$r16r17"
+      | R18R19 -> "$r18r19"
+      | R20R21 -> "$r20r21"
+      | R22R23 -> "$r22r23"
+      | R24R25 -> "$r24r25"
+      | R26R27 -> "$r26r27"
+      | R28R29 -> "$r28r29"
+      | R30R31 -> "$r30r31"
+      | R32R33 -> "$r32r33"
+      | R34R35 -> "$r34r35"
+      | R36R37 -> "$r36r37"
+      | R38R39 -> "$r38r39"
+      | R40R41 -> "$r40r41"
+      | R42R43 -> "$r42r43"
+      | R44R45 -> "$r44r45"
+      | R46R47 -> "$r46r47"
+      | R48R49 -> "$r48r49"
+      | R50R51 -> "$r50r51"
+      | R52R53 -> "$r52r53"
+      | R54R55 -> "$r54r55"
+      | R56R57 -> "$r56r57"
+      | R58R59 -> "$r58r59"
+      | R60R61 -> "$r60r61"
+      | R62R63 -> "$r62r63"
+                              
+    let gpreg_q oc r = output_string oc (int_gpreg_q_name r)
 
     let preg oc = let open Asmvliw in function
       | IR r -> ireg oc r
@@ -250,7 +287,7 @@ module Target (*: TARGET*) =
           | _ ->
               assert false
          end
-      | Pnop -> fprintf oc "	nop\n"
+      | Pnop -> (* FIXME fprintf oc "	nop\n" *) ()
       | Psemi -> fprintf oc ";;\n"
 
       | Pclzll (rd, rs) -> fprintf oc "	clzd %a = %a\n" ireg rd ireg rs
@@ -364,7 +401,9 @@ module Target (*: TARGET*) =
          fprintf oc "	sw%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
          fprintf oc "	sd%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
-
+      | Psq(rd, ra, adr) ->
+         fprintf oc "	sq%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra gpreg_q rd
+      
       (* Arith R instructions *)
 
       (* Arith RR instructions *)

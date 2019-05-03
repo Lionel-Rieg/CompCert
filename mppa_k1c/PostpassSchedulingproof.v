@@ -140,6 +140,19 @@ Proof.
   - discriminate.
 Qed.
 
+Lemma exec_store_q_offset_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_store_q_offset rs m rd ra ofs = Next rs' m' ->
+  exec_store_q_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_q_offset in *. unfold parexec_store_q_offset in *. rewrite Pregmap.gso; try discriminate.
+  simpl in *.
+  destruct (gpreg_q_expand _) as [s0 s1].
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  inv H. apply next_eq; auto.
+Qed.
+
 Lemma exec_store_reg_pc_var:
   forall t rs m rd ra ro rs' m' v,
   exec_store_reg t rs m rd ra ro = Next rs' m' ->
@@ -182,6 +195,7 @@ Proof.
     + exploreInst; apply exec_store_offset_pc_var; auto.
     + exploreInst; apply exec_store_reg_pc_var; auto.
     + exploreInst; apply exec_store_regxs_pc_var; auto.
+    + apply exec_store_q_offset_pc_var; auto.
   - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
     destruct (Mem.storev _ _ _ _); try discriminate.
     inv H. apply next_eq; auto. apply functional_extensionality. intros.
