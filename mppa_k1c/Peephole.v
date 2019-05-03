@@ -2,6 +2,7 @@ Require Import Coqlib.
 Require Import Asmvliw.
 Require Import Values.
 Require Import Integers.
+Require Compopts.
 
 Definition gpreg_q_list : list gpreg_q :=
 R0R1 :: R2R3 :: R4R5 :: R6R7 :: R8R9
@@ -25,9 +26,9 @@ Fixpoint gpreg_q_search_rec r0 r1 l :=
 Definition gpreg_q_search (r0 : gpreg) (r1 : gpreg) : option gpreg_q :=
   gpreg_q_search_rec r0 r1 gpreg_q_list.
 
-Parameter print_found_store : forall A : Type, Z -> A -> A.
+Parameter print_found_store: forall A, Z -> A -> A.
 
-Fixpoint optimize_body (insns : list basic) : list basic :=
+Fixpoint coalesce_mem (insns : list basic) : list basic :=
   match insns with
   | nil => nil
   | h0 :: t0 =>
@@ -41,16 +42,20 @@ Fixpoint optimize_body (insns : list basic) : list basic :=
             let zofs0 := Ptrofs.signed ofs0 in
             let zofs1 := Ptrofs.signed ofs1 in
             if (zofs1 =? zofs0 + 8) && (ireg_eq ra0 ra1)
-            then let h0' := print_found_store basic zofs0 h0 in
-                 (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (optimize_body t1)
-            else h0 :: (optimize_body t0)
-          | None => h0 :: (optimize_body t0)
+            then (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+            else h0 :: (coalesce_mem t0)
+          | None => h0 :: (coalesce_mem t0)
           end
-        | _, _ => h0 :: (optimize_body t0)
+        | _, _ => h0 :: (coalesce_mem t0)
         end   
     | nil => h0 :: nil
     end
   end.
+
+Definition optimize_body (insns : list basic) :=
+  if Compopts.optim_coalesce_mem tt
+  then coalesce_mem insns
+  else insns.
 
 Program Definition optimize_bblock (bb : bblock) :=
   let optimized := optimize_body (body bb) in
