@@ -28,7 +28,7 @@ let option_fconstprop = ref true
 let option_fcse = ref true
 let option_fredundancy = ref true
 let option_fpostpass = ref true
-let option_fpostpass_ilp = ref false
+let option_fpostpass_sched = ref "list"
 let option_falignfunctions = ref (None: int option)
 let option_falignbranchtargets = ref 0
 let option_faligncondbranchs = ref 0
@@ -66,3 +66,8 @@ let option_small_const = ref (!option_small_data)
 let option_timings = ref false
 let stdlib_path = ref Configuration.stdlib_path
 let use_standard_headers =  ref Configuration.has_standard_headers
+
+let option_fglobaladdrtmp = ref false
+let option_fglobaladdroffset = ref false
+let option_fxsaddr = ref true  
+let option_coalesce_mem = ref true  

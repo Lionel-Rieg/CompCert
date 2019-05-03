@@ -307,9 +307,66 @@ let priority_list_scheduler (order : list_scheduler_order)
 
 let list_scheduler = priority_list_scheduler CRITICAL_PATH_ORDER;;
 
-(* FIXME DUMMY CODE to placate warnings
- *)
+(** FIXME - warning fix *)
 let _ = priority_list_scheduler INSTRUCTION_ORDER;;
+
+type bundle = int list;;
+
+let rec extract_deps_to index = function
+  | [] -> []
+  | dep :: deps -> let extracts = extract_deps_to index deps in
+      if (dep.instr_to == index) then 
+        dep :: extracts
+      else
+        extracts
+
+exception InvalidBundle;;
+
+let dependency_check problem bundle index =
+  let index_deps = extract_deps_to index problem.latency_constraints in
+  List.iter (fun i -> 
+    List.iter (fun dep ->
+      if (dep.instr_from == i) then raise InvalidBundle
+    ) index_deps
+  ) bundle;;
+
+let rec make_bundle problem resources bundle index =
+  let resources_copy = Array.copy resources in
+  let nr_instructions = get_nr_instructions problem in
+  if (index >= nr_instructions) then (bundle, index+1) else
+  let inst_usage = problem.instruction_usages.(index) in
+  try match vector_less_equal inst_usage resources with
+  | false -> raise InvalidBundle
+  | true -> (
+      dependency_check problem bundle index;
+      vector_subtract problem.instruction_usages.(index) resources_copy;
+      make_bundle problem resources_copy (index::bundle) (index+1)
+      )
+  with InvalidBundle -> (bundle, index);;
+
+let rec make_bundles problem index : bundle list =
+  if index >= get_nr_instructions problem then
+    []
+  else
+    let (bundle, new_index) = make_bundle problem problem.resource_bounds [] index in
+    bundle :: (make_bundles problem new_index);;
+
+let bundles_to_schedule problem bundles : solution =
+  let nr_instructions = get_nr_instructions problem in
+  let schedule = Array.make (nr_instructions+1) (nr_instructions+4) in
+  let time = ref 0 in
+  List.iter (fun bundle ->
+    begin
+    List.iter (fun i ->
+      schedule.(i) <- !time
+    ) bundle;
+    time := !time + 1
+    end
+  ) bundles; schedule;;
+
+let greedy_scheduler (problem : problem) : solution option =
+  let bundles = make_bundles problem 0 in
+  Some (bundles_to_schedule problem bundles);;
 
 (* alternate implementation
 let swap_array_elements a i j =

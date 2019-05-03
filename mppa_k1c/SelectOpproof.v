@@ -23,6 +23,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Globalenvs.
 Require Import Cminor.
@@ -32,6 +33,7 @@ Require Import SelectOp.
 Require Import Events.
 Require Import OpHelpers.
 Require Import OpHelpersproof.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -310,15 +312,15 @@ Proof.
   - subst x.
     simpl negb.
     cbn iota.
-    destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    destruct (is_bitfield _ _) eqn:BOUNDS.
+    + exists (extfz (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfz.
+      ++ unfold extfz.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
@@ -367,15 +369,15 @@ Proof.
   - subst x.
     simpl negb.
     cbn iota.
-    destruct (_ && _ && _) eqn:BOUNDS.
-    + exists (Val.extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
+    destruct (is_bitfield _ _) eqn:BOUNDS.
+    + exists (extfs (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one))
             (Z.sub
                (Z.add
                   (Z.add (Int.unsigned n) (Z.sub Int.zwordsize (Z.add (Int.unsigned n1) Z.one)))
                   Z.one) Int.zwordsize) v1).
       split.
       ++ EvalOp.
-      ++ unfold Val.extfs.
+      ++ unfold extfs.
          rewrite BOUNDS.
          destruct v1; try (simpl; apply Val.lessdef_undef).
         replace (Z.sub Int.zwordsize
@@ -699,6 +701,58 @@ Proof.
       rewrite Int.or_commut.
       rewrite Int.or_zero.
       reflexivity.
+  - set (zstop := (int_highest_bit mask)).
+    set (zstart := (Int.unsigned start)).
+    destruct (is_bitfield _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * simpl in H6.
+        injection H6.
+        clear H6.
+        intro. subst y. subst x.
+        TrivialExists. simpl. f_equal.
+        unfold insf.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        rewrite Rnmask.
+        simpl.
+        unfold bitfield_mask.
+        subst v0.
+        subst zstart.
+        rewrite Int.repr_unsigned.
+        reflexivity.
+      * apply DEFAULT.
+    + apply DEFAULT.
+  - set (zstop := (int_highest_bit mask)).
+    set (zstart := 0).
+    destruct (is_bitfield _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * subst y. subst x.
+        TrivialExists. simpl. f_equal.
+        unfold insf.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        rewrite Rnmask.
+        simpl.
+        unfold bitfield_mask.
+        subst zstart.
+        rewrite (Val.or_commut (Val.and v1 _)).
+        rewrite (Val.or_commut (Val.and v1 _)).
+        destruct v0; simpl; trivial.
+        unfold Int.ltu, Int.iwordsize, Int.zwordsize.
+        rewrite Int.unsigned_repr.
+        ** rewrite Int.unsigned_repr.
+        *** simpl.
+            rewrite Int.shl_zero.
+            reflexivity.
+        *** simpl.
+            unfold Int.max_unsigned, Int.modulus.
+            simpl.
+            omega.
+        ** unfold Int.max_unsigned, Int.modulus.
+           simpl.
+           omega.
+      * apply DEFAULT.
+    + apply DEFAULT.
   - apply DEFAULT.
 Qed.
 
@@ -1101,9 +1155,23 @@ Theorem eval_floatofintu:
   Val.floatofintu x = Some y ->
   exists v, eval_expr ge sp e m le (floatofintu a) v /\ Val.lessdef y v.
 Proof.
-  intros until y; unfold floatofintu. case (floatofintu_match a); intros.
-  InvEval. simpl in H0. TrivialExists.
-  TrivialExists.
+  intros.
+  unfold Val.floatofintu in *.
+  unfold floatofintu.
+  destruct (floatofintu_match a).
+  - InvEval.
+    TrivialExists.
+  - InvEval.
+    TrivialExists.
+    constructor. econstructor. constructor. eassumption. constructor.
+    simpl. f_equal. constructor.
+    simpl.
+    destruct x; simpl; trivial.
+    f_equal.
+    inv H0.
+    f_equal.
+    rewrite Float.of_intu_of_longu.
+    reflexivity.
 Qed.
 
 Theorem eval_floatofint:
@@ -1112,9 +1180,22 @@ Theorem eval_floatofint:
   Val.floatofint x = Some y ->
   exists v, eval_expr ge sp e m le (floatofint a) v /\ Val.lessdef y v.
 Proof.
-  intros until y; unfold floatofint. case (floatofint_match a); intros.
-  InvEval. simpl in H0. TrivialExists.
-  TrivialExists.
+  intros.
+  unfold floatofint.
+  destruct (floatofint_match a).
+  - InvEval.
+    TrivialExists.
+  - InvEval.
+    TrivialExists.
+    constructor. econstructor. constructor. eassumption. constructor.
+    simpl. f_equal. constructor.
+    simpl.
+    destruct x; simpl; trivial.
+    f_equal.
+    inv H0.
+    f_equal.
+    rewrite Float.of_int_of_long.
+    reflexivity.
 Qed.
 
 Theorem eval_intofsingle:
@@ -1175,7 +1256,7 @@ Theorem eval_addressing:
 Proof.
   intros until v. unfold addressing; case (addressing_match a); intros; InvEval.
   - exists (@nil val);  split. eauto with evalexpr. simpl. auto.
-  - destruct (Archi.pic_code tt).
+  - destruct (orb _ _).
   + exists (Vptr b ofs0 :: nil); split.
     constructor. EvalOp. simpl. congruence. constructor. simpl. rewrite Ptrofs.add_zero. congruence.
   + exists (@nil val); split. constructor. simpl; auto.
@@ -1184,6 +1265,18 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
+  - destruct (Compopts.optim_fxsaddr tt).
+    + destruct (Z.eq_dec _ _).
+      * exists (v1 :: v2 :: nil); split.
+        repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
+      * exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
+    + exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.

@@ -141,8 +141,6 @@ let print_operation reg pp = function
   | Ofloatofsingle, [r1] -> fprintf pp "floatofsingle(%a)" reg r1
   | Ointoffloat, [r1] -> fprintf pp "intoffloat(%a)" reg r1
   | Ointuoffloat, [r1] -> fprintf pp "intuoffloat(%a)" reg r1
-  | Ofloatofint, [r1] -> fprintf pp "floatofint(%a)" reg r1
-  | Ofloatofintu, [r1] -> fprintf pp "floatofintu(%a)" reg r1
   | Olongoffloat, [r1] -> fprintf pp "longoffloat(%a)" reg r1
   | Olonguoffloat, [r1] -> fprintf pp "longuoffloat(%a)" reg r1
   | Ofloatoflong, [r1] -> fprintf pp "floatoflong(%a)" reg r1

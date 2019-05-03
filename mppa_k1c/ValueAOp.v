@@ -12,7 +12,7 @@
 
 Require Import Coqlib Compopts.
 Require Import AST Integers Floats Values Memory Globalenvs.
-Require Import Op RTL ValueDomain.
+Require Import Op ExtValues RTL ValueDomain.
 
 (** Value analysis for RISC V operators *)
 
@@ -37,6 +37,7 @@ Definition eval_static_addressing (addr: addressing) (vl: list aval): aval :=
   match addr, vl with
   | Aindexed n, v1::nil => offset_ptr v1 n
   | Aindexed2, v1::v2::nil => addl v1 v2
+  | Aindexed2XS scale, v1::v2::nil => addl v1 (shll v2 (I (Int.repr scale)))
   | Aglobal s ofs, nil => Ptr (Gl s ofs)
   | Ainstack ofs, nil => Ptr (Stk ofs)
   | _, _ => Vbot
@@ -76,9 +77,7 @@ Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : ava
   
 
 Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
@@ -89,15 +88,63 @@ Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
   else Vtop.
 
 Definition eval_static_extfz (stop : Z) (start : Z) (v : aval) :=
-  if (Z.leb start stop)
-       && (Z.geb start Z.zero)
-       && (Z.ltb stop Int.zwordsize)
+  if is_bitfield stop start
   then
     let stop' := Z.add stop Z.one in
     match v with
     | I w =>
       I (Int.shru (Int.shl w (Int.repr (Z.sub Int.zwordsize stop'))) (Int.repr (Z.sub Int.zwordsize (Z.sub stop' start))))
     | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_extfsl (stop : Z) (start : Z) (v : aval) :=
+  if is_bitfieldl stop start
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | L w =>
+      L (Int64.shr' (Int64.shl' w (Int.repr (Z.sub Int64.zwordsize stop'))) (Int.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
+    | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_extfzl (stop : Z) (start : Z) (v : aval) :=
+  if is_bitfieldl stop start
+  then
+    let stop' := Z.add stop Z.one in
+    match v with
+    | L w =>
+      L (Int64.shru' (Int64.shl' w (Int.repr (Z.sub Int64.zwordsize stop'))) (Int.repr (Z.sub Int64.zwordsize (Z.sub stop' start))))
+    | _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_insf stop start prev fld :=
+  let mask := Int.repr (zbitfield_mask stop start) in
+  if is_bitfield stop start
+  then
+    match prev, fld with
+    | (I prevI), (I fldI) =>
+      if Int.ltu (Int.repr start) Int.iwordsize
+      then I (Int.or (Int.and prevI (Int.not mask))
+                     (Int.and (Int.shl fldI (Int.repr start)) mask))
+      else Vtop
+    | _, _ => Vtop
+    end
+  else Vtop.
+
+Definition eval_static_insfl stop start prev fld :=
+  let mask := Int64.repr (zbitfield_mask stop start) in
+  if is_bitfieldl stop start
+  then
+    match prev, fld with
+    | (L prevL), (L fldL) =>
+      if Int.ltu (Int.repr start) Int64.iwordsize'
+      then L (Int64.or (Int64.and prevL (Int64.not mask))
+                       (Int64.and (Int64.shl' fldL (Int.repr start)) mask))
+      else Vtop
+    | _,_ => Vtop
     end
   else Vtop.
 
@@ -210,8 +257,6 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ofloatofsingle, v1::nil => floatofsingle v1
   | Ointoffloat, v1::nil => intoffloat v1
   | Ointuoffloat, v1::nil => intuoffloat v1
-  | Ofloatofint, v1::nil => floatofint v1
-  | Ofloatofintu, v1::nil => floatofintu v1
   | Ointofsingle, v1::nil => intofsingle v1
   | Ointuofsingle, v1::nil => intuofsingle v1
   | Osingleofint, v1::nil => singleofint v1
@@ -231,6 +276,10 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oselectfs cond), v0::v1::vselect::nil => eval_static_selectfs cond v0 v1 vselect
   | (Oextfz stop start), v0::nil => eval_static_extfz stop start v0
   | (Oextfs stop start), v0::nil => eval_static_extfs stop start v0
+  | (Oextfzl stop start), v0::nil => eval_static_extfzl stop start v0
+  | (Oextfsl stop start), v0::nil => eval_static_extfsl stop start v0
+  | (Oinsf stop start), v0::v1::nil => eval_static_insf stop start v0 v1
+  | (Oinsfl stop start), v0::v1::nil => eval_static_insfl stop start v0 v1
   | _, _ => Vbot
   end.
 
@@ -358,15 +407,38 @@ Proof.
       constructor.
 
   (* extfz *)
-  - unfold Val.extfz, eval_static_extfz.
-    destruct (_ && _ && _).
+  - unfold extfz, eval_static_extfz.
+    destruct (is_bitfield _ _).
     + inv H1; constructor.
     + constructor.
 
   (* extfs *)
-  - unfold Val.extfs, eval_static_extfs.
-    destruct (_ && _ && _).
+  - unfold extfs, eval_static_extfs.
+    destruct (is_bitfield _ _).
     + inv H1; constructor.
+    + constructor.
+
+  (* extfzl *)
+  - unfold extfzl, eval_static_extfzl.
+    destruct (is_bitfieldl _ _).
+    + inv H1; constructor.
+    + constructor.
+
+  (* extfsl *)
+  - unfold extfsl, eval_static_extfsl.
+    destruct (is_bitfieldl _ _).
+    + inv H1; constructor.
+    + constructor.
+      
+  (* insf *)
+  - unfold insf, eval_static_insf.
+    destruct (is_bitfield _ _).
+    + inv H1; inv H0; simpl; try constructor; destruct (Int.ltu _ _); simpl; constructor.
+    + constructor.
+  (* insfl *)
+  - unfold insfl, eval_static_insfl.
+    destruct (is_bitfieldl _ _).
+    + inv H1; inv H0; simpl; try constructor; destruct (Int.ltu _ _); simpl; constructor.
     + constructor.
 Qed.
 

@@ -21,6 +21,8 @@ Require Archi.
 Require Import Coqlib Errors.
 Require Import AST Integers Floats Memdata.
 Require Import Op Locations Machblock Asmblock.
+Require ExtValues.
+Require Import Chunks.
 
 Local Open Scope string_scope.
 Local Open Scope error_monad_scope.
@@ -518,11 +520,7 @@ Definition transl_op
       OK (Psrliw rd rs n ::i k)
   | Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs ::i k else
-          Psraiw RTMP rs (Int.repr 31) ::i
-          Psrliw RTMP RTMP (Int.sub Int.iwordsize n) ::i
-          Paddw RTMP rs RTMP ::i
-          Psraiw rd RTMP n ::i k)
+      OK (Psrxiw rd rs n ::i k)
   | Ororimm n, a1 :: nil =>
     do rd <- ireg_of res; do rs <- ireg_of a1;
       OK (Proriw rd rs n ::i k)
@@ -644,11 +642,7 @@ Definition transl_op
       OK (Psrlil rd rs n ::i k)
   | Oshrxlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs ::i k else
-          Psrail RTMP rs (Int.repr 63) ::i
-          Psrlil RTMP RTMP (Int.sub Int64.iwordsize' n) ::i
-          Paddl RTMP rs RTMP ::i
-          Psrail rd RTMP n ::i k)
+      OK (Psrxil rd rs n ::i k)
   | Omaddl, a1 :: a2 :: a3 :: nil =>
     assertion (mreg_eq a1 res);
       do r1 <- ireg_of a1;
@@ -703,12 +697,6 @@ Definition transl_op
   | Ofloatoflongu, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatudrnsz rd rs ::i k)
-  | Ofloatofint, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfloatdrnsz_i32 rd rs ::i k)
-  | Ofloatofintu, a1 :: nil =>
-      do rd <- freg_of res; do rs <- ireg_of a1;
-      OK (Pfloatudrnsz_i32 rd rs ::i k)
   | Ointofsingle, a1 :: nil =>
       do rd <- ireg_of res; do rs <- freg_of a1;
       OK (Pfixedwrzz rd rs ::i k)
@@ -773,19 +761,37 @@ Definition transl_op
        end)
 
   | Oextfz stop start, a1 :: nil =>
-    assertion ((Z.leb start stop)
-                 && (Z.geb start Z.zero)
-                 && (Z.ltb stop Int.zwordsize));
+    assertion (ExtValues.is_bitfield stop start);
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pextfz stop start rd rs ::i k)
 
   | Oextfs stop start, a1 :: nil =>
-    assertion ((Z.leb start stop)
-                 && (Z.geb start Z.zero)
-                 && (Z.ltb stop Int.zwordsize));
+    assertion (ExtValues.is_bitfield stop start);
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pextfs stop start rd rs ::i k)
+
+  | Oextfzl stop start, a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfzl stop start rd rs ::i k)
+
+  | Oextfsl stop start, a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pextfsl stop start rd rs ::i k)
     
+  | Oinsf stop start, a0 :: a1 :: nil =>
+    assertion (ExtValues.is_bitfield stop start);
+    assertion (mreg_eq a0 res);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pinsf stop start rd rs ::i k)
+    
+  | Oinsfl stop start, a0 :: a1 :: nil =>
+    assertion (ExtValues.is_bitfieldl stop start);
+    assertion (mreg_eq a0 res);
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Pinsfl stop start rd rs ::i k)
+
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.
@@ -797,36 +803,36 @@ Definition indexed_memory_access
         (base: ireg) (ofs: ptrofs) :=
   match make_immed64 (Ptrofs.to_int64 ofs) with
   | Imm64_single imm =>
-      mk_instr base (Ofsimm (Ptrofs.of_int64 imm))
+      mk_instr base (Ptrofs.of_int64 imm)
 end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
   match ty, preg_of dst with
-  | Tint,    IR rd => OK (indexed_memory_access (Plw rd) base ofs ::i k)
-  | Tlong,   IR rd => OK (indexed_memory_access (Pld rd) base ofs ::i k)
-  | Tsingle, IR rd => OK (indexed_memory_access (Pfls rd) base ofs ::i k)
-  | Tfloat,  IR rd => OK (indexed_memory_access (Pfld rd) base ofs ::i k)
-  | Tany32,  IR rd => OK (indexed_memory_access (Plw_a rd) base ofs ::i k)
-  | Tany64,  IR rd => OK (indexed_memory_access (Pld_a rd) base ofs ::i k)
+  | Tint,    IR rd => OK (indexed_memory_access (PLoadRRO Plw rd) base ofs ::i k)
+  | Tlong,   IR rd => OK (indexed_memory_access (PLoadRRO Pld rd) base ofs ::i k)
+  | Tsingle, IR rd => OK (indexed_memory_access (PLoadRRO Pfls rd) base ofs ::i k)
+  | Tfloat,  IR rd => OK (indexed_memory_access (PLoadRRO Pfld rd) base ofs ::i k)
+  | Tany32,  IR rd => OK (indexed_memory_access (PLoadRRO Plw_a rd) base ofs ::i k)
+  | Tany64,  IR rd => OK (indexed_memory_access (PLoadRRO Pld_a rd) base ofs ::i k)
   | _, _           => Error (msg "Asmblockgen.loadind")
   end.
 
 Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: bcode) :=
   match ty, preg_of src with
-  | Tint,    IR rd => OK (indexed_memory_access (Psw rd) base ofs ::i k)
-  | Tlong,   IR rd => OK (indexed_memory_access (Psd rd) base ofs ::i k)
-  | Tsingle, IR rd => OK (indexed_memory_access (Pfss rd) base ofs ::i k)
-  | Tfloat,  IR rd => OK (indexed_memory_access (Pfsd rd) base ofs ::i k)
-  | Tany32,  IR rd => OK (indexed_memory_access (Psw_a rd) base ofs ::i k)
-  | Tany64,  IR rd => OK (indexed_memory_access (Psd_a rd) base ofs ::i k)
+  | Tint,    IR rd => OK (indexed_memory_access (PStoreRRO Psw rd) base ofs ::i k)
+  | Tlong,   IR rd => OK (indexed_memory_access (PStoreRRO Psd rd) base ofs ::i k)
+  | Tsingle, IR rd => OK (indexed_memory_access (PStoreRRO Pfss rd) base ofs ::i k)
+  | Tfloat,  IR rd => OK (indexed_memory_access (PStoreRRO Pfsd rd) base ofs ::i k)
+  | Tany32,  IR rd => OK (indexed_memory_access (PStoreRRO Psw_a rd) base ofs ::i k)
+  | Tany64,  IR rd => OK (indexed_memory_access (PStoreRRO Psd_a rd) base ofs ::i k)
   | _, _           => Error (msg "Asmblockgen.storeind")
   end.
 
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) :=
-  indexed_memory_access (Pld dst) base ofs.
+  indexed_memory_access (PLoadRRO Pld dst) base ofs.
 
 Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) :=
-  indexed_memory_access (Psd src) base ofs.
+  indexed_memory_access (PStoreRRO Psd src) base ofs.
 
 (** Translation of memory accesses: loads, and stores. *)
 
@@ -841,6 +847,19 @@ Definition transl_memory_access2
   | _, _ => Error (msg "Asmblockgen.transl_memory_access2")
   end.
 
+Definition transl_memory_access2XS
+     (chunk: memory_chunk)
+     (mk_instr: ireg -> ireg -> basic)
+     scale (args: list mreg) (k: bcode) : res bcode :=
+  match args with
+  | (a1 :: a2 :: nil) =>
+      assertion (Z.eqb (zscale_of_chunk chunk) scale);
+      do rs1 <- ireg_of a1;
+      do rs2 <- ireg_of a2;
+      OK (mk_instr rs1 rs2 ::i k)
+  | _ => Error (msg "Asmblockgen.transl_memory_access2XS")
+  end.
+
 Definition transl_memory_access
      (mk_instr: ireg -> offset -> basic)
      (addr: addressing) (args: list mreg) (k: bcode) : res bcode :=
@@ -849,7 +868,7 @@ Definition transl_memory_access
       do rs <- ireg_of a1;
       OK (indexed_memory_access mk_instr rs ofs ::i k)
   | Aglobal id ofs, nil =>
-      OK (Ploadsymbol id ofs RTMP ::i (mk_instr RTMP (Ofsimm Ptrofs.zero) ::i k))
+      OK (Ploadsymbol id ofs RTMP ::i (mk_instr RTMP Ptrofs.zero ::i k))
   | Ainstack ofs, nil =>
       OK (indexed_memory_access mk_instr SP ofs ::i k)
   | _, _ =>
@@ -880,9 +899,15 @@ Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
   do r <- ireg_of dst;
   transl_memory_access2 (PLoadRRR (chunk2load chunk) r) addr args k.
 
+Definition transl_load_rrrXS (chunk: memory_chunk) (scale : Z)
+           (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of dst;
+  transl_memory_access2XS chunk (PLoadRRRXS (chunk2load chunk) r) scale args k.
+
 Definition transl_load (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   match addr with
+  | Aindexed2XS scale => transl_load_rrrXS chunk scale args dst k
   | Aindexed2 => transl_load_rrr chunk addr args dst k
   | _ => transl_load_rro chunk addr args dst k
   end.
@@ -909,10 +934,16 @@ Definition transl_store_rrr (chunk: memory_chunk) (addr: addressing)
   do r <- ireg_of src;
   transl_memory_access2 (PStoreRRR (chunk2store chunk) r) addr args k.
 
+Definition transl_store_rrrxs (chunk: memory_chunk) (scale: Z)
+           (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
+  do r <- ireg_of src;
+  transl_memory_access2XS chunk (PStoreRRRXS (chunk2store chunk) r) scale args k.
+
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (src: mreg) (k: bcode) : res bcode :=
   match addr with
   | Aindexed2 => transl_store_rrr chunk addr args src k
+  | Aindexed2XS scale => transl_store_rrrxs chunk scale args src k
   | _ => transl_store_rro chunk addr args src k
   end.
 

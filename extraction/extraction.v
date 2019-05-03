@@ -117,6 +117,14 @@ Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
   "fun _ -> !Clflags.option_g".
+Extract Constant Compopts.optim_fglobaladdrtmp =>
+  "fun _ -> !Clflags.option_fglobaladdrtmp".
+Extract Constant Compopts.optim_fglobaladdroffset =>
+  "fun _ -> !Clflags.option_fglobaladdroffset".
+Extract Constant Compopts.optim_fxsaddr =>
+  "fun _ -> !Clflags.option_fxsaddr".
+Extract Constant Compopts.optim_coalesce_mem =>
+  "fun _ -> !Clflags.option_coalesce_mem".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".

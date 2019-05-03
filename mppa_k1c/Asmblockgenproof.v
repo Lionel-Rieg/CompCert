@@ -521,9 +521,9 @@ Proof.
     unfold transl_cond_float32. exploreInst; try discriminate.
     unfold transl_cond_notfloat32. exploreInst; try discriminate.
   - simpl in TIB. unfold transl_load in TIB. exploreInst; try discriminate.
-    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; exploreInst; try discriminate.
+    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; unfold transl_memory_access2XS in EQ0; exploreInst; try discriminate.
   - simpl in TIB. unfold transl_store in TIB. exploreInst; try discriminate.
-    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; exploreInst; try discriminate.
+    all: monadInv TIB; unfold transl_memory_access in EQ0; unfold transl_memory_access2 in EQ0; unfold transl_memory_access2XS in EQ0; exploreInst; try discriminate. 
 Qed.
 
 Lemma transl_basic_code_nonil:

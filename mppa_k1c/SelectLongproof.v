@@ -19,11 +19,12 @@
 
 Require Import String Coqlib Maps Integers Floats Errors.
 Require Archi.
-Require Import AST Values Memory Globalenvs Events.
+Require Import AST Values ExtValues Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
 Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof.
 Require Import SelectLong.
+Require Import DecBoolOps.
 
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
@@ -126,9 +127,11 @@ Proof.
   destruct x; simpl; rewrite ?Int64.add_zero, ?Ptrofs.add_zero; auto.
   destruct (addlimm_match a); InvEval.
 - econstructor; split. apply eval_longconst. rewrite Int64.add_commut; auto.
-- econstructor; split. EvalOp. simpl; eauto. 
-  unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
-  destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto. 
+- destruct (Compopts.optim_fglobaladdroffset _).
+  + econstructor; split. EvalOp. simpl; eauto. 
+    unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
+    destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto.
+  + TrivialExists. repeat econstructor. simpl. trivial.
 - econstructor; split. EvalOp. simpl; eauto. 
   destruct sp; simpl; auto. destruct Archi.ptr64; auto. 
   rewrite Ptrofs.add_assoc, (Ptrofs.add_commut m0). auto. 
@@ -238,7 +241,7 @@ Proof.
   exists x; split; auto. subst n; destruct x; simpl; auto.
   destruct (Int.ltu Int.zero Int64.iwordsize'); auto.
   change (Int64.shru' i Int.zero) with (Int64.shru i Int64.zero). rewrite Int64.shru_zero; auto.
-  destruct (Int.ltu n Int64.iwordsize') eqn:LT; simpl.
+  destruct (Int.ltu n Int64.iwordsize') eqn:LT.
   assert (DEFAULT: exists v, eval_expr ge sp e m le (Eop (Oshrluimm n) (a:::Enil)) v
                          /\  Val.lessdef (Val.shrlu x (Vint n)) v) by TrivialExists.
   destruct (shrluimm_match a); InvEval.
@@ -248,6 +251,36 @@ Proof.
   destruct v1; simpl; auto. rewrite LT'.
   destruct (Int.ltu n1 Int64.iwordsize') eqn:LT1; auto.
   simpl; rewrite LT. rewrite Int.add_commut, Int64.shru'_shru'; auto. rewrite Int.add_commut; auto.
+- subst x.
+    simpl negb.
+    cbn iota.
+    destruct (is_bitfieldl _ _) eqn:BOUNDS.
+    + exists (extfzl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
+            (Z.sub
+               (Z.add
+                  (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                  Z.one) Int64.zwordsize) v1).
+      split.
+      ++ EvalOp.
+      ++ unfold extfzl.
+         rewrite BOUNDS.
+         destruct v1; try (simpl; apply Val.lessdef_undef).
+        replace (Z.sub Int64.zwordsize
+                         (Z.add (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1) by omega.
+        replace (Z.sub Int64.zwordsize
+             (Z.sub
+                (Z.add (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
+                (Z.sub
+                   (Z.add
+                      (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                      Z.one) Int64.zwordsize))) with (Int.unsigned n) by omega.
+        simpl.
+        destruct (Int.ltu n1 Int64.iwordsize') eqn:Hltu_n1; simpl; trivial.
+        destruct (Int.ltu n Int64.iwordsize') eqn:Hltu_n; simpl; trivial.
+        rewrite Int.repr_unsigned.        
+        rewrite Int.repr_unsigned.
+        constructor.
+    + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
 - apply DEFAULT.
 - TrivialExists. constructor; eauto. constructor. EvalOp. simpl; eauto. constructor. auto.
 Qed.
@@ -260,7 +293,7 @@ Proof.
   exists x; split; auto. subst n; destruct x; simpl; auto.
   destruct (Int.ltu Int.zero Int64.iwordsize'); auto.
   change (Int64.shr' i Int.zero) with (Int64.shr i Int64.zero). rewrite Int64.shr_zero; auto.
-  destruct (Int.ltu n Int64.iwordsize') eqn:LT; simpl.
+  destruct (Int.ltu n Int64.iwordsize') eqn:LT.
   assert (DEFAULT: exists v, eval_expr ge sp e m le (Eop (Oshrlimm n) (a:::Enil)) v
                          /\  Val.lessdef (Val.shrl x (Vint n)) v) by TrivialExists.
   destruct (shrlimm_match a); InvEval.
@@ -270,6 +303,36 @@ Proof.
   destruct v1; simpl; auto. rewrite LT'.
   destruct (Int.ltu n1 Int64.iwordsize') eqn:LT1; auto.
   simpl; rewrite LT. rewrite Int.add_commut, Int64.shr'_shr'; auto. rewrite Int.add_commut; auto.
+- subst x.
+    simpl negb.
+    cbn iota.
+    destruct (is_bitfieldl _ _) eqn:BOUNDS.
+    + exists (extfsl (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one))
+            (Z.sub
+               (Z.add
+                  (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                  Z.one) Int64.zwordsize) v1).
+      split.
+      ++ EvalOp.
+      ++ unfold extfsl.
+         rewrite BOUNDS.
+         destruct v1; try (simpl; apply Val.lessdef_undef).
+        replace (Z.sub Int64.zwordsize
+                         (Z.add (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)) with (Int.unsigned n1) by omega.
+        replace (Z.sub Int64.zwordsize
+             (Z.sub
+                (Z.add (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)) Z.one)
+                (Z.sub
+                   (Z.add
+                      (Z.add (Int.unsigned n) (Z.sub Int64.zwordsize (Z.add (Int.unsigned n1) Z.one)))
+                      Z.one) Int64.zwordsize))) with (Int.unsigned n) by omega.
+        simpl.
+        destruct (Int.ltu n1 Int64.iwordsize') eqn:Hltu_n1; simpl; trivial.
+        destruct (Int.ltu n Int64.iwordsize') eqn:Hltu_n; simpl; trivial.
+        rewrite Int.repr_unsigned.        
+        rewrite Int.repr_unsigned.
+        constructor.
+    + TrivialExists. constructor. econstructor. constructor. eassumption. constructor. simpl. reflexivity. constructor. simpl. reflexivity.
 - apply DEFAULT.
 - TrivialExists. constructor; eauto. constructor. EvalOp. simpl; eauto. constructor. auto.
 Qed.
@@ -528,6 +591,61 @@ Proof.
       rewrite Int64.and_zero.
       rewrite Int64.or_zero.
       reflexivity.
+
+  - (*insfl first case*)
+    destruct (is_bitfieldl _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * rewrite Rnmask in *.
+        inv H. inv H0. inv H4. inv H3. inv H9. inv H8.
+        simpl in H6, H7.
+        inv H6. inv H7.
+        inv H4. inv H3. inv H7.
+        simpl in H6.
+        inv H6.
+        set (zstop := (int64_highest_bit mask)) in *.
+        set (zstart := (Int.unsigned start)) in *.
+        
+        TrivialExists.
+        simpl. f_equal.
+        
+        unfold insfl.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        simpl.
+        unfold bitfield_maskl.
+        subst zstart.
+        rewrite Int.repr_unsigned.
+        reflexivity.
+      * TrivialExists.
+    + TrivialExists.
+  - destruct (is_bitfieldl _ _) eqn:Risbitfield.
+    + destruct (and_dec _ _) as [[Rmask Rnmask] | ].
+      * rewrite Rnmask in *.
+        inv H. inv H0. inv H4. inv H6. inv H8. inv H3. inv H8.
+        inv H0. simpl in H7. inv H7.
+        set (zstop := (int64_highest_bit mask)) in *.
+        set (zstart := 0) in *.
+    
+        TrivialExists. simpl. f_equal.
+        unfold insfl.
+        rewrite Risbitfield.
+        rewrite Rmask.
+        simpl.
+        subst zstart.
+        f_equal.
+        destruct v0; simpl; trivial.
+        unfold Int.ltu, Int64.iwordsize', Int64.zwordsize, Int64.wordsize.
+        rewrite Int.unsigned_repr.
+        ** rewrite Int.unsigned_repr.
+           *** simpl.
+               rewrite Int64.shl'_zero.
+               reflexivity.
+           *** simpl. unfold Int.max_unsigned. unfold Int.modulus.
+               simpl. omega.
+        ** unfold Int.max_unsigned. unfold Int.modulus.
+               simpl. omega.
+      * TrivialExists.
+    + TrivialExists.
 - TrivialExists.
 Qed.
 

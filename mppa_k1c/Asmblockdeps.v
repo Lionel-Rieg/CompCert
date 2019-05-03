@@ -13,6 +13,7 @@ Require Import ImpDep.
 Require Import Axioms.
 Require Import Parallelizability.
 Require Import Asmvliw Permutation.
+Require Import Chunks.
 
 Open Scope impure.
 
@@ -57,6 +58,7 @@ Inductive arith_op :=
   | OArithRRI32 (n: arith_name_rri32) (imm: int)
   | OArithRRI64 (n: arith_name_rri64) (imm: int64)
   | OArithARRR (n: arith_name_arrr)
+  | OArithARR (n: arith_name_arr)
   | OArithARRI32 (n: arith_name_arri32) (imm: int)
   | OArithARRI64 (n: arith_name_arri64) (imm: int64)
 .
@@ -74,6 +76,7 @@ Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 Inductive load_op :=
   | OLoadRRO (n: load_name) (ofs: offset)
   | OLoadRRR (n: load_name)
+  | OLoadRRRXS (n: load_name)
 .
 
 Coercion OLoadRRO: load_name >-> Funclass.
@@ -81,6 +84,7 @@ Coercion OLoadRRO: load_name >-> Funclass.
 Inductive store_op :=
   | OStoreRRO (n: store_name) (ofs: offset)
   | OStoreRRR (n: store_name)
+  | OStoreRRRXS (n: store_name)
 .
 
 Coercion OStoreRRO: store_name >-> Funclass.
@@ -121,6 +125,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | OArithRRI32 n i, [Val v] => Some (Val (arith_eval_rri32 n v i))
   | OArithRRI64 n i, [Val v] => Some (Val (arith_eval_rri64 n v i))
 
+  | OArithARR n, [Val v1; Val v2] => Some (Val (arith_eval_arr n v1 v2))
   | OArithARRR n, [Val v1; Val v2; Val v3] => Some (Val (arith_eval_arrr n v1 v2 v3))
   | OArithARRI32 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri32 n v1 v2 i))
   | OArithARRI64 n i, [Val v1; Val v2] => Some (Val (arith_eval_arri64 n v1 v2 i))
@@ -130,7 +135,7 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
 
 Definition exec_load_deps_offset (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
   let (ge, fn) := Ge in
-  match (eval_offset ge ofs) with
+  match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk m (Val.offset_ptr v ptr) with 
               | None => None
               | Some vl => Some (Val vl)
@@ -144,16 +149,23 @@ Definition exec_load_deps_reg (chunk: memory_chunk) (m: mem) (v vo: val) :=
   | Some vl => Some (Val vl)
   end.
 
+Definition exec_load_deps_regxs (chunk: memory_chunk) (m: mem) (v vo: val) :=
+  match Mem.loadv chunk m (Val.addl v (Val.shll vo (scale_of_chunk chunk))) with
+  | None => None
+  | Some vl => Some (Val vl)
+  end.
+
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
   | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps_offset (load_chunk n) m v ofs
   | OLoadRRR n, [Val v; Val vo; Memstate m] => exec_load_deps_reg (load_chunk n) m v vo
+  | OLoadRRRXS n, [Val v; Val vo; Memstate m] => exec_load_deps_regxs (load_chunk n) m v vo
   | _, _ => None
   end.
 
 Definition exec_store_deps_offset (chunk: memory_chunk) (m: mem) (vs va: val) (ofs: offset) :=
   let (ge, fn) := Ge in
-  match (eval_offset ge ofs) with
+  match (eval_offset ofs) with
   | OK ptr => match Mem.storev chunk m (Val.offset_ptr va ptr) vs with
               | None => None
               | Some m' => Some (Memstate m')
@@ -167,10 +179,17 @@ Definition exec_store_deps_reg (chunk: memory_chunk) (m: mem) (vs va vo: val) :=
   | Some m' => Some (Memstate m')
   end.
 
+Definition exec_store_deps_regxs (chunk: memory_chunk) (m: mem) (vs va vo: val) :=
+  match Mem.storev chunk m (Val.addl va (Val.shll vo (scale_of_chunk chunk))) vs with
+  | None => None
+  | Some m' => Some (Memstate m')
+  end.
+
 Definition store_eval (so: store_op) (l: list value) :=
   match so, l with
   | OStoreRRO n ofs, [Val vs; Val va; Memstate m] => exec_store_deps_offset (store_chunk n) m vs va ofs
   | OStoreRRR n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_reg (store_chunk n) m vs va vo
+  | OStoreRRRXS n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_regxs (store_chunk n) m vs va vo
   | _, _ => None
   end.
 
@@ -329,6 +348,8 @@ Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
      match o2 with OArithRRI64 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   | OArithARRR n1 =>
      match o2 with OArithARRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OArithARR n1 =>
+     match o2 with OArithARR n2 => phys_eq n1 n2 | _ => RET false end
   | OArithARRI32 n1 i1 =>
      match o2 with OArithARRI32 n2 i2 => iandb (phys_eq n1 n2) (phys_eq i1 i2) | _ => RET false end
   | OArithARRI64 n1 i1 =>
@@ -351,6 +372,8 @@ Definition load_op_eq (o1 o2: load_op): ?? bool :=
      match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
   | OLoadRRR n1 =>
      match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRRXS n1 =>
+     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma load_op_eq_correct o1 o2:
@@ -359,23 +382,40 @@ Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
   - congruence.
   - congruence.
+  - congruence.
 Qed.
 Hint Resolve load_op_eq_correct: wlp.
 Opaque load_op_eq_correct.
 
+Definition offset_eq (ofs1 ofs2 : offset): ?? bool :=
+  RET (Ptrofs.eq ofs1 ofs2).
+
+Lemma offset_eq_correct ofs1 ofs2:
+  WHEN offset_eq ofs1 ofs2 ~> b THEN b = true -> ofs1 = ofs2.
+Proof.
+  wlp_simplify.
+  pose (Ptrofs.eq_spec ofs1 ofs2).
+  rewrite H in *.
+  trivial.
+Qed.
+Hint Resolve offset_eq_correct: wlp.
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1 with
   | OStoreRRO n1 ofs1 =>
-     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
+     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
   | OStoreRRR n1 =>
      match o2 with OStoreRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OStoreRRRXS n1 =>
+     match o2 with OStoreRRRXS n2 => phys_eq n1 n2 | _ => RET false end
   end.
 
 Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
+  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial.
   - congruence.
   - congruence.
 Qed.
@@ -597,6 +637,7 @@ Definition trans_arith (ai: ar_instruction) : inst :=
   | PArithRRI32 n d s i => [(#d, Op (Arith (OArithRRI32 n i)) (PReg(#s) @ Enil))]
   | PArithRRI64 n d s i => [(#d, Op (Arith (OArithRRI64 n i)) (PReg(#s) @ Enil))]
   | PArithARRR n d s1 s2 => [(#d, Op (Arith (OArithARRR n)) (PReg(#d) @ PReg(#s1) @ PReg(#s2) @ Enil))]
+  | PArithARR n d s => [(#d, Op (Arith (OArithARR n)) (PReg(#d) @ PReg(#s) @ Enil))]
   | PArithARRI32 n d s i => [(#d, Op (Arith (OArithARRI32 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   | PArithARRI64 n d s i => [(#d, Op (Arith (OArithARRI64 n i)) (PReg(#d) @ PReg(#s) @ Enil))]
   end.
@@ -607,8 +648,14 @@ Definition trans_basic (b: basic) : inst :=
   | PArith ai => trans_arith ai
   | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg (#a) @ PReg pmem @ Enil))]
   | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PStoreQRRO qs a ofs =>
+    let (s0, s1) := gpreg_q_expand qs in 
+    [(pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s0) @ PReg (#a) @ PReg pmem @ Enil));
+     (pmem, Op (Store (OStoreRRO Psd_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#s1) @ PReg (#a) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));
@@ -776,6 +823,12 @@ Proof.
     * Simpl.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
+(* PArithARR *)
+  -  eexists; split; [|split].
+    * simpl. rewrite (H0 rd).  rewrite (H0 rs). reflexivity.
+    * Simpl.
+    * intros rr; destruct rr; Simpl.
+      destruct (ireg_eq g rd); subst; Simpl.      
 (* PArithARRI32 *)
   - eexists; split; [|split].
     * simpl. rewrite (H0 rd).  rewrite (H0 rs). reflexivity.
@@ -805,7 +858,8 @@ Proof.
     (* Load Offset *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_offset; simpl; unfold exec_load_deps_offset; erewrite GENV, H, H0;
-      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      unfold eval_offset;
+      simpl; auto;
       destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
@@ -817,12 +871,19 @@ Proof.
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
+    (* Load Reg XS *)
+    + destruct i; simpl load_chunk. all:
+      unfold parexec_load_regxs; simpl; unfold exec_load_deps_regxs; rewrite H, H0; rewrite (H0 rofs);
+      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
+
 (* Store *)
   - destruct i.
     (* Store Offset *)
     + destruct i; simpl store_chunk. all:
       unfold parexec_store_offset; simpl; unfold exec_store_deps_offset; erewrite GENV, H, H0; rewrite (H0 ra);
-      destruct (eval_offset _ _) eqn:EVALOFF; simpl; auto;
+      unfold eval_offset; simpl; auto;
       destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
@@ -834,7 +895,44 @@ Proof.
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl.
 
-(* Allocframe *)
+    (* Store Reg XS *)
+    + destruct i; simpl store_chunk. all:
+      unfold parexec_store_regxs; simpl; unfold exec_store_deps_regxs; rewrite H, H0; rewrite (H0 ra); rewrite (H0 rofs);
+      destruct (Mem.storev _ _ _ _) eqn:MEML; simpl; auto;
+      eexists; split; try split; Simpl;
+      intros rr; destruct rr; Simpl.
+
+    + unfold parexec_store_q_offset.
+      simpl.
+      destruct (gpreg_q_expand rs) as [s0 s1].
+      simpl.
+      unfold exec_store_deps_offset.
+      repeat rewrite H0.
+      repeat rewrite H.
+      destruct Ge.
+      destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ] eqn:MEML0; simpl.
+      ++ rewrite MEML0.
+         destruct (Mem.storev _ _ _ (rsr s1)) as [mem1 | ] eqn:MEML1; simpl.
+         * rewrite (assign_diff sr _ (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr _ (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           eexists; split.
+           reflexivity.
+           rewrite (assign_eq _ pmem).
+           split; trivial.
+           intro r.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
+           congruence.
+         * rewrite (assign_diff sr pmem (# s1)) by apply ppos_pmem_discr.
+           rewrite (assign_diff sr pmem (# ra)) by apply ppos_pmem_discr.
+           repeat rewrite H0.
+           rewrite MEML1.
+           reflexivity.
+     ++ rewrite MEML0.
+        reflexivity.
+  (* Allocframe *)
   - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
     * eexists; repeat split.
       { Simpl. erewrite !H0, H, MEMAL, MEMS. Simpl.
@@ -1215,6 +1313,8 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Pzxwd => "Pzxwd"
   | Pextfz _ _ => "Pextfz"
   | Pextfs _ _ => "Pextfs"
+  | Pextfzl _ _ => "Pextfzl"
+  | Pextfsl _ _ => "Pextfsl"
   | Pfabsd => "Pfabsd"
   | Pfabsw => "Pfabsw"
   | Pfnegd => "Pfnegd"
@@ -1224,9 +1324,7 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Pfloatwrnsz => "Pfloatwrnsz"
   | Pfloatuwrnsz => "Pfloatuwrnsz"
   | Pfloatudrnsz => "Pfloatudrnsz"
-  | Pfloatudrnsz_i32 => "Pfloatudrnsz_i32"
   | Pfloatdrnsz => "Pfloatdrnsz"
-  | Pfloatdrnsz_i32 => "Pfloatdrnsz_i32"
   | Pfixedwrzz => "Pfixedwrzz"
   | Pfixeduwrzz => "Pfixeduwrzz"
   | Pfixeddrzz => "Pfixeddrzz"
@@ -1274,6 +1372,7 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Pornw => "Pornw"
   | Psraw => "Psraw"
   | Psrlw => "Psrlw"
+  | Psrxw => "Psrxw"
   | Psllw => "Psllw"
   | Paddl => "Paddl"
   | Psubl => "Psubl"
@@ -1288,6 +1387,7 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Pmull => "Pmull"
   | Pslll => "Pslll"
   | Psrll => "Psrll"
+  | Psrxl => "Psrxl"
   | Psral => "Psral"
   | Pfaddd => "Pfaddd"
   | Pfaddw => "Pfaddw"
@@ -1312,11 +1412,13 @@ Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   | Porniw => "Porniw"
   | Psraiw => "Psraiw"
   | Psrliw => "Psrliw"
+  | Psrxiw => "Psrxiw"
   | Pslliw => "Pslliw"
   | Proriw => "Proriw"
   | Psllil => "Psllil"
   | Psrlil => "Psrlil"
   | Psrail => "Psrail"
+  | Psrxil => "Psrxil"
   end.
 
 Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
@@ -1342,6 +1444,12 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   | Pcmoveu _ => "Pcmoveu"
   end.
 
+Definition string_of_name_arr (n: arith_name_arr): pstring :=
+  match n with
+  | Pinsf _ _ => "Pinsf"
+  | Pinsfl _ _ => "Pinsfl"
+  end.
+
 Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
   match n with
   | Pmaddiw => "Pmaddw"
@@ -1364,6 +1472,7 @@ Definition string_of_arith (op: arith_op): pstring :=
   | OArithRRI32 n _ => string_of_name_rri32 n
   | OArithRRI64 n _ => string_of_name_rri64 n
   | OArithARRR n => string_of_name_arrr n
+  | OArithARR n => string_of_name_arr n
   | OArithARRI32 n _ => string_of_name_arri32 n
   | OArithARRI64 n _ => string_of_name_arri64 n
   end.
@@ -1386,6 +1495,7 @@ Definition string_of_load (op: load_op): pstring :=
   match op with
   | OLoadRRO n _ => string_of_load_name n
   | OLoadRRR n => string_of_load_name n
+  | OLoadRRRXS n => string_of_load_name n
   end.
 
 Definition string_of_store_name (n: store_name) : pstring :=
@@ -1404,6 +1514,7 @@ Definition string_of_store (op: store_op) : pstring :=
   match op with
   | OStoreRRO n _ => string_of_store_name n
   | OStoreRRR n => string_of_store_name n
+  | OStoreRRRXS n => string_of_store_name n
   end.
 
 Definition string_of_control (op: control_op) : pstring :=
@@ -1466,7 +1577,3 @@ Definition bblock_equivb: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bbloc
 Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
 
 End SECT_BBLOCK_EQUIV.
-
-
-
-

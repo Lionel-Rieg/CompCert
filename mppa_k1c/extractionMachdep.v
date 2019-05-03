@@ -22,6 +22,9 @@ Require Archi Asm.
 Extract Constant Archi.ptr64 => " Configuration.model = ""64"" ".
 Extract Constant Archi.pic_code => "fun () -> false".  (* for the time being *)
 
+Extract Constant Peephole.print_found_store =>
+"fun offset x -> Printf.printf ""found offset = %ld\n"" (Camlcoq.camlint_of_coqint offset); x".
+
 (* Asm *)
 (*
 Extract Constant Asm.low_half => "fun _ _ _ -> assert false".

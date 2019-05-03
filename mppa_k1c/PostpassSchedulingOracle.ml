@@ -36,6 +36,8 @@ let arith_rr_str = function
   | Pzxwd -> "Pzxwd"
   | Pextfz(_,_) -> "Pextfz"
   | Pextfs(_,_) -> "Pextfs"
+  | Pextfzl(_,_) -> "Pextfzl"
+  | Pextfsl(_,_) -> "Pextfsl"
   | Pfabsw -> "Pfabsw"
   | Pfabsd -> "Pfabsd"
   | Pfnegw -> "Pfnegw"
@@ -44,10 +46,8 @@ let arith_rr_str = function
   | Pfwidenlwd -> "Pfwidenlwd"
   | Pfloatwrnsz -> "Pfloatwrnsz"
   | Pfloatuwrnsz -> "Pfloatuwrnsz"
-  | Pfloatudrnsz_i32 -> "Pfloatudrnsz_i32"
   | Pfloatudrnsz -> "Pfloatudrnsz"
   | Pfloatdrnsz -> "Pfloatdrnsz"
-  | Pfloatdrnsz_i32 -> "Pfloatdrnsz_i32"
   | Pfixedwrzz -> "Pfixedwrzz"
   | Pfixeduwrzz -> "Pfixeduwrzz"
   | Pfixeddrzz -> "Pfixeddrzz"
@@ -73,6 +73,7 @@ let arith_rrr_str = function
   | Pornw -> "Pornw"
   | Psraw -> "Psraw"
   | Psrlw -> "Psrlw"
+  | Psrxw -> "Psrxw"
   | Psllw -> "Psllw"
   | Paddl -> "Paddl"
   | Psubl -> "Psubl"
@@ -87,6 +88,7 @@ let arith_rrr_str = function
   | Pmull -> "Pmull"
   | Pslll -> "Pslll"
   | Psrll -> "Psrll"
+  | Psrxl -> "Psrxl"
   | Psral -> "Psral"
   | Pfaddd -> "Pfaddd"
   | Pfaddw -> "Pfaddw"
@@ -108,12 +110,14 @@ let arith_rri32_str = function
   | Pandniw -> "Pandniw"
   | Porniw -> "Porniw"
   | Psraiw -> "Psraiw"
+  | Psrxiw -> "Psrxiw"
   | Psrliw -> "Psrliw"
   | Pslliw -> "Pslliw"
   | Proriw -> "Proriw"
   | Psllil -> "Psllil"
   | Psrlil -> "Psrlil"
   | Psrail -> "Psrail"
+  | Psrxil -> "Psrxil"
 
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
@@ -127,6 +131,11 @@ let arith_rri64_str = function
   | Pnxoril -> "Pnxoril"
   | Pandnil -> "Pandnil"
   | Pornil -> "Pornil"
+
+
+let arith_arr_str = function
+  | Pinsf (_, _) -> "Pinsf"
+  | Pinsfl (_, _) -> "Pinsfl"
 
 let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
@@ -177,6 +186,8 @@ let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; 
 
 let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
 
+let arith_arr_rec i rd rs = { inst = arith_arr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
+
 let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
 
 let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
@@ -190,6 +201,7 @@ let arith_rec i =
   | PArithRRI32 (i, rd, rs, imm32) -> arith_rri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithRRI64 (i, rd, rs, imm64) -> arith_rri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
+  | PArithARR (i, rd, rs) -> arith_arr_rec i (IR rd) (IR rs)
   (* Seems like single constant constructor types are elided *)
   | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
   | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
@@ -204,15 +216,20 @@ let arith_rec i =
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
-  | PLoadRRO (i, rs1, rs2, imm) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm))
-                                      ; is_control = false}
-  | PLoadRRR (i, rs1, rs2, rs3) -> { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None 
-                                      ; is_control = false}
+  | PLoadRRO (i, rs1, rs2, imm) ->
+     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+  | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
+     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+  | PStoreRRO (i, rs1, rs2, imm) ->
+     { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
                                       ; is_control = false}
-  | PStoreRRR (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
+  | PStoreQRRO (rs, ra, imm) ->
+     let (rs0, rs1) = gpreg_q_expand rs in
+     { inst = "Psq"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
+                                      ; is_control = false}
+  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
 
 let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
@@ -422,14 +439,14 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 type real_instruction = 
   (* ALU *) 
-  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Rorw | Xorw
-  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Xord
+  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
+  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Srsd | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Maddw | Maddd | Cmoved
-  | Make | Nop | Extfz | Extfs
+  | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld
-  | Sb | Sh | Sw | Sd 
+  | Sb | Sh | Sw | Sd | Sq
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
   (* FPU *)
@@ -459,6 +476,8 @@ let ab_inst_to_real = function
   | "Psubl" | "Pnegl" -> Sbfd
   | "Psraw" | "Psraiw" -> Sraw
   | "Psral" | "Psrail" -> Srad
+  | "Psrxw" | "Psrxiw" -> Srsw
+  | "Psrxl" | "Psrxil" -> Srsd
   | "Psrlw" | "Psrliw" -> Srlw
   | "Psrll" | "Psrlil" -> Srld
   | "Psllw" | "Pslliw" -> Sllw
@@ -476,18 +495,15 @@ let ab_inst_to_real = function
   | "Pmaddl" -> Maddd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
-  | "Psxwd" -> Extfs
-  | "Pzxwd" -> Extfz
-  | "Pextfz" -> Extfz
-  | "Pextfs" -> Extfs
+  | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
+  | "Pextfs" | "Pextfsl" | "Psxwd" -> Extfs
+  | "Pinsf" | "Pinsfl" -> Insf
   | "Pfnarrowdw" -> Fnarrowdw
   | "Pfwidenlwd" -> Fwidenlwd
   | "Pfloatwrnsz" -> Floatwz
   | "Pfloatuwrnsz" -> Floatuwz
   | "Pfloatdrnsz" -> Floatdz
-  | "Pfloatdrnsz_i32" -> Floatdz
   | "Pfloatudrnsz" -> Floatudz
-  | "Pfloatudrnsz_i32" -> Floatudz
   | "Pfixedwrzz" -> Fixedwz
   | "Pfixeduwrzz" -> Fixeduwz
   | "Pfixeddrzz" -> Fixeddz
@@ -507,6 +523,7 @@ let ab_inst_to_real = function
   | "Psh" -> Sh 
   | "Psw" | "Psw_a" | "Pfss" -> Sw
   | "Psd" | "Psd_a" | "Pfsd" -> Sd
+  | "Psq" -> Sq
 
   | "Pcb" | "Pcbu" -> Cb
   | "Pcall" | "Pdiv" | "Pdivu" -> Call
@@ -527,15 +544,17 @@ let ab_inst_to_real = function
   | "Pfsbfw" -> Fsbfw
   | "Pfmuld" -> Fmuld
   | "Pfmulw" -> Fmulw
+
+  | "nop" -> Nop
+           
   | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
               
 exception InvalidEncoding
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm @@ Z.to_int64 i)
-                                  | Some (Off (Ofsimm ptr)) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
-                                  | Some (Off (Ofslow (_, _))) -> Some E27U27L10 (* FIXME *) 
-                                  (* I do not know yet in which context Ofslow can be used by CompCert *)
+                                  | Some (Off ptr) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
+
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
@@ -571,16 +590,16 @@ let rec_to_usage r =
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Srsw | Sllw | Srad | Srld | Slld | Srsd -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
-  | Extfz | Extfs -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
+  | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
                           | Some E27U27L10 -> lsu_data_y)
-  | Sb | Sh | Sw | Sd ->
+  | Sb | Sh | Sw | Sd | Sq ->
       (match encoding with None | Some U6 | Some S10 -> lsu_acc 
                           | Some U27L5 | Some U27L10 -> lsu_acc_x 
                           | Some E27U27L10 -> lsu_acc_y)
@@ -592,17 +611,17 @@ let rec_to_usage r =
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
-  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srlw | Sllw | Xorw
+  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srsw | Srlw | Sllw | Xorw
     (* TODO check rorw *)
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
-  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srld | Slld | Xord | Make
-  | Extfs | Extfz | Fcompw | Fcompd | Cmoved
+  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srsd | Srld | Slld | Xord | Make
+  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
-  | Sb | Sh | Sw | Sd -> 1 (* See k1c-Optimization.pdf page 19 *)
+  | Sb | Sh | Sw | Sd | Sq -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
@@ -756,10 +775,12 @@ let print_bb oc bb =
 
 let do_schedule bb =
   let problem = build_problem bb
-  in let solution = validated_scheduler
-                      (if !Clflags.option_fpostpass_ilp
-                       then cascaded_scheduler
-                       else list_scheduler) problem
+  in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
+                      validated_scheduler cascaded_scheduler
+                    else if !Clflags.option_fpostpass_sched = "list" then
+                      validated_scheduler list_scheduler
+                    else if !Clflags.option_fpostpass_sched = "greedy" then
+                      greedy_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
   in match solution with
   | None -> failwith "Could not find a valid schedule"
   | Some sol -> let bundles = bundlize_solution bb sol in 
@@ -802,19 +823,25 @@ let is_opaque = function
   | PBasic (Pallocframe _) | PBasic (Pfreeframe _) | PControl (PExpand (Pbuiltin _)) -> true
   | _ -> false
 
+(* Returns : (accumulated instructions, remaining instructions, opaque instruction if found) *)
 let rec biggest_wo_opaque = function
-  | [] -> ([], [])
-  | [i] -> ([i], [])
-  | i1 :: i2 :: li -> if is_opaque i2 || is_opaque i1 then ([i1], i2::li) 
-                     else let big, rem = biggest_wo_opaque li in (i1 :: i2 :: big, rem)
+  | [] -> ([], [], None)
+  | i :: li -> if is_opaque i then ([], li, Some i)
+               else let big, rem, opaque = biggest_wo_opaque li in (i :: big, rem, opaque);;
 
 let separate_opaque bb =
   let instrs = bb_to_instrs bb
-  in let rec f hd = function
-  | [] -> []
-  | li ->
-    let sub_li, li = biggest_wo_opaque li
-    in (bundlize sub_li hd) :: (f [] li)
+  in let rec f hd li =
+    match li with
+    | [] -> []
+    | li -> let big, rem, opaque = biggest_wo_opaque li in
+            match opaque with
+            | Some i ->
+                (match big with
+                | [] -> (bundlize [i] hd) :: (f [] rem)
+                | big -> (bundlize big hd) :: (bundlize [i] []) :: (f [] rem)
+                )
+            | None -> (bundlize big hd) :: (f [] rem)
   in f bb.header instrs
 
 let smart_schedule bb =

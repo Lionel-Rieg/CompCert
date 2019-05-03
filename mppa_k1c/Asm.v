@@ -23,6 +23,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Events.
 Require Import Globalenvs.
@@ -41,6 +42,7 @@ Definition preg := preg.
 Inductive addressing : Type :=
   | AOff (ofs: offset)
   | AReg (ro: ireg)
+  | ARegXS (ro: ireg)
 .
 
 (** Syntax *)
@@ -120,7 +122,9 @@ Inductive instruction : Type :=
   | Psd     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store int64 *)
   | Psd_a   (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store any64 *)
   | Pfss    (rs: freg) (ra: ireg) (ofs: addressing)     (**r store float *)
-  | Pfsd     (rd: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
+  | Pfsd    (rs: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
+
+  | Psq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r store 64-bit float *)
 
   (** Arith RR *)
   | Pmv     (rd rs: ireg)                           (**r register move *)
@@ -133,6 +137,12 @@ Inductive instruction : Type :=
   | Pextfz  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
   | Pextfs  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
 
+  | Pextfzl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields unsigned *)
+  | Pextfsl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r extract bitfields signed *)
+
+  | Pinsf  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r insert bitfield *)
+  | Pinsfl  (rd : ireg) (rs : ireg) (stop : Z) (start : Z) (**r insert bitfield *)
+
   | Pfabsd  (rd rs: ireg)                           (**r float absolute double *)
   | Pfabsw  (rd rs: ireg)                           (**r float absolute word *)
   | Pfnegd  (rd rs: ireg)                           (**r float negate double *)
@@ -142,9 +152,7 @@ Inductive instruction : Type :=
   | Pfloatwrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 -> 32) *)
   | Pfloatuwrnsz (rd rs: ireg)                      (**r Floating Point Conversion from integer (u32 -> 32) *)
   | Pfloatudrnsz (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (64 bits) *)
-  | Pfloatudrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from unsigned integer (32 bits) *)
   | Pfloatdrnsz (rd rs: ireg)                       (**r Floating Point Conversion from integer (64 bits) *)
-  | Pfloatdrnsz_i32 (rd rs: ireg)                       (**r Floating Point Conversion from integer (32 bits) *)
   | Pfixedwrzz (rd rs: ireg)                        (**r Integer conversion from floating point *)
   | Pfixeduwrzz (rd rs: ireg)                        (**r Integer conversion from floating point (f32 -> 32 bits unsigned *)
   | Pfixeddrzz (rd rs: ireg)                        (**r Integer conversion from floating point (i64 -> 64 bits) *)
@@ -182,6 +190,7 @@ Inductive instruction : Type :=
   | Pandnw              (rd rs1 rs2: ireg)          (**r andn word *)
   | Pornw               (rd rs1 rs2: ireg)          (**r orn word *)
   | Psraw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word *)
+  | Psrxw               (rd rs1 rs2: ireg)          (**r shift right arithmetic word round to 0*)
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
   | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
@@ -200,6 +209,7 @@ Inductive instruction : Type :=
   | Pslll               (rd rs1 rs2: ireg)          (**r shift left logical long *)
   | Psrll               (rd rs1 rs2: ireg)          (**r shift right logical long *)
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
+  | Psrxl               (rd rs1 rs2: ireg)          (**r shift right arithmetic long round to 0*)
   | Pmaddl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
 
   | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
@@ -223,11 +233,13 @@ Inductive instruction : Type :=
   | Pandniw             (rd rs: ireg) (imm: int)    (**r andn imm word *)
   | Porniw              (rd rs: ireg) (imm: int)    (**r orn imm word *)
   | Psraiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word *)
+  | Psrxiw              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word round to 0*)
   | Psrliw              (rd rs: ireg) (imm: int)    (**r shift right logical imm word *)
   | Pslliw              (rd rs: ireg) (imm: int)    (**r shift left logical imm word *)
   | Proriw              (rd rs: ireg) (imm: int)    (**r rotate right imm word *) 
   | Pmaddiw             (rd rs: ireg) (imm: int)    (**r multiply add imm word *)
   | Psllil              (rd rs: ireg) (imm: int)    (**r shift left logical immediate long *)
+  | Psrxil              (rd rs: ireg) (imm: int)    (**r shift right arithmetic imm word round to 0*)
   | Psrlil              (rd rs: ireg) (imm: int)    (**r shift right logical immediate long *)
   | Psrail              (rd rs: ireg) (imm: int)    (**r shift right arithmetic immediate long *)
 
@@ -286,6 +298,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pzxwd rd rs  => Pzxwd rd rs
   | PArithRR (Asmvliw.Pextfz stop start) rd rs => Pextfz rd rs stop start
   | PArithRR (Asmvliw.Pextfs stop start) rd rs => Pextfs rd rs stop start
+  | PArithRR (Asmvliw.Pextfzl stop start) rd rs => Pextfzl rd rs stop start
+  | PArithRR (Asmvliw.Pextfsl stop start) rd rs => Pextfsl rd rs stop start
   | PArithRR Asmvliw.Pfabsd rd rs => Pfabsd rd rs
   | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs
@@ -296,8 +310,6 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pfloatwrnsz rd rs => Pfloatwrnsz rd rs
   | PArithRR Asmvliw.Pfloatudrnsz rd rs => Pfloatudrnsz rd rs
   | PArithRR Asmvliw.Pfloatdrnsz rd rs => Pfloatdrnsz rd rs
-  | PArithRR Asmvliw.Pfloatudrnsz_i32 rd rs => Pfloatudrnsz_i32 rd rs
-  | PArithRR Asmvliw.Pfloatdrnsz_i32 rd rs => Pfloatdrnsz_i32 rd rs
   | PArithRR Asmvliw.Pfixedwrzz rd rs => Pfixedwrzz rd rs
   | PArithRR Asmvliw.Pfixeduwrzz rd rs => Pfixeduwrzz rd rs
   | PArithRR Asmvliw.Pfixeddrzz rd rs => Pfixeddrzz rd rs
@@ -334,6 +346,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pandnw rd rs1 rs2      => Pandnw rd rs1 rs2
   | PArithRRR Asmvliw.Pornw rd rs1 rs2       => Pornw rd rs1 rs2
   | PArithRRR Asmvliw.Psraw rd rs1 rs2       => Psraw rd rs1 rs2
+  | PArithRRR Asmvliw.Psrxw rd rs1 rs2       => Psrxw rd rs1 rs2
   | PArithRRR Asmvliw.Psrlw rd rs1 rs2       => Psrlw rd rs1 rs2
   | PArithRRR Asmvliw.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
 
@@ -351,6 +364,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pslll rd rs1 rs2       => Pslll rd rs1 rs2
   | PArithRRR Asmvliw.Psrll rd rs1 rs2       => Psrll rd rs1 rs2
   | PArithRRR Asmvliw.Psral rd rs1 rs2       => Psral rd rs1 rs2
+  | PArithRRR Asmvliw.Psrxl rd rs1 rs2       => Psrxl rd rs1 rs2
 
   | PArithRRR Asmvliw.Pfaddd rd rs1 rs2      => Pfaddd rd rs1 rs2
   | PArithRRR Asmvliw.Pfaddw rd rs1 rs2      => Pfaddw rd rs1 rs2
@@ -372,11 +386,13 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 Asmvliw.Pandniw rd rs imm      => Pandniw rd rs imm
   | PArithRRI32 Asmvliw.Porniw rd rs imm       => Porniw rd rs imm
   | PArithRRI32 Asmvliw.Psraiw rd rs imm       => Psraiw rd rs imm
+  | PArithRRI32 Asmvliw.Psrxiw rd rs imm       => Psrxiw rd rs imm
   | PArithRRI32 Asmvliw.Psrliw rd rs imm       => Psrliw rd rs imm
   | PArithRRI32 Asmvliw.Pslliw rd rs imm       => Pslliw rd rs imm
   | PArithRRI32 Asmvliw.Proriw rd rs imm       => Proriw rd rs imm
   | PArithRRI32 Asmvliw.Psllil rd rs imm       => Psllil rd rs imm
   | PArithRRI32 Asmvliw.Psrlil rd rs imm       => Psrlil rd rs imm
+  | PArithRRI32 Asmvliw.Psrxil rd rs imm       => Psrxil rd rs imm
   | PArithRRI32 Asmvliw.Psrail rd rs imm       => Psrail rd rs imm
 
   (* RRI64 *)
@@ -397,6 +413,10 @@ Definition basic_to_instruction (b: basic) :=
   | PArithARRR Asmvliw.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmove cond) rd rs1 rs2=> Pcmove cond rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmoveu cond) rd rs1 rs2=> Pcmoveu cond rd rs1 rs2
+
+  (** ARR *)
+  | PArithARR (Asmvliw.Pinsf stop start) rd rs  => Pinsf rd rs stop start
+  | PArithARR (Asmvliw.Pinsfl stop start) rd rs  => Pinsfl rd rs stop start
 
   (** ARRI32 *)
   | PArithARRI32 Asmvliw.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
@@ -427,6 +447,17 @@ Definition basic_to_instruction (b: basic) :=
   | PLoadRRR Asmvliw.Pfls rd ra ro  => Pfls rd ra (AReg ro)
   | PLoadRRR Asmvliw.Pfld rd ra ro  => Pfld rd ra (AReg ro)
 
+  | PLoadRRRXS Asmvliw.Plb rd ra ro   => Plb rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plbu rd ra ro  => Plbu rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plh rd ra ro   => Plh rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plhu rd ra ro  => Plhu rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plw rd ra ro   => Plw rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Plw_a rd ra ro => Plw_a rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pld rd ra ro   => Pld rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pld_a rd ra ro => Pld_a rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pfls rd ra ro  => Pfls rd ra (ARegXS ro)
+  | PLoadRRRXS Asmvliw.Pfld rd ra ro  => Pfld rd ra (ARegXS ro)
+
   (** Store *)
   | PStoreRRO Asmvliw.Psb rd ra ofs  => Psb rd ra (AOff ofs)
   | PStoreRRO Asmvliw.Psh rd ra ofs => Psh rd ra (AOff ofs)
@@ -446,6 +477,16 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRR Asmvliw.Pfss rd ra ro => Pfss rd ra (AReg ro)
   | PStoreRRR Asmvliw.Pfsd rd ra ro => Pfsd rd ra (AReg ro)
 
+  | PStoreRRRXS Asmvliw.Psb rd ra ro  => Psb rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psh rd ra ro => Psh rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw rd ra ro => Psw rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psw_a rd ra ro => Psw_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd rd ra ro => Psd rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Psd_a rd ra ro => Psd_a rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfss rd ra ro => Pfss rd ra (ARegXS ro)
+  | PStoreRRRXS Asmvliw.Pfsd rd ra ro => Pfsd rd ra (ARegXS ro)
+
+  | PStoreQRRO qrs ra ofs => Psq qrs ra (AOff ofs)
   end.
 
 Section RELSEM.

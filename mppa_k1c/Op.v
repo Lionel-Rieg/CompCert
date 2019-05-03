@@ -31,7 +31,7 @@
 
 Require Import BoolEqual Coqlib.
 Require Import AST Integers Floats.
-Require Import Values Memory Globalenvs Events.
+Require Import Values ExtValues Memory Globalenvs Events.
 
 Set Implicit Arguments.
 
@@ -178,8 +178,6 @@ Inductive operation : Type :=
 (*c Conversions between int and float: *)
   | Ointoffloat              (**r [rd = signed_int_of_float64(r1)] *)
   | Ointuoffloat             (**r [rd = unsigned_int_of_float64(r1)] *)
-  | Ofloatofint              (**r [rd = float64_of_signed_int(r1)] *)
-  | Ofloatofintu             (**r [rd = float64_of_unsigned_int(r1)] *)
   | Ointofsingle             (**r [rd = signed_int_of_float32(r1)] *)
   | Ointuofsingle            (**r [rd = unsigned_int_of_float32(r1)] *)
   | Osingleofint             (**r [rd = float32_of_signed_int(r1)] *)
@@ -199,13 +197,18 @@ Inductive operation : Type :=
   | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
   | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
   | Oextfz (stop : Z) (start : Z)
-  | Oextfs (stop : Z) (start : Z).
+  | Oextfs (stop : Z) (start : Z)
+  | Oextfzl (stop : Z) (start : Z)
+  | Oextfsl (stop : Z) (start : Z)
+  | Oinsf (stop : Z) (start : Z)
+  | Oinsfl (stop : Z) (start : Z).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
 
 Inductive addressing: Type :=
-  | Aindexed2: addressing                  (**r Address is [r1 + r2] *)
+  | Aindexed2XS (scale : Z) : addressing (**r Address is [r1 + r2 << scale] *)
+  | Aindexed2 : addressing (**r Address is [r1 + r2] *)
   | Aindexed: ptrofs -> addressing    (**r Address is [r1 + offset] *)
   | Aglobal: ident -> ptrofs -> addressing  (**r Address is global plus offset *)
   | Ainstack: ptrofs -> addressing.   (**r Address is [stack_pointer + offset] *)
@@ -228,7 +231,7 @@ Defined.
 
 Definition eq_addressing (x y: addressing) : {x=y} + {x<>y}.
 Proof.
-  generalize ident_eq Ptrofs.eq_dec; intros.
+  generalize ident_eq Ptrofs.eq_dec Z.eq_dec; intros.
   decide equality.
 Defined.
 
@@ -481,8 +484,6 @@ Definition eval_operation
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
   | Ointoffloat, v1::nil => Val.intoffloat v1
   | Ointuoffloat, v1::nil => Val.intuoffloat v1
-  | Ofloatofint, v1::nil => Val.floatofint v1
-  | Ofloatofintu, v1::nil => Val.floatofintu v1
   | Ointofsingle, v1::nil => Val.intofsingle v1
   | Ointuofsingle, v1::nil => Val.intuofsingle v1
   | Osingleofint, v1::nil => Val.singleofint v1
@@ -500,8 +501,12 @@ Definition eval_operation
   | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
   | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
   | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
-  | (Oextfz stop start), v0::nil => Some (Val.extfz stop start v0)
-  | (Oextfs stop start), v0::nil => Some (Val.extfs stop start v0)
+  | (Oextfz stop start), v0::nil => Some (extfz stop start v0)
+  | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
+  | (Oextfzl stop start), v0::nil => Some (extfzl stop start v0)
+  | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
+  | (Oinsf stop start), v0::v1::nil => Some (insf stop start v0 v1)
+  | (Oinsfl stop start), v0::v1::nil => Some (insfl stop start v0 v1)
   | _, _ => None
   end.
 
@@ -509,6 +514,7 @@ Definition eval_addressing
     (F V: Type) (genv: Genv.t F V) (sp: val)
     (addr: addressing) (vl: list val) : option val :=
   match addr, vl with
+  | Aindexed2XS scale, v1 :: v2 :: nil => Some (Val.addl v1 (Val.shll v2 (Vint (Int.repr scale))))
   | Aindexed2, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Aindexed n, v1 :: nil => Some (Val.offset_ptr v1 n)
   | Aglobal s ofs, nil => Some (Genv.symbol_address genv s ofs)
@@ -675,8 +681,6 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ofloatofsingle => (Tsingle :: nil, Tfloat)
   | Ointoffloat => (Tfloat :: nil, Tint)
   | Ointuoffloat => (Tfloat :: nil, Tint)
-  | Ofloatofint => (Tint :: nil, Tfloat)
-  | Ofloatofintu => (Tint :: nil, Tfloat)
   | Ointofsingle => (Tsingle :: nil, Tint)
   | Ointuofsingle => (Tsingle :: nil, Tint)
   | Osingleofint => (Tint :: nil, Tsingle)
@@ -696,10 +700,15 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
   | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
   | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
+  | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
+  | Oinsf _ _ => (Tint :: Tint :: nil, Tint)
+  | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
   end.
 
+(* FIXME: two Tptr ?! *)
 Definition type_of_addressing (addr: addressing) : list typ :=
   match addr with
+  | Aindexed2XS _ => Tptr :: Tptr :: nil
   | Aindexed2 => Tptr :: Tptr :: nil
   | Aindexed _ => Tptr :: nil
   | Aglobal _ _ => nil
@@ -908,9 +917,6 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* intoffloat, intuoffloat *)
   - destruct v0; simpl in H0; inv H0. destruct (Float.to_int f); inv H2...
   - destruct v0; simpl in H0; inv H0. destruct (Float.to_intu f); inv H2...
-  (* floatofint, floatofintu *)
-  - destruct v0; simpl in H0; inv H0...
-  - destruct v0; simpl in H0; inv H0...
   (* intofsingle, intuofsingle *)
   - destruct v0; simpl in H0; inv H0. destruct (Float32.to_int f); inv H2...
   - destruct v0; simpl in H0; inv H0. destruct (Float32.to_intu f); inv H2...
@@ -969,14 +975,36 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
       destruct (_ && _); simpl; trivial.
       destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
-  - unfold Val.extfz.
-    destruct (_ && _ && _).
+  - unfold extfz.
+    destruct (is_bitfield _ _).
     + destruct v0; simpl; trivial.
     + constructor.
  (* extfs *)
-  - unfold Val.extfs.
-    destruct (_ && _ && _).
+  - unfold extfs.
+    destruct (is_bitfield _ _).
     + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfzl *)
+  - unfold extfzl.
+    destruct (is_bitfieldl _ _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* extfsl *)
+  - unfold extfsl.
+    destruct (is_bitfieldl _ _).
+    + destruct v0; simpl; trivial.
+    + constructor.
+ (* insf *)
+  - unfold insf, bitfield_mask.
+    destruct (is_bitfield _ _).
+    + destruct v0; destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+    + constructor.
+ (* insf *)
+  - unfold insfl, bitfield_mask.
+    destruct (is_bitfieldl _ _).
+    + destruct v0; destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
     + constructor.
 Qed.
 
@@ -1093,7 +1121,7 @@ Qed.
 
 Definition offset_addressing (addr: addressing) (delta: Z) : option addressing :=
   match addr with
-  | Aindexed2 => None
+  | Aindexed2 | Aindexed2XS _ => None
   | Aindexed n => Some(Aindexed (Ptrofs.add n (Ptrofs.repr delta)))
   | Aglobal id n => Some(Aglobal id (Ptrofs.add n (Ptrofs.repr delta)))
   | Ainstack n => Some(Ainstack (Ptrofs.add n (Ptrofs.repr delta)))
@@ -1499,9 +1527,6 @@ Proof.
     exists (Vint i); auto.
   - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_intu f0); simpl in H2; inv H2.
     exists (Vint i); auto.
-  (* floatofint, floatofintu *)
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
   (* intofsingle, intuofsingle *)
   - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_int f0); simpl in H2; inv H2.
     exists (Vint i); auto.
@@ -1589,15 +1614,43 @@ Proof.
     * rewrite Hcond'. constructor.
 
  (* extfz *)
-  - unfold Val.extfz.
-    destruct (_ && _ && _).
+  - unfold extfz.
+    destruct (is_bitfield _ _).
     + inv H4; trivial.
     + trivial.
 
  (* extfs *)
-  - unfold Val.extfs.
-    destruct (_ && _ && _).
+  - unfold extfs.
+    destruct (is_bitfield _ _).
     + inv H4; trivial.
+    + trivial.
+
+ (* extfzl *)
+  - unfold extfzl.
+    destruct (is_bitfieldl _ _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* extfsl *)
+  - unfold extfsl.
+    destruct (is_bitfieldl _ _).
+    + inv H4; trivial.
+    + trivial.
+
+ (* insf *)
+  - unfold insf.
+    destruct (is_bitfield _ _).
+    + inv H4; inv H2; trivial.
+      simpl. destruct (Int.ltu _ _); trivial.
+      simpl. trivial.
+    + trivial.
+
+ (* insfl *)
+  - unfold insfl.
+    destruct (is_bitfieldl _ _).
+    + inv H4; inv H2; trivial.
+      simpl. destruct (Int.ltu _ _); trivial.
+      simpl. trivial.
     + trivial.
 Qed.
 
@@ -1612,6 +1665,9 @@ Lemma eval_addressing_inj:
   exists v2, eval_addressing ge2 sp2 addr vl2 = Some v2 /\ Val.inject f v1 v2.
 Proof.
   intros. destruct addr; simpl in H2; simpl; FuncInv; InvInject; TrivialExists.
+  - apply Val.addl_inject; trivial.
+    destruct v0; destruct v'0; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial; inv H3.
+    apply Val.inject_long.
   - apply Val.addl_inject; auto.
   - apply Val.offset_ptr_inject; auto.
   - apply H; simpl; auto.

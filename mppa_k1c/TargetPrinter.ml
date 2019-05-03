@@ -41,6 +41,7 @@ module Target (*: TARGET*) =
     let print_label oc lbl = label oc (transl_label lbl)
 
     let int_reg_name = let open Asmvliw in function
+                                          
       | GPR0  -> "$r0"  | GPR1  -> "$r1"  | GPR2  -> "$r2"  | GPR3  -> "$r3"
       | GPR4  -> "$r4"  | GPR5  -> "$r5"  | GPR6  -> "$r6"  | GPR7  -> "$r7"
       | GPR8  -> "$r8"  | GPR9  -> "$r9"  | GPR10 -> "$r10" | GPR11 -> "$r11"
@@ -60,7 +61,43 @@ module Target (*: TARGET*) =
 
     let ireg oc r = output_string oc (int_reg_name r)
 
-    let ireg = ireg
+    let int_gpreg_q_name =
+      let open Asmvliw in
+      function
+      | R0R1 -> "$r0r1"
+      | R2R3 -> "$r2r3"
+      | R4R5 -> "$r4r5"
+      | R6R7 -> "$r6r7"
+      | R8R9 -> "$r8r9"
+      | R10R11 -> "$r10r11"
+      | R12R13 -> "$r12r13"
+      | R14R15 -> "$r14r15"
+      | R16R17 -> "$r16r17"
+      | R18R19 -> "$r18r19"
+      | R20R21 -> "$r20r21"
+      | R22R23 -> "$r22r23"
+      | R24R25 -> "$r24r25"
+      | R26R27 -> "$r26r27"
+      | R28R29 -> "$r28r29"
+      | R30R31 -> "$r30r31"
+      | R32R33 -> "$r32r33"
+      | R34R35 -> "$r34r35"
+      | R36R37 -> "$r36r37"
+      | R38R39 -> "$r38r39"
+      | R40R41 -> "$r40r41"
+      | R42R43 -> "$r42r43"
+      | R44R45 -> "$r44r45"
+      | R46R47 -> "$r46r47"
+      | R48R49 -> "$r48r49"
+      | R50R51 -> "$r50r51"
+      | R52R53 -> "$r52r53"
+      | R54R55 -> "$r54r55"
+      | R56R57 -> "$r56r57"
+      | R58R59 -> "$r58r59"
+      | R60R61 -> "$r60r61"
+      | R62R63 -> "$r62r63"
+                              
+    let gpreg_q oc r = output_string oc (int_gpreg_q_name r)
 
     let preg oc = let open Asmvliw in function
       | IR r -> ireg oc r
@@ -160,13 +197,15 @@ module Target (*: TARGET*) =
   *)
 (* Offset part of a load or store *)
 
-    let offset oc = let open Asmvliw in function
-    | Ofsimm n -> ptrofs oc n
-    | Ofslow(id, ofs) -> fprintf oc "%%lo(%a)" symbol_offset (id, ofs)
+    let offset oc n = ptrofs oc n 
 
     let addressing oc = function
     | AOff ofs -> offset oc ofs
-    | AReg ro -> ireg oc ro
+    | AReg ro | ARegXS ro -> ireg oc ro
+
+    let xscale oc = function
+    | ARegXS _ -> fprintf oc ".xs"
+    | _ -> ()
 
     let icond_name = let open Asmvliw in function
       | ITne | ITneu -> "ne"
@@ -248,7 +287,7 @@ module Target (*: TARGET*) =
           | _ ->
               assert false
          end
-      | Pnop -> fprintf oc "	nop\n"
+      | Pnop -> (* FIXME fprintf oc "	nop\n" *) ()
       | Psemi -> fprintf oc ";;\n"
 
       | Pclzll (rd, rs) -> fprintf oc "	clzd %a = %a\n" ireg rd ireg rs
@@ -342,27 +381,29 @@ module Target (*: TARGET*) =
 
       (* Load/Store instructions *)
       | Plb(rd, ra, adr) ->
-         fprintf oc "	lbs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lbs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plbu(rd, ra, adr) ->
-         fprintf oc "	lbz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lbz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plh(rd, ra, adr) ->
-         fprintf oc "	lhs	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lhs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plhu(rd, ra, adr) ->
-         fprintf oc "	lhz	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lhz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
-         fprintf oc "	lws	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	lws%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	ld	%a = %a[%a]\n" ireg rd addressing adr ireg ra
+         fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
     
       | Psb(rd, ra, adr) ->
-         fprintf oc "	sb	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sb%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psh(rd, ra, adr) ->
-         fprintf oc "	sh	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sh%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psw(rd, ra, adr) | Psw_a(rd, ra, adr) | Pfss(rd, ra, adr) ->
-         fprintf oc "	sw	%a[%a] = %a\n" addressing adr ireg ra ireg rd
+         fprintf oc "	sw%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psd(rd, ra, adr) | Psd_a(rd, ra, adr) | Pfsd(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	sd	%a[%a] = %a\n" addressing adr ireg ra ireg rd
-
+         fprintf oc "	sd%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
+      | Psq(rd, ra, adr) ->
+         fprintf oc "	sq%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra gpreg_q rd
+      
       (* Arith R instructions *)
 
       (* Arith RR instructions *)
@@ -377,10 +418,12 @@ module Target (*: TARGET*) =
          fprintf oc "	sxwd	%a = %a\n" ireg rd ireg rs
       | Pzxwd(rd, rs) ->
          fprintf oc "	zxwd	%a = %a\n" ireg rd ireg rs
-      | Pextfz(rd, rs, stop, start) ->
+      | Pextfz(rd, rs, stop, start) | Pextfzl(rd, rs, stop, start) ->
          fprintf oc "	extfz	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
-      | Pextfs(rd, rs, stop, start) ->
+      | Pextfs(rd, rs, stop, start) | Pextfsl(rd, rs, stop, start) ->
          fprintf oc "	extfs	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
+      | Pinsf(rd, rs, stop, start) | Pinsfl(rd, rs, stop, start) ->
+         fprintf oc "	insf	%a = %a, %ld, %ld\n" ireg rd ireg rs (camlint_of_coqint stop) (camlint_of_coqint start)
       | Pfabsd(rd, rs) ->
          fprintf oc "	fabsd	%a = %a\n" ireg rd ireg rs
       | Pfabsw(rd, rs) ->
@@ -399,12 +442,8 @@ module Target (*: TARGET*) =
          fprintf oc "	floatw.rn.s	%a = %a, 0\n" ireg rd ireg rs
       | Pfloatudrnsz(rd, rs) ->
          fprintf oc "	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatudrnsz_i32(rd, rs) ->
-         fprintf oc "	zxwd %a = %a\n # FIXME\n	;;\n	floatud.rn.s	%a = %a, 0\n" ireg rd ireg rs ireg rd ireg rd
       | Pfloatdrnsz(rd, rs) ->
           fprintf oc "	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs
-      | Pfloatdrnsz_i32(rd, rs) ->
-         fprintf oc "	sxwd %a = %a\n # FIXME\n	;;\n	floatd.rn.s	%a = %a, 0\n" ireg rd ireg rs ireg rd ireg rd
       | Pfixedwrzz(rd, rs) ->
          fprintf oc "	fixedw.rz	%a = %a, 0\n" ireg rd ireg rs
       | Pfixeduwrzz(rd, rs) ->
@@ -469,6 +508,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psraw (rd, rs1, rs2) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Psrxw (rd, rs1, rs2) ->
+         fprintf oc "	srsw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrlw (rd, rs1, rs2) ->
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psllw (rd, rs1, rs2) ->
@@ -502,6 +543,8 @@ module Target (*: TARGET*) =
          fprintf oc "	slld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psrll  (rd, rs1, rs2) ->
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Psrxl  (rd, rs1, rs2) ->
+         fprintf oc "	srsd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Psral   (rd, rs1, rs2) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddl (rd, rs1, rs2) ->
@@ -545,6 +588,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ornw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psraiw (rd, rs, imm) ->
          fprintf oc "	sraw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Psrxiw (rd, rs, imm) ->
+         fprintf oc "	srsw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Psrliw (rd, rs, imm) ->
          fprintf oc "	srlw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pslliw (rd, rs, imm) ->
@@ -560,6 +605,8 @@ module Target (*: TARGET*) =
          fprintf oc "	srld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Psrail (rd, rs, imm) ->
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Psrxil (rd, rs, imm) ->
+         fprintf oc "	srsd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
 
     (* Arith RRI64 instructions *)
       | Pcompil (it, rd, rs, imm) ->

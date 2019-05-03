@@ -25,6 +25,7 @@ Require Import AST.
 Require Import Integers.
 Require Import Floats.
 Require Import Values.
+Require Import ExtValues.
 Require Import Memory.
 Require Import Events.
 Require Import Globalenvs.
@@ -34,6 +35,7 @@ Require Stacklayout.
 Require Import Conventions.
 Require Import Errors.
 Require Import Sorting.Permutation.
+Require Import Chunks.
 
 (** * Abstract syntax *)
 
@@ -64,11 +66,62 @@ Inductive gpreg: Type :=
 Definition ireg := gpreg.
 Definition freg := gpreg.
 
+Lemma gpreg_eq: forall (x y: gpreg), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
 Lemma ireg_eq: forall (x y: ireg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
 Lemma freg_eq: forall (x y: freg), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
+
+Inductive gpreg_q : Type :=
+| R0R1 | R2R3 | R4R5 | R6R7 | R8R9
+| R10R11 | R12R13 | R14R15 | R16R17 | R18R19
+| R20R21 | R22R23 | R24R25 | R26R27 | R28R29
+| R30R31 | R32R33 | R34R35 | R36R37 | R38R39
+| R40R41 | R42R43 | R44R45 | R46R47 | R48R49
+| R50R51 | R52R53 | R54R55 | R56R57 | R58R59
+| R60R61 | R62R63.
+
+Lemma gpreg_q_eq : forall (x y : gpreg_q), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
+
+Definition gpreg_q_expand (x : gpreg_q) : gpreg * gpreg :=
+  match x with
+  | R0R1 => (GPR0, GPR1)
+  | R2R3 => (GPR2, GPR3)
+  | R4R5 => (GPR4, GPR5)
+  | R6R7 => (GPR6, GPR7)
+  | R8R9 => (GPR8, GPR9)
+  | R10R11 => (GPR10, GPR11)
+  | R12R13 => (GPR12, GPR13)
+  | R14R15 => (GPR14, GPR15)
+  | R16R17 => (GPR16, GPR17)
+  | R18R19 => (GPR18, GPR19)
+  | R20R21 => (GPR20, GPR21)
+  | R22R23 => (GPR22, GPR23)
+  | R24R25 => (GPR24, GPR25)
+  | R26R27 => (GPR26, GPR27)
+  | R28R29 => (GPR28, GPR29)
+  | R30R31 => (GPR30, GPR31)
+  | R32R33 => (GPR32, GPR33)
+  | R34R35 => (GPR34, GPR35)
+  | R36R37 => (GPR36, GPR37)
+  | R38R39 => (GPR38, GPR39)
+  | R40R41 => (GPR40, GPR41)
+  | R42R43 => (GPR42, GPR43)
+  | R44R45 => (GPR44, GPR45)
+  | R46R47 => (GPR46, GPR47)
+  | R48R49 => (GPR48, GPR49)
+  | R50R51 => (GPR50, GPR51)
+  | R52R53 => (GPR52, GPR53)
+  | R54R55 => (GPR54, GPR55)
+  | R56R57 => (GPR56, GPR57)
+  | R58R59 => (GPR58, GPR59)
+  | R60R61 => (GPR60, GPR61)
+  | R62R63 => (GPR62, GPR63)
+  end.
 
 (** We model the following registers of the RISC-V architecture. *)
 
@@ -150,9 +203,7 @@ Inductive ftest: Type :=
 (** Offsets for load and store instructions.  An offset is either an
   immediate integer or the low part of a symbol. *)
 
-Inductive offset : Type :=
-  | Ofsimm (ofs: ptrofs)
-  | Ofslow (id: ident) (ofs: ptrofs).
+Definition offset : Type := ptrofs.
 
 (** We model a subset of the K1c instruction set. In particular, we do not
   support floats yet.
@@ -183,9 +234,6 @@ Definition label := positive.
 *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
-(*| Ploadsymbol_high (rd: ireg) (id: ident) (ofs: ptrofs) (**r load the high part of the address of a symbol *)
-  | Pbtbl   (r: ireg)  (tbl: list label)            (**r N-way branch through a jump table *) *)
-
   | Pbuiltin: external_function -> list (builtin_arg preg)
               -> builtin_res preg -> ex_instruction   (**r built-in function (pseudo) *)
 .
@@ -269,10 +317,8 @@ Inductive load_name : Type :=
 Inductive ld_instruction : Type :=
   | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
   | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
 .
-
-Coercion PLoadRRO:       load_name        >-> Funclass.
-Coercion PLoadRRR:       load_name        >-> Funclass.
 
 (** Stores **)
 Inductive store_name : Type :=
@@ -289,10 +335,9 @@ Inductive store_name : Type :=
 Inductive st_instruction : Type :=
   | PStoreRRO  (i: store_name) (rs: ireg) (ra: ireg) (ofs: offset)
   | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreRRRXS(i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
+  | PStoreQRRO (rs: gpreg_q) (ra: ireg) (ofs: offset)
 .
-
-Coercion PStoreRRO:       store_name        >-> Funclass.
-Coercion PStoreRRR:       store_name        >-> Funclass.
 
 (** Arithmetic instructions **)
 Inductive arith_name_r : Type :=
@@ -306,10 +351,11 @@ Inductive arith_name_rr : Type :=
   | Pcvtl2w                                         (**r Convert Long to Word *)
   | Psxwd                                           (**r Sign Extend Word to Double Word *)
   | Pzxwd                                           (**r Zero Extend Word to Double Word *)
-(*  | Pextfs (stop : int) (start : int)               (**r extract bit field, signed *) *)
   | Pextfz (stop : Z) (start : Z)               (**r extract bit field, unsigned *)
   | Pextfs (stop : Z) (start : Z)               (**r extract bit field, signed *)
-           
+  | Pextfzl (stop : Z) (start : Z)              (**r extract bit field, unsigned *)
+  | Pextfsl (stop : Z) (start : Z)              (**r extract bit field, signed *)
+          
   | Pfabsd                                          (**r float absolute double *)
   | Pfabsw                                          (**r float absolute word *)
   | Pfnegd                                          (**r float negate double *)
@@ -319,9 +365,7 @@ Inductive arith_name_rr : Type :=
   | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
   | Pfloatuwrnsz                                    (**r Floating Point conversion from integer (unsigned int -> SINGLE) *)
   | Pfloatudrnsz                                    (**r Floating Point Conversion from integer (unsigned long -> float) *)
-  | Pfloatudrnsz_i32                                (**r Floating Point Conversion from integer (unsigned int -> float) *)
   | Pfloatdrnsz                                     (**r Floating Point Conversion from integer (long -> float) *)
-  | Pfloatdrnsz_i32                                 (**r Floating Point Conversion from integer (int -> float) *)
   | Pfixedwrzz                                      (**r Integer conversion from floating point (single -> int) *)
   | Pfixeduwrzz                                     (**r Integer conversion from floating point (single -> unsigned int) *)
   | Pfixeddrzz                                      (**r Integer conversion from floating point (float -> long) *)
@@ -364,6 +408,7 @@ Inductive arith_name_rrr : Type :=
   | Pandnw                                          (**r andn word *)
   | Pornw                                           (**r orn word *)
   | Psraw                                           (**r shift right arithmetic word *)
+  | Psrxw                                           (**r shift right arithmetic word round to 0*)
   | Psrlw                                           (**r shift right logical word *)
   | Psllw                                           (**r shift left logical word *)
 
@@ -380,6 +425,7 @@ Inductive arith_name_rrr : Type :=
   | Pmull                                           (**r mul long (low part) *)
   | Pslll                                           (**r shift left logical long *)
   | Psrll                                           (**r shift right logical long *)
+  | Psrxl                                           (**r shift right logical long round to 0*)
   | Psral                                           (**r shift right arithmetic long *)
 
   | Pfaddd                                          (**r float add double *)
@@ -404,12 +450,14 @@ Inductive arith_name_rri32 : Type :=
   | Pandniw                                         (**r andn word *)
   | Porniw                                          (**r orn word *)
   | Psraiw                                          (**r shift right arithmetic imm word *)
+  | Psrxiw                                          (**r shift right arithmetic imm word round to 0*)
   | Psrliw                                          (**r shift right logical imm word *)
   | Pslliw                                          (**r shift left logical imm word *)
   | Proriw                                          (**r rotate right imm word *)
   | Psllil                                          (**r shift left logical immediate long *)
   | Psrlil                                          (**r shift right logical immediate long *)
   | Psrail                                          (**r shift right arithmetic immediate long *)
+  | Psrxil                                          (**r shift right arithmetic immediate long round to 0*)
 .
 
 Inductive arith_name_rri64 : Type :=
@@ -441,6 +489,11 @@ Inductive arith_name_arri64 : Type :=
   | Pmaddil                                           (**r multiply add long *)
 .
 
+Inductive arith_name_arr : Type :=
+  | Pinsf (stop : Z) (start : Z)                (**r insert bit field *)
+  | Pinsfl (stop : Z) (start : Z)               (**r insert bit field *)
+.
+
 Inductive ar_instruction : Type :=
   | PArithR     (i: arith_name_r)     (rd: ireg)
   | PArithRR    (i: arith_name_rr)    (rd rs: ireg)
@@ -452,6 +505,7 @@ Inductive ar_instruction : Type :=
   | PArithRRI32 (i: arith_name_rri32) (rd rs: ireg) (imm: int)
   | PArithRRI64 (i: arith_name_rri64) (rd rs: ireg) (imm: int64)
   | PArithARRR   (i: arith_name_arrr)   (rd rs1 rs2: ireg)
+  | PArithARR   (i: arith_name_arr) (rd rs: ireg)
   | PArithARRI32 (i: arith_name_arri32) (rd rs: ireg) (imm: int)
   | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
@@ -465,7 +519,8 @@ Coercion PArithRF64:    arith_name_rf64     >-> Funclass.
 Coercion PArithRRR:     arith_name_rrr      >-> Funclass.
 Coercion PArithRRI32:   arith_name_rri32    >-> Funclass.
 Coercion PArithRRI64:   arith_name_rri64    >-> Funclass.
-Coercion PArithARRR:     arith_name_arrr      >-> Funclass.
+Coercion PArithARRR:    arith_name_arrr     >-> Funclass.
+Coercion PArithARR:     arith_name_arr      >-> Funclass.
 Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
 Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
 
@@ -633,7 +688,7 @@ Variable ge: genv.
   from the current state (a register set + a memory state) to either [Next rs' m']
   where [rs'] and [m'] are the updated register set and memory state after execution
   of the instruction at [rs#PC], or [Stuck] if the processor is stuck.
-
+ 
   The parallel semantics of each instructions handles two states in input:
    - the actual input state of the bundle which is only read
    - and the other on which every "write" is performed:
@@ -881,8 +936,10 @@ Definition arith_eval_rr n v :=
   | Pcvtl2w => Val.loword v
   | Psxwd => Val.longofint v
   | Pzxwd => Val.longofintu v
-  | Pextfz stop start => Val.extfz stop start v
-  | Pextfs stop start => Val.extfs stop start v
+  | Pextfz stop start => extfz stop start v
+  | Pextfs stop start => extfs stop start v
+  | Pextfzl stop start => extfzl stop start v
+  | Pextfsl stop start => extfsl stop start v
   | Pfnegd => Val.negf v
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v
@@ -893,8 +950,6 @@ Definition arith_eval_rr n v :=
   | Pfloatuwrnsz => match Val.singleofintu v with Some f => f | _ => Vundef end
   | Pfloatudrnsz => match Val.floatoflongu v with Some f => f | _ => Vundef end
   | Pfloatdrnsz => match Val.floatoflong v with Some f => f | _ => Vundef end
-  | Pfloatudrnsz_i32 => match Val.floatofintu v with Some f => f | _ => Vundef end
-  | Pfloatdrnsz_i32 => match Val.floatofint v with Some f => f | _ => Vundef end
   | Pfixedwrzz => match Val.intofsingle v with Some i => i | _ => Vundef end
   | Pfixeduwrzz => match Val.intuofsingle v with Some i => i | _ => Vundef end
   | Pfixeddrzz => match Val.longoffloat v with Some i => i | _ => Vundef end
@@ -944,6 +999,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Psrlw  => Val.shru v1 v2
   | Psraw  => Val.shr  v1 v2
   | Psllw  => Val.shl  v1 v2
+  | Psrxw  => ExtValues.val_shrx  v1 v2
 
   | Paddl => Val.addl v1 v2
   | Psubl => Val.subl v1 v2
@@ -959,6 +1015,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pslll => Val.shll v1 v2
   | Psrll => Val.shrlu v1 v2
   | Psral => Val.shrl v1 v2
+  | Psrxl  => ExtValues.val_shrxl v1 v2
 
   | Pfaddd => Val.addf v1 v2
   | Pfaddw => Val.addfs v1 v2
@@ -982,10 +1039,12 @@ Definition arith_eval_rri32 n v i :=
   | Pandniw => Val.and (Val.notint v) (Vint i)
   | Porniw  => Val.or (Val.notint v) (Vint i)
   | Psraiw  => Val.shr   v (Vint i)
+  | Psrxiw  => ExtValues.val_shrx v (Vint i)
   | Psrliw  => Val.shru  v (Vint i)
   | Pslliw  => Val.shl   v (Vint i)
   | Proriw  => Val.ror   v (Vint i)
   | Psllil  => Val.shll  v (Vint i)
+  | Psrxil  => ExtValues.val_shrxl v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
   end.
@@ -1043,6 +1102,12 @@ Definition arith_eval_arrr n v1 v2 v3 :=
     end
   end.
 
+Definition arith_eval_arr n v1 v2 :=
+  match n with
+  | Pinsf stop start => ExtValues.insf stop start v1 v2
+  | Pinsfl stop start => ExtValues.insfl stop start v1 v2
+  end.
+
 Definition arith_eval_arri32 n v1 v2 v3 :=
   match n with
   | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
@@ -1069,19 +1134,12 @@ Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
   | PArithRRI64 n d s i => rsw#d <- (arith_eval_rri64 n rsr#s i)
 
   | PArithARRR n d s1 s2 => rsw#d <- (arith_eval_arrr n rsr#d rsr#s1 rsr#s2)
+  | PArithARR n d s => rsw#d <- (arith_eval_arr n rsr#d rsr#s)
   | PArithARRI32 n d s i => rsw#d <- (arith_eval_arri32 n rsr#d rsr#s i)
   | PArithARRI64 n d s i => rsw#d <- (arith_eval_arri64 n rsr#d rsr#s i)
   end.
 
-Definition eval_offset (ofs: offset) : res ptrofs :=
-  match ofs with
-  | Ofsimm n => OK n
-  | Ofslow id delta => 
-      match (Genv.symbol_address ge id delta) with
-      | Vptr b ofs => OK ofs
-      | _ => Error (msg "Asmblock.eval_offset")
-      end
-  end.
+Definition eval_offset (ofs: offset) : res ptrofs := OK ofs.
 
 (** * load/store *)
 
@@ -1100,6 +1158,12 @@ Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem)
   | Some v => Next (rsw#d <- v) mw
   end.
 
+Definition parexec_load_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+  match Mem.loadv chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) with
+  | None => Stuck
+  | Some v => Next (rsw#d <- v) mw
+  end.
+
 Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
   | OK ptr => match Mem.storev chunk mr (Val.offset_ptr (rsr a) ptr) (rsr s) with
@@ -1114,6 +1178,28 @@ Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem
   | None => Stuck
   | Some m' => Next rsw m'
   end.
+
+Definition parexec_store_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
+  match Mem.storev chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) (rsr s) with
+  | None => Stuck
+  | Some m' => Next rsw m'
+  end.
+
+Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (a: ireg) (ofs: offset) :=
+  let (s0, s1) := gpreg_q_expand s in
+  match eval_offset ofs with
+  | OK eofs =>
+    match Mem.storev Many64 mr (Val.offset_ptr (rsr a) eofs) (rsr s0) with
+    | None => Stuck
+    | Some m1 =>
+      match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add eofs (Ptrofs.repr 8))) (rsr s1) with
+      | None => Stuck
+      | Some m2 => Next rsw m2
+      end
+    end
+  | _ => Stuck
+  end.
+  
 
 Definition load_chunk n :=
   match n with
@@ -1149,10 +1235,13 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
 
   | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
   | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
+  | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
-
+  | PStoreRRRXS n s a ro => parexec_store_regxs (store_chunk n) rsr rsw mr mw s a ro
+  | PStoreQRRO s a ofs => 
+    parexec_store_q_offset rsr rsw mr mw s a ofs
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in
       let sp := (Vptr stk Ptrofs.zero) in
