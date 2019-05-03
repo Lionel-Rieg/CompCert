@@ -1189,11 +1189,10 @@ Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (
   let (s0, s1) := gpreg_q_expand s in
   match eval_offset ofs with
   | OK eofs =>
-    let base := Val.offset_ptr (rsr a) eofs in
-    match Mem.storev Many64 mr base (rsr s0) with
+    match Mem.storev Many64 mr (Val.offset_ptr (rsr a) eofs) (rsr s0) with
     | None => Stuck
     | Some m1 =>
-      match Mem.storev Many64 m1 base (rsr s1) with
+      match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add eofs (Ptrofs.repr 8))) (rsr s1) with
       | None => Stuck
       | Some m2 => Next rsw m2
       end

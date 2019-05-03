@@ -42,7 +42,7 @@ Fixpoint optimize_body (insns : list basic) : list basic :=
             let zofs1 := Ptrofs.signed ofs1 in
             if (zofs1 =? zofs0 + 8) && (ireg_eq ra0 ra1)
             then let h0' := print_found_store basic zofs0 h0 in
-                 h0' :: (optimize_body t0)
+                 (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (optimize_body t1)
             else h0 :: (optimize_body t0)
           | None => h0 :: (optimize_body t0)
           end

@@ -387,11 +387,23 @@ Qed.
 Hint Resolve load_op_eq_correct: wlp.
 Opaque load_op_eq_correct.
 
+Definition offset_eq (ofs1 ofs2 : offset): ?? bool :=
+  RET (Ptrofs.eq ofs1 ofs2).
+
+Lemma offset_eq_correct ofs1 ofs2:
+  WHEN offset_eq ofs1 ofs2 ~> b THEN b = true -> ofs1 = ofs2.
+Proof.
+  wlp_simplify.
+  pose (Ptrofs.eq_spec ofs1 ofs2).
+  rewrite H in *.
+  trivial.
+Qed.
+Hint Resolve offset_eq_correct: wlp.
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1 with
   | OStoreRRO n1 ofs1 =>
-     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
+     match o2 with OStoreRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
   | OStoreRRR n1 =>
      match o2 with OStoreRRR n2 => phys_eq n1 n2 | _ => RET false end
   | OStoreRRRXS n1 =>
@@ -402,7 +414,8 @@ Lemma store_op_eq_correct o1 o2:
   WHEN store_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - congruence.
+  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial.
   - congruence.
   - congruence.
 Qed.
@@ -642,7 +655,7 @@ Definition trans_basic (b: basic) : inst :=
   | PStoreQRRO qs a ofs =>
     let (s0, s1) := gpreg_q_expand qs in 
     [(pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s0) @ PReg (#a) @ PReg pmem @ Enil));
-     (pmem, Op (Store (OStoreRRO Psd_a ofs)) (PReg (#s1) @ PReg (#a) @ PReg pmem @ Enil))]
+     (pmem, Op (Store (OStoreRRO Psd_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#s1) @ PReg (#a) @ PReg pmem @ Enil))]
   | Pallocframe sz pos => [(#FP, PReg (#SP)); (#SP, Op (Allocframe2 sz pos) (PReg (#SP) @ PReg pmem @ Enil)); (#RTMP, Op (Constant Vundef) Enil);
                            (pmem, Op (Allocframe sz pos) (Old (PReg (#SP)) @ PReg pmem @ Enil))]
   | Pfreeframe sz pos => [(pmem, Op (Freeframe sz pos) (PReg (#SP) @ PReg pmem @ Enil));

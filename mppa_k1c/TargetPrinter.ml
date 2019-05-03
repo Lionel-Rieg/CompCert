@@ -287,7 +287,7 @@ module Target (*: TARGET*) =
           | _ ->
               assert false
          end
-      | Pnop -> fprintf oc "	nop\n"
+      | Pnop -> (* FIXME fprintf oc "	nop\n" *) ()
       | Psemi -> fprintf oc ";;\n"
 
       | Pclzll (rd, rs) -> fprintf oc "	clzd %a = %a\n" ireg rd ireg rs
