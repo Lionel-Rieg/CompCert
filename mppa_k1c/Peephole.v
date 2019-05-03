@@ -46,6 +46,17 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
             else h0 :: (coalesce_mem t0)
           | None => h0 :: (coalesce_mem t0)
           end
+        | (PLoadRRO Pld_a rd0 ra0 ofs0),
+          (PLoadRRO Pld_a rd1 ra1 ofs1) =>
+          match gpreg_q_search rd0 rd1 with
+          | Some rd0rd1 =>
+            let zofs0 := Ptrofs.signed ofs0 in
+            let zofs1 := Ptrofs.signed ofs1 in
+            if (zofs1 =? zofs0 + 8) && (ireg_eq ra0 ra1) && negb (ireg_eq ra0 rd0)
+            then (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+            else h0 :: (coalesce_mem t0)
+          | None => h0 :: (coalesce_mem t0)
+          end
         | _, _ => h0 :: (coalesce_mem t0)
         end   
     | nil => h0 :: nil

@@ -218,6 +218,9 @@ let arith_rec i =
 let load_rec i = match i with
   | PLoadRRO (i, rs1, rs2, imm) ->
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+  | PLoadQRRO(rs, ra, imm) ->
+     let (rs0, rs1) = gpreg_q_expand rs in
+     { inst = "Plq"; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
@@ -445,7 +448,7 @@ type real_instruction =
   | Maddw | Maddd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq
   | Sb | Sh | Sw | Sd | Sq
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
@@ -518,6 +521,7 @@ let ab_inst_to_real = function
   | "Plhu" -> Lhz 
   | "Plw" | "Plw_a" | "Pfls" -> Lws 
   | "Pld" | "Pfld" | "Pld_a" -> Ld
+  | "Plq" -> Lq
 
   | "Psb" -> Sb
   | "Psh" -> Sh 
@@ -595,7 +599,7 @@ let rec_to_usage r =
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
                           | Some E27U27L10 -> lsu_data_y)
@@ -620,7 +624,7 @@ let real_inst_to_latency = function
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld -> 3
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq -> 3
   | Sb | Sh | Sw | Sd | Sq -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)

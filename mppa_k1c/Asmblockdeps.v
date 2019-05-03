@@ -366,27 +366,6 @@ Qed.
 Hint Resolve arith_op_eq_correct: wlp.
 Opaque arith_op_eq_correct.
 
-Definition load_op_eq (o1 o2: load_op): ?? bool :=
-  match o1 with
-  | OLoadRRO n1 ofs1 =>
-     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
-  | OLoadRRR n1 =>
-     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
-  | OLoadRRRXS n1 =>
-     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
-  end.
-
-Lemma load_op_eq_correct o1 o2:
-  WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
-Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  - congruence.
-  - congruence.
-  - congruence.
-Qed.
-Hint Resolve load_op_eq_correct: wlp.
-Opaque load_op_eq_correct.
-
 Definition offset_eq (ofs1 ofs2 : offset): ?? bool :=
   RET (Ptrofs.eq ofs1 ofs2).
 
@@ -399,6 +378,28 @@ Proof.
   trivial.
 Qed.
 Hint Resolve offset_eq_correct: wlp.
+
+Definition load_op_eq (o1 o2: load_op): ?? bool :=
+  match o1 with
+  | OLoadRRO n1 ofs1 =>
+     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
+  | OLoadRRR n1 =>
+     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRRXS n1 =>
+     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
+  end.
+
+Lemma load_op_eq_correct o1 o2:
+  WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial.
+  - congruence.
+  - congruence.
+Qed.
+Hint Resolve load_op_eq_correct: wlp.
+Opaque load_op_eq_correct.
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1 with
@@ -650,6 +651,14 @@ Definition trans_basic (b: basic) : inst :=
   | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
+  | PLoadQRRO qd a ofs =>
+    let (d0, d1) := gpreg_q_expand qd in
+    if ireg_eq d0 a
+    then [(#d0, Op Fail Enil);
+            (#d1, Op Fail Enil)]
+    else
+      [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
+       (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#a) @ PReg pmem @ Enil))]
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreQRRO qs a ofs =>
@@ -842,7 +851,7 @@ Proof.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 Qed.
-
+  
 Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -877,7 +886,55 @@ Proof.
       destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
-
+    + unfold parexec_load_q_offset.
+      destruct (gpreg_q_expand rd) as [rd0 rd1].
+      destruct (ireg_eq rd0 ra) as [ OVERLAP0 | NOOVERLAP0 ].
+      simpl. trivial.
+      unfold exec_load_deps_offset.
+      destruct Ge.
+      unfold eval_offset.
+      repeat rewrite H0.
+      destruct (Mem.loadv Many64 mr (Val.offset_ptr (rsr ra) ofs)) as [load0 | ] eqn:MEML0; simpl.
+      ++ destruct (Mem.loadv Many64 mr
+                            (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ] eqn:MEML1.
+        +++ rewrite H0.
+            rewrite H.
+            rewrite MEML0.
+            rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
+            rewrite H0.
+            rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
+            rewrite H.
+            rewrite MEML1.
+            eexists; split.
+            * f_equal.
+            * constructor.
+              ** repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
+                 assumption.
+              ** intro.
+                 destruct (preg_eq r rd1).
+                 *** subst r.
+                     rewrite (assign_eq _ (# rd1)).
+                     rewrite Pregmap.gss.
+                     reflexivity.
+                 *** rewrite (assign_diff _ (#rd1) (#r) _) by (apply ppos_discr; apply not_eq_sym; assumption).
+                     rewrite Pregmap.gso by assumption.
+                     destruct (preg_eq r rd0).
+                     **** subst r.
+                          rewrite (assign_eq _ (# rd0)).
+                          rewrite Pregmap.gss.
+                          reflexivity.
+                     **** rewrite (assign_diff _ (#rd0) (#r) _) by (apply ppos_discr; apply not_eq_sym; assumption).
+                          rewrite Pregmap.gso by assumption.
+                          trivial.
+        +++ rewrite H0. rewrite H. rewrite MEML0.
+            rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
+            rewrite H0.
+            rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
+            rewrite H.
+            rewrite MEML1.
+            constructor.
+     ++ rewrite H0. rewrite H. rewrite MEML0. trivial.
+                 
 (* Store *)
   - destruct i.
     (* Store Offset *)

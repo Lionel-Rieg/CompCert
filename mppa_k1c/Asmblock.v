@@ -270,6 +270,8 @@ Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ir
 
 Definition exec_load_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_regxs chunk rs rs m m d a ro.
 
+Definition exec_load_q_offset (rs: regset) (m: mem) (d : gpreg_q) (a: ireg) (ofs: offset) := parexec_load_q_offset rs rs m m d a ofs.
+
 Definition exec_store_offset (chunk: memory_chunk) (rs: regset) (m: mem) (s a: ireg) (ofs: offset) := parexec_store_offset chunk rs rs m m s a ofs.
 
 Definition exec_store_q_offset (rs: regset) (m: mem) (s : gpreg_q) (a: ireg) (ofs: offset) := parexec_store_q_offset rs rs m m s a ofs.

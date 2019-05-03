@@ -318,6 +318,7 @@ Inductive ld_instruction : Type :=
   | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
   | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
   | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadQRRO  (rd: gpreg_q) (ra: ireg) (ofs: offset)
 .
 
 (** Stores **)
@@ -1152,6 +1153,20 @@ Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: m
   | _ => Stuck
   end.
 
+Definition parexec_load_q_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_q) (a: ireg) (ofs: offset) :=
+  let (rd0, rd1) := gpreg_q_expand d in
+  if ireg_eq rd0 a
+  then Stuck
+  else
+    match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) ofs) with
+    | None => Stuck
+    | Some v0 =>
+      match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 8))) with
+      | None => Stuck
+      | Some v1 => Next (rsw#rd0 <- v0 #rd1 <- v1) mw
+      end
+    end.
+
 Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (rsr ro)) with
   | None => Stuck
@@ -1187,17 +1202,13 @@ Definition parexec_store_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: m
 
 Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (a: ireg) (ofs: offset) :=
   let (s0, s1) := gpreg_q_expand s in
-  match eval_offset ofs with
-  | OK eofs =>
-    match Mem.storev Many64 mr (Val.offset_ptr (rsr a) eofs) (rsr s0) with
+  match Mem.storev Many64 mr (Val.offset_ptr (rsr a) ofs) (rsr s0) with
+  | None => Stuck
+  | Some m1 =>
+    match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 8))) (rsr s1) with
     | None => Stuck
-    | Some m1 =>
-      match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add eofs (Ptrofs.repr 8))) (rsr s1) with
-      | None => Stuck
-      | Some m2 => Next rsw m2
-      end
+    | Some m2 => Next rsw m2
     end
-  | _ => Stuck
   end.
   
 
@@ -1236,6 +1247,8 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
   | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
   | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
+  | PLoadQRRO d a ofs => 
+    parexec_load_q_offset rsr rsw mr mw d a ofs
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
