@@ -366,27 +366,6 @@ Qed.
 Hint Resolve arith_op_eq_correct: wlp.
 Opaque arith_op_eq_correct.
 
-Definition load_op_eq (o1 o2: load_op): ?? bool :=
-  match o1 with
-  | OLoadRRO n1 ofs1 =>
-     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (phys_eq ofs1 ofs2) | _ => RET false end
-  | OLoadRRR n1 =>
-     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
-  | OLoadRRRXS n1 =>
-     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
-  end.
-
-Lemma load_op_eq_correct o1 o2:
-  WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
-Proof.
-  destruct o1, o2; wlp_simplify; try discriminate.
-  - congruence.
-  - congruence.
-  - congruence.
-Qed.
-Hint Resolve load_op_eq_correct: wlp.
-Opaque load_op_eq_correct.
-
 Definition offset_eq (ofs1 ofs2 : offset): ?? bool :=
   RET (Ptrofs.eq ofs1 ofs2).
 
@@ -399,6 +378,28 @@ Proof.
   trivial.
 Qed.
 Hint Resolve offset_eq_correct: wlp.
+
+Definition load_op_eq (o1 o2: load_op): ?? bool :=
+  match o1 with
+  | OLoadRRO n1 ofs1 =>
+     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
+  | OLoadRRR n1 =>
+     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRRXS n1 =>
+     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
+  end.
+
+Lemma load_op_eq_correct o1 o2:
+  WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
+Proof.
+  destruct o1, o2; wlp_simplify; try discriminate.
+  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial.
+  - congruence.
+  - congruence.
+Qed.
+Hint Resolve load_op_eq_correct: wlp.
+Opaque load_op_eq_correct.
 
 Definition store_op_eq (o1 o2: store_op): ?? bool :=
   match o1 with
