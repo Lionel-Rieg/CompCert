@@ -1,1 +1,1 @@
-make CONF=KalrayCompCert build/testcrypto # build/testspeed
+make CONF=KalrayCompCert build/testcrypto $@ # build/testspeed
