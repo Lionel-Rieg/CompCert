@@ -221,6 +221,9 @@ let load_rec i = match i with
   | PLoadQRRO(rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
      { inst = "Plq"; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
+  | PLoadORRO(rs, ra, imm) ->
+     let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
+     { inst = "Plo"; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
      { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
@@ -231,6 +234,10 @@ let store_rec i = match i with
   | PStoreQRRO (rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
      { inst = "Psq"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
+                                      ; is_control = false}
+  | PStoreORRO (rs, ra, imm) ->
+     let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
+     { inst = "Pso"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3); Reg (IR ra)]; imm = (Some (Off imm))
                                       ; is_control = false}
   | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
@@ -448,8 +455,8 @@ type real_instruction =
   | Maddw | Maddd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq
-  | Sb | Sh | Sw | Sd | Sq
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
+  | Sb | Sh | Sw | Sd | Sq | So
   (* BCU *)
   | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
   (* FPU *)
@@ -522,12 +529,14 @@ let ab_inst_to_real = function
   | "Plw" | "Plw_a" | "Pfls" -> Lws 
   | "Pld" | "Pfld" | "Pld_a" -> Ld
   | "Plq" -> Lq
+  | "Plo" -> Lo
 
   | "Psb" -> Sb
   | "Psh" -> Sh 
   | "Psw" | "Psw_a" | "Pfss" -> Sw
   | "Psd" | "Psd_a" | "Pfsd" -> Sd
   | "Psq" -> Sq
+  | "Pso" -> So
 
   | "Pcb" | "Pcbu" -> Cb
   | "Pcall" | "Pdiv" | "Pdivu" -> Call
@@ -599,11 +608,11 @@ let rec_to_usage r =
   | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq -> 
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 
       (match encoding with None | Some U6 | Some S10 -> lsu_data 
                           | Some U27L5 | Some U27L10 -> lsu_data_x 
                           | Some E27U27L10 -> lsu_data_y)
-  | Sb | Sh | Sw | Sd | Sq ->
+  | Sb | Sh | Sw | Sd | Sq | So ->
       (match encoding with None | Some U6 | Some S10 -> lsu_acc 
                           | Some U27L5 | Some U27L10 -> lsu_acc_x 
                           | Some E27U27L10 -> lsu_acc_y)
@@ -624,8 +633,8 @@ let real_inst_to_latency = function
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq -> 3
-  | Sb | Sh | Sw | Sd | Sq -> 1 (* See k1c-Optimization.pdf page 19 *)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 3
+  | Sb | Sh | Sw | Sd | Sq | So -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
