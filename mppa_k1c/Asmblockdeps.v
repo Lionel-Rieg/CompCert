@@ -908,8 +908,7 @@ Proof.
     (* Load Quad word *)
     + unfold parexec_load_q_offset.
       destruct (gpreg_q_expand rd) as [rd0 rd1].
-      destruct (ireg_eq rd0 ra) as [ OVERLAP0 | NOOVERLAP0 ].
-      simpl. trivial.
+      destruct (ireg_eq rd0 ra) as [ OVERLAP0 | NOOVERLAP0 ]; simpl; auto.
       unfold exec_load_deps_offset.
       destruct Ge.
       unfold eval_offset.
@@ -1081,12 +1080,10 @@ Proof.
 
     (* Store Quad Word *)
     + unfold parexec_store_q_offset.
-      simpl.
       destruct (gpreg_q_expand rs) as [s0 s1].
       simpl.
       unfold exec_store_deps_offset.
-      repeat rewrite H0.
-      repeat rewrite H.
+      rewrite !H0, !H.
       destruct Ge.
       destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ] eqn:MEML0; simpl.
       ++ rewrite MEML0.
