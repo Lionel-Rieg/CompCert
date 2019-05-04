@@ -916,8 +916,7 @@ Proof.
       destruct (Mem.loadv Many64 mr (Val.offset_ptr (rsr ra) ofs)) as [load0 | ] eqn:MEML0; simpl.
       ++ destruct (Mem.loadv Many64 mr
                             (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ] eqn:MEML1.
-        +++ rewrite H0.
-            rewrite H.
+        +++ rewrite H.
             rewrite MEML0.
             rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
             rewrite H0.
@@ -945,14 +944,14 @@ Proof.
                      **** rewrite (assign_diff _ (#rd0) (#r) _) by (apply ppos_discr; apply not_eq_sym; assumption).
                           rewrite Pregmap.gso by assumption.
                           trivial.
-        +++ rewrite H0. rewrite H. rewrite MEML0.
+        +++ rewrite H. rewrite MEML0.
             rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
             rewrite H0.
             rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
             rewrite H.
             rewrite MEML1.
             constructor.
-     ++ rewrite H0. rewrite H. rewrite MEML0. trivial.
+     ++ rewrite H. rewrite MEML0. trivial.
                  
     (* Load Octuple word *)
     + unfold parexec_load_o_offset.
