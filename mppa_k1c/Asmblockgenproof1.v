@@ -2573,7 +2573,7 @@ Proof.
           { eapply A2. }
           { apply exec_straight_one. simpl.
             rewrite (C2 SP) by auto with asmgen. rewrite <- (sp_val _ _ rs1 AG1). simpl; rewrite LP'.
-            rewrite FREE'; eauto. (* auto. *) } }
+            rewrite FREE'. eauto. (* auto. *) } }
       * split. (* apply agree_nextinstr.  *)apply agree_set_other; auto with asmgen. 
     apply agree_change_sp with (Vptr stk soff).
     apply agree_exten with rs; auto. intros; rewrite C2; auto with asmgen.
