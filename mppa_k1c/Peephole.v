@@ -88,6 +88,7 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
             else h0 :: (coalesce_mem t0)
           | None => h0 :: (coalesce_mem t0)
           end
+            
         | (PLoadRRO Pld_a rd0 ra0 ofs0),
           (PLoadRRO Pld_a rd1 ra1 ofs1) =>
           match gpreg_q_search rd0 rd1 with
@@ -95,7 +96,26 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
             let zofs0 := Ptrofs.signed ofs0 in
             let zofs1 := Ptrofs.signed ofs1 in
             if (zofs1 =? zofs0 + 8) && (ireg_eq ra0 ra1) && negb (ireg_eq ra0 rd0)
-            then (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+            then
+              if coalesce_octuples
+              then
+                match t1 with
+                | (PLoadRRO Pld_a rd2 ra2 ofs2) :: 
+                  (PLoadRRO Pld_a rd3 ra3 ofs3) :: t3 =>
+                  match gpreg_o_search rd0 rd1 rd2 rd3 with
+                  | Some octuple =>
+                    let zofs2 := Ptrofs.signed ofs2 in
+                    let zofs3 := Ptrofs.signed ofs3 in
+                    if (zofs2 =? zofs0 + 16) && (ireg_eq ra0 ra2) &&
+                       (zofs3 =? zofs0 + 24) && (ireg_eq ra0 ra3) &&
+                       negb (ireg_eq ra0 rd1) && negb (ireg_eq ra0 rd2)
+                    then (PLoad (PLoadORRO octuple ra0 ofs0)) :: Pnop :: Pnop :: Pnop :: (coalesce_mem t3)
+                    else (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+                  | None  => (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+                  end
+                | _ =>  (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+                end
+              else (PLoad (PLoadQRRO rd0rd1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
             else h0 :: (coalesce_mem t0)
           | None => h0 :: (coalesce_mem t0)
           end
