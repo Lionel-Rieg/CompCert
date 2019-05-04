@@ -50,6 +50,8 @@ Definition gpreg_o_search r0 r1 r2 r3 : option gpreg_o :=
 
 Parameter print_found_store: forall A, Z -> A -> A.
 
+Definition coalesce_octuples := true.
+
 Fixpoint coalesce_mem (insns : list basic) : list basic :=
   match insns with
   | nil => nil
@@ -65,21 +67,24 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
             let zofs1 := Ptrofs.signed ofs1 in
             if (zofs1 =? zofs0 + 8) && (ireg_eq ra0 ra1)
             then
-              match t1 with
-              | (PStoreRRO Psd_a rs2 ra2 ofs2) :: 
-                (PStoreRRO Psd_a rs3 ra3 ofs3) :: t3 =>
-                match gpreg_o_search rs0 rs1 rs2 rs3 with
-                | Some octuple =>
-                  let zofs2 := Ptrofs.signed ofs2 in
-                  let zofs3 := Ptrofs.signed ofs3 in
-                  if (zofs2 =? zofs0 + 16) && (ireg_eq ra0 ra2) &&
-                     (zofs3 =? zofs0 + 24) && (ireg_eq ra0 ra3)
-                  then (PStore (PStoreORRO octuple ra0 ofs0)) :: Pnop :: Pnop :: Pnop :: (coalesce_mem t3)
-                  else (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
-                | None => (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+              if coalesce_octuples
+              then
+                match t1 with
+                | (PStoreRRO Psd_a rs2 ra2 ofs2) :: 
+                  (PStoreRRO Psd_a rs3 ra3 ofs3) :: t3 =>
+                  match gpreg_o_search rs0 rs1 rs2 rs3 with
+                  | Some octuple =>
+                    let zofs2 := Ptrofs.signed ofs2 in
+                    let zofs3 := Ptrofs.signed ofs3 in
+                    if (zofs2 =? zofs0 + 16) && (ireg_eq ra0 ra2) &&
+                                             (zofs3 =? zofs0 + 24) && (ireg_eq ra0 ra3)
+                    then (PStore (PStoreORRO octuple ra0 ofs0)) :: Pnop :: Pnop :: Pnop :: (coalesce_mem t3)
+                    else (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+                  | None => (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
+                  end
+                | _ => (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
                 end
-              | _ => (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
-              end
+              else (PStore (PStoreQRRO rs0rs1 ra0 ofs0)) :: Pnop :: (coalesce_mem t1)
             else h0 :: (coalesce_mem t0)
           | None => h0 :: (coalesce_mem t0)
           end
