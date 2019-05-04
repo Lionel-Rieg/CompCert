@@ -83,7 +83,7 @@ Inductive gpreg_q : Type :=
 | R40R41 | R42R43 | R44R45 | R46R47 | R48R49
 | R50R51 | R52R53 | R54R55 | R56R57 | R58R59
 | R60R61 | R62R63.
-
+                             
 Lemma gpreg_q_eq : forall (x y : gpreg_q), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
@@ -122,6 +122,35 @@ Definition gpreg_q_expand (x : gpreg_q) : gpreg * gpreg :=
   | R60R61 => (GPR60, GPR61)
   | R62R63 => (GPR62, GPR63)
   end.
+
+Inductive gpreg_o : Type :=
+| R0R1R2R3 | R4R5R6R7 | R8R9R10R11 | R12R13R14R15
+| R16R17R18R19 | R20R21R22R23 | R24R25R26R27 | R28R29R30R31
+| R32R33R34R35 | R36R37R38R39 | R40R41R42R43 | R44R45R46R47
+| R48R49R50R51 | R52R53R54R55 | R56R57R58R59 | R60R61R62R63.
+
+Definition gpreg_o_expand (x : gpreg_o) : gpreg * gpreg * gpreg * gpreg :=
+  match x with
+  | R0R1R2R3 => (GPR0, GPR1, GPR2, GPR3)
+  | R4R5R6R7 => (GPR4, GPR5, GPR6, GPR7)
+  | R8R9R10R11 => (GPR8, GPR9, GPR10, GPR11)
+  | R12R13R14R15 => (GPR12, GPR13, GPR14, GPR15)
+  | R16R17R18R19 => (GPR16, GPR17, GPR18, GPR19)
+  | R20R21R22R23 => (GPR20, GPR21, GPR22, GPR23)
+  | R24R25R26R27 => (GPR24, GPR25, GPR26, GPR27)
+  | R28R29R30R31 => (GPR28, GPR29, GPR30, GPR31)
+  | R32R33R34R35 => (GPR32, GPR33, GPR34, GPR35)
+  | R36R37R38R39 => (GPR36, GPR37, GPR38, GPR39)
+  | R40R41R42R43 => (GPR40, GPR41, GPR42, GPR43)
+  | R44R45R46R47 => (GPR44, GPR45, GPR46, GPR47)
+  | R48R49R50R51 => (GPR48, GPR49, GPR50, GPR51)
+  | R52R53R54R55 => (GPR52, GPR53, GPR54, GPR55)
+  | R56R57R58R59 => (GPR56, GPR57, GPR58, GPR59)
+  | R60R61R62R63 => (GPR60, GPR61, GPR62, GPR63)
+  end.
+    
+Lemma gpreg_o_eq : forall (x y : gpreg_o), {x=y} + {x<>y}.
+Proof. decide equality. Defined.
 
 (** We model the following registers of the RISC-V architecture. *)
 
@@ -319,6 +348,7 @@ Inductive ld_instruction : Type :=
   | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
   | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
   | PLoadQRRO  (rd: gpreg_q) (ra: ireg) (ofs: offset)
+  | PLoadORRO  (rd: gpreg_o) (ra: ireg) (ofs: offset)
 .
 
 (** Stores **)
@@ -338,6 +368,7 @@ Inductive st_instruction : Type :=
   | PStoreRRR  (i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
   | PStoreRRRXS(i: store_name) (rs: ireg) (ra: ireg) (rofs: ireg)
   | PStoreQRRO (rs: gpreg_q) (ra: ireg) (ofs: offset)
+  | PStoreORRO (rs: gpreg_o) (ra: ireg) (ofs: offset)
 .
 
 (** Arithmetic instructions **)
@@ -1167,6 +1198,31 @@ Definition parexec_load_q_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_q) (a
       end
     end.
 
+Definition parexec_load_o_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_o) (a: ireg) (ofs: offset) :=
+  match gpreg_o_expand d with
+  | (rd0, rd1, rd2, rd3) =>
+  if (ireg_eq rd0 a) || (ireg_eq rd1 a) || (ireg_eq rd2 a)
+  then Stuck
+  else
+    match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) ofs) with
+    | None => Stuck
+    | Some v0 =>
+      match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 8))) with
+      | None => Stuck
+      | Some v1 =>
+        match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 16))) with
+        | None => Stuck
+        | Some v2 =>
+          match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 24))) with
+          | None => Stuck
+          | Some v3 =>
+            Next (rsw#rd0 <- v0 #rd1 <- v1 #rd2 <- v2 #rd3 <- v3) mw
+          end
+        end
+      end
+    end
+  end.
+
 Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (rsr ro)) with
   | None => Stuck
@@ -1211,6 +1267,27 @@ Definition parexec_store_q_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_q) (
     end
   end.
   
+Definition parexec_store_o_offset (rsr rsw: regset) (mr mw: mem) (s : gpreg_o) (a: ireg) (ofs: offset) :=
+  match gpreg_o_expand s with
+  | (s0, s1, s2, s3) =>
+    match Mem.storev Many64 mr (Val.offset_ptr (rsr a) ofs) (rsr s0) with
+    | None => Stuck
+    | Some m1 =>
+      match Mem.storev Many64 m1 (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 8))) (rsr s1) with
+      | None => Stuck
+      | Some m2 =>
+        match Mem.storev Many64 m2 (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 16))) (rsr s2) with
+        | None => Stuck
+        | Some m3 =>
+          match Mem.storev Many64 m3 (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 24))) (rsr s3) with
+          | None => Stuck
+          | Some m4 => Next rsw m4
+          end
+        end
+      end
+    end
+  end.
+  
 
 Definition load_chunk n :=
   match n with
@@ -1249,12 +1326,17 @@ Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
   | PLoadQRRO d a ofs => 
     parexec_load_q_offset rsr rsw mr mw d a ofs
+  | PLoadORRO d a ofs => 
+    parexec_load_o_offset rsr rsw mr mw d a ofs
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
   | PStoreRRR n s a ro => parexec_store_reg (store_chunk n) rsr rsw mr mw s a ro
   | PStoreRRRXS n s a ro => parexec_store_regxs (store_chunk n) rsr rsw mr mw s a ro
   | PStoreQRRO s a ofs => 
     parexec_store_q_offset rsr rsw mr mw s a ofs
+  | PStoreORRO s a ofs => 
+    parexec_store_o_offset rsr rsw mr mw s a ofs
+
   | Pallocframe sz pos =>
       let (mw, stk) := Mem.alloc mr 0 sz in
       let sp := (Vptr stk Ptrofs.zero) in

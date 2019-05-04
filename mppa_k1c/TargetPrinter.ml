@@ -96,8 +96,29 @@ module Target (*: TARGET*) =
       | R58R59 -> "$r58r59"
       | R60R61 -> "$r60r61"
       | R62R63 -> "$r62r63"
-                              
+
+    let int_gpreg_o_name =
+      let open Asmvliw in
+      function
+      | R0R1R2R3 -> "$r0r1r2r3"
+      | R4R5R6R7 -> "$r4r5r6r7"
+      | R8R9R10R11 -> "$r8r9r10r11"
+      | R12R13R14R15 -> "$r12r13r14r15" 
+      | R16R17R18R19 -> "$r16r17r18r19" 
+      | R20R21R22R23 -> "$r20r21r22r23"
+      | R24R25R26R27 -> "$r24r25r26r27" 
+      | R28R29R30R31 -> "$r28r29r30r31"
+      | R32R33R34R35 -> "$r32r33r34r35"
+      | R36R37R38R39 -> "$r36r37r38r39" 
+      | R40R41R42R43 -> "$r40r41r42r43"
+      | R44R45R46R47 -> "$r44r45r46r47" 
+      | R48R49R50R51 -> "$r48r49r50r51" 
+      | R52R53R54R55 -> "$r52r53r54r55" 
+      | R56R57R58R59 -> "$r56r57r58r59"
+      | R60R61R62R63 -> "$r60r61r62r63";;
+        
     let gpreg_q oc r = output_string oc (int_gpreg_q_name r)
+    let gpreg_o oc r = output_string oc (int_gpreg_o_name r)
 
     let preg oc = let open Asmvliw in function
       | IR r -> ireg oc r
@@ -394,6 +415,8 @@ module Target (*: TARGET*) =
          fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
       | Plq(rd, ra, adr) ->
          fprintf oc "	lq%a	%a = %a[%a]\n" xscale adr gpreg_q rd addressing adr ireg ra
+      | Plo(rd, ra, adr) ->
+         fprintf oc "	lo%a	%a = %a[%a]\n" xscale adr gpreg_o rd addressing adr ireg ra
     
       | Psb(rd, ra, adr) ->
          fprintf oc "	sb%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
@@ -405,6 +428,8 @@ module Target (*: TARGET*) =
          fprintf oc "	sd%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra ireg rd
       | Psq(rd, ra, adr) ->
          fprintf oc "	sq%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra gpreg_q rd
+      | Pso(rd, ra, adr) ->
+         fprintf oc "	so%a	%a[%a] = %a\n" xscale adr addressing adr ireg ra gpreg_o rd
       
       (* Arith R instructions *)
 

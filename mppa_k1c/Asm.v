@@ -113,7 +113,8 @@ Inductive instruction : Type :=
   | Pld_a   (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any64 *)
   | Pfls    (rd: freg) (ra: ireg) (ofs: addressing)     (**r load float *)
   | Pfld    (rd: freg) (ra: ireg) (ofs: addressing)    (**r load 64-bit float *)
-  | Plq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r load 64-bit float *)
+  | Plq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r load 2*64-bit *)
+  | Plo     (rs: gpreg_o) (ra: ireg) (ofs: addressing)  (**r load 4*64-bit *)
 
   (** Stores **)
   | Psb     (rs: ireg) (ra: ireg) (ofs: addressing)     (**r store byte *)
@@ -125,7 +126,8 @@ Inductive instruction : Type :=
   | Pfss    (rs: freg) (ra: ireg) (ofs: addressing)     (**r store float *)
   | Pfsd    (rs: freg) (ra: ireg) (ofs: addressing)    (**r store 64-bit float *)
 
-  | Psq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r store 64-bit float *)
+  | Psq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r store 2*64-bit *)
+  | Pso     (rs: gpreg_o) (ra: ireg) (ofs: addressing)  (**r store 2*64-bit *)
 
   (** Arith RR *)
   | Pmv     (rd rs: ireg)                           (**r register move *)
@@ -438,6 +440,7 @@ Definition basic_to_instruction (b: basic) :=
   | PLoadRRO Asmvliw.Pfld rd ra ofs  => Pfld rd ra (AOff ofs)
 
   | PLoadQRRO qrs ra ofs => Plq qrs ra (AOff ofs)
+  | PLoadORRO qrs ra ofs => Plo qrs ra (AOff ofs)
 
   | PLoadRRR Asmvliw.Plb rd ra ro   => Plb rd ra (AReg ro)
   | PLoadRRR Asmvliw.Plbu rd ra ro  => Plbu rd ra (AReg ro)
@@ -490,6 +493,7 @@ Definition basic_to_instruction (b: basic) :=
   | PStoreRRRXS Asmvliw.Pfsd rd ra ro => Pfsd rd ra (ARegXS ro)
 
   | PStoreQRRO qrs ra ofs => Psq qrs ra (AOff ofs)
+  | PStoreORRO qrs ra ofs => Pso qrs ra (AOff ofs)
   end.
 
 Section RELSEM.

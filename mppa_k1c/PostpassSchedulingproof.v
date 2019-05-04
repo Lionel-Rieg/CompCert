@@ -146,6 +146,30 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma exec_load_offset_o_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_load_o_offset rs m rd ra ofs = Next rs' m' ->
+  exec_load_o_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_o_offset in *. unfold parexec_load_o_offset in *.
+  destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3].
+  destruct (ireg_eq rd0 ra); try discriminate.
+  destruct (ireg_eq rd1 ra); try discriminate.
+  destruct (ireg_eq rd2 ra); try discriminate.
+  rewrite Pregmap.gso; try discriminate.
+  simpl in *.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  rewrite (regset_double_set PC rd0) by discriminate.
+  rewrite (regset_double_set PC rd1) by discriminate.
+  rewrite (regset_double_set PC rd2) by discriminate.
+  rewrite (regset_double_set PC rd3) by discriminate.
+  inv H.
+  trivial.
+Qed.
+
 Lemma exec_store_offset_pc_var:
   forall t rs m rd ra ofs rs' m' v,
   exec_store_offset t rs m rd ra ofs = Next rs' m' ->
@@ -171,6 +195,22 @@ Proof.
   inv H. apply next_eq; auto.
 Qed.
 
+Lemma exec_store_o_offset_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_store_o_offset rs m rd ra ofs = Next rs' m' ->
+  exec_store_o_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros.
+  unfold exec_store_o_offset in *. unfold parexec_store_o_offset in *.
+  destruct (gpreg_o_expand _) as [[[s0 s1] s2] s3].
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  inv H.
+  trivial.
+Qed.
+  
 Lemma exec_store_reg_pc_var:
   forall t rs m rd ra ro rs' m' v,
   exec_store_reg t rs m rd ra ro = Next rs' m' ->
@@ -210,11 +250,13 @@ Proof.
     + exploreInst; apply exec_load_reg_pc_var; auto.
     + exploreInst; apply exec_load_regxs_pc_var; auto.
     + apply exec_load_offset_q_pc_var; auto.
+    + apply exec_load_offset_o_pc_var; auto.
   - destruct i.
     + exploreInst; apply exec_store_offset_pc_var; auto.
     + exploreInst; apply exec_store_reg_pc_var; auto.
     + exploreInst; apply exec_store_regxs_pc_var; auto.
     + apply exec_store_q_offset_pc_var; auto.
+    + apply exec_store_o_offset_pc_var; auto.
   - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
     destruct (Mem.storev _ _ _ _); try discriminate.
     inv H. apply next_eq; auto. apply functional_extensionality. intros.
