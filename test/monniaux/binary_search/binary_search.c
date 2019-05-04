@@ -100,14 +100,17 @@ int main () {
   index pos1 = my_bsearch(buf, n, v);
   timestamp1 = get_current_cycle()-timestamp1;
 
+  my_bsearch2(buf, n, v);
   cycle_t timestamp2 = get_current_cycle();
   index pos2 = my_bsearch2(buf, n, v);
   timestamp2 = get_current_cycle()-timestamp2;
 
+  my_bsearch3(buf, n, v);
   cycle_t timestamp3 = get_current_cycle();
   index pos3 = my_bsearch3(buf, n, v);
   timestamp3 = get_current_cycle()-timestamp3;
 
+  my_bsearch4(buf, n, v);
   cycle_t timestamp4 = get_current_cycle();
   index pos4 = my_bsearch4(buf, n, v);
   timestamp4 = get_current_cycle()-timestamp4;
