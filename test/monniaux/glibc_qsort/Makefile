@@ -1,6 +1,6 @@
 include ../rules.mk
 
-PRODUCTS=glibc_qsort.gcc.host.out glibc_qsort.ccomp.host.out glibc_qsort.gcc.k1c.out glibc_qsort.ccomp.k1c.out glibc_qsort.ccomp.k1c.s glibc_qsort.gcc.k1c.s glibc_qsort.gcc.k1c glibc_qsort.ccomp.k1c
+PRODUCTS=glibc_qsort.gcc.host.out glibc_qsort.ccomp.host.out glibc_qsort.gcc.k1c.out glibc_qsort.gcc.o1.k1c.out glibc_qsort.ccomp.k1c.out glibc_qsort.ccomp.k1c.s glibc_qsort.gcc.k1c.s glibc_qsort.gcc.k1c glibc_qsort.ccomp.k1c
 
 all:	$(PRODUCTS)
 
@@ -14,6 +14,9 @@ glibc_qsort.gcc.k1c.s glibc_qsort.ccomp.k1c.s glibc_qsort_run.gcc.k1c.s: glibc_q
 
 glibc_qsort.gcc.k1c: glibc_qsort.gcc.k1c.o glibc_qsort_run.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
+
+glibc_qsort.gcc.o1.k1c: glibc_qsort.gcc.o1.k1c.o glibc_qsort_run.gcc.o1.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS_O1) $+ -o $@
 
 glibc_qsort.ccomp.k1c: glibc_qsort.ccomp.k1c.o glibc_qsort_run.gcc.k1c.o
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@

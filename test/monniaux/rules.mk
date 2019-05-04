@@ -1,11 +1,12 @@
 ALL_CCOMPFLAGS=-fno-unprototyped
-CCOMP=ccomp
+CCOMP=ccomp-x86
 CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
 
 CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CC=k1-mbr-gcc
-K1C_CFLAGS =-g -std=c99 -O2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+K1C_CFLAGS =-std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+K1C_CFLAGS_O1 =-std=c99 -O1 -fschedule-insns2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CCOMP = ../../../ccomp
 K1C_CCOMPFLAGS=-O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass-ilp
@@ -24,6 +25,12 @@ EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 %.ccomp.host.s : %.c
 	$(CCOMP) $(CCOMPFLAGS) -S -o $@ $<
+
+%.gcc.o1.k1c.s: %.c
+	$(K1C_CC) $(K1C_CFLAGS_O1) -S $< -o $@
+
+%.gcc.o1.k1c.o: %.gcc.o1.k1c.s
+	$(K1C_CC) $(K1C_CFLAGS_O1) -c $< -o $@
 
 %.gcc.k1c.s: %.c
 	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@

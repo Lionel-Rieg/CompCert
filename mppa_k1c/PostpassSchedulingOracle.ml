@@ -827,19 +827,25 @@ let is_opaque = function
   | PBasic (Pallocframe _) | PBasic (Pfreeframe _) | PControl (PExpand (Pbuiltin _)) -> true
   | _ -> false
 
+(* Returns : (accumulated instructions, remaining instructions, opaque instruction if found) *)
 let rec biggest_wo_opaque = function
-  | [] -> ([], [])
-  | [i] -> ([i], [])
-  | i1 :: i2 :: li -> if is_opaque i2 || is_opaque i1 then ([i1], i2::li) 
-                     else let big, rem = biggest_wo_opaque li in (i1 :: i2 :: big, rem)
+  | [] -> ([], [], None)
+  | i :: li -> if is_opaque i then ([], li, Some i)
+               else let big, rem, opaque = biggest_wo_opaque li in (i :: big, rem, opaque);;
 
 let separate_opaque bb =
   let instrs = bb_to_instrs bb
-  in let rec f hd = function
-  | [] -> []
-  | li ->
-    let sub_li, li = biggest_wo_opaque li
-    in (bundlize sub_li hd) :: (f [] li)
+  in let rec f hd li =
+    match li with
+    | [] -> []
+    | li -> let big, rem, opaque = biggest_wo_opaque li in
+            match opaque with
+            | Some i ->
+                (match big with
+                | [] -> (bundlize [i] hd) :: (f [] rem)
+                | big -> (bundlize big hd) :: (bundlize [i] []) :: (f [] rem)
+                )
+            | None -> (bundlize big hd) :: (f [] rem)
   in f bb.header instrs
 
 let smart_schedule bb =

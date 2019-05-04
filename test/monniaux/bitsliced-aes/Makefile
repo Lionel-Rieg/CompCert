@@ -2,7 +2,10 @@ src = $(wildcard *.c) tests/tests.c
 
 include ../rules.mk
 
-all: test.gcc.k1c.out test.ccomp.k1c.out test.gcc.host.out test.ccomp.host.out
+all: test.gcc.k1c.out test.gcc.o1.k1c.out test.ccomp.k1c.out test.gcc.host.out test.ccomp.host.out
+
+test.gcc.o1.k1c: $(src:.c=.gcc.o1.k1c.o) ../clock.gcc.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS_O1) -o $@ $+
 
 test.gcc.k1c: $(src:.c=.gcc.k1c.o) ../clock.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+
