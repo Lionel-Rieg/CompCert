@@ -459,9 +459,9 @@ let expand_instruction instr =
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
-        emit Psemi;
-        expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
+        let below = Ptrofs.repr (Z.neg sz) in
+        expand_addptrofs stack_pointer stack_pointer below;
+        expand_storeind_ptr Asmvliw.GPR17 stack_pointer (Ptrofs.add ofs below);
         emit Psemi;
         vararg_start_ofs := None
       end
