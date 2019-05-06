@@ -135,7 +135,7 @@ Lemma exec_load_offset_q_pc_var:
 Proof.
   intros. unfold exec_load_q_offset in *. unfold parexec_load_q_offset in *.
   destruct (gpreg_q_expand rd) as [rd0 rd1].
-  destruct (ireg_eq rd0 ra); try discriminate.
+  (* destruct (ireg_eq rd0 ra); try discriminate. *)
   rewrite Pregmap.gso; try discriminate.
   destruct (Mem.loadv _ _ _); try discriminate.
   inv H.
@@ -153,9 +153,11 @@ Lemma exec_load_offset_o_pc_var:
 Proof.
   intros. unfold exec_load_o_offset in *. unfold parexec_load_o_offset in *.
   destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3].
+(*
   destruct (ireg_eq rd0 ra); try discriminate.
   destruct (ireg_eq rd1 ra); try discriminate.
   destruct (ireg_eq rd2 ra); try discriminate.
+*)
   rewrite Pregmap.gso; try discriminate.
   simpl in *.
   destruct (Mem.loadv _ _ _); try discriminate.

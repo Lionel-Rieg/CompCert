@@ -1186,9 +1186,9 @@ Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: m
 
 Definition parexec_load_q_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_q) (a: ireg) (ofs: offset) :=
   let (rd0, rd1) := gpreg_q_expand d in
-  if ireg_eq rd0 a
-  then Stuck
-  else
+(* NB: By construction of [gpreg_q], register rd0 and rd1 are distinct, thus, the register writes cannot overlap.
+       But we do not need to express/prove this in the semantics.
+*)
     match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) ofs) with
     | None => Stuck
     | Some v0 =>
@@ -1201,10 +1201,10 @@ Definition parexec_load_q_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_q) (a
 Definition parexec_load_o_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_o) (a: ireg) (ofs: offset) :=
   match gpreg_o_expand d with
   | (rd0, rd1, rd2, rd3) =>
-  if (ireg_eq rd0 a) || (ireg_eq rd1 a) || (ireg_eq rd2 a)
-  then Stuck
-  else
-    match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) ofs) with
+(* NB: By construction of [gpreg_o], the four destination registers are pairwise distinct, thus, the register writes cannot overlap.
+       But we do not need to express/prove this in the semantics.
+*)
+   match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) ofs) with
     | None => Stuck
     | Some v0 =>
       match Mem.loadv Many64 mr (Val.offset_ptr (rsr a) (Ptrofs.add ofs (Ptrofs.repr 8))) with

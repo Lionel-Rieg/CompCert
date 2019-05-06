@@ -953,19 +953,17 @@ Proof.
   - (* PLoadQRRO *)
     unfold  parexec_load_q_offset in H1.
     destruct (gpreg_q_expand _) as [r0 r1] in H1.
-    destruct (ireg_eq _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
-    inv H1. Simpl.    
+    inv H1. Simpl.
   - (* PLoadORRO *)
     unfold  parexec_load_o_offset in H1.
     destruct (gpreg_o_expand _) as [[[r0 r1] r2] r3] in H1.
-    destruct (orb _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
-    inv H1. Simpl.    
+    inv H1. Simpl.
   - (* PStoreQRRO *)
     unfold  parexec_store_q_offset in H1.
     destruct (gpreg_q_expand _) as [r0 r1] in H1.
