@@ -653,21 +653,15 @@ Definition trans_basic (b: basic) : inst :=
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PLoadQRRO qd a ofs =>
     let (d0, d1) := gpreg_q_expand qd in
-    if ireg_eq d0 a
-    then [(#d0, Op Fail Enil)]
-    else
       [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-       (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#a) @ PReg pmem @ Enil))]
+       (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
   | PLoadORRO od a ofs =>
     match gpreg_o_expand od with
     | (d0, d1, d2, d3) =>
-      if (ireg_eq d0 a) || (ireg_eq d1 a) || (ireg_eq d2 a)
-      then [(#d0, Op Fail Enil)]
-      else
         [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-         (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (PReg (#a) @ PReg pmem @ Enil));
-         (#d2, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 16)))) (PReg (#a) @ PReg pmem @ Enil));
-         (#d3, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 24)))) (PReg (#a) @ PReg pmem @ Enil))]
+         (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d2, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 16)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d3, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 24)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
     end
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
@@ -869,13 +863,23 @@ Proof.
     * intros rr; destruct rr; Simpl.
       destruct (ireg_eq g rd); subst; Simpl.
 Qed.
-  
+
+
+
 Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (inst_prun Ge (trans_basic bi) sw sr sr).
 Proof.
+
+(* a little tactic to automate reasoning on preg_eq *)
+Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+Local Ltac preg_eq_discr r rd :=
+  destruct (preg_eq r rd); try (subst r; rewrite assign_eq, Pregmap.gss; auto);
+  rewrite (assign_diff _ (#rd) (#r) _); auto;
+  rewrite Pregmap.gso; auto.
+
   intros GENV MSR MSW; inversion MSR as (H & H0); inversion MSW as (H1 & H2).
   destruct bi; simpl.
 (* Arith *)
@@ -903,156 +907,39 @@ Proof.
       unfold parexec_load_regxs; simpl; unfold exec_load_deps_regxs; rewrite H, H0; rewrite (H0 rofs);
       destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
       eexists; split; try split; Simpl;
-        intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
+      intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
     (* Load Quad word *)
     + unfold parexec_load_q_offset.
-      destruct (gpreg_q_expand rd) as [rd0 rd1].
-      destruct (ireg_eq rd0 ra) as [ OVERLAP0 | NOOVERLAP0 ]; simpl; auto.
-      unfold exec_load_deps_offset.
-      destruct Ge.
-      unfold eval_offset.
-      repeat rewrite H0.
-      destruct (Mem.loadv Many64 mr (Val.offset_ptr (rsr ra) ofs)) as [load0 | ] eqn:MEML0; simpl.
-      ++ destruct (Mem.loadv Many64 mr
-                            (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ] eqn:MEML1.
-        +++ rewrite H.
-            rewrite MEML0.
-            rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-            rewrite H0.
-            rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-            rewrite H.
-            rewrite MEML1.
-            eexists; split.
-            * f_equal.
-            * constructor.
-              ** repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-                 assumption.
-              ** intro.
-                 destruct (preg_eq r rd1).
-                 *** subst r.
-                     rewrite (assign_eq _ (# rd1)).
-                     rewrite Pregmap.gss.
-                     reflexivity.
-                 *** rewrite (assign_diff _ (#rd1) (#r) _) by (apply ppos_discr; apply not_eq_sym; assumption).
-                     rewrite Pregmap.gso by assumption.
-                     destruct (preg_eq r rd0).
-                     **** subst r.
-                          rewrite (assign_eq _ (# rd0)).
-                          rewrite Pregmap.gss.
-                          reflexivity.
-                     **** rewrite (assign_diff _ (#rd0) (#r) _) by (apply ppos_discr; apply not_eq_sym; assumption).
-                          rewrite Pregmap.gso by assumption.
-                          trivial.
-        +++ rewrite H. rewrite MEML0.
-            rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-            rewrite H0.
-            rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-            rewrite H.
-            rewrite MEML1.
-            constructor.
-     ++ rewrite H. rewrite MEML0. trivial.
-                 
+      destruct (gpreg_q_expand rd) as [rd0 rd1]; destruct Ge; simpl.
+      rewrite H0, H.
+      destruct (Mem.loadv Many64 mr _) as [load0 | ]; simpl; auto.
+      rewrite !(assign_diff _ _ pmem), H; auto.
+      destruct (Mem.loadv Many64 mr (_ _ (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ]; simpl; auto.
+      eexists; intuition eauto.
+      { rewrite !(assign_diff _ _ pmem); auto. }
+      { preg_eq_discr r rd1.
+        preg_eq_discr r rd0. }
+
     (* Load Octuple word *)
-    + unfold parexec_load_o_offset.
-      destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3].
-      destruct (ireg_eq rd0 ra); simpl; trivial.
-      destruct (ireg_eq rd1 ra); simpl; trivial.
-      destruct (ireg_eq rd2 ra); simpl; trivial.
-      destruct Ge.
-      repeat rewrite H0.
-      destruct (Mem.loadv Many64 mr (Val.offset_ptr (rsr ra) ofs)) as [load0 | ] eqn:MEML0; simpl.
-      { destruct (Mem.loadv Many64 mr
-                            (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ] eqn:MEML1.
-        { destruct (Mem.loadv Many64 mr
-                              (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 16)))) as [load2| ] eqn:MEML2.
-          { destruct (Mem.loadv Many64 mr
-                                (Val.offset_ptr (rsr ra) (Ptrofs.add ofs (Ptrofs.repr 24)))) as [load3| ] eqn:MEML3.
-            { rewrite H.
-              rewrite MEML0.
-              rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-              rewrite H0.
-              rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-              rewrite H.
-              rewrite MEML1.
-              repeat rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-              rewrite H0.
-              repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-              rewrite H.
-              rewrite MEML2.
-              repeat rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-              rewrite H0.
-              repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-              rewrite H.
-              rewrite MEML3.
-              repeat rewrite (assign_diff _ _ (# ra)) by (apply ppos_discr; congruence).
-              econstructor; split; trivial.
-              constructor.
-              { repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr). assumption. }
-              { intro.
-                destruct (preg_eq r rd3).
-                { subst r. rewrite assign_eq. rewrite Pregmap.gss. trivial.
-                }
-                rewrite assign_diff by (apply ppos_discr; congruence).
-                rewrite Pregmap.gso by assumption.
-                destruct (preg_eq r rd2).
-                { subst r. rewrite assign_eq.
-                  rewrite Pregmap.gss. trivial.
-                }
-                rewrite assign_diff by (apply ppos_discr; congruence).
-                rewrite Pregmap.gso by assumption.
-                destruct (preg_eq r rd1).
-                { subst r. rewrite assign_eq.
-                  rewrite Pregmap.gss. trivial.
-                }
-                rewrite assign_diff by (apply ppos_discr; congruence).
-                rewrite Pregmap.gso by assumption.
-                destruct (preg_eq r rd0).
-                { subst r. rewrite assign_eq.
-                  rewrite Pregmap.gss. trivial.
-                }
-                rewrite assign_diff by (apply ppos_discr; congruence).
-                rewrite Pregmap.gso by assumption.
-                auto.
-              }
-            }
-            rewrite H. rewrite MEML0.
-            rewrite assign_diff by (apply ppos_discr; congruence).
-            rewrite H0.
-            rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).                
-            rewrite H. rewrite MEML1.
-            repeat rewrite assign_diff by (apply ppos_discr; congruence).
-            rewrite H0.
-            repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-            rewrite H. rewrite MEML2.
-            repeat rewrite assign_diff by (apply ppos_discr; congruence).
-            rewrite H0.
-            repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-            rewrite H. rewrite MEML3.
-            constructor.
-          }
-          rewrite H. rewrite MEML0.
-          rewrite assign_diff by (apply ppos_discr; congruence).
-          rewrite H0.
-          rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).                
-          rewrite H. rewrite MEML1.
-          repeat rewrite assign_diff by (apply ppos_discr; congruence).
-          rewrite H0.
-          repeat rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).
-          rewrite H. rewrite MEML2.
-          repeat rewrite assign_diff by (apply ppos_discr; congruence).
-          constructor.
-        }
-        rewrite H. rewrite MEML0.
-        rewrite assign_diff by (apply ppos_discr; congruence).
-        rewrite H0.
-        rewrite (assign_diff _ _ pmem) by (apply not_eq_sym; apply ppos_pmem_discr).                
-        rewrite H. rewrite MEML1.
-        repeat rewrite assign_diff by (apply ppos_discr; congruence).
-        constructor.
-      }
-      rewrite H. rewrite MEML0.
-      constructor.
+    + Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+      unfold parexec_load_o_offset.
+      destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3]; destruct Ge; simpl.
+      rewrite H0, H.
+      destruct (Mem.loadv Many64 mr (Val.offset_ptr (rsr ra) ofs)) as [load0 | ]; simpl; auto.
+      rewrite !(assign_diff _ _ pmem), !H; auto.
+      destruct (Mem.loadv Many64 mr (_ _ (Ptrofs.add ofs (Ptrofs.repr 8)))) as [load1| ]; simpl; auto.
+      rewrite !(assign_diff _ _ pmem), !H; auto.
+      destruct (Mem.loadv Many64 mr (_ _ (Ptrofs.add ofs (Ptrofs.repr 16)))) as [load2| ]; simpl; auto.
+      rewrite !(assign_diff _ _ pmem), !H; auto.
+      destruct (Mem.loadv Many64 mr (_ _ (Ptrofs.add ofs (Ptrofs.repr 24)))) as [load3| ]; simpl; auto.
+      eexists; intuition eauto.
+      { rewrite !(assign_diff _ _ pmem); auto. }
+      { preg_eq_discr r rd3.
+        preg_eq_discr r rd2.
+        preg_eq_discr r rd1.
+        preg_eq_discr r rd0. }
+
 (* Store *)
   - destruct i.
     (* Store Offset *)
@@ -1079,108 +966,28 @@ Proof.
 
     (* Store Quad Word *)
     + unfold parexec_store_q_offset.
-      destruct (gpreg_q_expand rs) as [s0 s1].
-      simpl.
-      unfold exec_store_deps_offset.
+      destruct (gpreg_q_expand rs) as [s0 s1]; destruct Ge; simpl.
       rewrite !H0, !H.
-      destruct Ge.
-      destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ] eqn:MEML0; simpl.
-      ++ rewrite MEML0.
-         destruct (Mem.storev _ _ _ (rsr s1)) as [mem1 | ] eqn:MEML1; simpl.
-         * rewrite (assign_diff sr _ (# s1)) by apply ppos_pmem_discr.
-           rewrite (assign_diff sr _ (# ra)) by apply ppos_pmem_discr.
-           repeat rewrite H0.
-           rewrite MEML1.
-           eexists; split.
-           reflexivity.
-           rewrite (assign_eq _ pmem).
-           split; trivial.
-           intro r.
-           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
-           rewrite (assign_diff _ _ (# r)) by apply ppos_pmem_discr.
-           congruence.
-         * rewrite (assign_diff sr pmem (# s1)) by apply ppos_pmem_discr.
-           rewrite (assign_diff sr pmem (# ra)) by apply ppos_pmem_discr.
-           repeat rewrite H0.
-           rewrite MEML1.
-           reflexivity.
-     ++ rewrite MEML0.
-        reflexivity.
+      destruct (Mem.storev _ _ _ (rsr s0)) as [mem0 | ]; simpl; auto.
+      rewrite !assign_diff, !H0; auto.
+      destruct (Mem.storev _ _ _ (rsr s1)) as [mem1 | ]; simpl; auto.
+      eexists; intuition eauto.
+      rewrite !assign_diff; auto.
 
     (* Store Ocuple Word *)
     + unfold parexec_store_o_offset.
-      simpl.
-      destruct (gpreg_o_expand rs) as [[[s0 s1] s2] s3].
-      simpl.
-      destruct Ge.
-      destruct (Mem.storev _ _ _ (rsr s0)) as [store0 | ] eqn:MEML0.
-      { destruct (Mem.storev _ _ _ (rsr s1)) as [store1 | ] eqn:MEML1.
-        { destruct (Mem.storev _ _ _ (rsr s2)) as [store2 | ] eqn:MEML2.
-          { destruct (Mem.storev _ _ _ (rsr s3)) as [store3 | ] eqn:MEML3.
-            { repeat (try rewrite H0; try rewrite H).
-              simpl.
-              rewrite MEML0.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H).
-              rewrite assign_eq.
-              rewrite MEML1.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H).
-              rewrite assign_eq.
-              rewrite MEML2.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H).
-              rewrite assign_eq.
-              rewrite MEML3.
-              econstructor; split; trivial.
-              split.
-              { repeat rewrite assign_eq. trivial. }
-              { intro.
-                repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-                trivial. }
-            }
-            {
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML0.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML1.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML2.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML3.
-              trivial.
-            }
-          }
-          {
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML0.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML1.
-              repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-              repeat (try rewrite H0; try rewrite H; simpl).
-              rewrite MEML2.
-              trivial.
-          }
-        }
-        {
-          repeat (try rewrite H0; try rewrite H; simpl).
-          rewrite MEML0.
-          repeat rewrite (assign_diff _ _ _) by apply ppos_pmem_discr.
-          repeat (try rewrite H0; try rewrite H; simpl).
-          rewrite MEML1.
-          trivial.
-        }
-      }
-      {
-        repeat (try rewrite H0; try rewrite H; simpl).
-        rewrite MEML0.
-        trivial.
-      }
-            
+      destruct (gpreg_o_expand rs) as [[[s0 s1] s2] s3]; destruct Ge; simpl.
+      rewrite !H0, !H.
+      destruct (Mem.storev _ _ _ (rsr s0)) as [store0 | ]; simpl; auto.
+      rewrite !assign_diff, !H0; auto.
+      destruct (Mem.storev _ _ _ (rsr s1)) as [store1 | ]; simpl; auto.
+      rewrite !assign_diff, !H0; auto.
+      destruct (Mem.storev _ _ _ (rsr s2)) as [store2 | ]; simpl; auto.
+      rewrite !assign_diff, !H0; auto.
+      destruct (Mem.storev _ _ _ (rsr s3)) as [store3 | ]; simpl; auto.
+      eexists; intuition eauto.
+      rewrite !assign_diff; auto.
+
   (* Allocframe *)
   - destruct (Mem.alloc _ _ _) eqn:MEMAL. destruct (Mem.store _ _ _ _) eqn:MEMS.
     * eexists; repeat split.
