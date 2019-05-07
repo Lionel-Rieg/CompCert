@@ -741,7 +741,7 @@ Proof.
       eapply transf_function_no_overflow; eauto. 
 
     erewrite transf_exec_bblock in H2; eauto.
-    inv BBEQ. rewrite H3 in H2.
+    unfold bblock_simu in BBEQ. rewrite BBEQ in H2; try congruence.
     exists (State rs' m'). split; try (constructor; auto).
     eapply transf_step_simu; eauto.
 

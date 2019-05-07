@@ -211,7 +211,7 @@ Qed.
 
 
 Definition verify_schedule (bb bb' : bblock) : res unit :=
-  match (bblock_equivb bb bb') with
+  match bblock_simub bb bb' with
   | true => OK tt
   | false => Error (msg "PostpassScheduling.verify_schedule")
   end.
@@ -230,7 +230,7 @@ Lemma verify_schedule_no_header:
   forall bb bb',
   verify_schedule (no_header bb) bb' = verify_schedule bb bb'.
 Proof.
-  intros. unfold verify_schedule. unfold bblock_equivb. unfold pure_bblock_eq_test. unfold bblock_eq_test. rewrite trans_block_noheader_inv.
+  intros. unfold verify_schedule. unfold bblock_simub. unfold pure_bblock_simu_test, bblock_simu_test. rewrite trans_block_noheader_inv.
   reflexivity.
 Qed.
 
@@ -240,7 +240,7 @@ Lemma stick_header_verify_schedule:
   stick_header hd bb' = hbb' ->
   verify_schedule bb bb' = verify_schedule bb hbb'.
 Proof.
-  intros. unfold verify_schedule. unfold bblock_equivb. unfold pure_bblock_eq_test. unfold bblock_eq_test.
+  intros. unfold verify_schedule. unfold bblock_simub, pure_bblock_simu_test, bblock_simu_test.
   rewrite <- H. rewrite trans_block_header_inv. reflexivity.
 Qed.
 
@@ -429,15 +429,15 @@ Lemma verified_schedule_nob_correct:
   verified_schedule_nob bb = OK lbb ->
   exists tbb, 
      concat_all lbb = OK tbb
-  /\ bblock_equiv ge f bb tbb.
+  /\ bblock_simu ge f bb tbb.
 Proof.
   intros. monadInv H.
   exploit stick_header_code_concat_all; eauto.
   intros (tbb & CONC & STH).
   exists tbb. split; auto.
   rewrite verify_schedule_no_header in EQ0. erewrite stick_header_verify_schedule in EQ0; eauto.
-  eapply bblock_equiv_eq; eauto. unfold verify_schedule in EQ0. unfold bblock_equivb in EQ0.
-  destruct (pure_bblock_eq_test true _ _); auto; try discriminate.
+  eapply bblock_simub_correct; eauto. unfold verify_schedule in EQ0.
+  destruct (bblock_simub _ _); auto; try discriminate.
 Qed.
 
 Theorem verified_schedule_correct:
@@ -445,7 +445,7 @@ Theorem verified_schedule_correct:
   verified_schedule bb = OK lbb ->
   exists tbb, 
      concat_all lbb = OK tbb
-  /\ bblock_equiv ge f bb tbb.
+  /\ bblock_simu ge f bb tbb.
 Proof.
   intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_correct; eauto; fail).
