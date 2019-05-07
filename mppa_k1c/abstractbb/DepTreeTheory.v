@@ -352,11 +352,11 @@ Proof.
 Qed.
 
 
-Theorem bblock_deps_equiv p1 p2:
+Theorem bblock_deps_simu p1 p2:
   (forall x, deps_get (bblock_deps p1) x = deps_get (bblock_deps p2) x)
-   -> bblock_equiv ge p1 p2.
+   -> bblock_simu ge p1 p2.
 Proof.
-  intros H m2.
+  intros H m2 DONTFAIL.
   remember (run ge p1 m2) as om1.
   destruct om1; simpl.
   + apply bblock_deps_Some_correct2.

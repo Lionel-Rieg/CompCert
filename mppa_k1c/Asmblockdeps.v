@@ -1300,7 +1300,7 @@ Local Hint Resolve trans_state_match.
 Lemma bblock_simu_reduce:
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
-  L.bblock_equiv Ge (trans_block p1) (trans_block p2) ->
+  L.bblock_simu Ge (trans_block p1) (trans_block p2) ->
   Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
   unfold bblock_simu, res_eq; intros p1 p2 ge fn H1 H2 rs m DONTSTUCK.
@@ -1308,21 +1308,16 @@ Proof.
   intro H2. 
   exploit (forward_simu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
   exploit (forward_simu Ge rs m p2 ge fn (trans_state (State rs m))); eauto.
-  remember (exec_bblock ge fn p1 rs m) as exp1.
-  destruct exp1.
-  + (* Next *) 
-    intros H3 (s2' & exp2 & MS'). unfold exec in exp2, H3. rewrite exp2 in H2.
-    destruct H2 as (m2' & H2 & H4). rewrite H2 in H3.
-    destruct (exec_bblock ge fn p2 rs m); simpl in H3.
-    * destruct H3 as (s' & H3 & H5 & H6). inv H3. inv MS'.
-      cutrewrite (rs0=rs1).
-      - cutrewrite (m0=m1); auto. congruence.
-      - apply functional_extensionality. intros r.
-        generalize (H0 r). intros Hr. congruence.
-    * discriminate.
-  + intros MO MO2. remember (trans_state (State rs m)) as s1. inversion MO2. clear MO2. unfold exec in *.
-    rewrite H0 in H2. clear H0. destruct (exec_bblock ge fn p2 rs m); auto. rewrite H2 in MO. unfold match_outcome in MO.
-    destruct MO as (? & ? & ?). discriminate.
+  destruct (exec_bblock ge fn p1 rs m); try congruence.
+  intros H3 (s2' & exp2 & MS'). unfold exec in exp2, H3. rewrite exp2 in H2.
+  destruct H2 as (m2' & H2 & H4). discriminate. rewrite H2 in H3.
+  destruct (exec_bblock ge fn p2 rs m); simpl in H3.
+  * destruct H3 as (s' & H3 & H5 & H6). inv H3. inv MS'.
+    cutrewrite (rs0=rs1).
+    - cutrewrite (m0=m1); auto. congruence.
+    - apply functional_extensionality. intros r.
+      generalize (H0 r). intros Hr. congruence.
+  * discriminate.
 Qed.
 
 Definition gpreg_name (gpr: gpreg) :=
@@ -1600,11 +1595,11 @@ Definition string_of_op (op: P.op): ?? pstring :=
 
 Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_eq_test string_of_name string_of_op (trans_block p1) (trans_block p2)
+    IDT.verb_bblock_simu_test string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IDT.bblock_eq_test (trans_block p1) (trans_block p2).
+    IDT.bblock_simu_test (trans_block p1) (trans_block p2).
 
-Local Hint Resolve IDT.bblock_eq_test_correct bblock_simu_reduce IDT.verb_bblock_eq_test_correct: wlp.
+Local Hint Resolve IDT.bblock_simu_test_correct bblock_simu_reduce IDT.verb_bblock_simu_test_correct: wlp.
 
 Theorem bblock_simu_test_correct verb p1 p2 :
   WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
@@ -1613,13 +1608,13 @@ Proof.
 Qed.
 Hint Resolve bblock_simu_test_correct: wlp.
 
-(* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
+(* Coerce bblock_simu_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
 
 Import UnsafeImpure.
 
 Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
 
-Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: Ge = Genv ge fn -> pure_bblock_simu_test verb p1 p2 = true -> bblock_simu ge fn p1 p2.
+Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: Ge = Genv ge fn -> pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
    intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
@@ -1627,7 +1622,7 @@ Qed.
 
 Definition bblock_simub: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_simu_test true.
 
-Lemma bblock_simub_correct p1 p2 ge fn: Ge = Genv ge fn -> bblock_simub p1 p2 = true -> bblock_simu ge fn p1 p2.
+Lemma bblock_simub_correct p1 p2 ge fn: Ge = Genv ge fn -> bblock_simub p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
  eapply (pure_bblock_simu_test_correct true).
 Qed.

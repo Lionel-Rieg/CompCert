@@ -140,9 +140,9 @@ Proof.
 Qed.
 
 
-(** A small theory of bblockram equality *)
+(** A small theory of bblock equality *)
 
-(* equalities on bblockram outputs *)
+(* equalities on bblock outputs *)
 Definition res_eq (om1 om2: option mem): Prop :=
   match om1 with
   | Some m1 => exists m2, om2 = Some m2 /\ forall x, m1 x = m2 x 
@@ -163,10 +163,10 @@ Proof.
   - intros; erewrite IHe, IHe0; auto.
 Qed.
 
-Definition bblock_equiv (p1 p2: bblock): Prop
-  := forall m, res_eq (run p1 m) (run p2 m).
+Definition bblock_simu (p1 p2: bblock): Prop
+  := forall m, (run p1 m) <> None -> res_eq (run p1 m) (run p2 m).
 
-Lemma alt_inst_equiv_refl i old1 old2: 
+Lemma inst_equiv_refl i old1 old2: 
   (forall x, old1 x = old2 x) ->
   forall m1 m2, (forall x, m1 x = m2 x) -> 
   res_eq (inst_run i m1 old1) (inst_run i m2 old2).
@@ -178,10 +178,10 @@ Proof.
   unfold assign; intro y. destruct (R.eq_dec x y); auto. 
 Qed.
 
-Lemma alt_bblock_equiv_refl p: forall m1 m2, (forall x, m1 x = m2 x) -> res_eq (run p m1) (run p m2).
+Lemma bblock_equiv_refl p: forall m1 m2, (forall x, m1 x = m2 x) -> res_eq (run p m1) (run p m2).
 Proof.
   induction p as [ | i p']; simpl; eauto.
-  intros m1 m2 H; lapply (alt_inst_equiv_refl i m1 m2); auto.
+  intros m1 m2 H; lapply (inst_equiv_refl i m1 m2); auto.
   intros X; lapply (X m1 m2); auto; clear X.
   destruct (inst_run i m1 m1); simpl.
   - intros [m3 [H1 H2]]; rewrite H1; simpl; auto.
@@ -205,11 +205,11 @@ Proof.
   - intro; subst; simpl; auto.
 Qed.
 
-Lemma bblock_equiv_alt p1 p2: bblock_equiv p1 p2 <-> (forall m1 m2,  (forall x, m1 x = m2 x) -> res_eq (run p1 m1) (run p2 m2)).
+Lemma bblock_simu_alt p1 p2: bblock_simu p1 p2 <-> (forall m1 m2,  (forall x, m1 x = m2 x) -> (run p1 m1)<>None -> res_eq (run p1 m1) (run p2 m2)).
 Proof.
-  unfold bblock_equiv; intuition.
-  intros; eapply res_eq_trans. eapply alt_bblock_equiv_refl; eauto.
-  eauto.
+  unfold bblock_simu; intuition.
+  intros; eapply res_eq_trans. eauto.
+  eapply bblock_equiv_refl; eauto.
 Qed.
 
 
