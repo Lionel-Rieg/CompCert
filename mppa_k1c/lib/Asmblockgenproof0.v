@@ -21,11 +21,10 @@ Module AB:=Asmvliw.
 
 Hint Extern 2 (_ <> _) => congruence: asmgen.
 
-Inductive bblock_equiv (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
-  | bblock_equiv_intro:
-      (forall rs m,
-      exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m) ->
-      bblock_equiv ge f bb bb'.
+Definition bblock_simu (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
+  forall rs m,
+    exec_bblock ge f bb rs m <> Stuck ->
+    exec_bblock ge f bb rs m = exec_bblock ge f bb' rs m.
 
 Lemma ireg_of_eq:
   forall r r', ireg_of r = OK r' -> preg_of r = IR r'.

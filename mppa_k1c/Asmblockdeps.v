@@ -1297,14 +1297,13 @@ Variable Ge: genv.
 
 Local Hint Resolve trans_state_match.
 
-Lemma bblock_equiv_reduce: 
+Lemma bblock_simu_reduce:
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
   L.bblock_equiv Ge (trans_block p1) (trans_block p2) ->
-  Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+  Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
-  unfold bblock_equiv, res_eq; intros p1 p2 ge fn H1 H2; constructor.
-  intros rs m.
+  unfold bblock_simu, res_eq; intros p1 p2 ge fn H1 H2 rs m DONTSTUCK.
   generalize (H2 (trans_state (State rs m))); clear H2.
   intro H2. 
   exploit (forward_simu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
@@ -1599,37 +1598,38 @@ Definition string_of_op (op: P.op): ?? pstring :=
   | Fail => RET (Str "Fail")
   end.
 
-Definition bblock_eq_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
+Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
   if verb then
     IDT.verb_bblock_eq_test string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
     IDT.bblock_eq_test (trans_block p1) (trans_block p2).
 
-Local Hint Resolve IDT.bblock_eq_test_correct bblock_equiv_reduce IDT.verb_bblock_eq_test_correct: wlp.
+Local Hint Resolve IDT.bblock_eq_test_correct bblock_simu_reduce IDT.verb_bblock_eq_test_correct: wlp.
 
-Theorem bblock_eq_test_correct verb p1 p2 :
-  WHEN bblock_eq_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Theorem bblock_simu_test_correct verb p1 p2 :
+  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
   wlp_simplify.
 Qed.
-Hint Resolve bblock_eq_test_correct: wlp.
+Hint Resolve bblock_simu_test_correct: wlp.
 
 (* Coerce bblock_eq_test into a pure function (this is a little unsafe like all oracles in CompCert). *)
 
 Import UnsafeImpure.
 
-Definition pure_bblock_eq_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_eq_test verb p1 p2).
+Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
 
-Theorem pure_bblock_eq_test_correct verb p1 p2:
-  forall ge fn, Ge = Genv ge fn ->
-   pure_bblock_eq_test verb p1 p2 = true -> Asmblockgenproof0.bblock_equiv ge fn p1 p2.
+Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: Ge = Genv ge fn -> pure_bblock_simu_test verb p1 p2 = true -> bblock_simu ge fn p1 p2.
 Proof.
-   intros; unfold pure_bblock_eq_test. intros; eapply bblock_eq_test_correct; eauto.
+   intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
 Qed.
 
-Definition bblock_equivb: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_eq_test true.
+Definition bblock_simub: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_simu_test true.
 
-Definition bblock_equiv_eq := pure_bblock_eq_test_correct true.
+Lemma bblock_simub_correct p1 p2 ge fn: Ge = Genv ge fn -> bblock_simub p1 p2 = true -> bblock_simu ge fn p1 p2.
+Proof.
+ eapply (pure_bblock_simu_test_correct true).
+Qed.
 
 End SECT_BBLOCK_EQUIV.
