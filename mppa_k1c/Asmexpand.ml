@@ -462,7 +462,7 @@ let expand_instruction instr =
         let below = Ptrofs.repr (Z.neg sz) in
         expand_addptrofs stack_pointer stack_pointer below;
         expand_storeind_ptr Asmvliw.GPR17 stack_pointer (Ptrofs.add ofs below);
-        emit Psemi;
+        (* DM we don't need it emit Psemi; *)
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
