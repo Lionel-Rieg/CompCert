@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "convertible_main.h" 
+#include "../clock.h"
 
 /* MACROS DEFINITIONS ****************/
 #ifndef TT
@@ -65,6 +66,9 @@ int main(){
 #endif
   
   /* Main loop */
+  clock_prepare();
+  clock_start();
+  
   for(int count=0; count<1000; count++){
     ++_s;
     Start = _get_bool("Start");
@@ -78,6 +82,10 @@ int main(){
     // printf("%d %d %d %d %d %d %f #outs %d %d %f %f\n",Start,Parked,Rot,Tic,OnOff,Done,Distance,Danger,Locked,Speed,Hood_Speed);
     // printf("%d %d %f %f\n",Danger,Locked,Speed,Hood_Speed);
   }
-  return 1;
+
+  clock_stop();
+  print_total_clock();
+  
+  return 0;
    
 }
