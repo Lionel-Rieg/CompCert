@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "carlightV2_carlight.h" 
-/* Print a promt ? ************************/
-static int ISATTY;
+#include "carlightV2_carlight.h"
+#include "../clock.h"
+
 /* MACROS DEFINITIONS ****************/
 #ifndef TT
 #define TT "1"
@@ -22,88 +22,23 @@ static int ISATTY;
 /* set this macro for testing output clocks */
 #endif
 
+static uint32_t dm_random_uint32(void) {
+  static uint32_t current=UINT32_C(0xDEADBEEF);
+  current = ((uint64_t) current << 6) % UINT32_C(4294967291);
+  return current;
+}
+
 /* Standard Input procedures **************/
 _boolean _get_bool(char* n){
-   char b[512];
-   _boolean r = 0;
-   int s = 1;
-   char c;
-   do {
-      if(ISATTY) {
-         if((s != 1)||(r == -1)) printf("\a");
-         // printf("%s (1,t,T/0,f,F) ? ", n);
-      }
-      if(scanf("%s", b)==EOF) exit(0);
-      if (*b == 'q') exit(0);
-      s = sscanf(b, "%c", &c);
-      r = -1;
-      if((c == '0') || (c == 'f') || (c == 'F')) r = 0;
-      if((c == '1') || (c == 't') || (c == 'T')) r = 1;
-   } while((s != 1) || (r == -1));
-   return r;
+  return dm_random_uint32() & 1;
 }
 _integer _get_int(char* n){
-   char b[512];
-   _integer r;
-   int s = 1;
-   do {
-      if(ISATTY) {
-         if(s != 1) printf("\a");
-         //printf("%s (integer) ? ", n);
-      }
-      if(scanf("%s", b)==EOF) exit(0);
-      if (*b == 'q') exit(0);
-      s = sscanf(b, "%d", &r);
-   } while(s != 1);
-   return r;
+  return (_integer) (dm_random_uint32() % 21) - 10;
 }
-#define REALFORMAT ((sizeof(_real)==8)?"%lf":"%f")
 _real _get_real(char* n){
-   char b[512];
-   _real r;
-   int s = 1;
-   do {
-      if(ISATTY) {
-         if(s != 1) printf("\a");
-         //printf("%s (real) ? ", n);
-      }
-      if(scanf("%s", b)==EOF) exit(0);
-      if (*b == 'q') exit(0);
-      s = sscanf(b, REALFORMAT, &r);
-   } while(s != 1);
-   return r;
+  return ((_integer) (dm_random_uint32() % 2000001) - 1000000)*1E-6;  
 }
-/* Standard Output procedures **************/
-void _put_bottom(char* n){
-   if(ISATTY) printf("%s = ", n);
-   printf("%s ", BB);
-   if(ISATTY) printf("\n");
-}
-void _put_bool(char* n, _boolean _V){
-   if(ISATTY) printf("%s = ", n);
-   printf("%s ", (_V)? TT : FF);
-   if(ISATTY) printf("\n");
-}
-void _put_int(char* n, _integer _V){
-   if(ISATTY) printf("%s = ", n);
-   printf("%d ", _V);
-   if(ISATTY) printf("\n");
-}
-void _put_real(char* n, _real _V){
-   if(ISATTY) printf("%s = ", n);
-   printf("%f ", _V);
-   if(ISATTY) printf("\n");
-}
-/* Output procedures **********************/
-#ifdef CKCHECK
-void %s_BOT_n(void* cdata){
-   _put_bottom("n");
-}
-#endif
-/* Output procedures **********************/
-void carlightV2_carlight_O_n(void* cdata, _integer _V) {
-   _put_int("n", _V);
-}
+
 /* Main procedure *************************/
 int main(){
   int _s = 0;
@@ -112,22 +47,21 @@ int main(){
   _boolean is_on;
     carlightV2_carlight_ctx_type* ctx = carlightV2_carlight_ctx_new_ctx(NULL);
 
-  printf("#inputs \"switch_pos\":int \"intensity\":real\n");
-  printf("#outputs \"is_on\":bool\n");
-
   /* Main loop */
-  ISATTY = isatty(0);
-  while(1){
-    if (ISATTY) printf("#step %d \n", _s+1);
-    else if(_s) printf("\n");
-    fflush(stdout);
+  clock_prepare();
+  clock_start();
+
+  for(int count=0; count<1000; count++){
     ++_s;
      switch_pos = _get_int("switch_pos");
      intensity = _get_real("intensity");
     carlightV2_carlight_step(switch_pos,intensity,&is_on,ctx);
     // printf("%d %f #outs %d\n",switch_pos,intensity,is_on);
-    printf("%d\n",is_on);
+    // printf("%d\n",is_on);
   }
-  return 1;
-   
+  
+  clock_stop();
+  print_total_clock();
+  
+  return 0;  
 }
