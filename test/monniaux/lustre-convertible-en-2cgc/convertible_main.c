@@ -2,54 +2,57 @@
 /*  lv6 -2c -en -2cgc -n main convertible.lus */
 /* on vanoise the 09/05/2019 at 15:28:26 */
 #include "convertible_main.h"
+
+#define DM_INLINE inline
+
 //// Defining step functions
 // Memory initialisation for Lustre_arrow_2_ctx
-void Lustre_arrow_2_ctx_reset(Lustre_arrow_2_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_2_ctx_reset(Lustre_arrow_2_ctx_type* ctx){
   int _i;
   ctx->_memory = _true;
 }
 
 // Initialisation of the  internal structure of Lustre_arrow_2_ctx
-void Lustre_arrow_2_ctx_init(Lustre_arrow_2_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_2_ctx_init(Lustre_arrow_2_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_arrow_2_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_arrow_2_ctx
-void Lustre_arrow_2_step(_integer i1,_integer i2,_integer *out,Lustre_arrow_2_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
+DM_INLINE void Lustre_arrow_2_step(_integer i1,_integer i2,_integer *out,Lustre_arrow_2_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
   ctx->_memory = _false;
 
 } // End of Lustre_arrow_2_step
 
 // Memory initialisation for Lustre_arrow_ctx
-void Lustre_arrow_ctx_reset(Lustre_arrow_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_ctx_reset(Lustre_arrow_ctx_type* ctx){
   int _i;
   ctx->_memory = _true;
 }
 
 // Initialisation of the  internal structure of Lustre_arrow_ctx
-void Lustre_arrow_ctx_init(Lustre_arrow_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_ctx_init(Lustre_arrow_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_arrow_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_arrow_ctx
-void Lustre_arrow_step(_real i1,_real i2,_real *out,Lustre_arrow_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
+DM_INLINE void Lustre_arrow_step(_real i1,_real i2,_real *out,Lustre_arrow_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
   ctx->_memory = _false;
 
 } // End of Lustre_arrow_step
 
 // Memory initialisation for Lustre_arrow_3_ctx
-void Lustre_arrow_3_ctx_reset(Lustre_arrow_3_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_3_ctx_reset(Lustre_arrow_3_ctx_type* ctx){
   int _i;
   ctx->_memory = _true;
 }
 
 // Initialisation of the  internal structure of Lustre_arrow_3_ctx
-void Lustre_arrow_3_ctx_init(Lustre_arrow_3_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_3_ctx_init(Lustre_arrow_3_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_arrow_3_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_arrow_3_ctx
-void Lustre_arrow_3_step(_real i1[50],_real i2[50],_real out[50]/*out*/,Lustre_arrow_3_ctx_type* ctx){  _assign_rp50(out, ((ctx->_memory)? i1 : i2), sizeof(_real [50]));
+DM_INLINE void Lustre_arrow_3_step(_real i1[50],_real i2[50],_real out[50]/*out*/,Lustre_arrow_3_ctx_type* ctx){  _assign_rp50(out, ((ctx->_memory)? i1 : i2), sizeof(_real [50]));
   ctx->_memory = _false;
 
 } // End of Lustre_arrow_3_step
@@ -110,73 +113,73 @@ void Lustre_hat_step(_real i1,_real out[50]/*out*/){
 } // End of Lustre_hat_step
 
 // Memory initialisation for Lustre_pre_2_ctx
-void Lustre_pre_2_ctx_reset(Lustre_pre_2_ctx_type* ctx){
+DM_INLINE void Lustre_pre_2_ctx_reset(Lustre_pre_2_ctx_type* ctx){
   int _i;
 
 }
 
 // Initialisation of the  internal structure of Lustre_pre_2_ctx
-void Lustre_pre_2_ctx_init(Lustre_pre_2_ctx_type* ctx){
+DM_INLINE void Lustre_pre_2_ctx_init(Lustre_pre_2_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_pre_2_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_pre_2_ctx
-void Lustre_pre_2_get(_integer *out,Lustre_pre_2_ctx_type* ctx){
+DM_INLINE void Lustre_pre_2_get(_integer *out,Lustre_pre_2_ctx_type* ctx){
   *out = ctx->_memory;
 
 } // End of Lustre_pre_2_get
 
-void Lustre_pre_2_set(_integer i1,Lustre_pre_2_ctx_type* ctx){
+DM_INLINE void Lustre_pre_2_set(_integer i1,Lustre_pre_2_ctx_type* ctx){
   ctx->_memory = i1;
 
 } // End of Lustre_pre_2_set
 
 // Memory initialisation for Lustre_pre_ctx
-void Lustre_pre_ctx_reset(Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_ctx_reset(Lustre_pre_ctx_type* ctx){
   int _i;
 
 }
 
 // Initialisation of the  internal structure of Lustre_pre_ctx
-void Lustre_pre_ctx_init(Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_ctx_init(Lustre_pre_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_pre_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_pre_ctx
-void Lustre_pre_get(_real *out,Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_get(_real *out,Lustre_pre_ctx_type* ctx){
   *out = ctx->_memory;
 
 } // End of Lustre_pre_get
 
-void Lustre_pre_set(_real i1,Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_set(_real i1,Lustre_pre_ctx_type* ctx){
   ctx->_memory = i1;
 
 } // End of Lustre_pre_set
 
 // Memory initialisation for Lustre_pre_3_ctx
-void Lustre_pre_3_ctx_reset(Lustre_pre_3_ctx_type* ctx){
+DM_INLINE void Lustre_pre_3_ctx_reset(Lustre_pre_3_ctx_type* ctx){
   int _i;
 
 }
 
 // Initialisation of the  internal structure of Lustre_pre_3_ctx
-void Lustre_pre_3_ctx_init(Lustre_pre_3_ctx_type* ctx){
+DM_INLINE void Lustre_pre_3_ctx_init(Lustre_pre_3_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_pre_3_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_pre_3_ctx
-void Lustre_pre_3_get(_real out[50]/*out*/,Lustre_pre_3_ctx_type* ctx){
+DM_INLINE void Lustre_pre_3_get(_real out[50]/*out*/,Lustre_pre_3_ctx_type* ctx){
   _assign_rp50(out, ctx->_memory, sizeof(_real [50]));
 
 } // End of Lustre_pre_3_get
 
-void Lustre_pre_3_set(_real i1[50],Lustre_pre_3_ctx_type* ctx){
+DM_INLINE void Lustre_pre_3_set(_real i1[50],Lustre_pre_3_ctx_type* ctx){
   _assign_rp50(ctx->_memory, i1, sizeof(_real [50]));
 
 } // End of Lustre_pre_3_set
 
 // Step function(s) for Lustre_slash_ctx
-void Lustre_slash_step(_real i1,_real i2,_real *out){
+DM_INLINE void Lustre_slash_step(_real i1,_real i2,_real *out){
   *out = (i1 / i2);
 
 } // End of Lustre_slash_step
