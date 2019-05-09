@@ -347,45 +347,45 @@ module Target (*: TARGET*) =
       | Pwfxm(n, dst) ->
          fprintf oc "	wfxm	$s%ld = %a\n" (camlint_of_coqint n) ireg dst
       | Pldu(dst, addr) ->
-	 fprintf oc "	ld.u	%a = 0[%a]\n" ireg dst ireg addr
+         fprintf oc "	ld.u	%a = 0[%a]\n" ireg dst ireg addr
       | Plbzu(dst, addr) ->
-	 fprintf oc "	lbz.u	%a = 0[%a]\n" ireg dst ireg addr
+         fprintf oc "	lbz.u	%a = 0[%a]\n" ireg dst ireg addr
       | Plhzu(dst, addr) ->
-	 fprintf oc "	lhz.u	%a = 0[%a]\n" ireg dst ireg addr
+         fprintf oc "	lhz.u	%a = 0[%a]\n" ireg dst ireg addr
       | Plwzu(dst, addr) ->
-	 fprintf oc "	lwz.u	%a = 0[%a]\n" ireg dst ireg addr
+         fprintf oc "	lwz.u	%a = 0[%a]\n" ireg dst ireg addr
       | Pawait ->
-	 fprintf oc "	await\n"
+         fprintf oc "	await\n"
       | Psleep ->
-	 fprintf oc "	sleep\n"
+         fprintf oc "	sleep\n"
       | Pstop ->
-	 fprintf oc "	stop\n"
+         fprintf oc "	stop\n"
       | Pbarrier ->
-	 fprintf oc "	barrier\n"
+         fprintf oc "	barrier\n"
       | Pfence ->
-	 fprintf oc "	fence\n"
+         fprintf oc "	fence\n"
       | Pdinval ->
-	 fprintf oc "	dinval\n"
+         fprintf oc "	dinval\n"
       | Pdinvall addr ->
-	 fprintf oc "	dinvall	0[%a]\n" ireg addr
+         fprintf oc "	dinvall	0[%a]\n" ireg addr
       | Pdtouchl addr ->
-	 fprintf oc "	dtouchl	0[%a]\n" ireg addr
+         fprintf oc "	dtouchl	0[%a]\n" ireg addr
       | Piinval ->
-	 fprintf oc "	iinval\n"
+         fprintf oc "	iinval\n"
       | Piinvals addr ->
-	 fprintf oc "	iinvals	0[%a]\n" ireg addr
+         fprintf oc "	iinvals	0[%a]\n" ireg addr
       | Pitouchl addr ->
-	 fprintf oc "	itouchl	0[%a]\n" ireg addr
+         fprintf oc "	itouchl	0[%a]\n" ireg addr
       | Pdzerol addr ->
-	 fprintf oc "	dzerol	0[%a]\n" ireg addr
+         fprintf oc "	dzerol	0[%a]\n" ireg addr
       | Pafaddd(addr, incr_res) ->
-	 fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
+         fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
       | Pafaddw(addr, incr_res) ->
-	 fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res
+         fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res
       | Palclrd(res, addr) ->
-	 fprintf oc "	alclrd	%a = 0[%a]\n" ireg res ireg addr
+         fprintf oc "	alclrd	%a = 0[%a]\n" ireg res ireg addr
       | Palclrw(res, addr) ->
-	 fprintf oc "	alclrw	%a = 0[%a]\n" ireg res ireg addr
+         fprintf oc "	alclrw	%a = 0[%a]\n" ireg res ireg addr
       | Pjumptable (idx_reg, tbl) ->
          let lbl = new_label() in
          (* jumptables := (lbl, tbl) :: !jumptables; *)
