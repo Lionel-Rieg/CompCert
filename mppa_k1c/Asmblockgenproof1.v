@@ -340,6 +340,35 @@ Proof.
     rewrite H0. simpl; auto.
 Qed.
 
+Lemma transl_compi_correct:
+  forall cmp r1 n lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_compi cmp Signed r1 n lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmp_bool cmp rs#r1 (Vint n) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_compi. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (rs # RTMP <- (compare_int (itest_for_cmp cmp Signed) rs # r1 (Vint n))) as rs'.
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+    { 
+      assert ((nextblock tbb rs') # RTMP = (compare_int (itest_for_cmp cmp Signed) rs # r1 (Vint n))).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val.cmp_bool cmp rs#r1 (Vint n)) as cmpbool.
+      destruct cmp; simpl;
+      unfold Val.cmp; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
 Lemma transl_compu_correct:
   forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
@@ -369,6 +398,35 @@ Proof.
     rewrite H0. simpl; auto.
 Qed.
 
+Lemma transl_compui_correct:
+  forall cmp r1 n lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_compi cmp Unsigned r1 n lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ (Val_cmpu_bool cmp rs#r1 (Vint n) = Some b ->
+       exec_control ge fn (Some (PCtlFlow ((Pcb BTwnez RTMP lbl)))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_compi. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (rs # RTMP <- (compare_int (itest_for_cmp cmp Unsigned) rs # r1 (Vint n))) as rs'.
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+    { 
+      assert ((nextblock tbb rs') # RTMP = (compare_int (itest_for_cmp cmp Unsigned) rs # r1 (Vint n))).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val_cmpu_bool cmp rs#r1 (Vint n)) as cmpubool.
+      destruct cmp; simpl; unfold Val_cmpu;
+        rewrite <- Heqcmpubool; destruct cmpubool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
 Lemma transl_compl_correct:
   forall cmp r1 r2 lbl k rs m tbb b,
   exists rs',
@@ -391,6 +449,36 @@ Proof.
       { rewrite Heqrs'. auto. }
       rewrite H0. rewrite <- H.
       remember (Val.cmpl_bool cmp rs#r1 rs#r2) as cmpbool.
+      destruct cmp; simpl;
+      unfold compare_long, Val.cmpl;
+      rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
+Lemma transl_compil_correct:
+  forall cmp r1 n lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_compil cmp Signed r1 n lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val.cmpl_bool cmp rs#r1 (Vlong n) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_compil. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Signed) rs # r1 (Vlong n))) as rs'.
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+    { 
+      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Signed) rs # r1 (Vlong n))).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val.cmpl_bool cmp rs#r1 (Vlong n)) as cmpbool.
       destruct cmp; simpl;
       unfold compare_long, Val.cmpl;
       rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
@@ -710,6 +798,35 @@ Proof.
     rewrite H0. simpl; auto.
 Qed.
 
+Lemma transl_compilu_correct:
+  forall cmp r1 n lbl k rs m tbb b,
+  exists rs',
+     exec_straight ge (transl_compil cmp Unsigned r1 n lbl k) rs m (Pcb BTwnez RTMP lbl ::g k) rs' m
+  /\ (forall r : preg, r <> PC -> r <> RTMP -> rs' r = rs r)  
+  /\ ( Val_cmplu_bool cmp rs#r1 (Vlong n) = Some b ->
+       exec_control ge fn (Some (PCtlFlow (Pcb BTwnez RTMP lbl))) (nextblock tbb rs') m
+        = eval_branch fn lbl (nextblock tbb rs') m (Some b))
+  .
+Proof.
+  intros. esplit. split.
+- unfold transl_compil. apply exec_straight_one; simpl; eauto.
+- split.
+  + intros; Simpl.
+  + intros.
+    remember (rs # RTMP <- (compare_long (itest_for_cmp cmp Unsigned) rs # r1 (Vlong n))) as rs'.
+    simpl. assert (Val.cmp_bool Cne (nextblock tbb rs') # RTMP (Vint (Int.repr 0)) = Some b).
+    { 
+      assert ((nextblock tbb rs') # RTMP = (compare_long (itest_for_cmp cmp Unsigned) rs # r1 (Vlong n))).
+      { rewrite Heqrs'. auto. }
+      rewrite H0. rewrite <- H.
+      remember (Val_cmplu_bool cmp rs#r1 (Vlong n)) as cmpbool.
+      destruct cmp; simpl;
+      unfold compare_long, Val_cmplu; rewrite <- Heqcmpbool; destruct cmpbool; simpl; auto;
+      destruct b0; simpl; auto.
+    }
+    rewrite H0. simpl; auto.
+Qed.
+
 Lemma transl_opt_compuimm_correct:
   forall n cmp r1 lbl k rs m b tbb c,
   select_comp n cmp = Some c ->
@@ -907,16 +1024,12 @@ Proof.
         unfold nextblock, incrPC. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
-  + exploit (loadimm32_correct RTMP n); eauto. intros (rs' & A & B & C).
-    exploit (transl_comp_correct c0 x RTMP lbl); eauto. intros (rs'2 & A' & B' & C').
+  + exploit (transl_compi_correct c0 x n lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez RTMP lbl).
     split.
-    * constructor. apply exec_straight_trans 
-         with (c2 := (transl_comp c0 Signed x RTMP lbl k)) (rs2 := rs') (m2 := m').
-      eexact A. eexact A'.
+    * constructor. eexact A'.
     * split; auto.
-      { apply C'; auto. rewrite B, C; eauto with asmgen. }
-      { intros. rewrite B'; eauto with asmgen. }
+      { apply C'; auto. }
 (* Ccompuimm *)
 - remember (select_comp n c0) as selcomp.
   destruct selcomp.
@@ -926,22 +1039,18 @@ Proof.
     split.
     * apply A.
     * split; auto. apply C. apply EVAL'.
-  + assert (transl_opt_compuimm n c0 x lbl k = loadimm32 RTMP n ::g transl_comp c0 Unsigned x RTMP lbl k).
+  + assert (transl_opt_compuimm n c0 x lbl k = transl_compi c0 Unsigned x n lbl k).
     { unfold transl_opt_compuimm.
       destruct (Int.eq n Int.zero) eqn:EQN.
       all: unfold select_comp in Heqselcomp; rewrite EQN in Heqselcomp; destruct c0; simpl in *; auto.
       all: discriminate. }
     rewrite H. clear H.
-    exploit (loadimm32_correct RTMP n); eauto. intros (rs' & A & B & C).
-    exploit (transl_compu_correct c0 x RTMP lbl); eauto. intros (rs'2 & A' & B' & C').
+    exploit (transl_compui_correct c0 x n lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez RTMP lbl).
     split.
-    * constructor. apply exec_straight_trans 
-         with (c2 := (transl_comp c0 Unsigned x RTMP lbl k)) (rs2 := rs') (m2 := m').
-      eexact A. eexact A'.
+    * constructor. eexact A'.
     * split; auto.
-      { apply C'; auto. rewrite B, C; eauto with asmgen. }
-      { intros. rewrite B'; eauto with asmgen. }
+      { apply C'; auto. }
 (* Ccompl *)
 - exploit (transl_compl_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
   exists rs', (Pcb BTwnez RTMP lbl).
@@ -970,16 +1079,12 @@ Proof.
         unfold nextblock, incrPC. Simpl. rewrite H0 in EVAL'. clear H0.
       destruct c0; simpl; auto;
       unfold eval_branch; rewrite <- H; rewrite EVAL'; auto.
-  + exploit (loadimm64_correct RTMP n); eauto. intros (rs' & A & B & C).
-    exploit (transl_compl_correct c0 x RTMP lbl); eauto. intros (rs'2 & A' & B' & C').
+  + exploit (transl_compil_correct c0 x n lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez RTMP lbl).
     split.
-    * constructor. apply exec_straight_trans 
-         with (c2 := (transl_compl c0 Signed x RTMP lbl k)) (rs2 := rs') (m2 := m').
-      eexact A. eexact A'.
+    * constructor. eexact A'.
     * split; auto.
-      { apply C'; auto. rewrite B, C; eauto with asmgen. }
-      { intros. rewrite B'; eauto with asmgen. }
+      { apply C'; auto. }
 
 (* Ccompluimm *)
 - remember (select_compl n c0) as selcomp.
@@ -990,22 +1095,18 @@ Proof.
     split.
     * apply A.
     * split; eauto. (*  apply C. apply EVAL'. *)
-  + assert (transl_opt_compluimm n c0 x lbl k = loadimm64 RTMP n ::g transl_compl c0 Unsigned x RTMP lbl k).
+  + assert (transl_opt_compluimm n c0 x lbl k = transl_compil c0 Unsigned x n lbl k).
     { unfold transl_opt_compluimm.
       destruct (Int64.eq n Int64.zero) eqn:EQN.
       all: unfold select_compl in Heqselcomp; rewrite EQN in Heqselcomp; destruct c0; simpl in *; auto.
       all: discriminate. }
     rewrite H. clear H.
-    exploit (loadimm64_correct RTMP n); eauto. intros (rs' & A & B & C).
-    exploit (transl_complu_correct c0 x RTMP lbl); eauto. intros (rs'2 & A' & B' & C').
+    exploit (transl_compilu_correct c0 x n lbl); eauto. intros (rs'2 & A' & B' & C').
     exists rs'2, (Pcb BTwnez RTMP lbl).
     split.
-    * constructor. apply exec_straight_trans 
-         with (c2 := (transl_compl c0 Unsigned x RTMP lbl k)) (rs2 := rs') (m2 := m').
-      eexact A. eexact A'.
+    * constructor. eexact A'.
     * split; auto.
-      { apply C'; auto. rewrite B, C; eauto with asmgen. }
-      { intros. rewrite B'; eauto with asmgen. }
+      { apply C'; auto. eapply Val_cmplu_bool_correct; eauto. }
 
 (* Ccompf *)
 - exploit (transl_compf_correct c0 x x0 lbl); eauto. intros (rs' & A & B & C).
