@@ -135,9 +135,17 @@ Definition transl_comp
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompw (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
 
+Definition transl_compi
+    (c: comparison) (s: signedness) (r: ireg) (imm: int) (lbl: label) (k: code) : list instruction :=
+  Pcompiw (itest_for_cmp c s) RTMP r imm ::g Pcb BTwnez RTMP lbl ::g k.
+
 Definition transl_compl
     (c: comparison) (s: signedness) (r1 r2: ireg) (lbl: label) (k: code) : list instruction :=
   Pcompl (itest_for_cmp c s) RTMP r1 r2 ::g Pcb BTwnez RTMP lbl ::g k.
+
+Definition transl_compil
+    (c: comparison) (s: signedness) (r: ireg) (imm: int64) (lbl: label) (k: code) : list instruction :=
+  Pcompil (itest_for_cmp c s) RTMP r imm ::g Pcb BTwnez RTMP lbl ::g k.
 
 Definition select_comp (n: int) (c: comparison) : option comparison :=
   if Int.eq n Int.zero then
@@ -156,10 +164,10 @@ Definition transl_opt_compuimm
     match c with
     | Ceq => Pcbu BTweqz r1 lbl ::g k
     | Cne => Pcbu BTwnez r1 lbl ::g k
-    | _ => loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
+    | _ => transl_compi c Unsigned r1 n lbl k
     end
   else
-    loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
+    transl_compi c Unsigned r1 n lbl k
   .
 
 (* Definition transl_opt_compuimm
@@ -192,10 +200,10 @@ Definition transl_opt_compluimm
     match c with
     | Ceq => Pcbu BTdeqz r1 lbl ::g k
     | Cne => Pcbu BTdnez r1 lbl ::g k
-    | _ => loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
+    | _ => transl_compil c Unsigned r1 n lbl k
     end
   else
-    loadimm64 RTMP n ::g (transl_compl c Unsigned r1 RTMP lbl k)
+    transl_compil c Unsigned r1 n lbl k
   .
 
 Definition transl_comp_float32 (cmp: comparison) (r1 r2: ireg) (lbl: label) (k: code) :=
@@ -239,7 +247,7 @@ Definition transl_cbranch
       OK (if Int.eq n Int.zero then
             Pcb (btest_for_cmpswz c) r1 lbl ::g k
           else
-            loadimm32 RTMP n ::g (transl_comp c Signed r1 RTMP lbl k)
+            transl_compi c Signed r1 n lbl k
          )
   | Ccompluimm c n, a1 :: nil =>
       do r1 <- ireg_of a1;
@@ -255,7 +263,7 @@ Definition transl_cbranch
       OK (if Int64.eq n Int64.zero then
             Pcb (btest_for_cmpsdz c) r1 lbl ::g k
           else
-            loadimm64 RTMP n ::g (transl_compl c Signed r1 RTMP lbl k)
+            transl_compil c Signed r1 n lbl k
          )
   | Ccompf c, a1 :: a2 :: nil =>
       do r1 <- ireg_of a1; do r2 <- ireg_of a2;
