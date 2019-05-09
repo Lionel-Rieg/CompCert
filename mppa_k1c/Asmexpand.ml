@@ -23,7 +23,6 @@ open Asm
 open Asmexpandaux
 open AST
 open Camlcoq
-open !Integers
 
 exception Error of string
                   
@@ -141,26 +140,50 @@ let get_builtin_arg dst arg =
   | BA_splitlong _ -> failwith "get_builtin_arg: BA_splitlong"
   | BA_addptr _ -> failwith "get_builtin_arg: BA_addptr";;
 
+let memcpy_by_doubleword = true
+			     
 (* FIXME DMonniaux this is really suboptimal (byte per byte) *)
 let expand_builtin_memcpy_big sz al src dst =
   assert (sz > Z.zero);
   let dstptr = Asmvliw.GPR62
   and srcptr = Asmvliw.GPR63
-  and tmpbuf = Asmvliw.GPR61 in
+  and tmpbuf = Asmvliw.GPR61
+  and caml_sz = camlint64_of_coqint sz in
   get_builtin_arg dstptr dst;
   get_builtin_arg srcptr src;
-  emit (Pmake (tmpbuf, sz));
-  emit Psemi; 
-  let lbl = new_label() in
-  emit (Ploopdo (tmpbuf, lbl));
-  emit Psemi;
-  emit (Plb (tmpbuf, srcptr, AOff Z.zero));
-  emit (Paddil (srcptr, srcptr, Z.one));
-  emit Psemi;
-  emit (Psb (tmpbuf, dstptr, AOff Z.zero));
-  emit (Paddil (dstptr, dstptr, Z.one));
-  emit Psemi;
-  emit (Plabel lbl);;
+  let caml_sz_div8 = Int64.shift_right caml_sz 3
+  and eight = coqint_of_camlint64 8L in
+  if memcpy_by_doubleword && (Int64.shift_left caml_sz_div8 3) = caml_sz
+  then
+    begin
+      emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div8)));
+      emit Psemi; 
+      let lbl = new_label() in
+      emit (Ploopdo (tmpbuf, lbl));
+      emit Psemi;
+      emit (Pld (tmpbuf, srcptr, AOff Z.zero));
+      emit (Paddil (srcptr, srcptr, eight));
+      emit Psemi;
+      emit (Psd (tmpbuf, dstptr, AOff Z.zero));
+      emit (Paddil (dstptr, dstptr, eight));
+      emit Psemi;
+      emit (Plabel lbl)
+    end
+  else
+    begin
+      emit (Pmake (tmpbuf, sz));
+      emit Psemi; 
+      let lbl = new_label() in
+      emit (Ploopdo (tmpbuf, lbl));
+      emit Psemi;
+      emit (Plb (tmpbuf, srcptr, AOff Z.zero));
+      emit (Paddil (srcptr, srcptr, Z.one));
+      emit Psemi;
+      emit (Psb (tmpbuf, dstptr, AOff Z.zero));
+      emit (Paddil (dstptr, dstptr, Z.one));
+      emit Psemi;
+      emit (Plabel lbl);
+    end;;
   
 let expand_builtin_memcpy  sz al args =
   match args with
@@ -185,7 +208,7 @@ let expand_builtin_vload_common chunk base ofs res =
   | Mint64, BR(Asmvliw.IR res) ->
      emit (Pld  (res, base, AOff ofs))
   | Mint64, BR_splitlong(BR(Asmvliw.IR res1), BR(Asmvliw.IR res2)) ->
-     let ofs' = Ptrofs.add ofs _4 in
+     let ofs' = Integers.Ptrofs.add ofs _4 in
      if base <> res2 then begin
          emit (Plw (res2, base, AOff ofs));
          emit (Plw (res1, base, AOff ofs'))
@@ -223,7 +246,7 @@ let expand_builtin_vstore_common chunk base ofs src =
   | Mint64, BA(Asmvliw.IR src) ->
      emit (Psd (src, base, AOff ofs))
   | Mint64, BA_splitlong(BA(Asmvliw.IR src1), BA(Asmvliw.IR src2)) ->
-     let ofs' = Ptrofs.add ofs _4 in
+     let ofs' = Integers.Ptrofs.add ofs _4 in
      emit (Psw (src2, base, AOff ofs));
      emit (Psw (src1, base, AOff ofs'))
   | Mfloat32, BA(Asmvliw.IR src) ->
@@ -267,7 +290,7 @@ let save_arguments first_reg base_ofs = let open Asmvliw in
     expand_storeind_ptr
       int_param_regs.(i)
       GPR12
-      (Ptrofs.repr (Z.add base_ofs (Z.of_uint ((i - first_reg) * wordsize))));
+      (Integers.Ptrofs.repr (Z.add base_ofs (Z.of_uint ((i - first_reg) * wordsize))));
     emit Psemi
   end done
 
@@ -278,9 +301,9 @@ match !vararg_start_ofs with
   | None ->
       invalid_arg "Fatal error: va_start used in non-vararg function"
   | Some ofs ->
-      expand_addptrofs Asmvliw.GPR32 stack_pointer (Ptrofs.repr ofs);
+      expand_addptrofs Asmvliw.GPR32 stack_pointer (Integers.Ptrofs.repr ofs);
       emit Psemi;
-      expand_storeind_ptr Asmvliw.GPR32 r Ptrofs.zero
+      expand_storeind_ptr Asmvliw.GPR32 r Integers.Ptrofs.zero
 
 (* Auxiliary for 64-bit integer arithmetic built-ins.  They expand to
    two instructions, one computing the low 32 bits of the result,
@@ -449,7 +472,7 @@ let expand_instruction instr =
         let n = arguments_size sg in
         let extra_sz = if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize) in
         let full_sz = Z.add sz (Z.of_uint extra_sz) in
-        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg full_sz));
+        expand_addptrofs stack_pointer stack_pointer (Integers.Ptrofs.repr (Z.neg full_sz));
         emit Psemi;
         expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
@@ -459,9 +482,9 @@ let expand_instruction instr =
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        let below = Ptrofs.repr (Z.neg sz) in
+        let below = Integers.Ptrofs.repr (Z.neg sz) in
         expand_addptrofs stack_pointer stack_pointer below;
-        expand_storeind_ptr stack_pointer stack_pointer (Ptrofs.add ofs below);
+        expand_storeind_ptr stack_pointer stack_pointer (Integers.Ptrofs.add ofs below);
         (* DM we don't need it emit Psemi; *)
         vararg_start_ofs := None
       end
@@ -472,7 +495,7 @@ let expand_instruction instr =
         let n = arguments_size sg in
         if n >= _nbregargs_ then 0 else (* align _alignment_ *) ((_nbregargs_ - n) * wordsize)
       end else 0 in
-     expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
+     expand_addptrofs stack_pointer stack_pointer (Integers.Ptrofs.repr (Z.add sz (Z.of_uint extra_sz)))
 
 (*| Pseqw(rd, rs1, rs2) ->
       (* emulate based on the fact that x == 0 iff x <u 1 (unsigned cmp) *)
@@ -504,7 +527,7 @@ let expand_instruction instr =
       end
 *)| Pcvtl2w (rd, rs) ->
       assert Archi.ptr64;
-      emit (Paddiw (rd, rs, Int.zero))  (* 32-bit sign extension *)
+      emit (Paddiw (rd, rs, Integers.Int.zero))  (* 32-bit sign extension *)
 
 (*| Pjal_r(r, sg) ->
       fixup_call sg; emit instr
