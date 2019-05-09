@@ -195,7 +195,7 @@ module Target (*: TARGET*) =
         fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
       end else begin
         if (extern_atom id) = "_impure_thread_data" then begin
-            fprintf oc "	make	%a = @tprel(%a)\n;;\n	addd	%a = %a, $r13\n" ireg r symbol_offset (id, ofs) ireg r ireg r               
+            fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs)         
         end else begin            
             fprintf oc "	make	%a = %a\n" ireg r symbol_offset (id, ofs)
         end

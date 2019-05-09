@@ -91,18 +91,18 @@ Proof.
    intros; destruct (inst_prun _ _ _); simpl; auto.
 Qed.
 
-Lemma prun_iw_app_None p1 m1 old p2:
+Lemma prun_iw_app_None p1: forall m1 old p2,
    prun_iw p1 m1 old = None ->
    prun_iw (p1++p2) m1 old = None.
 Proof.
-   intros H; rewrite prun_iw_app. rewrite H; auto.
+   intros m1 old p2 H; rewrite prun_iw_app. rewrite H; auto.
 Qed.
 
-Lemma prun_iw_app_Some p1 m1 old m2 p2:
+Lemma prun_iw_app_Some p1: forall m1 old m2 p2,
    prun_iw p1 m1 old = Some m2 ->
    prun_iw (p1++p2) m1 old = prun_iw p2 m2 old.
 Proof.
-   intros H; rewrite prun_iw_app. rewrite H; auto.
+   intros m1 old m2 p2 H; rewrite prun_iw_app. rewrite H; auto.
 Qed.
 
 End PARALLEL.

@@ -459,10 +459,10 @@ let expand_instruction instr =
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
-        expand_addptrofs stack_pointer stack_pointer (Ptrofs.repr (Z.neg sz));
-        emit Psemi;
-        expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
-        emit Psemi;
+        let below = Ptrofs.repr (Z.neg sz) in
+        expand_addptrofs stack_pointer stack_pointer below;
+        expand_storeind_ptr stack_pointer stack_pointer (Ptrofs.add ofs below);
+        (* DM we don't need it emit Psemi; *)
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->

@@ -518,7 +518,12 @@ Definition unfold_exit (oc: option control) :=
   | Some c => control_to_instruction c :: nil
   end.
 
-Definition unfold_bblock (b: bblock) := unfold_label (header b) ++ unfold_body (body b) ++ unfold_exit (exit b) ++ Psemi :: nil.
+Definition unfold_bblock (b: bblock) := unfold_label (header b) ++
+  (match (body b), (exit b) with
+   | (((Asmvliw.Pfreeframe _ _ | Asmvliw.Pallocframe _ _)::nil) as bo), None =>
+     unfold_body bo
+   | bo, ex => unfold_body bo ++ unfold_exit ex ++ Psemi :: nil
+  end).
 
 Fixpoint unfold (lb: bblocks) :=
   match lb with

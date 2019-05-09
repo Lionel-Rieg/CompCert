@@ -385,7 +385,7 @@ Hypothesis hco_list_correct: hCons_spec hco_list.
 Variable print_error_end: hdeps -> hdeps -> ?? unit.
 Variable print_error: pstring -> ?? unit.
 
-Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
+Program Definition g_bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO r <~ (TRY
     DO d1 <~ hbblock_deps (hC hco_tree) (hC hco_list) dbg1 log1 p1 ;;
     DO d2 <~ hbblock_deps (hC_known hco_tree) (hC_known hco_list) dbg2 log2 p2 ;;
@@ -398,23 +398,23 @@ Program Definition g_bblock_eq_test (p1 p2: bblock): ?? bool :=
   CATCH_FAIL s, _ =>
     print_error s;;
     RET false
-  ENSURE (fun b => b=true -> forall ge, bblock_equiv ge p1 p2));;
+  ENSURE (fun b => b=true -> forall ge, bblock_simu ge p1 p2));;
   RET (`r).
 Obligation 1.
   destruct hco_tree_correct as [X1 X2], hco_list_correct as [Y1 Y2].
   constructor 1; wlp_simplify; try congruence.
-  apply bblock_deps_equiv; auto.
+  apply bblock_deps_simu; auto.
   intros; rewrite <- H, <- H0.
   apply pdeps_get_intro. auto.
 Qed.
 
-Theorem g_bblock_eq_test_correct p1 p2:
-  WHEN g_bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
+Theorem g_bblock_simu_test_correct p1 p2:
+  WHEN g_bblock_simu_test p1 p2 ~> b THEN b=true -> forall ge, bblock_simu ge p1 p2.
 Proof.
   wlp_simplify.
   destruct exta; simpl in * |- *; auto.
 Qed.
-Global Opaque g_bblock_eq_test.
+Global Opaque g_bblock_simu_test.
 
 End Prog_Eq_Gen.
 
@@ -424,7 +424,7 @@ Definition skip (_:unit): ?? unit := RET tt.
 Definition no_dbg (_:R.t): ?? option pstring := RET None.
 
 
-Definition msg_prefix: pstring := "*** ERROR INFO from bblock_eq_test: ".
+Definition msg_prefix: pstring := "*** ERROR INFO from bblock_simu_test: ".
 Definition msg_error_on_end: pstring := "mismatch in final assignments !".
 Definition msg_unknow_tree: pstring := "unknown tree node".
 Definition msg_unknow_list_tree: pstring := "unknown list node".
@@ -438,11 +438,11 @@ Definition print_error (log: logger unit) (s:pstring): ?? unit
     println (msg_prefix +; msg_number +; n +; " -- " +; s). 
 
 
-Program Definition bblock_eq_test (p1 p2: bblock): ?? bool :=
+Program Definition bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log <~ count_logger ();;
   DO hco_tree <~ mk_annot (hCons tree_hash_eq (fun _ => RET msg_unknow_tree));;
   DO hco_list <~ mk_annot (hCons list_tree_hash_eq (fun _ => RET msg_unknow_list_tree));;
-  g_bblock_eq_test no_dbg no_dbg skip (log_insert log) hco_tree _ hco_list _ print_error_end (print_error log) p1 p2.
+  g_bblock_simu_test no_dbg no_dbg skip (log_insert log) hco_tree _ hco_list _ print_error_end (print_error log) p1 p2.
 Obligation 1.  
   generalize (hCons_correct _ _ _ _ H0); clear H0.
   constructor 1; wlp_simplify.
@@ -452,18 +452,18 @@ Obligation 2.
   constructor 1; wlp_simplify.
 Qed.
 
-Local Hint Resolve g_bblock_eq_test_correct.
+Local Hint Resolve g_bblock_simu_test_correct.
 
-Theorem bblock_eq_test_correct p1 p2:
-  WHEN bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
+Theorem bblock_simu_test_correct p1 p2:
+  WHEN bblock_simu_test p1 p2 ~> b THEN b=true -> forall ge, bblock_simu ge p1 p2.
 Proof.
   wlp_simplify.
 Qed.
-Global Opaque bblock_eq_test.
+Global Opaque bblock_simu_test.
 
 
 
-(** This is only to print info on each bblock_eq_test run **)
+(** This is only to print info on each bblock_simu_test run **)
 Section Verbose_version.
 
 Variable string_of_name: R.t -> ?? pstring.
@@ -689,13 +689,13 @@ Definition hlog (log: logger unit) (hct: hashConsing tree) (hcl: hashConsing lis
       next_log hcl s
     ).
 
-Program Definition verb_bblock_eq_test (p1 p2: bblock): ?? bool :=
+Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log1 <~ count_logger ();;
   DO log2 <~ count_logger ();;
   DO cr <~ make_cref Nothing;;
   DO hco_tree <~ mk_annot (hCons tree_hash_eq (msg_tree cr));;
   DO hco_list <~ mk_annot (hCons list_tree_hash_eq (msg_list cr));;
-  DO result1 <~ g_bblock_eq_test
+  DO result1 <~ g_bblock_simu_test
      (log_debug log1)
      simple_debug
      (hlog log1 hco_tree hco_list)
@@ -713,7 +713,7 @@ Program Definition verb_bblock_eq_test (p1 p2: bblock): ?? bool :=
     DO cr <~ make_cref Nothing;;
     DO hco_tree <~ mk_annot (hCons tree_hash_eq (msg_tree cr));;
     DO hco_list <~ mk_annot (hCons list_tree_hash_eq (msg_list cr));;
-    DO result2 <~ g_bblock_eq_test 
+    DO result2 <~ g_bblock_simu_test 
        (log_debug log1)
        simple_debug
        (hlog log1 hco_tree hco_list)
@@ -725,7 +725,7 @@ Program Definition verb_bblock_eq_test (p1 p2: bblock): ?? bool :=
        p2 p1;;
     if result2 
     then (
-      println (msg_prefix +; " OOops - symmetry violation in bblock_eq_test  => this is a bug of bblock_eq_test ??");;
+      println (msg_prefix +; " OOops - symmetry violation in bblock_simu_test  => this is a bug of bblock_simu_test ??");;
       RET false
     ) else RET false
    .
@@ -746,12 +746,12 @@ Obligation 4.
   constructor 1; wlp_simplify.
 Qed.
 
-Theorem verb_bblock_eq_test_correct p1 p2:
-  WHEN verb_bblock_eq_test p1 p2 ~> b THEN b=true -> forall ge, bblock_equiv ge p1 p2.
+Theorem verb_bblock_simu_test_correct p1 p2:
+  WHEN verb_bblock_simu_test p1 p2 ~> b THEN b=true -> forall ge, bblock_simu ge p1 p2.
 Proof.
   wlp_simplify.
 Qed.
-Global Opaque verb_bblock_eq_test.
+Global Opaque verb_bblock_simu_test.
 
 End Verbose_version.
 
