@@ -154,10 +154,24 @@ let expand_builtin_memcpy_big sz al src dst =
   get_builtin_arg srcptr src;
   let caml_sz_div16 = Int64.shift_right caml_sz 4
   and sixteen = coqint_of_camlint64 16L in
-  if smart_memcpy && (Int64.shift_left caml_sz_div16 4) = caml_sz
+  if smart_memcpy
   then
+    let remaining = ref caml_sz
+    and offset = ref 0L in
+    let cpy buf size load store =
+      (if !remaining >= size
+      then
+        let zofs = coqint_of_camlint64 !offset in
+        begin
+          emit Psemi;
+          emit (load buf srcptr (AOff zofs));
+          emit Psemi;
+          emit (store buf dstptr (AOff zofs));
+          remaining := Int64.sub !remaining size;
+          offset := Int64.add !offset size
+        end) in
     begin
-      if caml_sz_div16 >= 2L
+      (if caml_sz_div16 >= 2L
       then
         begin
           emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div16)));
@@ -171,15 +185,16 @@ let expand_builtin_memcpy_big sz al src dst =
           emit (Psq (tmpbuf2, dstptr, AOff Z.zero));
           emit (Paddil (dstptr, dstptr, sixteen));
           emit Psemi;
-          emit (Plabel lbl)
-        end
-      else
-        begin
-          emit Psemi;
-          emit (Plq (tmpbuf2, srcptr, AOff Z.zero));
-          emit Psemi;
-          emit (Psq (tmpbuf2, dstptr, AOff Z.zero));
-        end
+          emit (Plabel lbl);
+          remaining := Int64.sub !remaining (Int64.shift_left caml_sz_div16 4)
+        end);
+    
+      cpy tmpbuf2 16L (fun x y z -> Plq(x, y, z)) (fun x y z -> Psq(x, y, z));
+      cpy tmpbuf 8L (fun x y z -> Pld(x, y, z)) (fun x y z -> Psd(x, y, z));
+      cpy tmpbuf 4L (fun x y z -> Plw(x, y, z)) (fun x y z -> Psw(x, y, z));
+      cpy tmpbuf 2L (fun x y z -> Plh(x, y, z)) (fun x y z -> Psh(x, y, z));
+      cpy tmpbuf 1L (fun x y z -> Plb(x, y, z)) (fun x y z -> Psb(x, y, z));
+      assert (!remaining = 0L)
     end
   else
     begin
