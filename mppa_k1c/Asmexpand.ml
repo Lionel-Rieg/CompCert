@@ -156,18 +156,29 @@ let expand_builtin_memcpy_big sz al src dst =
   if memcpy_by_doubleword && (Int64.shift_left caml_sz_div8 3) = caml_sz
   then
     begin
-      emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div8)));
-      emit Psemi; 
-      let lbl = new_label() in
-      emit (Ploopdo (tmpbuf, lbl));
-      emit Psemi;
-      emit (Pld (tmpbuf, srcptr, AOff Z.zero));
-      emit (Paddil (srcptr, srcptr, eight));
-      emit Psemi;
-      emit (Psd (tmpbuf, dstptr, AOff Z.zero));
-      emit (Paddil (dstptr, dstptr, eight));
-      emit Psemi;
-      emit (Plabel lbl)
+      if caml_sz_div8 >= 2L
+      then
+        begin
+          emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div8)));
+          emit Psemi; 
+          let lbl = new_label() in
+          emit (Ploopdo (tmpbuf, lbl));
+          emit Psemi;
+          emit (Pld (tmpbuf, srcptr, AOff Z.zero));
+          emit (Paddil (srcptr, srcptr, eight));
+          emit Psemi;
+          emit (Psd (tmpbuf, dstptr, AOff Z.zero));
+          emit (Paddil (dstptr, dstptr, eight));
+          emit Psemi;
+          emit (Plabel lbl)
+        end
+      else
+        begin
+          emit (Pld (tmpbuf, srcptr, AOff Z.zero));
+          emit Psemi;
+          emit (Psd (tmpbuf, dstptr, AOff Z.zero));
+          emit Psemi;
+        end
     end
   else
     begin
