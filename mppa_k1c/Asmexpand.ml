@@ -140,44 +140,45 @@ let get_builtin_arg dst arg =
   | BA_splitlong _ -> failwith "get_builtin_arg: BA_splitlong"
   | BA_addptr _ -> failwith "get_builtin_arg: BA_addptr";;
 
-let memcpy_by_doubleword = true
-			     
+let smart_memcpy = true
+                 
 (* FIXME DMonniaux this is really suboptimal (byte per byte) *)
 let expand_builtin_memcpy_big sz al src dst =
   assert (sz > Z.zero);
   let dstptr = Asmvliw.GPR62
   and srcptr = Asmvliw.GPR63
   and tmpbuf = Asmvliw.GPR61
+  and tmpbuf2 = Asmvliw.R60R61
   and caml_sz = camlint64_of_coqint sz in
   get_builtin_arg dstptr dst;
   get_builtin_arg srcptr src;
-  let caml_sz_div8 = Int64.shift_right caml_sz 3
-  and eight = coqint_of_camlint64 8L in
-  if memcpy_by_doubleword && (Int64.shift_left caml_sz_div8 3) = caml_sz
+  let caml_sz_div16 = Int64.shift_right caml_sz 4
+  and sixteen = coqint_of_camlint64 16L in
+  if smart_memcpy && (Int64.shift_left caml_sz_div16 4) = caml_sz
   then
     begin
-      if caml_sz_div8 >= 2L
+      if caml_sz_div16 >= 2L
       then
         begin
-          emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div8)));
+          emit (Pmake (tmpbuf, (coqint_of_camlint64 caml_sz_div16)));
           emit Psemi; 
           let lbl = new_label() in
           emit (Ploopdo (tmpbuf, lbl));
           emit Psemi;
-          emit (Pld (tmpbuf, srcptr, AOff Z.zero));
-          emit (Paddil (srcptr, srcptr, eight));
+          emit (Plq (tmpbuf2, srcptr, AOff Z.zero));
+          emit (Paddil (srcptr, srcptr, sixteen));
           emit Psemi;
-          emit (Psd (tmpbuf, dstptr, AOff Z.zero));
-          emit (Paddil (dstptr, dstptr, eight));
+          emit (Psq (tmpbuf2, dstptr, AOff Z.zero));
+          emit (Paddil (dstptr, dstptr, sixteen));
           emit Psemi;
           emit (Plabel lbl)
         end
       else
         begin
-          emit (Pld (tmpbuf, srcptr, AOff Z.zero));
           emit Psemi;
-          emit (Psd (tmpbuf, dstptr, AOff Z.zero));
+          emit (Plq (tmpbuf2, srcptr, AOff Z.zero));
           emit Psemi;
+          emit (Psq (tmpbuf2, dstptr, AOff Z.zero));
         end
     end
   else
