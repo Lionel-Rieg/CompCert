@@ -17,6 +17,7 @@ Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
 Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
+Require Import Axioms.
 
 Module MB := Machblock.
 Module AB := Asmvliw.
@@ -1100,7 +1101,7 @@ Proof.
     destruct ep eqn:EPeq.
   (* RTMP contains parent *)
     + exploit loadind_correct. eexact EQ1.
-      instantiate (2 := rs1). rewrite DXP; eauto. congruence.
+      instantiate (2 := rs1). rewrite DXP; eauto.
       intros [rs2 [P [Q R]]].
 
       eapply exec_straight_body in P.
@@ -1121,8 +1122,8 @@ Proof.
 
   (* GPR11 does not contain parent *)
     + rewrite chunk_of_Tptr in A. 
-      exploit loadind_ptr_correct. eexact A. congruence. intros [rs2 [P [Q R]]].
-      exploit loadind_correct. eexact EQ1. instantiate (2 := rs2). rewrite Q. eauto. congruence.
+      exploit loadind_ptr_correct. eexact A. intros [rs2 [P [Q R]]].
+      exploit loadind_correct. eexact EQ1. instantiate (2 := rs2). rewrite Q. eauto.
       intros [rs3 [S [T U]]].
 
       exploit exec_straight_trans.
@@ -1593,6 +1594,12 @@ Proof.
     congruence.
 Qed.
 
+Lemma next_sep:
+  forall rs m rs' m', rs = rs' -> m = m' -> Next rs m = Next rs' m'.
+Proof.
+  congruence.
+Qed.
+
 Theorem step_simulation:
   forall S1 t S2, MB.step return_address_offset ge S1 t S2 ->
   forall S1' (MS: match_states S1 S1'),
@@ -1648,55 +1655,58 @@ Proof.
   intros [m3' [P Q]].
   (* Execution of function prologue *)
   monadInv EQ0. (* rewrite transl_code'_transl_code in EQ1. *)
-  set (tfbody := Pallocframe (fn_stacksize f) (fn_link_ofs f) ::b
-                 Pget GPRA RA ::b
-                 storeind_ptr GPRA SP (fn_retaddr_ofs f) ::b x0) in *.
+  set (tfbody := make_prologue f x0) in *.
   set (tf := {| fn_sig := MB.fn_sig f; fn_blocks := tfbody |}) in *.
-  set (rs2 := nextblock (bblock_single_inst (Pallocframe (fn_stacksize f) (fn_link_ofs f))) 
-                          (rs0#FP <- (parent_sp s) #SP <- sp #RTMP <- Vundef)).
+  set (rs2 := rs0#FP <- (parent_sp s) #SP <- sp #RTMP <- Vundef).
   exploit (Pget_correct tge GPRA RA nil rs2 m2'); auto.
   intros (rs' & U' & V').
-  exploit (exec_straight_through_singleinst); eauto.
-  intro W'. remember (nextblock _ rs') as rs''.
-  exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPRA nil rs'' m2').
+(*   exploit (exec_straight_through_singleinst); eauto.
+  intro W'. remember (nextblock _ rs') as rs''. *)
+  exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPRA nil rs' m2').
     rewrite chunk_of_Tptr in P.
     assert (rs' GPRA = rs0 RA). { apply V'. }
-    assert (rs'' GPRA = rs' GPRA). { subst. Simpl. }
     assert (rs' SP = rs2 SP). { apply V'; discriminate. }
-    assert (rs'' SP = rs' SP). { subst. Simpl. }
-    rewrite H4. rewrite H3. rewrite H6. rewrite H5.
+    rewrite H4. rewrite H3.
     (* change (rs' GPRA) with (rs0 RA). *)
     rewrite ATLR.
     change (rs2 SP) with sp. eexact P.
-    congruence. congruence.
   intros (rs3 & U & V).
-  exploit (exec_straight_through_singleinst); eauto.
-  intro W.
-  remember (nextblock _ rs3) as rs3'.
-  assert (EXEC_PROLOGUE:
+(*   exploit (exec_straight_through_singleinst); eauto.
+  intro W. *)
+  assert (EXEC_PROLOGUE: exists rs3',
             exec_straight_blocks tge tf
               tf.(fn_blocks) rs0 m'
-              x0 rs3' m3').
-  { change (fn_blocks tf) with tfbody; unfold tfbody.
-    apply exec_straight_blocks_step with rs2 m2'.
-    unfold exec_bblock. simpl exec_body. rewrite C. fold sp. simpl exec_control.
-    rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. simpl in F. rewrite F. rewrite regset_same_assign. reflexivity.
-    reflexivity.
-    eapply exec_straight_blocks_trans.
-    - eexact W'.
-    - eexact W. }
+              x0 rs3' m3'
+          /\ forall r, r <> PC -> rs3' r = rs3 r).
+  { eexists. split.
+    - change (fn_blocks tf) with tfbody; unfold tfbody.
+      econstructor; eauto. unfold exec_bblock. simpl exec_body.
+      rewrite C. fold sp. rewrite <- (sp_val _ _ _ AG). rewrite chunk_of_Tptr in F. simpl in F. rewrite F.
+      Simpl. unfold parexec_store_offset. rewrite Ptrofs.of_int64_to_int64. unfold eval_offset.
+      rewrite chunk_of_Tptr in P. Simpl. rewrite ATLR. unfold Mptr in P. assert (Archi.ptr64 = true) by auto. 2: auto. rewrite H3 in P. rewrite P.
+      simpl. apply next_sep; eauto. reflexivity.
+    - intros. destruct V' as (V'' & V'). destruct r.
+      + Simpl.
+        destruct (gpreg_eq g0 GPR16). { subst. Simpl. rewrite V; try discriminate. rewrite V''. subst rs2. Simpl. }
+        destruct (gpreg_eq g0 GPR32). { subst. Simpl. rewrite V; try discriminate. rewrite V'; try discriminate. subst rs2. Simpl. }
+        destruct (gpreg_eq g0 GPR12). { subst. Simpl. rewrite V; try discriminate. rewrite V'; try discriminate. subst rs2. Simpl. }
+        destruct (gpreg_eq g0 GPR17). { subst. Simpl. rewrite V; try discriminate. rewrite V'; try discriminate. subst rs2. Simpl. }
+        Simpl. rewrite V; try discriminate. rewrite V'; try discriminate. subst rs2. Simpl. { destruct g0; try discriminate. contradiction. }
+      + Simpl. rewrite V; try discriminate. rewrite V'; try discriminate. subst rs2. Simpl.
+      + contradiction.
+  } destruct EXEC_PROLOGUE as (rs3' & EXEC_PROLOGUE & Heqrs3').
   exploit exec_straight_steps_2; eauto using functions_transl.
-  simpl fn_blocks. unfold make_prologue in g. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega. constructor.
+  simpl fn_blocks. simpl fn_blocks in g. omega. constructor.
   intros (ofs' & X & Y).                    
   left; exists (State rs3' m3'); split.
   eapply exec_straight_steps_1; eauto.
-  simpl fn_blocks. unfold make_prologue in g. simpl fn_blocks in g. unfold tfbody. simpl bblock_single_inst. omega.
+  simpl fn_blocks. simpl fn_blocks in g. omega.
   constructor.
   econstructor; eauto.
   rewrite X; econstructor; eauto. 
   apply agree_exten with rs2; eauto with asmgen.
   unfold rs2. 
-  apply agree_nextblock. apply agree_set_other; auto with asmgen.
+  apply agree_set_other; auto with asmgen.
   apply agree_change_sp with (parent_sp s). 
   apply agree_undef_regs with rs0. auto.
 Local Transparent destroyed_at_function_entry.
@@ -1705,17 +1715,17 @@ Local Transparent destroyed_at_function_entry.
 
   intros.
   assert (r <> RTMP). { contradict H3; rewrite H3; unfold data_preg; auto. }
-  rewrite Heqrs3'. Simpl. rewrite V. rewrite Heqrs''. Simpl. inversion V'. rewrite H6. auto.
+  rewrite Heqrs3'. Simpl. rewrite V. inversion V'. rewrite H6. auto.
   assert (r <> GPRA). { contradict H3; rewrite H3; unfold data_preg; auto. }
   assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
   (* rewrite H8; auto. *)
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
-  auto. intros. rewrite Heqrs3'. Simpl. rewrite V by auto with asmgen.
+  contradict H3; rewrite H3; unfold data_preg; auto.
+  intros. rewrite Heqrs3'. rewrite V by auto with asmgen.
   assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
-  rewrite Heqrs''. Simpl.
-  rewrite H4 by auto with asmgen. reflexivity.
+  rewrite H4 by auto with asmgen. reflexivity. discriminate.
 - (* external function *)
   inv MS.
   exploit functions_translated; eauto.

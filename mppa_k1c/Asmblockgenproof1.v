@@ -1969,13 +1969,12 @@ Qed.
 
 Lemma indexed_memory_access_correct:
   forall mk_instr base ofs k rs m,
-  base <> RTMP ->
   exists base' ofs' rs' ptr',
      exec_straight_opt (indexed_memory_access mk_instr base ofs ::g k) rs m
                        (mk_instr base' ofs' ::g k) rs' m
   /\ eval_offset ofs' = OK ptr'
   /\ Val.offset_ptr rs'#base' ptr' = Val.offset_ptr rs#base ofs
-  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> rs'#r = rs#r.
 Proof.
   unfold indexed_memory_access; intros.
   (* destruct Archi.ptr64 eqn:SF. *)
@@ -2021,13 +2020,12 @@ Lemma indexed_load_access_correct:
      exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
   forall (base: ireg) ofs k (rs: regset) v,
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
-  base <> RTMP ->
   exists rs',
      exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m
   /\ rs'#rd = v
-  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r.
 Proof.
-  intros until m; intros EXEC; intros until v; intros LOAD NOT31.
+  intros until m; intros EXEC; intros until v; intros LOAD.
   exploit indexed_memory_access_correct; eauto.
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
@@ -2042,20 +2040,18 @@ Lemma indexed_store_access_correct:
      exec_basic_instr ge (mk_instr base ofs) rs m = exec_store_offset chunk rs m r1 base ofs) ->
   forall (base: ireg) ofs k (rs: regset) m',
   Mem.storev chunk m (Val.offset_ptr rs#base ofs) (rs#r1) = Some m' ->
-  base <> RTMP -> r1 <> RTMP ->
   exists rs',
      exec_straight ge (indexed_memory_access mk_instr base ofs ::g k) rs m k rs' m'
-  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> rs'#r = rs#r.
 Proof.
-  intros until m; intros EXEC; intros until m'; intros STORE NOT31 NOT31'.
-  exploit indexed_memory_access_correct. instantiate (1 := base). eauto.
+  intros until m; intros EXEC; intros until m'; intros STORE.
+  exploit indexed_memory_access_correct. (* instantiate (1 := base). eauto. *)
   intros (base' & ofs' & rs' & ptr' & A & PtrEq & B & C).
   econstructor; split.
   eapply exec_straight_opt_right. eapply A. apply exec_straight_one. rewrite EXEC.
   unfold exec_store_offset. unfold parexec_store_offset. rewrite PtrEq. rewrite B, C, STORE.
     eauto.
     discriminate.
-    { intro. inv H. contradiction. }
   auto.
 Qed.
 
@@ -2063,13 +2059,12 @@ Lemma loadind_correct:
   forall (base: ireg) ofs ty dst k c (rs: regset) m v,
   loadind base ofs ty dst k = OK c ->
   Mem.loadv (chunk_of_type ty) m (Val.offset_ptr rs#base ofs) = Some v ->
-  base <> RTMP ->
   exists rs',
      exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
   /\ rs'#(preg_of dst) = v
-  /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
-  intros until v; intros TR LOAD NOT31. 
+  intros until v; intros TR LOAD. 
   assert (A: exists mk_instr rd,
                 preg_of dst = IR rd
              /\ c = indexed_memory_access mk_instr base ofs :: k
@@ -2086,12 +2081,11 @@ Lemma storeind_correct:
   forall (base: ireg) ofs ty src k c (rs: regset) m m',
   storeind src base ofs ty k = OK c ->
   Mem.storev (chunk_of_type ty) m (Val.offset_ptr rs#base ofs) rs#(preg_of src) = Some m' ->
-  base <> RTMP ->
   exists rs',
      exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m'
-  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> rs'#r = rs#r.
 Proof.
-  intros until m'; intros TR STORE NOT31.
+  intros until m'; intros TR STORE.
   assert (A: exists mk_instr rr,
                 preg_of src = IR rr
              /\ c = indexed_memory_access mk_instr base ofs :: k
@@ -2102,7 +2096,6 @@ Proof.
   destruct A as (mk_instr & rr & rsEq & B & C). subst c.
   eapply indexed_store_access_correct; eauto with asmgen.
   congruence.
-  destruct rr; try discriminate. destruct src; try discriminate.
 Qed.
 
 Ltac bsimpl := unfold exec_bblock; simpl.
@@ -2139,23 +2132,21 @@ Qed.
 Lemma loadind_ptr_correct:
   forall (base: ireg) ofs (dst: ireg) k (rs: regset) m v,
   Mem.loadv Mptr m (Val.offset_ptr rs#base ofs) = Some v ->
-  base <> RTMP ->
   exists rs',
      exec_straight ge (loadind_ptr base ofs dst ::g k) rs m k rs' m
   /\ rs'#dst = v
-  /\ forall r, r <> PC -> r <> RTMP -> r <> dst -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
-  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H1. auto.
+  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H0. auto.
 Qed.
 
 Lemma storeind_ptr_correct:
   forall (base: ireg) ofs (src: ireg) k (rs: regset) m m',
   Mem.storev Mptr m (Val.offset_ptr rs#base ofs) rs#src = Some m' ->
-  base <> RTMP -> src <> RTMP ->
   exists rs',
      exec_straight ge (storeind_ptr src base ofs ::g k) rs m k rs' m'
-  /\ forall r, r <> PC -> r <> RTMP -> rs'#r = rs#r.
+  /\ forall r, r <> PC -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_store_access_correct with (r1 := src); eauto with asmgen.
   intros. unfold Mptr. assert (Archi.ptr64 = true); auto.
@@ -2174,7 +2165,10 @@ Proof.
   intros until v; intros TR EV. 
   unfold transl_memory_access in TR; destruct addr; ArgsInv.
 - (* indexed *)
-  inv EV. apply indexed_memory_access_correct; eauto with asmgen.
+  inv EV. exploit indexed_memory_access_correct; eauto. intros (base' & ofs' & rs' & ptr' & EOPT & EVALOFF & VALOFF & RSEQ).
+  eexists; eexists; eexists; eexists. split; try split; try split.
+  eapply EOPT. unfold eval_offset in EVALOFF. inv EVALOFF. eauto.
+  { intros. destruct r; rewrite RSEQ; auto. }
 - (* global *)
   simpl in EV. inv EV. inv TR.  econstructor; econstructor; econstructor; econstructor; split.
   constructor. apply exec_straight_one. simpl; eauto. auto. 
@@ -2193,7 +2187,11 @@ Proof.
     destruct (Genv.find_symbol ge i); discriminate.
   + simpl. rewrite Ptrofs.add_zero; auto.
 - (* stack *)
-  inv TR. inv EV. apply indexed_memory_access_correct; eauto with asmgen.
+  inv TR. inv EV. 
+  exploit indexed_memory_access_correct; eauto. intros (base' & ofs' & rs' & ptr' & EOPT & EVALOFF & VALOFF & RSEQ).
+  eexists; eexists; eexists; eexists. split; try split; try split.
+  eapply EOPT. unfold eval_offset in EVALOFF. inv EVALOFF. eauto.
+  { intros. destruct r; rewrite RSEQ; auto. }
 Qed.
 
 Lemma transl_memory_access2_correct:
@@ -2658,7 +2656,6 @@ Proof.
   exploit ((loadind_ptr_correct SP (fn_retaddr_ofs f) GPRA (Pset RA GPRA ::g Pfreeframe (fn_stacksize f) (fn_link_ofs f) ::g k))
             rs tm).
   - rewrite <- (sp_val _ _ rs AG). simpl. eexact LRA'.
-  - congruence.
   - intros (rs1 & A1 & B1 & C1).
     assert (agree ms (Vptr stk soff) rs1) as AG1.
     + destruct AG.
