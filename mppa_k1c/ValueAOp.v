@@ -161,8 +161,13 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ocast16signed, v1 :: nil => sign_ext 16 v1
   | Oadd, v1::v2::nil => add v1 v2
   | Oaddimm n, v1::nil => add v1 (I n)
+  | Oaddx shift, v1::v2::nil => add (shl v1 (I (int_of_shift1_4 shift))) v2
+  | Oaddximm shift n, v1::nil => add (shl v1 (I (int_of_shift1_4 shift))) (I n)
   | Oneg, v1::nil => neg v1
   | Osub, v1::v2::nil => sub v1 v2
+  | Orevsubx shift, v1::v2::nil => sub v2 (shl v1 (I (int_of_shift1_4 shift)))
+  | Orevsubimm n, v1::nil => sub (I n) v1
+  | Orevsubximm shift n, v1::nil => sub (I n) (shl v1 (I (int_of_shift1_4 shift)))
   | Omul, v1::v2::nil => mul v1 v2
   | Omulimm n, v1::nil => mul v1 (I n)
   | Omulhs, v1::v2::nil => mulhs v1 v2
@@ -198,6 +203,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Oshrximm n, v1::nil => shrx v1 (I n)
   | Omadd, v1::v2::v3::nil => add v1 (mul v2 v3)
   | Omaddimm n, v1::v2::nil => add v1 (mul v2 (I n))
+  | Omsub, v1::v2::v3::nil => sub v1 (mul v2 v3)
+  | Omsubimm n, v1::v2::nil => sub v1 (mul v2 (I n))
   | Omakelong, v1::v2::nil => longofwords v1 v2
   | Olowlong, v1::nil => loword v1
   | Ohighlong, v1::nil => hiword v1
@@ -205,8 +212,13 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ocast32unsigned, v1::nil => longofintu v1
   | Oaddl, v1::v2::nil => addl v1 v2
   | Oaddlimm n, v1::nil => addl v1 (L n)
+  | Oaddxl shift, v1::v2::nil => addl (shll v1 (I (int_of_shift1_4 shift))) v2
+  | Oaddxlimm shift n, v1::nil => addl (shll v1 (I (int_of_shift1_4 shift))) (L n)
   | Onegl, v1::nil => negl v1
   | Osubl, v1::v2::nil => subl v1 v2
+  | Orevsubxl shift, v1::v2::nil => subl v2 (shll v1 (I (int_of_shift1_4 shift)))
+  | Orevsublimm n, v1::nil => subl (L n) v1
+  | Orevsubxlimm shift n, v1::nil => subl (L n) (shll v1 (I (int_of_shift1_4 shift)))
   | Omull, v1::v2::nil => mull v1 v2
   | Omullimm n, v1::nil => mull v1 (L n)
   | Omullhs, v1::v2::nil => mullhs v1 v2
@@ -241,6 +253,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Oshrxlimm n, v1::nil => shrxl v1 (I n)
   | Omaddl, v1::v2::v3::nil => addl v1 (mull v2 v3)
   | Omaddlimm n, v1::v2::nil => addl v1 (mull v2 (L n))
+  | Omsubl, v1::v2::v3::nil => subl v1 (mull v2 v3)
+  | Omsublimm n, v1::v2::nil => subl v1 (mull v2 (L n))
   | Onegf, v1::nil => negf v1
   | Oabsf, v1::nil => absf v1
   | Oaddf, v1::v2::nil => addf v1 v2
@@ -360,11 +374,25 @@ Theorem eval_static_operation_sound:
   vmatch bc vres (eval_static_operation op aargs).
 Proof.
   unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs; intros;
-  destruct op; InvHyps; eauto with va.
-  destruct (propagate_float_constants tt); constructor.
-  destruct (propagate_float_constants tt); constructor.
-  rewrite Ptrofs.add_zero_l; eauto with va.
-  apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
+  destruct op; try (InvHyps; eauto with va).
+  - destruct (propagate_float_constants tt); constructor.
+  - destruct (propagate_float_constants tt); constructor.
+  - rewrite Ptrofs.add_zero_l; eauto with va.
+  - (*revsubimm*) inv H1; constructor.
+  - replace (match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
+    | Vint n2 => Vint (Int.sub n n2)
+    | _ => Vundef
+             end) with (Val.sub (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
+    eauto with va.
+    destruct a1; destruct shift; reflexivity.
+  - inv H1; constructor.
+  - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
+    | Vlong n2 => Vlong (Int64.sub n n2)
+    | _ => Vundef
+             end) with (Val.subl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
+    eauto with va.
+    destruct a1; destruct shift; reflexivity.
+  - apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
   (* select *)
   - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
     rewrite eval_select_to2.
