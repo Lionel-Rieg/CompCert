@@ -61,7 +61,9 @@ let arith_rrr_str = function
   | Pfcompw ft -> "Pfcompw"
   | Pfcompl ft -> "Pfcompl"
   | Paddw -> "Paddw"
+  | Paddxw _ -> "Paddxw"
   | Psubw -> "Psubw"
+  | Psubxw _ -> "Psubxw"
   | Pmulw -> "Pmulw"
   | Pandw -> "Pandw"
   | Pnandw -> "Pnandw"
@@ -76,7 +78,9 @@ let arith_rrr_str = function
   | Psrxw -> "Psrxw"
   | Psllw -> "Psllw"
   | Paddl -> "Paddl"
+  | Paddxl _ -> "Paddxl"
   | Psubl -> "Psubl"
+  | Psubxl _ -> "Psubxl"
   | Pandl -> "Pandl"
   | Pnandl -> "Pnandl"
   | Porl -> "Porl"
@@ -100,6 +104,9 @@ let arith_rrr_str = function
 let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
+  | Paddxiw _ -> "Paddxiw"
+  | Psubiw -> "Psubiw"
+  | Psubxiw _ -> "Psubxiw"
   | Pmuliw -> "Pmuliw"
   | Pandiw -> "Pandiw"
   | Pnandiw -> "Pnandiw"
@@ -122,6 +129,9 @@ let arith_rri32_str = function
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
+  | Psubil -> "Psubil"
+  | Paddxil _ -> "Paddxil"
+  | Psubxil _ -> "Psubxil"
   | Pmulil -> "Pmulil"
   | Pandil -> "Pandil"
   | Pnandil -> "Pnandil"
@@ -140,6 +150,8 @@ let arith_arr_str = function
 let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
   | Pmaddl -> "Pmaddl"
+  | Pmsubw -> "Pmsubw"
+  | Pmsubl -> "Pmsubl"
   | Pcmove _ -> "Pcmove"
   | Pcmoveu _ -> "Pcmoveu"
             

@@ -429,7 +429,9 @@ Inductive arith_name_rrr : Type :=
   | Pfcompl (ft: ftest)                             (**r comparison float64 *)
 
   | Paddw                                           (**r add word *)
-  | Psubw                                           (**r sub word *)
+  | Paddxw (shift : Z)                              (**r add shift *)
+  | Psubw                                           (**r sub word word *)
+  | Psubxw (shift : Z)                              (**r sub shift word *)
   | Pmulw                                           (**r mul word *)
   | Pandw                                           (**r and word *)
   | Pnandw                                          (**r nand word *)
@@ -445,7 +447,9 @@ Inductive arith_name_rrr : Type :=
   | Psllw                                           (**r shift left logical word *)
 
   | Paddl                                           (**r add long *)
+  | Paddxl (shift : Z)                              (**r add shift long *)
   | Psubl                                           (**r sub long *)
+  | Psubxl (shift : Z)                              (**r sub shift long *)
   | Pandl                                           (**r and long *)
   | Pnandl                                          (**r nand long *)
   | Porl                                            (**r or long *)
@@ -472,6 +476,9 @@ Inductive arith_name_rri32 : Type :=
   | Pcompiw (it: itest)                             (**r comparison imm word *)
 
   | Paddiw                                          (**r add imm word *)
+  | Paddxiw (shift : Z)
+  | Psubiw                                          (**r add imm word *)
+  | Psubxiw (shift : Z)
   | Pmuliw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
   | Pnandiw                                         (**r nand imm word *)
@@ -495,6 +502,9 @@ Inductive arith_name_rri32 : Type :=
 Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
+  | Paddxil (shift : Z)
+  | Psubil
+  | Psubxil (shift : Z)
   | Pmulil                                          (**r mul immediate long *) 
   | Pandil                                          (**r and immediate long *) 
   | Pnandil                                         (**r nand immediate long *) 
@@ -509,6 +519,8 @@ Inductive arith_name_rri64 : Type :=
 Inductive arith_name_arrr : Type :=
   | Pmaddw                                           (**r multiply add word *)
   | Pmaddl                                           (**r multiply add long *)
+  | Pmsubw                                           (**r multiply subtract word *)
+  | Pmsubl                                           (**r multiply subtract long *)
   | Pcmove (bt: btest)                               (**r conditional move *)
   | Pcmoveu (bt: btest)                              (**r conditional move, test on unsigned semantics *)
 .
@@ -1055,12 +1067,33 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfsbfw => Val.subfs v1 v2
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
+
+  | Paddxw shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.add v1 (Val.shl v2 (Vint (Int.repr shift)))
+    else Vundef
+
+  | Paddxl shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.addl v1 (Val.shll v2 (Vint (Int.repr shift)))
+    else Vundef
+
+  | Psubxw shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.sub v1 (Val.shl v2 (Vint (Int.repr shift)))
+    else Vundef
+
+  | Psubxl shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.subl v1 (Val.shll v2 (Vint (Int.repr shift)))
+    else Vundef
   end.
 
 Definition arith_eval_rri32 n v i :=
   match n with
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
+  | Psubiw  => Val.sub   v (Vint i)
   | Pmuliw  => Val.mul   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
   | Pnandiw => Val.notint (Val.and  v (Vint i))
@@ -1079,12 +1112,21 @@ Definition arith_eval_rri32 n v i :=
   | Psrxil  => ExtValues.val_shrxl v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
+  | Paddxiw shift =>
+        if Z.leb shift 4 && Z.leb 1 shift
+        then Val.add (Vint i) (Val.shl v (Vint (Int.repr shift)))
+        else Vundef
+  | Psubxiw shift =>
+        if Z.leb shift 4 && Z.leb 1 shift
+        then Val.sub (Vint i) (Val.shl v (Vint (Int.repr shift)))
+        else Vundef
   end.
 
 Definition arith_eval_rri64 n v i :=
   match n with
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
+  | Psubil  => Val.subl v (Vlong i)
   | Pmulil  => Val.mull v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
   | Pnandil  => Val.notl (Val.andl v (Vlong i))
@@ -1094,12 +1136,22 @@ Definition arith_eval_rri64 n v i :=
   | Pnxoril  => Val.notl (Val.xorl  v (Vlong i))
   | Pandnil => Val.andl (Val.notl v) (Vlong i)
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
+  | Paddxil shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.addl (Vlong i) (Val.shll v (Vint (Int.repr shift)))
+    else Vundef
+  | Psubxil shift =>
+    if Z.leb shift 4 && Z.leb 1 shift
+    then Val.subl (Vlong i) (Val.shll v (Vint (Int.repr shift)))
+    else Vundef
   end.
 
 Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
+  | Pmsubw => Val.sub v1 (Val.mul v2 v3)
+  | Pmsubl => Val.subl v1 (Val.mull v2 v3)
   | Pcmove bt =>
     match cmp_for_btest bt with
     | (Some c, Int)  =>
