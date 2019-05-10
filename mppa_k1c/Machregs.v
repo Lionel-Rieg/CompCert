@@ -167,7 +167,10 @@ Fixpoint destroyed_by_clobber (cl: list string): list mreg :=
 Definition destroyed_by_builtin (ef: external_function): list mreg :=
   match ef with
   | EF_inline_asm txt sg clob => destroyed_by_clobber clob
-  | EF_memcpy sz al => R62 :: R63 :: R61 :: nil
+  | EF_memcpy sz al =>
+    if Z.leb sz 15
+    then R62 :: R63 :: R61 :: nil
+    else R62 :: R63 :: R61 :: R60 :: nil
   | _ => nil
   end.
 
