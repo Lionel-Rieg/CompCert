@@ -66,20 +66,6 @@ Definition arg_type_of_condition0 (cond: condition0) :=
 (** Arithmetic and logical operations.  In the descriptions, [rd] is the
   result of the operation and [r1], [r2], etc, are the arguments. *)
 
-Inductive shift1_4 : Type :=
-| SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
-
-Definition z_of_shift1_4 (x : shift1_4) :=
-  match x with
-  | SHIFT1 => 1
-  | SHIFT2 => 2
-  | SHIFT3 => 3
-  | SHIFT4 => 4
-  end.
-
-Definition int_of_shift1_4 (x : shift1_4) :=
-  Int.repr (z_of_shift1_4 x).
-
 Inductive operation : Type :=
   | Omove                    (**r [rd = r1] *)
   | Ointconst (n: int)       (**r [rd] is set to the given integer constant *)

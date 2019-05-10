@@ -130,6 +130,12 @@ module Target (*: TARGET*) =
       | RA   -> "$ra"
       | _ -> assert false
 
+    let scale_of_shift1_4 = let open ExtValues in function
+      | SHIFT1 -> 2
+      | SHIFT2 -> 4
+      | SHIFT3 -> 8
+      | SHIFT4 -> 16;;
+    
 (* Names of sections *)
 
     let name_of_section = function
@@ -513,17 +519,13 @@ module Target (*: TARGET*) =
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Paddxw (zshift, rd, rs1, rs2) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	addx%dw	%a = %a, %a\n" (1 lsl (Int32.to_int shift))
+      | Paddxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Psubw (rd, rs1, rs2) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Psubxw (zshift, rd, rs1, rs2) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	subx%dw	%a = %a, %a\n" (1 lsl (Int32.to_int shift))
+      | Psubxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	subx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Pmulw (rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -558,17 +560,13 @@ module Target (*: TARGET*) =
 
       | Paddl (rd, rs1, rs2) ->
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Paddxl (zshift, rd, rs1, rs2) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	addx%dd	%a = %a, %a\n" (1 lsl (Int32.to_int shift))
+      | Paddxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Psubl (rd, rs1, rs2) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Psubxl (zshift, rd, rs1, rs2) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	sbfx%dd	%a = %a, %a\n" (1 lsl (Int32.to_int shift))
+      | Psubxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Pandl (rd, rs1, rs2) ->
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -619,17 +617,13 @@ module Target (*: TARGET*) =
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint imm
       | Paddiw (rd, rs, imm) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint imm
-      | Paddxiw (zshift, rd, rs, imm) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	addx%dw	%a = %a, %a\n"  (1 lsl (Int32.to_int shift))
+      | Paddxiw (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
       | Psubiw (rd, rs, imm) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs coqint imm
-      | Psubxiw (zshift, rd, rs, imm) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	sbfx%dw	%a = %a, %a\n"  (1 lsl (Int32.to_int shift))
+      | Psubxiw (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
       | Pmuliw (rd, rs, imm) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs coqint imm
@@ -676,17 +670,13 @@ module Target (*: TARGET*) =
          fprintf oc "	compd.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint64 imm
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
-      | Paddxil (zshift, rd, rs, imm) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	addx%dd	%a = %a, %a\n"  (1 lsl (Int32.to_int shift))
+      | Paddxil (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
       | Psubil (rd, rs, imm) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
-      | Psubxil (zshift, rd, rs, imm) ->
-         let shift = camlint_of_coqint zshift in
-         assert(shift >= 1l && shift <= 4l);
-         fprintf oc "	sbfx%dd	%a = %a, %a\n"  (1 lsl (Int32.to_int shift))
+      | Psubxil (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint64 imm
       | Pmulil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	muld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm

@@ -2,6 +2,20 @@ Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
 
+Inductive shift1_4 : Type :=
+| SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
+
+Definition z_of_shift1_4 (x : shift1_4) :=
+  match x with
+  | SHIFT1 => 1
+  | SHIFT2 => 2
+  | SHIFT3 => 3
+  | SHIFT4 => 4
+  end.
+
+Definition int_of_shift1_4 (x : shift1_4) :=
+  Int.repr (z_of_shift1_4 x).
+
 Definition is_bitfield stop start :=
   (Z.leb start stop)
     && (Z.geb start Z.zero)
