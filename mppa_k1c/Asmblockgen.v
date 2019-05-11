@@ -443,6 +443,12 @@ Definition transl_op
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n ::i k)
+  | Oaddx shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Paddxw shift rd rs1 rs2 ::i k)
+  | Oaddximm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Paddxiw shift rd rs n ::i k)
   | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pnegw rd rs ::i k)

@@ -1068,8 +1068,8 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
 
-  | Paddxw shift => Val.add v1 (Val.shl v2 (Vint (int_of_shift1_4 shift)))
-  | Paddxl shift => Val.addl v1 (Val.shll v2 (Vint (int_of_shift1_4 shift)))
+  | Paddxw shift => Val.add v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
+  | Paddxl shift => Val.addl v1 (Val.shll v1 (Vint (int_of_shift1_4 shift)))
 
   | Prevsubxw shift => Val.sub v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
 

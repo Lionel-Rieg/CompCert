@@ -161,8 +161,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ocast16signed, v1 :: nil => sign_ext 16 v1
   | Oadd, v1::v2::nil => add v1 v2
   | Oaddimm n, v1::nil => add v1 (I n)
-  | Oaddx shift, v1::v2::nil => add (shl v1 (I (int_of_shift1_4 shift))) v2
-  | Oaddximm shift n, v1::nil => add (shl v1 (I (int_of_shift1_4 shift))) (I n)
+  | Oaddx shift, v1::v2::nil => add v2 (shl v1 (I (int_of_shift1_4 shift)))
+  | Oaddximm shift n, v1::nil => add (I n) (shl v1 (I (int_of_shift1_4 shift)))
   | Oneg, v1::nil => neg v1
   | Osub, v1::v2::nil => sub v1 v2
   | Orevsubx shift, v1::v2::nil => sub v2 (shl v1 (I (int_of_shift1_4 shift)))
@@ -212,8 +212,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ocast32unsigned, v1::nil => longofintu v1
   | Oaddl, v1::v2::nil => addl v1 v2
   | Oaddlimm n, v1::nil => addl v1 (L n)
-  | Oaddxl shift, v1::v2::nil => addl (shll v1 (I (int_of_shift1_4 shift))) v2
-  | Oaddxlimm shift n, v1::nil => addl (shll v1 (I (int_of_shift1_4 shift))) (L n)
+  | Oaddxl shift, v1::v2::nil => addl v2 (shll v1 (I (int_of_shift1_4 shift)))
+  | Oaddxlimm shift n, v1::nil => addl (L n) (shll v1 (I (int_of_shift1_4 shift))) 
   | Onegl, v1::nil => negl v1
   | Osubl, v1::v2::nil => subl v1 v2
   | Orevsubxl shift, v1::v2::nil => subl v2 (shll v1 (I (int_of_shift1_4 shift)))
@@ -378,20 +378,41 @@ Proof.
   - destruct (propagate_float_constants tt); constructor.
   - destruct (propagate_float_constants tt); constructor.
   - rewrite Ptrofs.add_zero_l; eauto with va.
+  - replace (match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
+    | Vint n2 => Vint (Int.add n n2)
+    | Vptr b2 ofs2 =>
+        if Archi.ptr64
+        then Vundef
+        else Vptr b2 (Ptrofs.add ofs2 (Ptrofs.of_int n))
+    | _ => Vundef
+             end) with (Val.add (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
+    + eauto with va.
+    + destruct a1; destruct shift; reflexivity.
   - (*revsubimm*) inv H1; constructor.
   - replace (match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
     | Vint n2 => Vint (Int.sub n n2)
     | _ => Vundef
              end) with (Val.sub (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
-    eauto with va.
-    destruct a1; destruct shift; reflexivity.
+    + eauto with va.
+    + destruct a1; destruct shift; reflexivity.
+  - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
+    | Vlong n2 => Vlong (Int64.add n n2)
+    | Vptr b2 ofs2 =>
+        if Archi.ptr64
+        then Vptr b2 (Ptrofs.add ofs2 (Ptrofs.of_int64 n))
+        else Vundef
+    | _ => Vundef
+             end) with
+    (Val.addl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
+    + eauto with va.
+    + destruct a1; destruct shift; reflexivity.
   - inv H1; constructor.
   - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
     | Vlong n2 => Vlong (Int64.sub n n2)
     | _ => Vundef
              end) with (Val.subl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
-    eauto with va.
-    destruct a1; destruct shift; reflexivity.
+    + eauto with va.
+    + destruct a1; destruct shift; reflexivity.
   - apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
   (* select *)
   - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).

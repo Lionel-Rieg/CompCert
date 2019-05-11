@@ -1693,7 +1693,7 @@ Opaque Int.eq.
   split; intros; Simpl.
   assert (A: Int.ltu (Int.repr 16) Int.iwordsize = true) by auto.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A. 
-  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity. 
+  apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Oshrximm *)
   econstructor; split.
   + apply exec_straight_one. simpl. eauto.

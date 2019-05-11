@@ -405,8 +405,8 @@ Definition eval_operation
   | Ocast16signed, v1 :: nil => Some (Val.sign_ext 16 v1)
   | Oadd, v1 :: v2 :: nil => Some (Val.add v1 v2)
   | Oaddimm n, v1 :: nil => Some (Val.add v1 (Vint n))
-  | Oaddx shift, v1 :: v2 :: nil => Some (Val.add (Val.shl v1 (Vint (int_of_shift1_4 shift))) v2)
-  | Oaddximm shift n, v1 :: nil => Some (Val.add (Val.shl v1 (Vint (int_of_shift1_4 shift))) (Vint n))
+  | Oaddx shift, v1 :: v2 :: nil => Some (Val.add v2 (Val.shl v1 (Vint (int_of_shift1_4 shift))))
+  | Oaddximm shift n, v1 :: nil => Some (Val.add (Vint n) (Val.shl v1 (Vint (int_of_shift1_4 shift))))
   | Oneg, v1 :: nil => Some (Val.neg v1)
   | Osub, v1 :: v2 :: nil => Some (Val.sub v1 v2)
   | Orevsubimm n, v1 :: nil => Some (Val.sub (Vint n) v1)
@@ -457,8 +457,8 @@ Definition eval_operation
   | Ocast32unsigned, v1 :: nil => Some (Val.longofintu v1)
   | Oaddl, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Oaddlimm n, v1::nil => Some (Val.addl v1 (Vlong n))
-  | Oaddxl shift, v1 :: v2 :: nil => Some (Val.addl (Val.shll v1 (Vint (int_of_shift1_4 shift))) v2)
-  | Oaddxlimm shift n, v1 :: nil => Some (Val.addl (Val.shll v1 (Vint (int_of_shift1_4 shift))) (Vlong n))
+  | Oaddxl shift, v1 :: v2 :: nil => Some (Val.addl v2 (Val.shll v1 (Vint (int_of_shift1_4 shift))))
+  | Oaddxlimm shift n, v1 :: nil => Some (Val.addl (Vlong n) (Val.shll v1 (Vint (int_of_shift1_4 shift))))
   | Onegl, v1::nil => Some (Val.negl v1)
   | Osubl, v1::v2::nil => Some (Val.subl v1 v2)
   | Orevsublimm n, v1 :: nil => Some (Val.subl (Vlong n) v1)
@@ -836,7 +836,8 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - apply type_add.
   (* addx, addximm *)
   - apply type_add.
-  - apply type_add.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - destruct v0...
   - apply type_sub.
@@ -917,7 +918,8 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - apply type_addl.
   (* addxl addxlimm *)
   - apply type_addl.
-  - apply type_addl.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
   - destruct v0...
   - apply type_subl.
@@ -1452,8 +1454,7 @@ Proof.
   (* addx, addximm *)
   - apply Val.add_inject; trivial.
     inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
-  - apply Val.add_inject; trivial.
-    inv H4; simpl; try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; trivial. try destruct (Int.ltu _ _); simpl; auto.
   (* neg, sub *)
   - inv H4; simpl; auto.
   - apply Val.sub_inject; auto.
@@ -1543,8 +1544,7 @@ Proof.
   - apply Val.addl_inject; auto.
     inv H4; simpl; trivial.
     destruct (Int.ltu _ _); simpl; trivial.
-  - apply Val.addl_inject; auto.
-    inv H4; simpl; trivial.
+  - inv H4; simpl; trivial.
     destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
   - inv H4; simpl; auto.
