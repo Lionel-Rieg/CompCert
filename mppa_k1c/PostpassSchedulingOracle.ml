@@ -405,6 +405,10 @@ let alu_lite_x : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 2 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let alu_lite_y : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 3 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
 let alu_full : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
@@ -588,15 +592,23 @@ let rec_to_usage r =
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
-  | Nxorw | Andnw | Ornw | Addxw  -> 
+  | Nxorw | Andnw | Ornw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
-  | Nxord | Andnd | Ornd | Cmoved | Addxd -> 
+  | Nxord | Andnd | Ornd | Cmoved -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
+  | Addxw -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_lite 
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | _ -> raise InvalidEncoding)
+  | Addxd -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_lite 
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | Some E27U27L10 -> alu_lite_y)
   | Compw -> (match encoding with None -> alu_tiny
                                 | Some U6 | Some S10 | Some U27L5 -> alu_tiny_x
                                 | _ -> raise InvalidEncoding)
@@ -620,9 +632,9 @@ let rec_to_usage r =
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Srsw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
-  | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
+  | Srsw | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 

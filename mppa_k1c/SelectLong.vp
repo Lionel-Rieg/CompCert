@@ -66,6 +66,12 @@ Definition longofintu (e: expr) :=
 
 (** ** Integer addition and pointer addition *)
 
+Definition addlimm_shllimm sh k2 e1 :=
+  match shift1_4_of_z (Int.unsigned sh) with
+  | Some s14 => Eop (Oaddxlimm s14 k2) (e1:::Enil)
+  | None => Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil)
+  end.
+
 Nondetfunction addlimm (n: int64) (e: expr) :=
   if Int64.eq n Int64.zero then e else
   match e with
@@ -76,7 +82,14 @@ Nondetfunction addlimm (n: int64) (e: expr) :=
      else Eop (Oaddlimm n) (e ::: Enil))
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
   | Eop (Oaddlimm m) (t ::: Enil) => Eop (Oaddlimm(Int64.add n m)) (t ::: Enil)
+  | Eop (Oshllimm sh) (t1:::Enil) => addlimm_shllimm sh n t1
   | _ => Eop (Oaddlimm n) (e ::: Enil)
+  end.
+
+Definition addl_shllimm n e1 e2 :=
+  match shift1_4_of_z (Int.unsigned n) with
+  | Some s14 => Eop (Oaddxl s14) (e1:::e2:::Enil)
+  | None => Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil)
   end.
 
 Nondetfunction addl (e1: expr) (e2: expr) :=
@@ -102,6 +115,10 @@ Nondetfunction addl (e1: expr) (e2: expr) :=
       Eop (Omaddlimm n) (t1:::t2:::Enil)
   | (Eop (Omullimm n) (t2:::Enil)), t1 =>
       Eop (Omaddlimm n) (t1:::t2:::Enil)
+  | (Eop (Oshllimm n) (t1:::Enil)), t2 =>
+    addl_shllimm n t1 t2
+  | t2, (Eop (Oshllimm n) (t1:::Enil)) =>
+    addl_shllimm n t1 t2
   | _, _ => Eop Oaddl (e1:::e2:::Enil)
   end.
 

@@ -394,6 +394,7 @@ Proof.
              end) with (Val.sub (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
     + destruct a1; destruct shift; reflexivity.
+  - unfold addxl. eauto with va.
   - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
     | Vlong n2 => Vlong (Int64.add n n2)
     | Vptr b2 ofs2 =>
@@ -401,8 +402,7 @@ Proof.
         then Vptr b2 (Ptrofs.add ofs2 (Ptrofs.of_int64 n))
         else Vundef
     | _ => Vundef
-             end) with
-    (Val.addl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
+             end) with (Val.addl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
     + destruct a1; destruct shift; reflexivity.
   - inv H1; constructor.

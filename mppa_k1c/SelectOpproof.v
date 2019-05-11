@@ -1377,18 +1377,25 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
-  - destruct (Compopts.optim_fxsaddr tt).
-    + destruct (Z.eq_dec _ _).
-      * exists (v1 :: v2 :: nil); split.
-        repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
-      * exists (v1 :: v0 :: nil); split.
-        repeat (constructor; auto). econstructor.
-        repeat (constructor; auto). eassumption. simpl. congruence.
+  - unfold addxl in *.
+    destruct (Compopts.optim_fxsaddr tt).
+    + unfold int_of_shift1_4 in *.
+      destruct (Z.eq_dec _ _).
+      * exists (v0 :: v1 :: nil); split.
+        repeat (constructor; auto). simpl.
+        congruence.
+      * eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
         simpl. congruence.
-    + exists (v1 :: v0 :: nil); split.
-        repeat (constructor; auto). econstructor.
-        repeat (constructor; auto). eassumption. simpl. congruence.
-        simpl. congruence.
+    + eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
+        simpl. unfold int_of_shift1_4 in *. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.

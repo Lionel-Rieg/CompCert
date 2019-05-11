@@ -202,3 +202,6 @@ Qed.
 
 Definition addx sh v1 v2 :=
   Val.add v2 (Val.shl v1 (Vint sh)).
+
+Definition addxl sh v1 v2 :=
+  Val.addl v2 (Val.shll v1 (Vint sh)).
