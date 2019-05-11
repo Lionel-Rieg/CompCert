@@ -201,6 +201,37 @@ Proof.
     + TrivialExists.
 Qed.
 
+Lemma eval_addx: forall n, binary_constructor_sound (add_shlimm n) (ExtValues.addx n).
+Proof.
+  red.
+  intros.
+  unfold add_shlimm.
+  destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
+  - TrivialExists.
+    simpl.
+    f_equal. f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      rewrite <- e1.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      rewrite <- e2.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      rewrite <- e3.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      rewrite <- e4.
+      apply Int.repr_unsigned. }
+    discriminate.
+  - TrivialExists;
+    repeat econstructor; eassumption.
+Qed.
+  
 Theorem eval_add: binary_constructor_sound add Val.add.
 Proof.
   red; intros until y.
@@ -238,6 +269,11 @@ Proof.
     subst. TrivialExists.
   - (* Omaddimm rev *)
     subst. rewrite Val.add_commut. TrivialExists.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    rewrite Val.add_commut.
+    apply ADDX; assumption.
   - TrivialExists.
 Qed.
 

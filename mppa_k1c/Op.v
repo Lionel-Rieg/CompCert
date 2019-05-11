@@ -403,8 +403,8 @@ Definition eval_operation
   | Ocast16signed, v1 :: nil => Some (Val.sign_ext 16 v1)
   | Oadd, v1 :: v2 :: nil => Some (Val.add v1 v2)
   | Oaddimm n, v1 :: nil => Some (Val.add v1 (Vint n))
-  | Oaddx shift, v1 :: v2 :: nil => Some (Val.add v2 (Val.shl v1 (Vint (int_of_shift1_4 shift))))
-  | Oaddximm shift n, v1 :: nil => Some (Val.add (Vint n) (Val.shl v1 (Vint (int_of_shift1_4 shift))))
+  | Oaddx s14, v1 :: v2 :: nil => Some (addx (int_of_shift1_4 s14) v1 v2)
+  | Oaddximm s14 n, v1 :: nil => Some (addx (int_of_shift1_4 s14) v1 (Vint n))
   | Oneg, v1 :: nil => Some (Val.neg v1)
   | Osub, v1 :: v2 :: nil => Some (Val.sub v1 v2)
   | Orevsubimm n, v1 :: nil => Some (Val.sub (Vint n) v1)
@@ -1446,7 +1446,8 @@ Proof.
   (* addx, addximm *)
   - apply Val.add_inject; trivial.
     inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
-  - inv H4; simpl; trivial. try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - inv H4; simpl; auto.
   - apply Val.sub_inject; auto.

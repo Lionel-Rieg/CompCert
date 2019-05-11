@@ -1068,7 +1068,7 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
 
-  | Paddxw shift => Val.add v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
+  | Paddxw shift => ExtValues.addx (int_of_shift1_4 shift) v1 v2
   | Paddxl shift => Val.addl v1 (Val.shll v1 (Vint (int_of_shift1_4 shift)))
 
   | Prevsubxw shift => Val.sub v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
@@ -1099,7 +1099,7 @@ Definition arith_eval_rri32 n v i :=
   | Psrxil  => ExtValues.val_shrxl v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
-  | Paddxiw shift => Val.add (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
+  | Paddxiw shift => ExtValues.addx (int_of_shift1_4 shift) v (Vint i)
   | Prevsubxiw shift => Val.sub (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
   end.
 

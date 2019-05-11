@@ -371,19 +371,20 @@ Theorem eval_static_operation_sound:
   list_forall2 (vmatch bc) vargs aargs ->
   vmatch bc vres (eval_static_operation op aargs).
 Proof.
-  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs; intros;
-  destruct op; try (InvHyps; eauto with va).
+  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs; intros.
+  destruct op; InvHyps; eauto with va.
   - destruct (propagate_float_constants tt); constructor.
   - destruct (propagate_float_constants tt); constructor.
   - rewrite Ptrofs.add_zero_l; eauto with va.
-  - replace (match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
+  - unfold addx. eauto with va.
+  - replace(match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
     | Vint n2 => Vint (Int.add n n2)
     | Vptr b2 ofs2 =>
         if Archi.ptr64
         then Vundef
         else Vptr b2 (Ptrofs.add ofs2 (Ptrofs.of_int n))
     | _ => Vundef
-             end) with (Val.add (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
+    end)  with (Val.add (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
     + destruct a1; destruct shift; reflexivity.
   - (*revsubimm*) inv H1; constructor.

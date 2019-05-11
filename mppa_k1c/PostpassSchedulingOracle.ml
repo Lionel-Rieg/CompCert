@@ -466,6 +466,7 @@ type real_instruction =
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
   | Maddw | Maddd | Msbfw | Msbfd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
+  | Addxw | Addxd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
   | Sb | Sh | Sw | Sd | Sq | So
@@ -479,6 +480,8 @@ type real_instruction =
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
+  | "Paddxw" | "Paddxiw" -> Addxw
+  | "Paddxl" | "Paddxil" -> Addxd
   | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
   | "Pandw" | "Pandiw" -> Andw
   | "Pnandw" | "Pnandiw" -> Nandw
@@ -585,12 +588,12 @@ let rec_to_usage r =
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
-  | Nxorw | Andnw | Ornw  -> 
+  | Nxorw | Andnw | Ornw | Addxw  -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
-  | Nxord | Andnd | Ornd | Cmoved -> 
+  | Nxord | Andnd | Ornd | Cmoved | Addxd -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
@@ -643,7 +646,7 @@ let real_inst_to_latency = function
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srsd | Srld | Slld | Xord | Make
-  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
+  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved | Addxw | Addxd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd | Msbfw | Msbfd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)

@@ -13,6 +13,28 @@ Definition z_of_shift1_4 (x : shift1_4) :=
   | SHIFT4 => 4
   end.
 
+Definition shift1_4_of_z (x : Z) :=
+  if Z.eq_dec x 1 then Some SHIFT1
+  else if Z.eq_dec x 2 then Some SHIFT2
+  else if Z.eq_dec x 3 then Some SHIFT3
+  else if Z.eq_dec x 4 then Some SHIFT4
+  else None.
+
+Lemma shift1_4_of_z_correct :
+  forall z,
+    match shift1_4_of_z z with
+    | Some x => z_of_shift1_4 x = z
+    | None => True
+    end.
+Proof.
+  intro. unfold shift1_4_of_z.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  trivial.
+Qed.
+
 Definition int_of_shift1_4 (x : shift1_4) :=
   Int.repr (z_of_shift1_4 x).
 
@@ -178,3 +200,5 @@ Proof.
   apply Int64.neg_mul_distr_r.
 Qed.
 
+Definition addx sh v1 v2 :=
+  Val.add v2 (Val.shl v1 (Vint sh)).
