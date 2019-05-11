@@ -151,6 +151,10 @@ Nondetfunction sub (e1: expr) (e2: expr) :=
       addimm n1 (Eop Osub (t1:::t2:::Enil))
   | t1, Eop (Oaddimm n2) (t2:::Enil) =>
       addimm (Int.neg n2) (Eop Osub (t1:::t2:::Enil))
+  | t1, (Eop Omul (t2:::t3:::Enil)) =>
+      Eop Omsub (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omulimm n) (t2:::Enil)) =>
+      Eop (Omaddimm (Int.neg n)) (t1:::t2:::Enil)
   | _, _ => Eop Osub (e1:::e2:::Enil)
   end.
 

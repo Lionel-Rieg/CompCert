@@ -122,7 +122,6 @@ Inductive operation : Type :=
   | Omadd                    (**r [rd = rd + r1 * r2] *)
   | Omaddimm (n: int)        (**r [rd = rd + r1 * imm] *)
   | Omsub                    (**r [rd = rd - r1 * r2] *)
-  | Omsubimm (n: int)        (**r [rd = rd - r1 * imm] *)
 (*c 64-bit integer arithmetic: *)
   | Omakelong                (**r [rd = r1 << 32 | r2] *)
   | Olowlong                 (**r [rd = low-word(r1)] *)
@@ -173,7 +172,6 @@ Inductive operation : Type :=
   | Omaddl                   (**r [rd = rd + r1 * r2] *)
   | Omaddlimm (n: int64)     (**r [rd = rd + r1 * imm] *)
   | Omsubl                   (**r [rd = rd - r1 * r2] *)
-  | Omsublimm (n: int64)     (**r [rd = rd - r1 * imm] *)
 (*c Floating-point arithmetic: *)
   | Onegf                    (**r [rd = - r1] *)
   | Oabsf                    (**r [rd = abs(r1)] *)
@@ -448,7 +446,6 @@ Definition eval_operation
   | Omadd, v1::v2::v3::nil => Some (Val.add v1 (Val.mul v2 v3))
   | (Omaddimm n), v1::v2::nil => Some (Val.add v1 (Val.mul v2 (Vint n)))
   | Omsub, v1::v2::v3::nil => Some (Val.sub v1 (Val.mul v2 v3))
-  | (Omsubimm n), v1::v2::nil => Some (Val.sub v1 (Val.mul v2 (Vint n)))
                                      
   | Omakelong, v1::v2::nil => Some (Val.longofwords v1 v2)
   | Olowlong, v1::nil => Some (Val.loword v1)
@@ -499,7 +496,6 @@ Definition eval_operation
   | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
   | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
   | Omsubl, v1::v2::v3::nil => Some (Val.subl v1 (Val.mull v2 v3))
-  | (Omsublimm n), v1::v2::nil => Some (Val.subl v1 (Val.mull v2 (Vlong n)))
                                       
   | Onegf, v1::nil => Some (Val.negf v1)
   | Oabsf, v1::nil => Some (Val.absf v1)
@@ -659,7 +655,6 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Omadd => (Tint :: Tint :: Tint :: nil, Tint)
   | Omaddimm _ => (Tint :: Tint :: nil, Tint)
   | Omsub => (Tint :: Tint :: Tint :: nil, Tint)
-  | Omsubimm _ => (Tint :: Tint :: nil, Tint)
                    
   | Omakelong => (Tint :: Tint :: nil, Tlong)
   | Olowlong => (Tlong :: nil, Tint)
@@ -710,7 +705,6 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Omaddl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
   | Omaddlimm _ => (Tlong :: Tlong :: nil, Tlong)
   | Omsubl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
-  | Omsublimm _ => (Tlong :: Tlong :: nil, Tlong)
 
   | Onegf => (Tfloat :: nil, Tfloat)
   | Oabsf => (Tfloat :: nil, Tfloat)
@@ -905,7 +899,6 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - apply type_add.
   (* msub *)
   - apply type_sub.
-  - apply type_sub.
   (* makelong, lowlong, highlong *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -982,8 +975,7 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* maddl, maddlim *)
   - apply type_addl.
   - apply type_addl.
-  (* msubl, msublim *)
-  - apply type_subl.
+  (* msubl *)
   - apply type_subl.
   (* negf, absf *)
   - destruct v0...
@@ -1528,8 +1520,6 @@ Proof.
   (* msub *)
   - apply Val.sub_inject; auto.
     inv H3; inv H2; simpl; auto.
-  - apply Val.sub_inject; trivial.
-    inv H2; inv H4; simpl; auto.
   (* makelong, highlong, lowlong *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1621,8 +1611,6 @@ Proof.
   (* msubl, msublimm *)
   - apply Val.subl_inject; auto.
     inv H2; inv H3; inv H4; simpl; auto.
-  - apply Val.subl_inject; auto.
-    inv H4; inv H2; simpl; auto.
     
   (* negf, absf *)
   - inv H4; simpl; auto.

@@ -464,7 +464,7 @@ type real_instruction =
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Srsd | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
-  | Maddw | Maddd | Cmoved
+  | Maddw | Maddd | Msbfw | Msbfd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
@@ -505,6 +505,7 @@ let ab_inst_to_real = function
   | "Psllw" | "Pslliw" -> Sllw
   | "Proriw" -> Rorw
   | "Pmaddw" | "Pmaddiw" -> Maddw
+  | "Pmsubw" | "Pmsubiw" -> Msbfw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
@@ -514,7 +515,8 @@ let ab_inst_to_real = function
   | "Pnxorl" | "Pnxoril" -> Nxord
   | "Pandnl" | "Pandnil" -> Andnd
   | "Pornl" | "Pornil" -> Ornd
-  | "Pmaddl" -> Maddd
+  | "Pmaddl" | "Pmaddil" -> Maddd
+  | "Pmsubl" | "Pmsubil" -> Msbfd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
@@ -608,10 +610,10 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw| Maddw -> (match encoding with None -> mau
+  | Mulw| Maddw | Msbfw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Maddd | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
@@ -644,7 +646,7 @@ let real_inst_to_latency = function
   | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
-  | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
+  | Mulw | Muld | Maddw | Maddd | Msbfw | Msbfd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 3
   | Sb | Sh | Sw | Sd | Sq | So -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1

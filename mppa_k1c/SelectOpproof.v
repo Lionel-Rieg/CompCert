@@ -251,6 +251,12 @@ Proof.
     apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_l. apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_r. apply eval_addimm; EvalOp.
+  - TrivialExists. simpl. subst. reflexivity.
+  - TrivialExists. simpl. subst.
+    rewrite sub_add_neg.
+    rewrite neg_mul_distr_r.
+    unfold Val.neg.
+    reflexivity.
   - TrivialExists.
 Qed.
 

@@ -78,7 +78,6 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Omadd => op3 (modarith nv)
   | Omaddimm n => op2 (modarith nv)
   | Omsub => op3 (modarith nv)
-  | Omsubimm n => op2 (modarith nv)
   | Omakelong => op2 (default nv)
   | Olowlong | Ohighlong => op1 (default nv)
   | Ocast32signed => op1 (default nv)
@@ -120,7 +119,6 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Omaddl => op3 (default nv)
   | Omaddlimm n => op2 (default nv)
   | Omsubl => op3 (default nv)
-  | Omsublimm n => op2 (default nv)
   | Onegf | Oabsf => op1 (default nv)
   | Oaddf | Osubf | Omulf | Odivf => op2 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
@@ -457,14 +455,6 @@ Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
 Qed.
-
-Remark sub_add_neg :
-  forall x y, Val.sub x y = Val.add x (Val.neg y).
-Proof.
-  destruct x; destruct y; simpl; trivial.
-  f_equal.
-  apply Int.sub_add_opp.
-Qed.
   
 Lemma needs_of_operation_sound:
   forall op args v nv args',
@@ -508,19 +498,12 @@ Proof.
   (* madd *)
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
-- repeat rewrite sub_add_neg.
+- repeat rewrite ExtValues.sub_add_neg.
   apply add_sound; trivial.
   apply neg_sound; trivial.
   rewrite modarith_idem.
   apply mul_sound;
   rewrite modarith_idem; trivial.
-- repeat rewrite sub_add_neg.
-  apply add_sound; trivial.
-  apply neg_sound; trivial.
-  rewrite modarith_idem.
-  apply mul_sound;
-  rewrite modarith_idem; trivial.
-  apply vagree_same.
   (* maddl *)
 - apply addl_sound; trivial.
   apply mull_sound; trivial.

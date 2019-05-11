@@ -131,3 +131,19 @@ Definition val_shrxl (v1 v2: val): val :=
      else Vundef
   | _, _ => Vundef
   end.
+
+Lemma sub_add_neg :
+  forall x y, Val.sub x y = Val.add x (Val.neg y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int.sub_add_opp.
+Qed.
+
+Lemma neg_mul_distr_r :
+  forall x y, Val.neg (Val.mul x y) = Val.mul x (Val.neg y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int.neg_mul_distr_r.
+Qed.
