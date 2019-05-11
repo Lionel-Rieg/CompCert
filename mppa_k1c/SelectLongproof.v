@@ -208,6 +208,23 @@ Proof.
 - subst. rewrite Val.subl_addl_l. apply eval_addlimm; EvalOp.
 - subst. rewrite Val.subl_addl_r.
   apply eval_addlimm; EvalOp.
+- TrivialExists. simpl. subst. reflexivity.
+- TrivialExists. simpl. subst.
+  destruct v1; destruct x; simpl; trivial.
+  + f_equal. f_equal.
+    rewrite <- Int64.neg_mul_distr_r.
+    rewrite Int64.sub_add_opp.
+    reflexivity.
+  + destruct (Archi.ptr64) eqn:ARCHI64; simpl; trivial.
+    f_equal. f_equal.
+    rewrite <- Int64.neg_mul_distr_r.
+    rewrite Ptrofs.sub_add_opp.
+    unfold Ptrofs.add.
+    f_equal. f_equal.
+    rewrite (Ptrofs.agree64_neg ARCHI64 (Ptrofs.of_int64 (Int64.mul i n)) (Int64.mul i n)).
+    rewrite (Ptrofs.agree64_of_int ARCHI64  (Int64.neg (Int64.mul i n))).
+    reflexivity.
+    apply (Ptrofs.agree64_of_int ARCHI64).
 - TrivialExists.
 Qed.
 
@@ -371,7 +388,7 @@ Proof.
     auto. }
   generalize (Int64.one_bits'_decomp n); intros D.
   destruct (Int64.one_bits' n) as [ | i [ | j [ | ? ? ]]] eqn:B.
-- apply DEFAULT.
+- TrivialExists.
 - replace (Val.mull x (Vlong n)) with (Val.shll x (Vint i)).
   apply eval_shllimm; auto.
   simpl in D. rewrite D, Int64.add_zero. destruct x; simpl; auto.
@@ -389,7 +406,7 @@ Proof.
   rewrite (Int64.one_bits'_range n) in B2 by (rewrite B; auto with coqlib).
   inv B1; inv B2. simpl in B3; inv B3.
   rewrite Int64.mul_add_distr_r. rewrite <- ! Int64.shl'_mul. auto.
-- apply DEFAULT.
+- TrivialExists.
 Qed.
 
 Theorem eval_mullimm: forall n, unary_constructor_sound (mullimm n) (fun v => Val.mull v (Vlong n)).

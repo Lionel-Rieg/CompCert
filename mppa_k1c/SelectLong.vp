@@ -118,6 +118,10 @@ Nondetfunction subl (e1: expr) (e2: expr) :=
       addlimm n1 (Eop Osubl (t1:::t2:::Enil))
   | t1, Eop (Oaddlimm n2) (t2:::Enil) =>
       addlimm (Int64.neg n2) (Eop Osubl (t1:::t2:::Enil))
+  | t1, (Eop Omull (t2:::t3:::Enil)) =>
+      Eop Omsubl (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omullimm n) (t2:::Enil)) =>
+      Eop (Omaddlimm (Int64.neg n)) (t1:::t2:::Enil)
   | _, _ => Eop Osubl (e1:::e2:::Enil)
   end.
 
@@ -225,7 +229,7 @@ Definition mullimm_base (n1: int64) (e2: expr) :=
   | i :: j :: nil =>
       Elet e2 (addl (shllimm (Eletvar 0) i) (shllimm (Eletvar 0) j))
   | _ =>
-      Eop Omull (e2 ::: longconst n1 ::: Enil)
+      Eop (Omullimm n1) (e2 ::: Enil)
   end.
 
 Nondetfunction mullimm (n1: int64) (e2: expr) :=

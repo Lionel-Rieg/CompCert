@@ -147,3 +147,34 @@ Proof.
   f_equal.
   apply Int.neg_mul_distr_r.
 Qed.
+
+(* pointer diff
+Lemma sub_addl_negl :
+  forall x y, Val.subl x y = Val.addl x (Val.negl y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  + f_equal. apply Int64.sub_add_opp.
+  + destruct (Archi.ptr64) eqn:ARCHI64; trivial.
+    f_equal. rewrite Ptrofs.sub_add_opp.
+    pose (Ptrofs.agree64_neg ARCHI64 (Ptrofs.of_int64 i0) i0) as Hagree.
+    unfold Ptrofs.agree64 in Hagree.
+    unfold Ptrofs.add.
+    f_equal. f_equal.
+    rewrite Hagree.
+    pose (Ptrofs.agree64_of_int ARCHI64 (Int64.neg i0)) as Hagree2.
+    rewrite Hagree2.
+    reflexivity.
+    exact (Ptrofs.agree64_of_int ARCHI64 i0).
+  +  destruct (Archi.ptr64) eqn:ARCHI64; simpl; trivial.
+     destruct (eq_block _ _); simpl; trivial.
+Qed.
+ *)
+
+Lemma negl_mull_distr_r :
+  forall x y, Val.negl (Val.mull x y) = Val.mull x (Val.negl y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int64.neg_mul_distr_r.
+Qed.
+
