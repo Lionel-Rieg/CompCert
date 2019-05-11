@@ -267,6 +267,11 @@ Proof.
     + econstructor; split. EvalOp. simpl; eauto. 
       destruct sp; simpl; auto.
     + TrivialExists; simpl. subst x. rewrite Val.add_assoc. rewrite Int.add_commut. auto.
+    + TrivialExists; simpl. subst x.
+      destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+      rewrite Int.add_assoc. rewrite Int.add_commut.
+      reflexivity.
     + pose proof eval_addimm_shlimm as ADDX.
       unfold unary_constructor_sound in ADDX.
       unfold addx in ADDX.

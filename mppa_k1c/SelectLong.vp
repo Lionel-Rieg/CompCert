@@ -67,7 +67,7 @@ Definition longofintu (e: expr) :=
 (** ** Integer addition and pointer addition *)
 
 Definition addlimm_shllimm sh k2 e1 :=
-  if Compopts.optim_faddx tt
+  if Compopts.optim_addx tt
   then
     match shift1_4_of_z (Int.unsigned sh) with
     | Some s14 => Eop (Oaddxlimm s14 k2) (e1:::Enil)
@@ -80,17 +80,18 @@ Nondetfunction addlimm (n: int64) (e: expr) :=
   match e with
   | Eop (Olongconst m) Enil => longconst (Int64.add n m)
   | Eop (Oaddrsymbol s m) Enil   =>
-    (if Compopts.optim_fglobaladdroffset tt
+    (if Compopts.optim_globaladdroffset tt
      then Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
      else Eop (Oaddlimm n) (e ::: Enil))
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
   | Eop (Oaddlimm m) (t ::: Enil) => Eop (Oaddlimm(Int64.add n m)) (t ::: Enil)
+  | Eop (Oaddxlimm sh m) (t ::: Enil) => Eop (Oaddxlimm sh (Int64.add n m)) (t ::: Enil)
   | Eop (Oshllimm sh) (t1:::Enil) => addlimm_shllimm sh n t1
   | _ => Eop (Oaddlimm n) (e ::: Enil)
   end.
 
 Definition addl_shllimm n e1 e2 :=
-  if Compopts.optim_faddx tt
+  if Compopts.optim_addx tt
   then
     match shift1_4_of_z (Int.unsigned n) with
     | Some s14 => Eop (Oaddxl s14) (e1:::e2:::Enil)

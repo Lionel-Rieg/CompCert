@@ -105,7 +105,7 @@ Definition addrstack (ofs: ptrofs) :=
 (** ** Integer addition and pointer addition *)
 
 Definition addimm_shlimm sh k2 e1 :=
-  if Compopts.optim_faddx tt
+  if Compopts.optim_addx tt
   then
     match shift1_4_of_z (Int.unsigned sh) with
     | Some s14 => Eop (Oaddximm s14 k2) (e1:::Enil)
@@ -120,13 +120,13 @@ Nondetfunction addimm (n: int) (e: expr) :=
   | Eop (Oaddrsymbol s m) Enil   => Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int n) m)) Enil
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int n) m)) Enil
   | Eop (Oaddimm m) (t ::: Enil) => Eop (Oaddimm(Int.add n m)) (t ::: Enil)
-  | Eop (Oshlimm sh) (t1:::Enil) =>
-    addimm_shlimm sh n t1
+  | Eop (Oaddximm sh m) (t ::: Enil) => Eop (Oaddximm sh (Int.add n m)) (t ::: Enil)
+  | Eop (Oshlimm sh) (t1:::Enil) => addimm_shlimm sh n t1
   | _ => Eop (Oaddimm n) (e ::: Enil)
   end.
 
 Definition add_shlimm n e1 e2 :=
-  if Compopts.optim_faddx tt
+  if Compopts.optim_addx tt
   then
     match shift1_4_of_z (Int.unsigned n) with
     | Some s14 => Eop (Oaddx s14) (e1:::e2:::Enil)
@@ -612,13 +612,13 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
   match e with
   | Eop (Oaddrstack n) Enil => (Ainstack n, Enil)
   | Eop (Oaddrsymbol id ofs) Enil =>
-    (if (orb (Archi.pic_code tt) (negb (Compopts.optim_fglobaladdrtmp tt)))
+    (if (orb (Archi.pic_code tt) (negb (Compopts.optim_globaladdrtmp tt)))
      then (Aindexed Ptrofs.zero, e:::Enil)
      else (Aglobal id ofs, Enil))
   | Eop (Oaddimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int n), e1:::Enil)
   | Eop (Oaddlimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int64 n), e1:::Enil)
   | Eop Oaddl (e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil) =>
-    (if Compopts.optim_fxsaddr tt
+    (if Compopts.optim_xsaddr tt
      then let zscale := Int.unsigned scale in
           if Z.eq_dec zscale (zscale_of_chunk chunk)
           then (Aindexed2XS zscale, e1:::e2:::Enil) 
@@ -627,7 +627,7 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
   | Eop (Oaddxl sh) (e1:::e2:::Enil) =>
     let zscale := ExtValues.z_of_shift1_4 sh in
     let scale := Int.repr zscale in
-    (if Compopts.optim_fxsaddr tt
+    (if Compopts.optim_xsaddr tt
      then if Z.eq_dec zscale (zscale_of_chunk chunk)
           then (Aindexed2XS zscale, e2:::e1:::Enil) 
           else (Aindexed2, e2:::(Eop (Oshllimm scale) (e1:::Enil)):::Enil)

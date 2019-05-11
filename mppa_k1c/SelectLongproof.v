@@ -206,6 +206,11 @@ Proof.
   destruct sp; simpl; auto. destruct Archi.ptr64; auto. 
   rewrite Ptrofs.add_assoc, (Ptrofs.add_commut m0). auto. 
 - subst x. rewrite Val.addl_assoc. rewrite Int64.add_commut. TrivialExists.
+- TrivialExists; simpl. subst x.
+      destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+      rewrite Int64.add_assoc. rewrite Int64.add_commut.
+      reflexivity.
 -  pose proof eval_addlimm_shllimm as ADDXL.
       unfold unary_constructor_sound in ADDXL.
       unfold addxl in ADDXL.
