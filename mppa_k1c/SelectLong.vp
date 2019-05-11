@@ -67,10 +67,13 @@ Definition longofintu (e: expr) :=
 (** ** Integer addition and pointer addition *)
 
 Definition addlimm_shllimm sh k2 e1 :=
-  match shift1_4_of_z (Int.unsigned sh) with
-  | Some s14 => Eop (Oaddxlimm s14 k2) (e1:::Enil)
-  | None => Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil)
-  end.
+  if Compopts.optim_faddx tt
+  then
+    match shift1_4_of_z (Int.unsigned sh) with
+    | Some s14 => Eop (Oaddxlimm s14 k2) (e1:::Enil)
+    | None => Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil)
+    end
+  else Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil).
 
 Nondetfunction addlimm (n: int64) (e: expr) :=
   if Int64.eq n Int64.zero then e else
@@ -87,10 +90,13 @@ Nondetfunction addlimm (n: int64) (e: expr) :=
   end.
 
 Definition addl_shllimm n e1 e2 :=
-  match shift1_4_of_z (Int.unsigned n) with
-  | Some s14 => Eop (Oaddxl s14) (e1:::e2:::Enil)
-  | None => Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil)
-  end.
+  if Compopts.optim_faddx tt
+  then
+    match shift1_4_of_z (Int.unsigned n) with
+    | Some s14 => Eop (Oaddxl s14) (e1:::e2:::Enil)
+    | None => Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil)
+    end
+  else Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil).
 
 Nondetfunction addl (e1: expr) (e2: expr) :=
   if Archi.splitlong then SplitLong.addl e1 e2 else

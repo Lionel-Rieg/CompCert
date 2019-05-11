@@ -124,6 +124,8 @@ Theorem eval_addlimm_shllimm:
   forall sh k2, unary_constructor_sound (addlimm_shllimm sh k2) (fun x => ExtValues.addxl sh x (Vlong k2)).
 Proof.
   red; unfold addlimm_shllimm; intros.
+  destruct (Compopts.optim_addx tt).
+  {
   destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
   - TrivialExists. simpl.
     f_equal.
@@ -178,6 +180,13 @@ Proof.
     repeat (try eassumption; try econstructor).
     simpl.
     reflexivity.
+  }
+  { unfold addxl. rewrite Val.addl_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+  }
 Qed.
 
 Theorem eval_addlimm: forall n, unary_constructor_sound (addlimm n) (fun v => Val.addl v (Vlong n)).
@@ -188,7 +197,7 @@ Proof.
   destruct x; simpl; rewrite ?Int64.add_zero, ?Ptrofs.add_zero; auto.
   destruct (addlimm_match a); InvEval.
 - econstructor; split. apply eval_longconst. rewrite Int64.add_commut; auto.
-- destruct (Compopts.optim_fglobaladdroffset _).
+- destruct (Compopts.optim_globaladdroffset _).
   + econstructor; split. EvalOp. simpl; eauto. 
     unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
     destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto.
@@ -211,6 +220,8 @@ Proof.
   red.
   intros.
   unfold addl_shllimm.
+  destruct (Compopts.optim_addx tt).
+  {
   destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
   - TrivialExists.
     simpl.
@@ -235,7 +246,11 @@ Proof.
     discriminate.
     (* Oaddxl *)
   - TrivialExists;
-    repeat econstructor; eassumption.
+      repeat econstructor; eassumption.
+  }
+  { TrivialExists;
+      repeat econstructor; eassumption.
+  }
 Qed.
 
 Theorem eval_addl: binary_constructor_sound addl Val.addl.

@@ -105,10 +105,13 @@ Definition addrstack (ofs: ptrofs) :=
 (** ** Integer addition and pointer addition *)
 
 Definition addimm_shlimm sh k2 e1 :=
-  match shift1_4_of_z (Int.unsigned sh) with
-  | Some s14 => Eop (Oaddximm s14 k2) (e1:::Enil)
-  | None => Eop (Oaddimm k2) ((Eop (Oshlimm sh) (e1:::Enil)):::Enil)
-  end.
+  if Compopts.optim_faddx tt
+  then
+    match shift1_4_of_z (Int.unsigned sh) with
+    | Some s14 => Eop (Oaddximm s14 k2) (e1:::Enil)
+    | None => Eop (Oaddimm k2) ((Eop (Oshlimm sh) (e1:::Enil)):::Enil)
+    end
+  else Eop (Oaddimm k2) ((Eop (Oshlimm sh) (e1:::Enil)):::Enil).
 
 Nondetfunction addimm (n: int) (e: expr) :=
   if Int.eq n Int.zero then e else
@@ -123,10 +126,13 @@ Nondetfunction addimm (n: int) (e: expr) :=
   end.
 
 Definition add_shlimm n e1 e2 :=
-  match shift1_4_of_z (Int.unsigned n) with
-  | Some s14 => Eop (Oaddx s14) (e1:::e2:::Enil)
-  | None => Eop Oadd (e2:::(Eop (Oshlimm n) (e1:::Enil)):::Enil)
-  end.
+  if Compopts.optim_faddx tt
+  then
+    match shift1_4_of_z (Int.unsigned n) with
+    | Some s14 => Eop (Oaddx s14) (e1:::e2:::Enil)
+    | None => Eop Oadd (e2:::(Eop (Oshlimm n) (e1:::Enil)):::Enil)
+    end
+  else Eop Oadd (e2:::(Eop (Oshlimm n) (e1:::Enil)):::Enil).
 
 Nondetfunction add (e1: expr) (e2: expr) :=
   match e1, e2 with
@@ -611,6 +617,13 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
      else (Aglobal id ofs, Enil))
   | Eop (Oaddimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int n), e1:::Enil)
   | Eop (Oaddlimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int64 n), e1:::Enil)
+  | Eop Oaddl (e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil) =>
+    (if Compopts.optim_fxsaddr tt
+     then let zscale := Int.unsigned scale in
+          if Z.eq_dec zscale (zscale_of_chunk chunk)
+          then (Aindexed2XS zscale, e1:::e2:::Enil) 
+          else (Aindexed2, e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil)
+     else (Aindexed2, e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil))
   | Eop (Oaddxl sh) (e1:::e2:::Enil) =>
     let zscale := ExtValues.z_of_shift1_4 sh in
     let scale := Int.repr zscale in

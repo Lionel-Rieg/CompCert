@@ -187,6 +187,8 @@ Theorem eval_addimm_shlimm:
   forall sh k2, unary_constructor_sound (addimm_shlimm sh k2) (fun x => ExtValues.addx sh x (Vint k2)).
 Proof.
   red; unfold addimm_shlimm; intros.
+  destruct (Compopts.optim_addx tt).
+  {
   destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
   - TrivialExists. simpl.
     f_equal.
@@ -241,6 +243,13 @@ Proof.
     repeat (try eassumption; try econstructor).
     simpl.
     reflexivity.
+  }
+  { unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+    }
 Qed.
 
 Theorem eval_addimm:
@@ -272,6 +281,8 @@ Proof.
   red.
   intros.
   unfold add_shlimm.
+  destruct (Compopts.optim_addx tt).
+  {
   destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
   - TrivialExists.
     simpl.
@@ -295,7 +306,11 @@ Proof.
       apply Int.repr_unsigned. }
     discriminate.
   - TrivialExists;
-    repeat econstructor; eassumption.
+      repeat econstructor; eassumption.
+  }
+  { TrivialExists;
+      repeat econstructor; eassumption.
+  }
 Qed.
   
 Theorem eval_add: binary_constructor_sound add Val.add.
@@ -1377,8 +1392,20 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
+  - destruct (Compopts.optim_xsaddr tt).
+    + destruct (Z.eq_dec _ _).
+      * exists (v1 :: v2 :: nil); split.
+        repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
+      * exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
+    + exists (v1 :: v0 :: nil); split.
+        repeat (constructor; auto). econstructor.
+        repeat (constructor; auto). eassumption. simpl. congruence.
+        simpl. congruence.
   - unfold addxl in *.
-    destruct (Compopts.optim_fxsaddr tt).
+    destruct (Compopts.optim_xsaddr tt).
     + unfold int_of_shift1_4 in *.
       destruct (Z.eq_dec _ _).
       * exists (v0 :: v1 :: nil); split.
