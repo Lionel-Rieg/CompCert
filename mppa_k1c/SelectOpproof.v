@@ -274,6 +274,10 @@ Proof.
     unfold binary_constructor_sound in ADDX.
     rewrite Val.add_commut.
     apply ADDX; assumption.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    apply ADDX; assumption.
   - TrivialExists.
 Qed.
 

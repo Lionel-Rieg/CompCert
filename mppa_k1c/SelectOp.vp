@@ -144,6 +144,8 @@ Nondetfunction add (e1: expr) (e2: expr) :=
     Eop (Omaddimm n) (t1:::t2:::Enil)
   | (Eop (Oshlimm n) (t1:::Enil)), t2 =>
     add_shlimm n t1 t2
+  | t2, (Eop (Oshlimm n) (t1:::Enil)) =>
+    add_shlimm n t1 t2
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 
