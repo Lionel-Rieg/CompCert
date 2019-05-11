@@ -183,6 +183,66 @@ Proof.
   auto.
 Qed.
 
+Theorem eval_addimm_shlimm:
+  forall sh k2, unary_constructor_sound (addimm_shlimm sh k2) (fun x => ExtValues.addx sh x (Vint k2)).
+Proof.
+  red; unfold addimm_shlimm; intros.
+  destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
+  - TrivialExists. simpl.
+    f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e1.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e1.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e2.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e2.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e3.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e3.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e4.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e4.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    discriminate.
+  - unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+Qed.
+
 Theorem eval_addimm:
   forall n, unary_constructor_sound (addimm n) (fun x => Val.add x (Vint n)).
 Proof.
@@ -198,6 +258,12 @@ Proof.
     + econstructor; split. EvalOp. simpl; eauto. 
       destruct sp; simpl; auto.
     + TrivialExists; simpl. subst x. rewrite Val.add_assoc. rewrite Int.add_commut. auto.
+    + pose proof eval_addimm_shlimm as ADDX.
+      unfold unary_constructor_sound in ADDX.
+      unfold addx in ADDX.
+      rewrite Val.add_commut.
+      subst x.
+      apply ADDX; assumption.
     + TrivialExists.
 Qed.
 
