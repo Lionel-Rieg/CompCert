@@ -58,7 +58,7 @@ DM_INLINE void Lustre_arrow_3_step(_real i1[50],_real i2[50],_real out[50]/*out*
 } // End of Lustre_arrow_3_step
 
 // Step function(s) for Lustre_hat_ctx
-void Lustre_hat_step(_real i1,_real out[50]/*out*/){
+DM_INLINE void Lustre_hat_step(_real i1,_real out[50]/*out*/){
   out[0] = i1;
   out[1] = i1;
   out[2] = i1;

@@ -431,7 +431,7 @@ Inductive arith_name_rrr : Type :=
   | Paddw                                           (**r add word *)
   | Paddxw (shift : shift1_4)                              (**r add shift *)
   | Psubw                                           (**r sub word word *)
-  | Psubxw (shift : shift1_4)                              (**r sub shift word *)
+  | Prevsubxw (shift : shift1_4)                              (**r sub shift word *)
   | Pmulw                                           (**r mul word *)
   | Pandw                                           (**r and word *)
   | Pnandw                                          (**r nand word *)
@@ -449,7 +449,7 @@ Inductive arith_name_rrr : Type :=
   | Paddl                                           (**r add long *)
   | Paddxl (shift : shift1_4)                              (**r add shift long *)
   | Psubl                                           (**r sub long *)
-  | Psubxl (shift : shift1_4)                              (**r sub shift long *)
+  | Prevsubxl (shift : shift1_4)                              (**r sub shift long *)
   | Pandl                                           (**r and long *)
   | Pnandl                                          (**r nand long *)
   | Porl                                            (**r or long *)
@@ -477,8 +477,8 @@ Inductive arith_name_rri32 : Type :=
 
   | Paddiw                                          (**r add imm word *)
   | Paddxiw (shift : shift1_4)
-  | Psubiw                                          (**r add imm word *)
-  | Psubxiw (shift : shift1_4)
+  | Prevsubiw                                          (**r add imm word *)
+  | Prevsubxiw (shift : shift1_4)
   | Pmuliw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
   | Pnandiw                                         (**r nand imm word *)
@@ -503,8 +503,8 @@ Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
   | Paddxil (shift : shift1_4)
-  | Psubil
-  | Psubxil (shift : shift1_4)
+  | Prevsubil
+  | Prevsubxil (shift : shift1_4)
   | Pmulil                                          (**r mul immediate long *) 
   | Pandil                                          (**r and immediate long *) 
   | Pnandil                                         (**r nand immediate long *) 
@@ -1071,16 +1071,16 @@ Definition arith_eval_rrr n v1 v2 :=
   | Paddxw shift => Val.add v1 (Val.shl v2 (Vint (int_of_shift1_4 shift)))
   | Paddxl shift => Val.addl v1 (Val.shll v2 (Vint (int_of_shift1_4 shift)))
 
-  | Psubxw shift => Val.sub v1 (Val.shl v2 (Vint (int_of_shift1_4 shift)))
+  | Prevsubxw shift => Val.sub v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
 
-  | Psubxl shift => Val.subl v1 (Val.shll v2 (Vint (int_of_shift1_4 shift)))
+  | Prevsubxl shift => Val.subl v2 (Val.shll v1 (Vint (int_of_shift1_4 shift)))
   end.
 
 Definition arith_eval_rri32 n v i :=
   match n with
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
-  | Psubiw  => Val.sub   v (Vint i)
+  | Prevsubiw  => Val.sub (Vint i) v
   | Pmuliw  => Val.mul   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
   | Pnandiw => Val.notint (Val.and  v (Vint i))
@@ -1100,14 +1100,14 @@ Definition arith_eval_rri32 n v i :=
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
   | Paddxiw shift => Val.add (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
-  | Psubxiw shift => Val.sub (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
+  | Prevsubxiw shift => Val.sub (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
   end.
 
 Definition arith_eval_rri64 n v i :=
   match n with
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
-  | Psubil  => Val.subl v (Vlong i)
+  | Prevsubil  => Val.subl (Vlong i) v
   | Pmulil  => Val.mull v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
   | Pnandil  => Val.notl (Val.andl v (Vlong i))
@@ -1118,7 +1118,7 @@ Definition arith_eval_rri64 n v i :=
   | Pandnil => Val.andl (Val.notl v) (Vlong i)
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
   | Paddxil shift => Val.addl (Vlong i) (Val.shll v (Vint (int_of_shift1_4 shift)))
-  | Psubxil shift => Val.subl (Vlong i) (Val.shll v (Vint (int_of_shift1_4 shift)))
+  | Prevsubxil shift => Val.subl (Vlong i) (Val.shll v (Vint (int_of_shift1_4 shift)))
   end.
 
 Definition arith_eval_arrr n v1 v2 v3 :=

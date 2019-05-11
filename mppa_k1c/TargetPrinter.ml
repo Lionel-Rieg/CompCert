@@ -524,7 +524,7 @@ module Target (*: TARGET*) =
            ireg rd ireg rs1 ireg rs2
       | Psubw (rd, rs1, rs2) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Psubxw (s14, rd, rs1, rs2) ->
+      | Prevsubxw (s14, rd, rs1, rs2) ->
          fprintf oc "	subx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Pmulw (rd, rs1, rs2) ->
@@ -565,7 +565,7 @@ module Target (*: TARGET*) =
            ireg rd ireg rs1 ireg rs2
       | Psubl (rd, rs1, rs2) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Psubxl (s14, rd, rs1, rs2) ->
+      | Prevsubxl (s14, rd, rs1, rs2) ->
          fprintf oc "	sbfx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Pandl (rd, rs1, rs2) ->
@@ -620,9 +620,9 @@ module Target (*: TARGET*) =
       | Paddxiw (s14, rd, rs, imm) ->
          fprintf oc "	addx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
-      | Psubiw (rd, rs, imm) ->
+      | Prevsubiw (rd, rs, imm) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs coqint imm
-      | Psubxiw (s14, rd, rs, imm) ->
+      | Prevsubxiw (s14, rd, rs, imm) ->
          fprintf oc "	sbfx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
       | Pmuliw (rd, rs, imm) ->
@@ -673,9 +673,9 @@ module Target (*: TARGET*) =
       | Paddxil (s14, rd, rs, imm) ->
          fprintf oc "	addx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint imm
-      | Psubil (rd, rs, imm) ->
+      | Prevsubil (rd, rs, imm) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
-      | Psubxil (s14, rd, rs, imm) ->
+      | Prevsubxil (s14, rd, rs, imm) ->
          fprintf oc "	sbfx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
            ireg rd ireg rs coqint64 imm
       | Pmulil (rd, rs, imm) -> assert Archi.ptr64;

@@ -184,7 +184,7 @@ Inductive instruction : Type :=
   | Paddw               (rd rs1 rs2: ireg)          (**r add word *)
   | Paddxw (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add word *)
   | Psubw               (rd rs1 rs2: ireg)          (**r sub word *)
-  | Psubxw (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add word *)
+  | Prevsubxw (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add word *)
   | Pmulw               (rd rs1 rs2: ireg)          (**r mul word *)
   | Pandw               (rd rs1 rs2: ireg)          (**r and word *)
   | Pnandw              (rd rs1 rs2: ireg)          (**r nand word *)
@@ -204,7 +204,7 @@ Inductive instruction : Type :=
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
   | Paddxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add long shift *)
   | Psubl               (rd rs1 rs2: ireg)          (**r sub long *)
-  | Psubxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r sub long shift *)
+  | Prevsubxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r sub long shift *)
   | Pandl               (rd rs1 rs2: ireg)          (**r and long *)
   | Pnandl              (rd rs1 rs2: ireg)          (**r nand long *)
   | Porl                (rd rs1 rs2: ireg)          (**r or long *)
@@ -233,8 +233,8 @@ Inductive instruction : Type :=
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
   | Paddxiw (shift : shift1_4) (rd rs: ireg) (imm: int)    (**r add imm word *)
-  | Psubiw              (rd rs: ireg) (imm: int)    (**r subtract imm word *)
-  | Psubxiw (shift : shift1_4) (rd rs: ireg) (imm: int)    (**r subtract imm word *)
+  | Prevsubiw              (rd rs: ireg) (imm: int)    (**r subtract imm word *)
+  | Prevsubxiw (shift : shift1_4) (rd rs: ireg) (imm: int)    (**r subtract imm word *)
   | Pmuliw              (rd rs: ireg) (imm: int)    (**r mul imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
   | Pnandiw             (rd rs: ireg) (imm: int)    (**r nand imm word *)
@@ -259,8 +259,8 @@ Inductive instruction : Type :=
   | Pcompil (it: itest) (rd rs: ireg) (imm: int64)  (**r comparison imm long *)
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Paddxil (shift : shift1_4) (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
-  | Psubil              (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
-  | Psubxil (shift : shift1_4) (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
+  | Prevsubil              (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
+  | Prevsubxil (shift : shift1_4) (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
   | Pmulil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pnandil             (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
@@ -352,7 +352,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Paddw rd rs1 rs2       => Paddw rd rs1 rs2
   | PArithRRR (Asmvliw.Paddxw shift) rd rs1 rs2 => Paddxw shift rd rs1 rs2
   | PArithRRR Asmvliw.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
-  | PArithRRR (Asmvliw.Psubxw shift) rd rs1 rs2 => Psubxw shift rd rs1 rs2
+  | PArithRRR (Asmvliw.Prevsubxw shift) rd rs1 rs2 => Prevsubxw shift rd rs1 rs2
   | PArithRRR Asmvliw.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2
   | PArithRRR Asmvliw.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
   | PArithRRR Asmvliw.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
@@ -370,7 +370,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Paddl rd rs1 rs2       => Paddl rd rs1 rs2
   | PArithRRR (Asmvliw.Paddxl shift) rd rs1 rs2 => Paddxl shift rd rs1 rs2
   | PArithRRR Asmvliw.Psubl rd rs1 rs2       => Psubl rd rs1 rs2
-  | PArithRRR (Asmvliw.Psubxl shift) rd rs1 rs2 => Psubxl shift rd rs1 rs2
+  | PArithRRR (Asmvliw.Prevsubxl shift) rd rs1 rs2 => Prevsubxl shift rd rs1 rs2
   | PArithRRR Asmvliw.Pandl rd rs1 rs2       => Pandl rd rs1 rs2
   | PArithRRR Asmvliw.Pnandl rd rs1 rs2      => Pnandl rd rs1 rs2
   | PArithRRR Asmvliw.Porl rd rs1 rs2        => Porl rd rs1 rs2
@@ -396,8 +396,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI32 (Asmvliw.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
   | PArithRRI32 Asmvliw.Paddiw rd rs imm       => Paddiw rd rs imm
   | PArithRRI32 (Asmvliw.Paddxiw shift) rd rs imm => Paddxiw shift rd rs imm
-  | PArithRRI32 Asmvliw.Psubiw rd rs imm       => Psubiw rd rs imm
-  | PArithRRI32 (Asmvliw.Psubxiw shift) rd rs imm => Psubxiw shift rd rs imm
+  | PArithRRI32 Asmvliw.Prevsubiw rd rs imm       => Prevsubiw rd rs imm
+  | PArithRRI32 (Asmvliw.Prevsubxiw shift) rd rs imm => Prevsubxiw shift rd rs imm
   | PArithRRI32 Asmvliw.Pmuliw rd rs imm       => Pmuliw rd rs imm
   | PArithRRI32 Asmvliw.Pandiw rd rs imm       => Pandiw rd rs imm
   | PArithRRI32 Asmvliw.Pnandiw rd rs imm      => Pnandiw rd rs imm
@@ -421,8 +421,8 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRI64 (Asmvliw.Pcompil it) rd rs imm => Pcompil it rd rs imm
   | PArithRRI64 Asmvliw.Paddil rd rs imm       => Paddil rd rs imm
   | PArithRRI64 (Asmvliw.Paddxil shift) rd rs imm => Paddxil shift rd rs imm
-  | PArithRRI64 Asmvliw.Psubil rd rs imm       => Psubil rd rs imm
-  | PArithRRI64 (Asmvliw.Psubxil shift) rd rs imm => Psubxil shift rd rs imm
+  | PArithRRI64 Asmvliw.Prevsubil rd rs imm       => Prevsubil rd rs imm
+  | PArithRRI64 (Asmvliw.Prevsubxil shift) rd rs imm => Prevsubxil shift rd rs imm
   | PArithRRI64 Asmvliw.Pmulil rd rs imm       => Pmulil rd rs imm
   | PArithRRI64 Asmvliw.Pandil rd rs imm       => Pandil rd rs imm
   | PArithRRI64 Asmvliw.Pnandil rd rs imm      => Pnandil rd rs imm
