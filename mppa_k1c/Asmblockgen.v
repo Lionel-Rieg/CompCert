@@ -582,6 +582,15 @@ Definition transl_op
   | Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 ::i k)
+  | Orevsubxl shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Prevsubxl shift rd rs1 rs2 ::i k)
+  | Orevsublimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubil rd rs n ::i k)
+  | Orevsubxlimm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubxil shift rd rs n ::i k)
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
