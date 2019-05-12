@@ -34,9 +34,22 @@ module Target (*: TARGET*) =
 
     let comment = "#"
 
-    let symbol        = elf_symbol
-    let symbol_offset = elf_symbol_offset
-    let label         = elf_label
+    let subst_symbol = function
+        "__compcert_i64_udiv" -> "__udivdi3"
+      | "__compcert_i64_sdiv" -> "__divdi3"
+      | "__compcert_i64_umod" -> "__umoddi3"
+      | "__compcert_i64_smod" -> "__moddi3"
+      | x -> x;;
+    
+    let symbol oc symb =
+      fprintf oc "%s" (subst_symbol (extern_atom symb))
+
+    let symbol_offset oc (symb, ofs) =
+      symbol oc symb;
+      let ofs = camlint64_of_ptrofs ofs in
+      if ofs <> 0L then fprintf oc " + %Ld" ofs
+
+  let label         = elf_label
 
     let print_label oc lbl = label oc (transl_label lbl)
 
