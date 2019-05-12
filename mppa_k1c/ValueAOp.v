@@ -371,12 +371,11 @@ Theorem eval_static_operation_sound:
   list_forall2 (vmatch bc) vargs aargs ->
   vmatch bc vres (eval_static_operation op aargs).
 Proof.
-  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs; intros.
+  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs, addx, revsubx, addxl, revsubxl; intros.
   destruct op; InvHyps; eauto with va.
   - destruct (propagate_float_constants tt); constructor.
   - destruct (propagate_float_constants tt); constructor.
   - rewrite Ptrofs.add_zero_l; eauto with va.
-  - unfold addx. eauto with va.
   - replace(match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
     | Vint n2 => Vint (Int.add n n2)
     | Vptr b2 ofs2 =>
@@ -389,12 +388,11 @@ Proof.
     + destruct a1; destruct shift; reflexivity.
   - (*revsubimm*) inv H1; constructor.
   - replace (match Val.shl a1 (Vint (int_of_shift1_4 shift)) with
-    | Vint n2 => Vint (Int.sub n n2)
-    | _ => Vundef
+   | Vint n2 => Vint (Int.sub n n2)
+   | _ => Vundef
              end) with (Val.sub (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
-    + destruct a1; destruct shift; reflexivity.
-  - unfold addxl. eauto with va.
+    + destruct n; destruct shift; reflexivity.
   - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
     | Vlong n2 => Vlong (Int64.add n n2)
     | Vptr b2 ofs2 =>
