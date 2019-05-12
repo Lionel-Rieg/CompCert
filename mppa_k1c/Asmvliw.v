@@ -1071,9 +1071,8 @@ Definition arith_eval_rrr n v1 v2 :=
   | Paddxw shift => ExtValues.addx (int_of_shift1_4 shift) v1 v2
   | Paddxl shift => ExtValues.addxl (int_of_shift1_4 shift) v1 v2
 
-  | Prevsubxw shift => Val.sub v2 (Val.shl v1 (Vint (int_of_shift1_4 shift)))
-
-  | Prevsubxl shift => Val.subl v2 (Val.shll v1 (Vint (int_of_shift1_4 shift)))
+  | Prevsubxw shift => ExtValues.revsubx (int_of_shift1_4 shift) v1 v2
+  | Prevsubxl shift => ExtValues.revsubxl (int_of_shift1_4 shift) v1 v2
   end.
 
 Definition arith_eval_rri32 n v i :=
@@ -1100,7 +1099,7 @@ Definition arith_eval_rri32 n v i :=
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
   | Paddxiw shift => ExtValues.addx (int_of_shift1_4 shift) v (Vint i)
-  | Prevsubxiw shift => Val.sub (Vint i) (Val.shl v (Vint (int_of_shift1_4 shift)))
+  | Prevsubxiw shift => ExtValues.revsubx (int_of_shift1_4 shift) v (Vint i)
   end.
 
 Definition arith_eval_rri64 n v i :=
@@ -1117,8 +1116,8 @@ Definition arith_eval_rri64 n v i :=
   | Pnxoril  => Val.notl (Val.xorl  v (Vlong i))
   | Pandnil => Val.andl (Val.notl v) (Vlong i)
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
-  | Paddxil shift => Val.addl (Vlong i) (Val.shll v (Vint (int_of_shift1_4 shift)))
-  | Prevsubxil shift => Val.subl (Vlong i) (Val.shll v (Vint (int_of_shift1_4 shift)))
+  | Paddxil shift => ExtValues.addxl (int_of_shift1_4 shift) v (Vlong i)
+  | Prevsubxil shift => ExtValues.revsubxl (int_of_shift1_4 shift) v (Vlong i)
   end.
 
 Definition arith_eval_arrr n v1 v2 v3 :=

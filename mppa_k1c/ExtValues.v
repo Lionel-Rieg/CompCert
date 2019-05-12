@@ -205,3 +205,9 @@ Definition addx sh v1 v2 :=
 
 Definition addxl sh v1 v2 :=
   Val.addl v2 (Val.shll v1 (Vint sh)).
+
+Definition revsubx sh v1 v2 :=
+  Val.sub v2 (Val.shl v1 (Vint sh)).
+
+Definition revsubxl sh v1 v2 :=
+  Val.subl v2 (Val.shll v1 (Vint sh)).
