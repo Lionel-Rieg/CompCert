@@ -117,3 +117,67 @@ Definition val_shrxl (v1 v2: val): val :=
      else Vundef
   | _, _ => Vundef
   end.
+
+Remark modulus_fits_64: Int.modulus < Int64.max_unsigned.
+Proof.
+  compute.
+  trivial.
+Qed.
+
+Remark unsigned64_repr :
+  forall i,
+    -1 < i < Int.modulus ->
+    Int64.unsigned (Int64.repr i) = i.
+Proof.
+  intros i H.
+  destruct H as [Hlow Hhigh].
+  apply Int64.unsigned_repr.
+  split. { omega. }
+  pose proof modulus_fits_64.
+  omega.
+Qed.
+  
+Theorem divu_is_divlu: forall v1 v2 : val,
+    Val.divu v1 v2 =
+    match Val.divlu (Val.longofintu v1) (Val.longofintu v2) with
+    | None => None
+    | Some q => Some (Val.loword q)
+    end.
+Proof.
+  intros.
+  destruct v1; simpl; trivial.
+  destruct v2; simpl; trivial.
+  destruct i as [i_val i_range].
+  destruct i0 as [i0_val i0_range].
+  simpl.
+  unfold Int.eq, Int64.eq, Int.zero, Int64.zero.
+  simpl.
+  rewrite Int.unsigned_repr by (compute; split; discriminate).
+  rewrite (Int64.unsigned_repr 0) by (compute; split; discriminate).
+  rewrite (unsigned64_repr i0_val) by assumption.
+  destruct (zeq i0_val 0) as [ | Hnot0]; simpl; trivial.
+  f_equal. f_equal.
+  unfold Int.divu, Int64.divu. simpl.
+  rewrite (unsigned64_repr i_val) by assumption.
+  rewrite (unsigned64_repr i0_val) by assumption.
+  unfold Int64.loword.
+  rewrite Int64.unsigned_repr.
+  reflexivity.
+  destruct (Z.eq_dec i0_val 1).
+  {subst i0_val.
+   pose proof modulus_fits_64.
+   rewrite Zdiv_1_r.
+   omega.
+  }
+  destruct (Z.eq_dec i_val 0).
+  { subst i_val. compute.
+    split;
+    intro ABSURD;
+    discriminate ABSURD. }
+  assert ((i_val / i0_val) < i_val).
+  { apply Z_div_lt; omega. }
+  split.
+  { apply Z_div_pos; omega. }
+  pose proof modulus_fits_64.
+  omega.
+Qed.
