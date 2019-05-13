@@ -899,8 +899,24 @@ Theorem eval_modu_base:
     Val.modu x y = Some z ->
     exists v, eval_expr ge sp e m le (modu_base a b) v /\ Val.lessdef z v.
 Proof.
-  intros; unfold modu_base.
-  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+  intros until z.
+  intros Hax Hby Hmod. unfold modu_base.
+  pose proof (modu_is_modlu x y) as MODU.
+  destruct (Val.modlu (Val.longofintu x) (Val.longofintu y))
+    as [ ql | ] eqn:Emod.
+  { TrivialExists.
+    { econstructor. eapply eval_helper_2; eauto.
+      { econstructor. econstructor. eassumption.
+       constructor. simpl. reflexivity. }
+      { econstructor. econstructor. eassumption.
+        constructor. simpl. reflexivity. }
+      { DeclHelper. }
+      { UseHelper. }
+      constructor. }
+    simpl.
+    congruence.
+  }
+  congruence.
 Qed.
 
 Theorem eval_shrximm:

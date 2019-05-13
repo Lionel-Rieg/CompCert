@@ -181,3 +181,39 @@ Proof.
   pose proof modulus_fits_64.
   omega.
 Qed.
+  
+Theorem modu_is_modlu: forall v1 v2 : val,
+    Val.modu v1 v2 =
+    match Val.modlu (Val.longofintu v1) (Val.longofintu v2) with
+    | None => None
+    | Some q => Some (Val.loword q)
+    end.
+Proof.
+  intros.
+  destruct v1; simpl; trivial.
+  destruct v2; simpl; trivial.
+  destruct i as [i_val i_range].
+  destruct i0 as [i0_val i0_range].
+  simpl.
+  unfold Int.eq, Int64.eq, Int.zero, Int64.zero.
+  simpl.
+  rewrite Int.unsigned_repr by (compute; split; discriminate).
+  rewrite (Int64.unsigned_repr 0) by (compute; split; discriminate).
+  rewrite (unsigned64_repr i0_val) by assumption.
+  destruct (zeq i0_val 0) as [ | Hnot0]; simpl; trivial.
+  f_equal. f_equal.
+  unfold Int.modu, Int64.modu. simpl.
+  rewrite (unsigned64_repr i_val) by assumption.
+  rewrite (unsigned64_repr i0_val) by assumption.
+  unfold Int64.loword.
+  rewrite Int64.unsigned_repr.
+  reflexivity.
+  assert((i_val mod i0_val) < i0_val).
+  apply Z_mod_lt.
+  omega.
+  split.
+  { apply Z_mod_lt.
+    omega. }
+  pose proof modulus_fits_64.
+  omega.
+Qed.
