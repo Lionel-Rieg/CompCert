@@ -490,31 +490,18 @@ Lemma star_step_simu_body_step s f sp c bdy c':
   starN (Mach.step (inv_trans_rao rao)) ge (length bdy) (Mach.State s f sp c rs m) t s' ->
   exists rs' m', s'=Mach.State s f sp c' rs' m' /\ t=E0 /\ body_step tge (trans_stack s) f sp bdy rs m rs' m'.
 Proof.
-  induction 1.
-Admitted. (* A FINIR *)
-
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-  induction c as [ | i0 c0 Hc0]; simpl; intros p c' rs m t s' H.
-  * (* nil *)
-    inversion_clear H; simpl; intros X; inversion_clear X.
-    eapply ex_intro; eapply ex_intro; intuition eauto.
-  * (* cons *)
-    remember (to_basic_inst i0) as o eqn:Ho.
-    destruct o as [bi |].
-    + (* to_basic_inst i0 = Some bi *)
-      remember (to_bblock_body c0) as r eqn:Hr.
-      destruct r as [p1 c1]; inversion H; simpl; subst; clear H.
-      intros X; inversion_clear X.
-      exploit step_simu_basic_step; eauto.
-      intros [rs' [m' [H2 [H3 H4]]]]; subst.
-      exploit Hc0; eauto.
-      intros [rs'' [m'' [H5 [H6 H7]]]]; subst.
-      refine (ex_intro _ rs'' (ex_intro _ m'' _)); intuition eauto.
-   + (* to_basic_inst i0 = None *)
-     inversion_clear H; simpl.
-     intros X; inversion_clear X. intuition eauto.
-Qed.
-*)
+  induction 1; simpl.
+  + intros. inversion H. exists rs. exists m. auto.
+  + intros. inversion H0. exists rs. exists m. auto.
+  + intros. inversion H1; subst. 
+    exploit (step_simu_basic_step ); eauto. 
+    destruct 1 as [ rs1 [ m1 Hs]].
+    destruct Hs as [Hs1 [Hs2 Hs3]].    
+    destruct (IHis_body rs1 m1 t2 s') as [rs2 Hb]. rewrite <- Hs1; eauto.
+    destruct Hb as [m2 [Hb1 [Hb2 Hb3]]].
+    exists rs2, m2.
+    rewrite Hs2, Hb2; eauto.
+    Qed. 
 
 Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit.
 Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
@@ -576,13 +563,40 @@ Proof.
 Qed.
 *)
 
+
 Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
   is_exit e c c' -> is_trans_code c' blc ->
   starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s1 ->
   exists s2, exit_step rao tge e (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ match_states s1 s2.
 Proof.
-  destruct 1. (* A FINIR *)
+  destruct 1. 
+  - (* None *)
+    intros H0 H1. inversion H1. exists (State (trans_stack stk) f sp blc rs m).
+    split; eauto.
+    Search trans_code.
+    apply is_trans_code_inv in H0. 
+    rewrite H0.
+    apply match_states_trans_state.
+  - (* None *)
+    intros H0 H1. inversion H1. exists (State (trans_stack stk) f sp blc rs m).
+    split; eauto.
+    Search trans_code.
+    apply is_trans_code_inv in H0. 
+    rewrite H0.
+    apply match_states_trans_state.
+  - (* Some *)
+    intros H0 H1.
+    inversion H1; subst. 
+    (* A FINIR *)
 Admitted.
+(*
+Inductive state : Type :=
+    State : list stackframe ->
+            block -> val -> code -> regset -> mem -> state
+  | Callstate : list stackframe -> block -> regset -> mem -> state
+  | Returnstate : list stackframe -> regset -> mem -> state
+*)
+
 (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
 Proof.
   intros H1 H2; destruct e as [ e |]; inversion_clear H2. 
