@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "_main.h"
+#include "../clock.h"
 #include "../dm_random.c"
 
 static inline int get_bool(void) {
@@ -35,6 +36,9 @@ int main(int argc, char** argv) {
   if ((argc==2)) {
     step_max = atoi(argv[1]);
   };
+
+  clock_prepare();
+  clock_start();
   Radiotrans__main_reset(&mem);
   while ((!(step_max)||(step_c<step_max))) {
     step_c = (step_c+1);
@@ -57,10 +61,14 @@ int main(int argc, char** argv) {
                           wake_up, irq_tx_done, irq_on_packet,
                           irq_end_of_packet, irq_end_of_calibration,
                           irq_fifo_threshold, adc_on, adc_off, &_res, &mem);
+#if 0
     printf("%d\n", _res.a_on);
     printf("%d\n", _res.red);
     fflush(stdout);
+#endif
   };
+  clock_stop();
+  print_total_clock();
   return 0;
 }
 
