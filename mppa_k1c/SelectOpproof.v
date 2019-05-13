@@ -872,8 +872,24 @@ Theorem eval_divu_base:
     Val.divu x y = Some z ->
     exists v, eval_expr ge sp e m le (divu_base a b) v /\ Val.lessdef z v.
 Proof.
-  intros; unfold divu_base.
-  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+  intros until z.
+  intros Hax Hby Hdiv. unfold divu_base.
+  pose proof (divu_is_divlu x y) as DIVU.
+  destruct (Val.divlu (Val.longofintu x) (Val.longofintu y))
+    as [ ql | ] eqn:Ediv.
+  { TrivialExists.
+    { econstructor. eapply eval_helper_2; eauto.
+      { econstructor. econstructor. eassumption.
+       constructor. simpl. reflexivity. }
+      { econstructor. econstructor. eassumption.
+        constructor. simpl. reflexivity. }
+      { DeclHelper. }
+      { UseHelper. }
+      constructor. }
+    simpl.
+    congruence.
+  }
+  congruence.
 Qed.
 
 Theorem eval_modu_base:
