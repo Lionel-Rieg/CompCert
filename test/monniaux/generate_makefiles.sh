@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
-for bench in binary_search; do
-  ./genmake.py $(cat $bench/make.proto) > $bench/Makefile
+source benches.sh
+
+for bench in $benches; do
+  ./genmake.py $bench/make.proto > $bench/Makefile
 done

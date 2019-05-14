@@ -9,6 +9,7 @@ See the source for more info.
 
 from collections import namedtuple
 import sys
+import yaml
 
 Optim = namedtuple("Optim", ["short", "full"])
 Env = namedtuple("Env", ["compiler", "optimizations", "target"])
@@ -31,8 +32,19 @@ environments = [gcc_x86, gcc_k1c, ccomp_x86, ccomp_k1c]
 # Argument parsing
 ##
 if len(sys.argv) != 2:
-  raise Exception("Only 1 argument should be given to this script")
-basename = sys.argv[1]
+  raise Exception("Only 1 argument should be given to this script: the make.proto file")
+yaml_file = sys.argv[1]
+
+with open(yaml_file, "r") as f:
+  settings = yaml.load(f.read())
+
+basename = settings["target"]
+objdeps = settings["objdeps"] if "objdeps" in settings else []
+intro = settings["intro"] if "intro" in settings else ""
+
+for objdep in objdeps:
+  if objdep["compiler"] not in ("gcc", "ccomp", "both"):
+    raise Exception('Invalid compiler specified in make.proto:objdeps, should be either "gcc" or "ccomp" or "both"')
 
 ##
 # Printing the rules
@@ -41,27 +53,38 @@ basename = sys.argv[1]
 def make_product(env, optim):
   return basename + "." + env.compiler.short + (("." + optim.short) if optim.short != "" else "") + "." + env.target
 
+def make_obj(name, env, compiler_short):
+  return name + "." + compiler_short + "." + env.target + ".o"
+
 def make_clock(env, optim):
   return "clock.gcc." + env.target
 
 def print_rule(env, optim):
-  print("{product}: {product}.o ../{clock}.o"
-        .format(product = make_product(env, optim), clock = make_clock(env, optim)))
+  print("{product}: {product}.o ../{clock}.o "
+        .format(product = make_product(env, optim), clock = make_clock(env, optim))
+          + " ".join([make_obj(objdep["name"], env, (objdep["compiler"] if objdep["compiler"] != "both" else env.compiler.short)) for objdep in objdeps]))
   print("	{compiler} {flags} $+ -o $@"
         .format(compiler = env.compiler.full, flags = optim.full))
 
 products = []
 for env in environments:
   for optim in env.optimizations:
-    products.append(make_product(env, optim) + ".out")
+    products.append(make_product(env, optim))
 
 print("""
 include ../rules.mk
 
-PRODUCTS?={}
+{intro}
+
+PRODUCTS?={prod}
+PRODUCTS_OUT=$(addsuffix .out,$(PRODUCTS))
 
 all: $(PRODUCTS)
-""".format(" ".join(products)))
+
+.PHONY:
+exec: $(PRODUCTS_OUT)
+
+""".format(intro=intro, prod=" ".join(products)))
 
 for env in environments:
   for optim in env.optimizations:

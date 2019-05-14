@@ -1,0 +1,2 @@
+objdeps: [{name: float_mat_run, compiler: gcc}]
+target: float_mat
