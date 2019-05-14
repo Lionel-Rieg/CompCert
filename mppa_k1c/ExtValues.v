@@ -217,3 +217,261 @@ Proof.
   pose proof modulus_fits_64.
   omega.
 Qed.
+
+Remark if_zlt_0_half_modulus :
+  forall T : Type,
+  forall x y: T,
+    (if (zlt 0 Int.half_modulus) then x else y) = x.
+Proof.
+  reflexivity.
+Qed.
+
+Remark if_zlt_mone_half_modulus :
+  forall T : Type,
+  forall x y: T,
+    (if (zlt (Int.unsigned Int.mone) Int.half_modulus) then x else y) = y.
+Proof.
+  reflexivity.
+Qed.
+
+Remark if_zlt_min_signed_half_modulus :
+  forall T : Type,
+  forall x y: T,
+    (if (zlt (Int.unsigned (Int.repr Int.min_signed))
+                     Int.half_modulus)
+    then x
+     else y)  = y.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma repr_unsigned64_repr:
+  forall x, Int.repr (Int64.unsigned (Int64.repr x)) = Int.repr x.
+Proof.
+  intros.
+  apply Int.eqm_samerepr.
+  unfold Int.eqm.
+  unfold Int.eqmod.
+  pose proof (Int64.eqm_unsigned_repr x) as H64.
+  unfold Int64.eqm in H64.
+  unfold Int64.eqmod in H64.
+  destruct H64 as [k64 H64].
+  change Int64.modulus with 18446744073709551616 in *.
+  change Int.modulus with 4294967296.
+  exists (-4294967296 * k64).
+  set (y := Int64.unsigned (Int64.repr x)) in *.
+  rewrite H64.
+  clear H64.
+  omega.
+Qed.
+
+(*
+Theorem divs_is_divls: forall v1 v2 : val,
+    match Val.divs v1 v2 with
+    | Some q =>
+      match Val.divls (Val.longofint v1) (Val.longofint v2) with
+      | None => False
+      | Some q' => q = Val.loword q'
+      end
+    | None => True
+    end.
+Proof.
+  intros.
+  destruct v1; simpl; trivial.
+  destruct v2; simpl; trivial.
+  destruct i as [i_val i_range].
+  destruct i0 as [i0_val i0_range].
+  simpl.
+  unfold Int.eq, Int64.eq, Int.zero, Int64.zero.
+  simpl.
+  replace (Int.unsigned (Int.repr 0)) with 0 in * by reflexivity.
+  destruct (zeq _ _) as [H0' | Hnot0]; simpl; trivial.
+  destruct (zeq i_val (Int.unsigned (Int.repr Int.min_signed))) as [Hmin | Hnotmin]; simpl.
+  { subst.
+    destruct (zeq i0_val (Int.unsigned Int.mone)) as [Hmone | Hnotmone]; trivial.
+    unfold Int.signed. simpl.
+    replace (Int64.unsigned (Int64.repr 0)) with 0 in * by reflexivity.
+    rewrite if_zlt_min_signed_half_modulus.
+    replace (if
+           zeq
+             (Int64.unsigned
+                (Int64.repr
+                   (Int.unsigned (Int.repr Int.min_signed) - Int.modulus)))
+             (Int64.unsigned (Int64.repr Int64.min_signed))
+          then true
+              else false) with false by reflexivity.
+    simpl.
+    rewrite orb_false_r.
+    destruct (zlt i0_val Int.half_modulus) as [Hlt_half | Hge_half].
+    {
+      replace Int.half_modulus with 2147483648 in * by reflexivity.
+      rewrite Int64.unsigned_repr by (change Int64.max_unsigned with 18446744073709551615; omega).
+      destruct (zeq _ _) as [ | Hneq0]; try omega. clear Hneq0.
+      unfold Val.loword.
+      f_equal.
+      unfold Int64.divs, Int.divs, Int64.loword.
+      unfold Int.signed, Int64.signed. simpl.      
+      rewrite if_zlt_min_signed_half_modulus.
+      change Int.half_modulus with 2147483648 in *.
+      destruct (zlt _ _) as [discard|]; try omega. clear discard.
+      change (Int64.unsigned
+                  (Int64.repr
+                     (Int.unsigned (Int.repr Int.min_signed) - Int.modulus)))
+      with 18446744071562067968.
+      change Int64.half_modulus with 9223372036854775808.
+      change Int64.modulus with 18446744073709551616.
+      simpl.
+      rewrite (Int64.unsigned_repr i0_val) by (change Int64.max_unsigned with 18446744073709551615; omega).
+      destruct (zlt i0_val 9223372036854775808) as [discard |]; try omega.
+      clear discard.
+      change (Int.unsigned (Int.repr Int.min_signed) - Int.modulus) with  (-2147483648).
+      destruct (Z.eq_dec i0_val 1) as [H1 | Hnot1].
+      { subst.
+        rewrite Z.quot_1_r.
+        apply Int.eqm_samerepr.
+        unfold Int.eqm.
+        change (Int64.unsigned (Int64.repr (-2147483648))) with 18446744071562067968.
+        unfold Int.eqmod.
+        change Int.modulus with 4294967296.
+        exists (-4294967296).
+        compute.
+        reflexivity.
+      }
+      change (-2147483648) with (-(2147483648)).
+      rewrite Z.quot_opp_l by assumption.
+      rewrite repr_unsigned64_repr.
+      reflexivity.
+    }
+    destruct (zeq _ _) as [Hmod|Hnmod].
+    {
+      rewrite Int64.unsigned_repr_eq in Hmod.
+      set (delta := (i0_val - Int.modulus)) in *.
+      assert (delta = Int64.modulus*(delta/Int64.modulus)) as Hdelta.
+      { apply Z_div_exact_full_2.
+        compute. omega.
+        assumption. }
+      set (k := (delta / Int64.modulus)) in *.
+      change Int64.modulus with 18446744073709551616 in *.
+      change Int.modulus with 4294967296 in *.
+      change Int.half_modulus with 2147483648 in *.
+      change (Int.unsigned Int.mone) with 4294967295 in *.
+      omega.
+    }
+    unfold Int.divs, Int64.divs, Val.loword, Int64.loword.
+    change (Int.unsigned (Int.repr Int.min_signed)) with 2147483648.
+    change Int.modulus with 4294967296.
+    change (Int64.signed (Int64.repr (2147483648 - 4294967296))) with (-2147483648).
+    f_equal.
+    change (Int.signed {| Int.intval := 2147483648; Int.intrange := i_range |})
+           with (-2147483648).
+    rewrite Int64.signed_repr.
+    {
+      replace (Int.signed {| Int.intval := i0_val; Int.intrange := i0_range |}) with (i0_val - 4294967296).
+      { rewrite repr_unsigned64_repr.
+        reflexivity.
+      }
+ *)
+
+Lemma big_unsigned_signed:
+  forall x,
+    (Int.unsigned x >= Int.half_modulus) ->
+    (Int.signed x) = (Int.unsigned x) - Int.modulus.
+Proof.
+  destruct x as [xval xrange].
+  intro BIG.
+  unfold Int.signed, Int.unsigned in *. simpl in *.
+  destruct (zlt _ _).
+  omega.
+  trivial.
+Qed.
+
+(*
+Lemma signed_0_eqb :
+  forall x, (Z.eqb (Int.signed x) 0) = Int.eq x Int.zero.
+Admitted.
+ *)
+
+Lemma Z_quot_le: forall a b,
+    0 <= a -> 1 <= b -> Z.quot a b <= a.
+Proof.
+  intros a b Ha Hb.
+  destruct (Z.eq_dec b 1) as [Hb1 | Hb1].
+  { (* b=1 *)
+    subst.
+    rewrite Z.quot_1_r.
+    auto with zarith.
+  }
+  destruct (Z.eq_dec a 0) as [Ha0 | Ha0].
+  { (* a=0 *)
+    subst.
+    rewrite Z.quot_0_l.
+    auto with zarith.
+    omega.
+  }
+  assert ((Z.quot a b) < a).
+  {
+    apply Z.quot_lt; omega.
+  }
+  auto with zarith.
+Qed.
+
+(*
+Lemma divs_is_quot: forall v1 v2 : val,
+    Val.divs v1 v2 =
+    match v1, v2 with
+    | (Vint w1), (Vint w2) =>
+      let q := Z.quot (Int.signed w1) (Int.signed w2) in
+      if (negb (Z.eqb (Int.signed w2) 0))
+           && (Z.geb q Int.min_signed) && (Z.leb q Int.max_signed)
+      then Some (Vint (Int.repr q))
+      else None
+    | _, _ => None
+    end.
+
+Proof.
+  destruct v1; destruct v2; simpl; trivial.
+  unfold Int.divs.
+  rewrite signed_0_eqb.
+  destruct (Int.eq i0 Int.zero) eqn:Eeq0; simpl; trivial.
+  destruct (Int.eq i (Int.repr Int.min_signed) && Int.eq i0 Int.mone) eqn:EXCEPTION.
+  { replace (Int.signed i0) with (-1).
+    replace (Int.signed i) with Int.min_signed.
+    change Int.min_signed with (-2147483648).
+    change Int.max_signed with (2147483647).
+    compute.
+    reflexivity.
+    { unfold Int.eq in EXCEPTION.
+      destruct (zeq _ _) as [Hmin | ]  in EXCEPTION; try discriminate.
+      change Int.min_signed with (-2147483648).
+      change (Int.unsigned (Int.repr Int.min_signed)) with (2147483648) in *.
+      rewrite big_unsigned_signed.
+      change Int.modulus with 4294967296.
+      omega.
+      change Int.half_modulus with 2147483648.
+      omega.
+    }
+    unfold Int.eq in EXCEPTION.
+    destruct (zeq _ _) in EXCEPTION; try discriminate.
+    destruct (zeq _ _) as [Hmone | ]  in EXCEPTION; try discriminate.
+    destruct i0 as [i0val i0range]; unfold Int.signed in *; simpl in *.
+    rewrite Hmone.
+    reflexivity.
+  }
+  replace (Int.signed i ÷ Int.signed i0 >=? Int.min_signed) with true.
+  replace (Int.signed i ÷ Int.signed i0 <=? Int.max_signed) with true.
+  reflexivity.
+  { assert (Int.signed i ÷ Int.signed i0 <= Int.max_signed).
+    {
+      destruct (Z_lt_le_dec (Int.signed i) 0).
+      {
+        apply Z.le_trans with (m:=0).
+        rewrite <- (Z.quot_0_l (Int.signed i0)).
+        Require Import Coq.ZArith.Zquot.
+        apply Z_quot_monotone.                                      
+      }
+        assert ( Int.signed i ÷ Int.signed i0 <= Int.signed i).
+      apply Z_quot_le.
+    }
+  }
+
+*)
