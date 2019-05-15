@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "heater_control_alloc.h"
+#include "../clock.h"
 #include "../dm_random.c"
 
 static double _get_double(void) {
@@ -22,6 +23,9 @@ int main (int argc, char *argv[]) {
   
   /* Main memory allocation */
   heater_control_ALLOC(static,main_mem);
+
+  clock_prepare();
+  clock_start();
   
   /* Initialize the main memory */
   heater_control_reset(&main_mem);
@@ -34,9 +38,11 @@ int main (int argc, char *argv[]) {
     double T3 = _get_double();
     _Bool Heat_on;
     heater_control_step (T, T1, T2, T3, &Heat_on, &main_mem);
-    _put_bool("Heat_on", Heat_on);
+    // _put_bool("Heat_on", Heat_on);
   }
   
+  clock_stop();
+  print_total_clock();
   
   return 1;
 }

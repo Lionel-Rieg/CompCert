@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "../dm_random.c"
+#include "../clock.h"
 #include "heater_control_heater_control.h" 
 
 /* MACROS DEFINITIONS ****************/
@@ -39,6 +40,10 @@ int main(){
   _boolean Heat_on;
   heater_control_heater_control_ctx_type ctx_struct;
   heater_control_heater_control_ctx_type* ctx = &ctx_struct;
+
+  clock_prepare();
+  clock_start();
+  
   heater_control_heater_control_ctx_init(ctx);
 
   /* Main loop */
@@ -48,8 +53,11 @@ int main(){
      T2 = _get_real("T2");
      T3 = _get_real("T3");
     heater_control_heater_control_step(T,T1,T2,T3,&Heat_on,ctx);
-    _put_bool("Heat_on", Heat_on);
+    // _put_bool("Heat_on", Heat_on);
   }
-  return 1;
-   
+
+  clock_stop();
+  print_total_clock();
+  
+  return 1; 
 }
