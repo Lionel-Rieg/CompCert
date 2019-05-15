@@ -45,10 +45,15 @@ DM_INLINE void Lustre_pre_set(_boolean i1,Lustre_pre_ctx_type* ctx){
 } // End of Lustre_pre_set
 
 // Step function(s) for Lustre_slash_ctx
+#if 0
 DM_INLINE void Lustre_slash_step(_real i1,_real i2,_real *out){
   *out = (i1 / i2);
 
-} // End of Lustre_slash_step
+}
+#else
+#define Lustre_slash_step(x, y, out) *out = x/y
+#endif
+// End of Lustre_slash_step
 
 // Memory initialisation for heater_control_heater_control_ctx
 DM_INLINE void heater_control_heater_control_ctx_reset(heater_control_heater_control_ctx_type* ctx){
