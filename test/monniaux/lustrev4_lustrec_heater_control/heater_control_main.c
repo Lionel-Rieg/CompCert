@@ -27,7 +27,7 @@ int main (int argc, char *argv[]) {
   heater_control_reset(&main_mem);
   
   /* Infinite loop */
-  while(1){
+  for(int loop_count=0; loop_count<1000; loop_count++){
     double T = _get_double();
     double T1 = _get_double();
     double T2 = _get_double();
