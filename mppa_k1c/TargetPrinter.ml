@@ -39,6 +39,8 @@ module Target (*: TARGET*) =
       | "__compcert_i64_sdiv" -> "__divdi3"
       | "__compcert_i64_umod" -> "__umoddi3"
       | "__compcert_i64_smod" -> "__moddi3"
+      | "__compcert_f64_div" -> "__divdf3"
+      | "__compcert_f32_div" -> "__divsf3"
       | x -> x;;
     
     let symbol oc symb =
