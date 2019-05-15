@@ -570,8 +570,36 @@ Lemma step_simu_cfi_step (i: Mach.instruction) (cfi: control_flow_inst) (c: Mach
   trans_inst i = MB_cfi cfi ->
   is_trans_code c blc ->
   Mach.step (inv_trans_rao rao) ge (Mach.State stk f sp (i::c) rs m) t s' ->
-  exists s2, cfi_step rao tge cfi (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ t=E0 /\ match_states s' s2.
+  exists s2, cfi_step rao tge cfi (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ match_states s' s2.
 Proof.
+  destruct i; simpl in * |-;
+  (intro H; intro Htc;apply is_trans_code_inv in Htc;rewrite Htc;inversion_clear H;intro X; inversion_clear X).
+  * eapply ex_intro.
+    intuition auto.
+    eapply exec_MBcall;eauto. 
+    rewrite <-H; exploit (find_function_ptr_same); eauto.
+  * eapply ex_intro.
+    intuition auto.
+    eapply exec_MBtailcall;eauto. 
+    - rewrite <-H; exploit (find_function_ptr_same); eauto.
+    - simpl; rewrite <- parent_sp_preserved; auto.
+    - simpl; rewrite <- parent_ra_preserved; auto.
+  * eapply ex_intro.
+    intuition auto.
+    eapply exec_MBbuiltin ;eauto.
+  * exploit find_label_preserved. eauto. 
+    intro Hla. destruct Hla as [ h [Hla1 Hla2]].
+    exists (trans_state (Mach.State stk f sp c' rs m)).
+    intuition auto.
+    eapply exec_MBgoto; eauto.
+    
+  
+(* eapply ex_intro.
+    intuition auto.
+    eapply exec_MBcond_true;eauto. 
+*)
+
+
 Admitted.
 
 Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
@@ -598,11 +626,12 @@ Proof.
     inversion H1; subst. 
     exploit (step_simu_cfi_step); eauto.
     intro Hcfi.
-    destruct Hcfi as [s2 [Hcfi1 [Hcfi2 Hcfi3]]].
+    destruct Hcfi as [s2 [Hcfi1 Hcfi3]].
     inversion H4. subst; simpl.
+    autorewrite  with trace_rewrite.
     exists s2.
     split;eauto.
-Admitted.
+Qed.
 (*
 Inductive state : Type :=
     State : list stackframe ->
