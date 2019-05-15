@@ -466,6 +466,8 @@ Proof.
   inversion hs as [|n1 s1 t1 t2 s2 t3 s3 H1]. inversion H1. subst. auto. 
 Qed.
 
+
+
 Lemma step_simu_basic_step (i: Mach.instruction) (bi: basic_inst) (c: Mach.code) s f sp rs m (t:trace) (s':Mach.state):
   trans_inst i = MB_basic bi ->
   Mach.step (inv_trans_rao rao) ge (Mach.State s f sp (i::c) rs m) t s' ->
@@ -484,6 +486,7 @@ Proof.
   - eapply exec_MBstore; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
 Qed.
+
 
 Lemma star_step_simu_body_step s f sp c bdy c':
   is_body bdy c c' -> forall rs m t s',
@@ -563,6 +566,13 @@ Proof.
 Qed.
 *)
 
+Lemma step_simu_cfi_step (i: Mach.instruction) (cfi: control_flow_inst) (c: Mach.code) (blc:code) stk f sp rs m (t:trace) (s':Mach.state) b:
+  trans_inst i = MB_cfi cfi ->
+  is_trans_code c blc ->
+  Mach.step (inv_trans_rao rao) ge (Mach.State stk f sp (i::c) rs m) t s' ->
+  exists s2, cfi_step rao tge cfi (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ t=E0 /\ match_states s' s2.
+Proof.
+Admitted.
 
 Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
   is_exit e c c' -> is_trans_code c' blc ->
@@ -580,14 +590,18 @@ Proof.
   - (* None *)
     intros H0 H1. inversion H1. exists (State (trans_stack stk) f sp blc rs m).
     split; eauto.
-    Search trans_code.
     apply is_trans_code_inv in H0. 
     rewrite H0.
     apply match_states_trans_state.
   - (* Some *)
     intros H0 H1.
     inversion H1; subst. 
-    (* A FINIR *)
+    exploit (step_simu_cfi_step); eauto.
+    intro Hcfi.
+    destruct Hcfi as [s2 [Hcfi1 [Hcfi2 Hcfi3]]].
+    inversion H4. subst; simpl.
+    exists s2.
+    split;eauto.
 Admitted.
 (*
 Inductive state : Type :=
