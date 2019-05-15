@@ -474,4 +474,58 @@ Proof.
     }
   }
 
-*)
+ *)
+
+Require Import Coq.ZArith.Zquot.
+Lemma Z_quot_pos_pos_bound: forall a b m,
+    0 <= a <= m -> 1 <= b -> 0 <= Z.quot a b <= m.
+Proof.
+  intros.
+  split.
+  { rewrite <- (Z.quot_0_l b) by omega.
+    apply Z_quot_monotone; omega.
+  }
+  apply Z.le_trans with (m := a).
+  {
+    apply Z_quot_le; tauto.
+  }
+  tauto.
+Qed.
+Lemma Z_quot_neg_pos_bound: forall a b m,
+    m <= a <= 0 -> 1 <= b -> m <= Z.quot a b <= 0.
+  intros.
+  assert (0 <= - (a ÷ b) <= -m).
+  {
+    rewrite <- Z.quot_opp_l by omega.
+    apply Z_quot_pos_pos_bound; omega.
+  }
+  omega.
+Qed.
+
+Lemma Z_quot_signed_pos_bound: forall a b,
+    Int.min_signed <= a <= Int.max_signed -> 1 <= b ->
+    Int.min_signed <= Z.quot a b <= Int.max_signed.
+Proof.
+  intros.
+  destruct (Z_lt_ge_dec a 0).
+  {
+    split.
+    { apply Z_quot_neg_pos_bound; omega. }
+    { eapply Z.le_trans with (m := 0).
+      { apply Z_quot_neg_pos_bound with (m := Int.min_signed); trivial.
+        split. tauto. auto with zarith.
+      }
+      discriminate.
+    }
+  }
+  { split.
+    { eapply Z.le_trans with (m := 0).
+      discriminate.
+      apply Z_quot_pos_pos_bound with (m := Int.max_signed); trivial.
+      split. omega. tauto.
+    }
+    { apply Z_quot_pos_pos_bound; omega.
+    }
+  }
+Qed.
+
