@@ -41,6 +41,10 @@ with open(yaml_file, "r") as f:
 basename = settings["target"]
 objdeps = settings["objdeps"] if "objdeps" in settings else []
 intro = settings["intro"] if "intro" in settings else ""
+sources = settings["sources"] if "sources" in settings else None
+
+if sources:
+  intro += "\nsrc=" + sources
 
 for objdep in objdeps:
   if objdep["compiler"] not in ("gcc", "ccomp", "both"):
@@ -59,9 +63,16 @@ def make_obj(name, env, compiler_short):
 def make_clock(env, optim):
   return "clock.gcc." + env.target
 
+def make_sources(env, optim):
+  if sources:
+    return "$(src:.c=." + env.compiler.short + (("." + optim.short) if optim.short != "" else "") + "." + env.target + ".o)"
+  else:
+    return "{product}.o".format(product = make_product(env, optim))
+
 def print_rule(env, optim):
-  print("{product}: {product}.o ../{clock}.o "
-        .format(product = make_product(env, optim), clock = make_clock(env, optim))
+  print("{product}: {sources} ../{clock}.o "
+        .format(product = make_product(env, optim),
+          sources = make_sources(env, optim), clock = make_clock(env, optim))
           + " ".join([make_obj(objdep["name"], env, (objdep["compiler"] if objdep["compiler"] != "both" else env.compiler.short)) for objdep in objdeps]))
   print("	{compiler} {flags} $+ -o $@"
         .format(compiler = env.compiler.full, flags = optim.full))
@@ -91,8 +102,7 @@ for env in environments:
     print_rule(env, optim)
 
 print("""
+.PHONY:
 clean:
-	-rm -f *.o *.s *.k1c
-
-.PHONY: clean
+	rm -f *.o *.s *.k1c
 """)
