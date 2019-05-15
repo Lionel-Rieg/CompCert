@@ -4,52 +4,54 @@
 #include "heater_control_heater_control.h"
 //// Defining step functions
 // Memory initialisation for Lustre_arrow_ctx
-void Lustre_arrow_ctx_reset(Lustre_arrow_ctx_type* ctx){
+#define DM_INLINE inline
+
+DM_INLINE void Lustre_arrow_ctx_reset(Lustre_arrow_ctx_type* ctx){
   int _i;
   ctx->_memory = _true;
 }
 
 // Initialisation of the  internal structure of Lustre_arrow_ctx
-void Lustre_arrow_ctx_init(Lustre_arrow_ctx_type* ctx){
+DM_INLINE void Lustre_arrow_ctx_init(Lustre_arrow_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_arrow_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_arrow_ctx
-void Lustre_arrow_step(_boolean i1,_boolean i2,_boolean *out,Lustre_arrow_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
+DM_INLINE void Lustre_arrow_step(_boolean i1,_boolean i2,_boolean *out,Lustre_arrow_ctx_type* ctx){  *out = ((ctx->_memory)? i1 : i2);
   ctx->_memory = _false;
 
 } // End of Lustre_arrow_step
 
 // Memory initialisation for Lustre_pre_ctx
-void Lustre_pre_ctx_reset(Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_ctx_reset(Lustre_pre_ctx_type* ctx){
   int _i;
 
 }
 
 // Initialisation of the  internal structure of Lustre_pre_ctx
-void Lustre_pre_ctx_init(Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_ctx_init(Lustre_pre_ctx_type* ctx){
   // ctx->client_data = cdata;
   Lustre_pre_ctx_reset(ctx);
  }
 // Step function(s) for Lustre_pre_ctx
-void Lustre_pre_get(_boolean *out,Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_get(_boolean *out,Lustre_pre_ctx_type* ctx){
   *out = ctx->_memory;
 
 } // End of Lustre_pre_get
 
-void Lustre_pre_set(_boolean i1,Lustre_pre_ctx_type* ctx){
+DM_INLINE void Lustre_pre_set(_boolean i1,Lustre_pre_ctx_type* ctx){
   ctx->_memory = i1;
 
 } // End of Lustre_pre_set
 
 // Step function(s) for Lustre_slash_ctx
-void Lustre_slash_step(_real i1,_real i2,_real *out){
+DM_INLINE void Lustre_slash_step(_real i1,_real i2,_real *out){
   *out = (i1 / i2);
 
 } // End of Lustre_slash_step
 
 // Memory initialisation for heater_control_heater_control_ctx
-void heater_control_heater_control_ctx_reset(heater_control_heater_control_ctx_type* ctx){
+DM_INLINE void heater_control_heater_control_ctx_reset(heater_control_heater_control_ctx_type* ctx){
   int _i;
 
     Lustre_pre_ctx_reset(&ctx->Lustre_pre_ctx_tab[0]);
