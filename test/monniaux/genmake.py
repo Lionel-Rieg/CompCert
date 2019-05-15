@@ -43,6 +43,7 @@ objdeps = settings["objdeps"] if "objdeps" in settings else []
 intro = settings["intro"] if "intro" in settings else ""
 sources = settings["sources"] if "sources" in settings else None
 measures = settings["measures"] if "measures" in settings else []
+name = settings["name"] if "name" in settings else None
 
 if sources:
   intro += "\nsrc=" + sources
@@ -87,7 +88,7 @@ def print_measure_rule(environments, measures):
   print("measures.csv: $(PRODUCTS_OUT)")
   print('	echo ", {}" > $@'.format(make_env_list(environments)))
   for measure in measures:
-    print('	echo "{name} {measure}"'.format(name=basename, measure=measure), end="")
+    print('	echo "{name} {measure}"'.format(name=basename if not name else name, measure=measure if len(measures) > 1 else ""), end="")
     for env in environments:
       for optim in env.optimizations:
         print(", $$(grep '{measure}' {outfile} | cut -d':' -f2)".format(
@@ -110,7 +111,7 @@ PRODUCTS_OUT=$(addsuffix .out,$(PRODUCTS))
 all: $(PRODUCTS)
 
 .PHONY:
-exec: measures.csv
+run: measures.csv
 
 """.format(intro=intro, prod=" ".join(products)))
 
