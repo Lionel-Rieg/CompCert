@@ -42,6 +42,7 @@ basename = settings["target"]
 objdeps = settings["objdeps"] if "objdeps" in settings else []
 intro = settings["intro"] if "intro" in settings else ""
 sources = settings["sources"] if "sources" in settings else None
+measures = settings["measures"] if "measures" in settings else []
 
 if sources:
   intro += "\nsrc=" + sources
@@ -77,6 +78,22 @@ def print_rule(env, optim):
   print("	{compiler} {flags} $+ -o $@"
         .format(compiler = env.compiler.full, flags = optim.full))
 
+def make_env_list(envs):
+  return ",".join([(env.compiler.short + ((" " + optim.short) if optim.short != "" else "") + " " + env.target)
+                    for env in environments
+                    for optim in env.optimizations])
+
+def print_measure_rule(environments, measures):
+  print("measures.csv: $(PRODUCTS_OUT)")
+  print('	echo ", {}" > $@'.format(make_env_list(environments)))
+  for measure in measures:
+    print('	echo "{name} {measure}"'.format(name=basename, measure=measure), end="")
+    for env in environments:
+      for optim in env.optimizations:
+        print(", $$(grep '{measure}' {outfile} | cut -d':' -f2)".format(
+              measure=measure, outfile=make_product(env, optim) + ".out"), end="")
+    print('>> $@')
+
 products = []
 for env in environments:
   for optim in env.optimizations:
@@ -93,7 +110,7 @@ PRODUCTS_OUT=$(addsuffix .out,$(PRODUCTS))
 all: $(PRODUCTS)
 
 .PHONY:
-exec: $(PRODUCTS_OUT)
+exec: measures.csv
 
 """.format(intro=intro, prod=" ".join(products)))
 
@@ -101,8 +118,11 @@ for env in environments:
   for optim in env.optimizations:
     print_rule(env, optim)
 
+print_measure_rule(environments, measures)
+
+
 print("""
 .PHONY:
 clean:
-	rm -f *.o *.s *.k1c
+	rm -f *.o *.s *.k1c *.csv
 """)
