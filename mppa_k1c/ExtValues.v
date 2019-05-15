@@ -529,3 +529,51 @@ Proof.
   }
 Qed.
 
+Lemma Z_quot_signed_neg_bound: forall a b,
+    Int.min_signed <= a <= Int.max_signed -> b < -1 ->
+    Int.min_signed <= Z.quot a b <= Int.max_signed.
+Proof.
+  change Int.min_signed with (-2147483648).
+  change Int.max_signed with 2147483647.
+  intros.
+
+  replace b with (-(-b)) by auto with zarith.
+  rewrite Z.quot_opp_r by omega.
+  assert (-2147483647 <= (a ÷ - b) <= 2147483648).
+  2: omega.
+  
+  destruct (Z_lt_ge_dec a 0).
+  {
+    replace a with (-(-a)) by auto with zarith.
+    rewrite Z.quot_opp_l by omega.
+    assert (-2147483648 <= - a ÷ - b <= 2147483647).
+    2: omega.
+    split.
+    {
+      rewrite Z.quot_opp_l by omega.
+      assert (a ÷ - b <= 2147483648).
+      2: omega.
+      {
+        apply Z.le_trans with (m := 0).
+        rewrite <- (Z.quot_0_l (-b)) by omega.
+        apply Z_quot_monotone; omega.
+        discriminate.
+      }
+    }
+    assert (- a ÷ - b < -a ).
+    2: omega.
+    apply Z_quot_lt; omega.
+  }
+  {
+    split.
+    { apply Z.le_trans with (m := 0).
+      discriminate.
+      rewrite <- (Z.quot_0_l (-b)) by omega.
+      apply Z_quot_monotone; omega.
+    }
+    { apply Z.le_trans with (m := a).
+      apply Z_quot_le.
+      all: omega.
+    }
+  }
+Qed.
