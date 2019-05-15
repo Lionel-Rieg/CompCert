@@ -1,2 +1,4 @@
 objdeps: [{name: bstea_run, compiler: gcc}]
 target: bstea
+name: bitsliced-tea
+measures: ["cycles"]
