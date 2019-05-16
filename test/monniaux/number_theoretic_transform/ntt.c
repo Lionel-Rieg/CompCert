@@ -14,8 +14,8 @@ FFT original code from Rosetta Code.
 #include <string.h>
 #include "../clock.h"
 
-typedef uint64_t modint;
-typedef int64_t smodint;
+typedef uint32_t modint;
+typedef int32_t smodint;
 
 static modint invm(modint a0, modint b0)
 {
@@ -89,6 +89,12 @@ void fft(modint modulus, modint root_of_unit, modint buf[], unsigned n)
   free(out);
 }
 
+static void negate(modint MODULUS, modint buf[restrict], unsigned n) {
+  for(unsigned i=0; i<n; i++) {
+    if (buf[i]) buf[i] = MODULUS-buf[i];
+  }
+}
+
 static void mulvecm(modint modulus, modint buf[restrict], unsigned n, modint coef) {
   for(unsigned i=0; i<n; i++) {
     buf[i] = mulm(buf[i], coef, modulus);
@@ -107,6 +113,7 @@ modint randm(modint modulus) {
 }
 
 int main() {
+#if 0
   modint root_of_unit = 1;
   for(modint i=1; i<MODULUS; i++) {
     if (powm_u(i, MUL_MODULUS/2, MODULUS) != 1) {
@@ -114,8 +121,11 @@ int main() {
       break;
     }
   }
+#else
+  modint root_of_unit = 3;
+#endif
   assert(root_of_unit != 1);
-  printf("root of unit = %" PRIu64 "\n", root_of_unit);
+  //printf("root of unit = %" PRIu64 "\n", root_of_unit);
 
   modint *buf = malloc(LENGTH * sizeof(modint)),
     *save = malloc(LENGTH * sizeof(modint));
@@ -131,10 +141,13 @@ int main() {
   fft(MODULUS, invm(root_of_unit, MODULUS), buf, LENGTH);
   clock_stop();
   print_total_clock();
-  
+
+#if 0
   /* can be replaced by x -> -x */
   mulvecm(MODULUS, buf, LENGTH, invm(LENGTH, MODULUS));
-
+#else
+  negate(MODULUS, buf, LENGTH);  
+#endif
   printf("compare = %d\n", memcmp(buf, save, LENGTH * sizeof(modint)));
 	 
   /*
