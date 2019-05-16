@@ -62,7 +62,6 @@ __compcert_i32_smod:
 __compcert_i32_udiv:
 __compcert_i32_umod:
 	sxwd $r0 = $r0
-	;; /* Can't issue next in the same bundle */
 	sxwd $r1 = $r1
 	;; /* Can't issue next in the same bundle */
 	make $r2 = 0x3ff0000000000000
@@ -74,15 +73,8 @@ __compcert_i32_umod:
 	;;
 	floatw.rn.s $r1 = $r1, 0
 	;;
-	;;
-#APP
-# 16 "clock_int_div2.c" 1
 	finvw $r1=$r1
-# 0 "" 2
 	;;
-
-	;;
-#NO_APP
 	fwidenlwd $r1 = $r1
 	;;
 	fmuld $r0 = $r0, $r1
