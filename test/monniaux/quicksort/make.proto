@@ -1,0 +1,2 @@
+objdeps: [{name: quicksort_run, compiler: gcc}]
+target: quicksort

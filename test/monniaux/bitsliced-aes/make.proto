@@ -1,0 +1,2 @@
+sources: "$(wildcard *.c) tests/tests.c"
+target: test

@@ -1,5 +1,5 @@
 ALL_CCOMPFLAGS=-fno-unprototyped
-CCOMP=ccomp
+CCOMP=ccomp-x86
 CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
 
 CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
