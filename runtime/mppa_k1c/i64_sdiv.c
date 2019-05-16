@@ -1,15 +1,5 @@
 extern long __divdi3 (long a, long b);
 
-long i64_sdiv (long a, long b)
-{
-  return __divdi3 (a, b);
-}
-
-int i32_sdiv (int a, int b)
-{
-  return __divdi3 (a, b);
-}
-
 #include <mppa_bare_runtime/k1c/registers.h>
 
 /* DM FIXME this is for floating point */
