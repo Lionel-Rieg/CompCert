@@ -58,7 +58,6 @@ __compcert_acswapw:
 	.globl __compcert_i32_udiv
 	.globl __compcert_i32_umod
 __compcert_i32_sdiv:
-__compcert_i32_smod:
 __compcert_i32_umod:
 	sxwd $r0 = $r0
 	sxwd $r1 = $r1
@@ -87,6 +86,38 @@ __compcert_i32_umod:
 	ret
 	;;
 
+__compcert_i32_smod:
+	sxwd $r4 = $r0
+	sxwd $r5 = $r1
+	make $r2 = 0x3ff0000000000000
+	;;
+	copyd $r0 = $r4
+	copyd $r1 = $r5
+	floatd.rn.s $r4 = $r4, 0
+	;;
+	floatd.rn.s $r3 = $r5, 0
+	;;
+	floatw.rn.s $r5 = $r5, 0
+	;;
+	finvw $r5=$r5
+	;;
+	fwidenlwd $r5 = $r5
+	;;
+	fmuld $r4 = $r4, $r5
+	;;
+	ffmsd $r2 = $r5, $r3
+	copyd $r5 = $r4
+	;;
+	ffmad $r5 = $r2, $r4
+	;;
+	ffmad $r4 = $r2, $r5
+	;;
+	fixedd.rz $r4 = $r4, 0
+	;;
+	msbfd $r0 = $r1, $r4
+	ret
+	;;
+
 __compcert_i32_udiv:
 	zxwd $r0 = $r0
 	zxwd $r1 = $r1
@@ -112,5 +143,6 @@ __compcert_i32_udiv:
 	ffmad $r0 = $r2, $r1
 	;;
 	fixedud.rz $r0 = $r0, 0
+	;; 
 	ret
 	;;
