@@ -80,10 +80,7 @@ __compcert_i32_umod:
 	fmuld $r0 = $r0, $r1
 	;;
 	ffmsd $r2 = $r1, $r3
-	;;
-	sd 8[$r12] = $r0
-	;;
-	ld $r1 = 8[$r12]
+	copyd $r1 = $r0
 	;;
 	ffmad $r1 = $r2, $r0
 	;;
