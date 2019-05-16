@@ -136,7 +136,7 @@ Record hdeps:= {hpre: list (hashV tree); hpost: Dict.t (hashV tree)}.
 Coercion hpost: hdeps >-> Dict.t.
 
 (* pseudo deps_get *)
-Definition pdeps_get (d:hdeps) x : tree := 
+Definition pdeps_get (d:Dict.t (hashV tree)) x : tree := 
    match Dict.get d x with 
    | None => Tname x
    | Some t => (data t)
@@ -158,9 +158,25 @@ Hint Resolve hdeps_get_correct: wlp.
 
 Definition hdeps_valid ge (hd:hdeps) m := forall ht, List.In ht hd.(hpre) -> tree_eval ge (data ht) m <> None.
 
+
 Definition deps_model ge (d: deps) (hd:hdeps): Prop :=
-     (forall m, hdeps_valid ge hd m <-> pre d ge m)
-  /\ (forall m x, tree_eval ge (pdeps_get hd x) m = deps_eval ge d x m).
+  (forall m, hdeps_valid ge hd m <-> valid ge d m) 
+  /\ (forall m x, valid ge d m -> tree_eval ge (pdeps_get hd x) m = (deps_eval ge d x m)).
+
+Lemma deps_model_valid_alt ge d hd: deps_model ge d hd -> 
+ forall m x, valid ge d m -> tree_eval ge (pdeps_get hd x) m <> None.
+Proof.
+  intros (H1 & H2) m x H. rewrite H2; auto.
+  unfold valid in H. intuition eauto.
+Qed.
+
+Lemma deps_model_hdeps_valid_alt ge d hd: deps_model ge d hd -> 
+ forall m x, hdeps_valid ge hd m -> tree_eval ge (pdeps_get hd x) m <> None.
+Proof.
+  intros (H1 & H2) m x H. eapply deps_model_valid_alt.
+  - split; eauto.
+  - rewrite <- H1; auto.
+Qed.
 
 Fixpoint hexp_tree (e: exp) (d od: hdeps) (dbg: option pstring) : ?? hashV tree :=
   match e with
@@ -184,21 +200,22 @@ Lemma hexp_tree_correct_x ge e hod od:
   deps_model ge od hod ->
  forall hd d dbg,
   deps_model ge d hd ->
-  WHEN hexp_tree e hd hod dbg ~> t THEN forall m, tree_eval ge (data t) m  = tree_eval ge (exp_tree e d od) m.
+  WHEN hexp_tree e hd hod dbg ~> t THEN forall m, valid ge d m -> valid ge od m -> tree_eval ge (data t) m = tree_eval ge (exp_tree e d od) m.
 Proof.
   intro H.
   induction e using exp_mut with (P0:=fun le =>  forall d hd,
      deps_model ge d hd ->
-     WHEN hlist_exp_tree le hd hod ~> lt THEN forall m, list_tree_eval ge (data lt) m = list_tree_eval ge (list_exp_tree le d od) m); 
-     unfold deps_model, deps_eval in * |- * ; simpl; wlp_simplify; try congruence.
-  - rewrite H4, <- H0; simpl; reflexivity.
-  - rewrite H1; simpl; reflexivity.
-  - rewrite H5, <- H0, <- H4; simpl; reflexivity.
+     WHEN hlist_exp_tree le hd hod ~> lt THEN forall m, valid ge d m -> valid ge od m -> list_tree_eval ge (data lt) m = list_tree_eval ge (list_exp_tree le d od) m); 
+     unfold deps_model, deps_eval in * |- * ; simpl; wlp_simplify.
+  - rewrite H1, H4; auto.
+  - rewrite H4, <- H0; simpl; auto.
+  - rewrite H1; simpl; auto.
+  - rewrite H5, <- H0, <- H4; simpl; auto.
 Qed.
 Global Opaque hexp_tree.
 
 Lemma hexp_tree_correct e hd hod dbg:
-  WHEN hexp_tree e hd hod dbg ~> t THEN forall ge od d m, deps_model ge od hod -> deps_model ge d hd -> tree_eval ge (data t) m = tree_eval ge (exp_tree e d od) m.
+  WHEN hexp_tree e hd hod dbg ~> t THEN forall ge od d m, deps_model ge od hod -> deps_model ge d hd -> valid ge d m -> valid ge od m -> tree_eval ge (data t) m = tree_eval ge (exp_tree e d od) m.
 Proof.
   unfold wlp; intros; eapply hexp_tree_correct_x; eauto.
 Qed.
@@ -221,29 +238,85 @@ Proof.
 Qed.
 Local Hint Resolve failsafe_correct.
 
-Definition hdeps_set (d:hdeps) x (t:hashV tree) :=
-     DO ot <~ hdeps_get d x None;;
-     RET {| hpre:=if failsafe (data ot) then d.(hpre) else ot::d.(hpre);
-            hpost:=Dict.set d x t |}.
+Definition naive_set (hd:hdeps) x (t:hashV tree) := 
+  {| hpre:= t::hd.(hpre); hpost:=Dict.set hd x t |}.
+
+Lemma naive_set_correct hd x ht ge d t:
+    deps_model ge d hd ->
+    (forall m, valid ge d m -> tree_eval ge (data ht) m = tree_eval ge t m) ->
+    deps_model ge (deps_set d x t) (naive_set hd x ht).
+Proof.
+  unfold naive_set; intros (DM0 & DM1) EQT; split.
+  - intros m.
+    destruct (DM0 m) as (PRE & VALID0); clear DM0.
+    assert (VALID1: hdeps_valid ge hd m -> pre d ge m). { unfold valid in PRE; tauto. }
+    assert (VALID2: hdeps_valid ge hd m -> forall x : Dict.R.t, deps_eval ge d x m <> None). { unfold valid in PRE; tauto. }
+    unfold hdeps_valid in * |- *; simpl.
+    intuition (subst; eauto).
+    + eapply valid_set_proof; eauto.
+      erewrite <- EQT; eauto.
+    + exploit valid_set_decompose_1; eauto.
+      intros X1; exploit valid_set_decompose_2; eauto.
+      rewrite <- EQT; eauto.
+    + exploit valid_set_decompose_1; eauto.
+  - clear DM0. unfold deps_eval, pdeps_get, deps_get in * |- *; simpl.
+    Local Hint Resolve valid_set_decompose_1.
+    intros; case (R.eq_dec x x0).
+    + intros; subst; rewrite !Dict.set_spec_eq; simpl; eauto.
+    + intros; rewrite !Dict.set_spec_diff; simpl; eauto.
+Qed.
+Local Hint Resolve naive_set_correct.
+
+Definition equiv_hdeps ge (hd1 hd2: hdeps) := 
+      (forall m, hdeps_valid ge hd1 m <-> hdeps_valid ge hd2 m)
+   /\ (forall m x, hdeps_valid ge hd1 m -> tree_eval ge (pdeps_get hd1 x) m = tree_eval ge (pdeps_get hd2 x) m).
+
+Lemma equiv_deps_symmetry ge hd1 hd2:
+  equiv_hdeps ge hd1 hd2 -> equiv_hdeps ge hd2 hd1.
+Proof.
+  intros (V1 & P1); split.
+  - intros; symmetry; auto.
+  - intros; symmetry; eapply P1. rewrite V1; auto.
+Qed.
+
+Lemma equiv_hdeps_models ge hd1 hd2 d: 
+   deps_model ge d hd1 -> equiv_hdeps ge hd1 hd2 -> deps_model ge d hd2.
+Proof.
+  intros (VALID & EQUIV) (HEQUIV & PEQUIV); split.
+  - intros m; rewrite <- VALID; auto. symmetry; auto.
+  - intros m x H. rewrite <- EQUIV; auto. 
+    rewrite PEQUIV; auto.
+    rewrite VALID; auto.
+Qed.
+
+Definition hdeps_set (hd:hdeps) x (t:hashV tree) :=
+     DO ot <~ hdeps_get hd x None;;
+     DO b <~ phys_eq ot t;;
+     if b then
+        RET hd
+     else
+        RET {| hpre:= if failsafe (data t) then hd.(hpre) else t::hd.(hpre);
+               hpost:=Dict.set hd x t |}.
 
 Lemma hdeps_set_correct hd x ht:
   WHEN hdeps_set hd x ht ~> nhd THEN
     forall ge d t, deps_model ge d hd ->
-    (forall m, tree_eval ge (data ht) m = tree_eval ge t m) -> (* TODO: condition à revoir, on peut sans doute relâcher ici ! *)
+    (forall m, valid ge d m -> tree_eval ge (data ht) m = tree_eval ge t m) ->
     deps_model ge (deps_set d x t) nhd.
 Proof.
-  intros; wlp_simplify.
-  unfold deps_model, deps_set; simpl. destruct H0 as (DM0 & DM1); split.
-  - intros m; unfold hdeps_valid in DM0 |- *; simpl.
-    generalize (failsafe_correct ge (data exta) m); intros FAILSAFE.
-    destruct (DM0 m) as (H2 & H3); clear DM0. unfold deps_eval in * |- *.
-    destruct (failsafe _); simpl.
-    * rewrite !H, !DM1 in * |- *; intuition (subst; eauto).
-    * clear FAILSAFE. rewrite <- DM1, <- H. intuition (subst; eauto).
-  - clear H DM0. unfold deps_eval, pdeps_get, deps_get in * |- *; simpl.
-    intros; case (R.eq_dec x x0).
-    + intros; subst; rewrite !Dict.set_spec_eq; simpl; auto.
-    + intros; rewrite !Dict.set_spec_diff; simpl; auto.
+  intros; wlp_simplify; eapply equiv_hdeps_models; eauto; unfold equiv_hdeps, hdeps_valid; simpl.
+  + split; eauto.
+    * intros m; split.
+      - intros X1 ht0 X2; apply X1; auto.
+      - intros X1 ht0 [Y1 | Y1]. subst.
+        rewrite H; eapply deps_model_hdeps_valid_alt; eauto.
+        eauto.
+    * intros m x0 X1. case (R.eq_dec x x0).
+      - intros; subst. unfold pdeps_get at 1. rewrite Dict.set_spec_eq. congruence.
+      - intros; unfold pdeps_get; rewrite Dict.set_spec_diff; auto.
+  + split; eauto. intros m.
+    generalize (failsafe_correct ge (data ht) m); intros FAILSAFE.
+    destruct (failsafe _); simpl; intuition (subst; eauto).
 Qed.
 Local Hint Resolve hdeps_set_correct: wlp.
 Global Opaque hdeps_set.
@@ -263,9 +336,10 @@ Fixpoint hinst_deps (i: inst) (d od: hdeps): ?? hdeps :=
 
 Lemma hinst_deps_correct i: forall hd hod,
   WHEN hinst_deps i hd hod ~> hd' THEN
-    forall ge od d, deps_model ge od hod -> deps_model ge d hd -> deps_model ge (inst_deps i d od) hd'.
+    forall ge od d, deps_model ge od hod -> deps_model ge d hd -> (forall m, valid ge d m -> valid ge od m) -> deps_model ge (inst_deps i d od) hd'.
 Proof.
-  induction i; simpl; wlp_simplify.
+  Local Hint Resolve valid_set_proof.
+  induction i; simpl; wlp_simplify; eauto 20.
 Qed.
 Global Opaque hinst_deps.
 Local Hint Resolve hinst_deps_correct: wlp.
@@ -298,8 +372,8 @@ Lemma hbblock_deps_correct p:
   WHEN hbblock_deps p ~> hd THEN forall ge, deps_model ge (bblock_deps p) hd.
 Proof.
   unfold bblock_deps; wlp_simplify. eapply H. clear H.
-  unfold deps_model, pdeps_get, hdeps_valid, deps_eval, deps_get; simpl.
-  intuition; rewrite !Dict.empty_spec; simpl; auto.
+  unfold deps_model, valid, pdeps_get, hdeps_valid, deps_eval, deps_get; simpl; intuition;
+  rewrite !Dict.empty_spec in * |- *; simpl in * |- *; try congruence.
 Qed.
 Global Opaque hbblock_deps.
 
@@ -427,8 +501,12 @@ Obligation 1.
   apply bblock_deps_simu; auto.
   + intros m; rewrite <- EQPRE1, <- EQPRE2.
     unfold incl, hdeps_valid in * |- *; intuition eauto.
-  + intros m0 x m1 VALID; rewrite <- EQPOST1, <- EQPOST2.
-    erewrite pdeps_get_intro; auto. auto.
+  + intros m0 x m1 VALID; rewrite <- EQPOST1, <- EQPOST2; auto.
+    erewrite pdeps_get_intro; auto.
+    auto.
+    erewrite <- EQPRE2; auto.
+    erewrite <- EQPRE1 in VALID.
+    unfold incl, hdeps_valid in * |- *; intuition eauto.
 Qed.
 
 Theorem g_bblock_simu_test_correct p1 p2:

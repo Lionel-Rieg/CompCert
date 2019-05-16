@@ -365,16 +365,51 @@ Proof.
   unfold deps_empty; simpl. auto.
 Qed.
 
+Definition valid ge d m := pre d ge m /\ forall x, deps_eval ge d x m <> None.
+
 Theorem bblock_deps_simu p1 p2:
-  (forall m, pre (bblock_deps p1) ge m -> pre (bblock_deps p2) ge m) ->
-  (forall m0 x m1, pre (bblock_deps p1) ge m0 -> deps_eval ge (bblock_deps p1) x m0 = Some m1 ->
+  (forall m, valid ge (bblock_deps p1) m -> valid ge (bblock_deps p2) m) ->
+  (forall m0 x m1, valid ge (bblock_deps p1) m0 -> deps_eval ge (bblock_deps p1) x m0 = Some m1 ->
                    deps_eval ge (bblock_deps p2) x m0 = Some m1) ->
    bblock_simu ge p1 p2.
 Proof.
   Local Hint Resolve bblock_deps_valid bblock_deps_Some_correct1.
-  intros INCL EQUIV m DONTFAIL.
+  unfold valid; intros INCL EQUIV m DONTFAIL.
   destruct (run ge p1 m) as [m1|] eqn: RUN1; simpl; try congruence.
+  assert (X: forall x, deps_eval ge (bblock_deps p1) x m = Some (m1 x)); eauto.
   eapply bblock_deps_Some_correct2; eauto.
+  + destruct (INCL m); intuition eauto.
+    congruence.
+  + intro x; apply EQUIV; intuition eauto.
+    congruence.
+Qed.
+
+Lemma valid_set_decompose_1 d t x m:
+  valid ge (deps_set d x t) m -> valid ge d m.
+Proof.
+  unfold valid; intros ((PRE1 & PRE2) & VALID); split.
+  + intuition.
+  + intros x0 H. case (R.eq_dec x x0).
+    * intuition congruence.
+    * intros DIFF; eapply VALID. erewrite set_spec_diff; eauto.
+Qed.
+
+Lemma valid_set_decompose_2 d t x m:
+  valid ge (deps_set d x t) m -> tree_eval ge t m <> None.
+Proof.
+  unfold valid; intros ((PRE1 & PRE2) & VALID) H.
+  generalize (VALID x); autorewrite with dict_rw.
+  tauto.
+Qed.
+
+Lemma valid_set_proof d x t m:
+  valid ge d m -> tree_eval ge t m <> None -> valid ge (deps_set d x t) m.
+Proof.
+  unfold valid; intros (PRE & VALID) PREt. split.
+  + split; auto.
+  + intros x0; case (R.eq_dec x x0).
+    - intros; subst; autorewrite with dict_rw. auto.
+    - intros. rewrite set_spec_diff; auto. 
 Qed.
 
 End DEPTREE.
