@@ -63,9 +63,7 @@ __compcert_i32_udiv:
 __compcert_i32_umod:
 	sxwd $r0 = $r0
 	sxwd $r1 = $r1
-	;; /* Can't issue next in the same bundle */
 	make $r2 = 0x3ff0000000000000
-	addd $r12 = $r12, -16
 	;;
 	floatd.rn.s $r0 = $r0, 0
 	;;
@@ -85,9 +83,6 @@ __compcert_i32_umod:
 	ffmad $r1 = $r2, $r0
 	;;
 	ffmad $r0 = $r2, $r1
-	;;
-	sd 8[$r12] = $r1
-	addd $r12 = $r12, 16
 	;;
 	fixedd.rz $r0 = $r0, 0
 	ret
