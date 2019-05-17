@@ -872,8 +872,11 @@ let smart_schedule bb =
             Printf.eprintf "In regards to this group of instructions:\n";
             print_bb stderr bb;
             Printf.eprintf "Postpass scheduling could not complete: %s\n%s" msg stack;
+            failwith "Invalid schedule"
+            (*
             Printf.eprintf "Issuing one instruction per bundle instead\n\n";
             dumb_schedule bb
+            *)
           end
       in bundles @ (f lbb)
   in f lbb
