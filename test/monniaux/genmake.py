@@ -88,11 +88,17 @@ def print_measure_rule(environments, measures):
   print("measures.csv: $(PRODUCTS_OUT)")
   print('	echo ", {}" > $@'.format(make_env_list(environments)))
   for measure in measures:
-    print('	echo "{name} {measure}"'.format(name=basename if not name else name, measure=measure if len(measures) > 1 else ""), end="")
+    display_measure_name = (len(measures) > 1)
+    if isinstance(measure, list):
+      measure_name, measure_short = measure
+      display_measure_name = True
+    else:
+      measure_name = measure_short = measure
+    print('	echo "{name} {measure}"'.format(name=basename if not name else name, measure=measure_short if display_measure_name else ""), end="")
     for env in environments:
       for optim in env.optimizations:
         print(", $$(grep '{measure}' {outfile} | cut -d':' -f2)".format(
-              measure=measure, outfile=make_product(env, optim) + ".out"), end="")
+              measure=measure_name, outfile=make_product(env, optim) + ".out"), end="")
     print('>> $@')
 
 products = []

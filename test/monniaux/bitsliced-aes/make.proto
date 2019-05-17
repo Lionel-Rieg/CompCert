@@ -1,4 +1,4 @@
 sources: "$(wildcard *.c) tests/tests.c"
 target: test
-measures: ["cycles"]
+measures: [cycles]
 name: bitsliced-aes
