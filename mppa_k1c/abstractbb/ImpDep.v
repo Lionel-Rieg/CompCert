@@ -72,8 +72,6 @@ Hypothesis hC_tree_correct: forall t, WHEN hC_tree t ~> t' THEN pre_data t=data 
 Variable hC_list_tree: pre_hashV list_tree -> ?? hashV list_tree.
 Hypothesis hC_list_tree_correct: forall t, WHEN hC_list_tree t ~> t' THEN pre_data t=data t'.
 
-Variable ge: genv.
-
 (* First, we wrap constructors for hashed values !*)
 
 Local Open Scope positive.
@@ -107,19 +105,6 @@ Qed.
 Global Opaque hTop.
 Hint Resolve hTop_correct: wlp.
 
-Definition hTerase (t1 t2: hashV tree) (debug: option pstring): ?? hashV tree :=
-   DO hc <~ hash 3;; 
-   hC_tree {| pre_data:=Terase (data t1) (data t2); 
-              hcodes:=[hc;hid t1; hid t2]; debug_info := debug |}.
-
-Lemma hTerase_correct t1 t2 dbg: 
-  WHEN hTerase t1 t2 dbg ~> t THEN (data t)=(Terase (data t1) (data t2)).
-Proof.
-  wlp_simplify.
-Qed.
-Global Opaque hTerase.
-Hint Resolve hTerase_correct: wlp.
-
 Definition hTnil (_: unit): ?? hashV list_tree :=
    hC_list_tree {| pre_data:=Tnil; hcodes := nil; debug_info := None |} .
 
@@ -146,10 +131,12 @@ Hint Resolve hTcons_correct: wlp.
 (* Second, we use these hashed constructors ! *)
 
 
-Definition hdeps:= Dict.t (hashV tree).
+Record hdeps:= {hpre: list (hashV tree); hpost: Dict.t (hashV tree)}.
+
+Coercion hpost: hdeps >-> Dict.t.
 
 (* pseudo deps_get *)
-Definition pdeps_get (d:hdeps) x : tree := 
+Definition pdeps_get (d:Dict.t (hashV tree)) x : tree := 
    match Dict.get d x with 
    | None => Tname x
    | Some t => (data t)
@@ -169,6 +156,28 @@ Qed.
 Global Opaque hdeps_get.
 Hint Resolve hdeps_get_correct: wlp.
 
+Definition hdeps_valid ge (hd:hdeps) m := forall ht, List.In ht hd.(hpre) -> tree_eval ge (data ht) m <> None.
+
+
+Definition deps_model ge (d: deps) (hd:hdeps): Prop :=
+  (forall m, hdeps_valid ge hd m <-> valid ge d m) 
+  /\ (forall m x, valid ge d m -> tree_eval ge (pdeps_get hd x) m = (deps_eval ge d x m)).
+
+Lemma deps_model_valid_alt ge d hd: deps_model ge d hd -> 
+ forall m x, valid ge d m -> tree_eval ge (pdeps_get hd x) m <> None.
+Proof.
+  intros (H1 & H2) m x H. rewrite H2; auto.
+  unfold valid in H. intuition eauto.
+Qed.
+
+Lemma deps_model_hdeps_valid_alt ge d hd: deps_model ge d hd -> 
+ forall m x, hdeps_valid ge hd m -> tree_eval ge (pdeps_get hd x) m <> None.
+Proof.
+  intros (H1 & H2) m x H. eapply deps_model_valid_alt.
+  - split; eauto.
+  - rewrite <- H1; auto.
+Qed.
+
 Fixpoint hexp_tree (e: exp) (d od: hdeps) (dbg: option pstring) : ?? hashV tree :=
   match e with
   | PReg x => hdeps_get d x dbg
@@ -187,25 +196,130 @@ with hlist_exp_tree (le: list_exp) (d od: hdeps): ?? hashV list_tree :=
   | LOld le => hlist_exp_tree le od od
   end.
 
-Lemma hexp_tree_correct_x e od1 od2:
-  (forall x, pdeps_get od1 x = deps_get od2 x) ->
- forall d1 d2 dbg,
-  (forall x, pdeps_get d1 x = deps_get d2 x) ->
-  WHEN hexp_tree e d1 od1 dbg ~> t THEN data t = exp_tree e d2 od2.
+Lemma hexp_tree_correct_x ge e hod od:
+  deps_model ge od hod ->
+ forall hd d dbg,
+  deps_model ge d hd ->
+  WHEN hexp_tree e hd hod dbg ~> t THEN forall m, valid ge d m -> valid ge od m -> tree_eval ge (data t) m = tree_eval ge (exp_tree e d od) m.
 Proof.
   intro H.
-  induction e using exp_mut with (P0:=fun le =>  forall d1 d2,
-     (forall x, pdeps_get d1 x = deps_get d2 x) ->
-     WHEN hlist_exp_tree le d1 od1 ~> lt THEN data lt = list_exp_tree le d2 od2); simpl; wlp_simplify; congruence.
+  induction e using exp_mut with (P0:=fun le =>  forall d hd,
+     deps_model ge d hd ->
+     WHEN hlist_exp_tree le hd hod ~> lt THEN forall m, valid ge d m -> valid ge od m -> list_tree_eval ge (data lt) m = list_tree_eval ge (list_exp_tree le d od) m); 
+     unfold deps_model, deps_eval in * |- * ; simpl; wlp_simplify.
+  - rewrite H1, H4; auto.
+  - rewrite H4, <- H0; simpl; auto.
+  - rewrite H1; simpl; auto.
+  - rewrite H5, <- H0, <- H4; simpl; auto.
 Qed.
 Global Opaque hexp_tree.
 
-Lemma hexp_tree_correct e d1 od1 dbg:
-  WHEN hexp_tree e d1 od1 dbg ~> t THEN forall od2 d2, (forall x, pdeps_get od1 x = deps_get od2 x) -> (forall x, pdeps_get d1 x = deps_get d2 x) -> data t = exp_tree e d2 od2.
+Lemma hexp_tree_correct e hd hod dbg:
+  WHEN hexp_tree e hd hod dbg ~> t THEN forall ge od d m, deps_model ge od hod -> deps_model ge d hd -> valid ge d m -> valid ge od m -> tree_eval ge (data t) m = tree_eval ge (exp_tree e d od) m.
 Proof.
-  intros t H od2 d2 H1 H2; apply (hexp_tree_correct_x e od1 od2 H1 d1 d2 dbg H2 t H). 
+  unfold wlp; intros; eapply hexp_tree_correct_x; eauto.
 Qed.
 Hint Resolve hexp_tree_correct: wlp.
+
+Definition failsafe (t: tree): bool :=
+  match t with
+  | Tname x => true
+  | Top o Tnil => is_constant o
+  | _ => false
+  end.
+
+Local Hint Resolve is_constant_correct.
+
+Lemma failsafe_correct ge (t: tree) m: failsafe t = true -> tree_eval ge t m <> None.
+Proof.
+  destruct t; simpl; try congruence.
+  destruct l; simpl; try congruence.
+  eauto.
+Qed.
+Local Hint Resolve failsafe_correct.
+
+Definition naive_set (hd:hdeps) x (t:hashV tree) := 
+  {| hpre:= t::hd.(hpre); hpost:=Dict.set hd x t |}.
+
+Lemma naive_set_correct hd x ht ge d t:
+    deps_model ge d hd ->
+    (forall m, valid ge d m -> tree_eval ge (data ht) m = tree_eval ge t m) ->
+    deps_model ge (deps_set d x t) (naive_set hd x ht).
+Proof.
+  unfold naive_set; intros (DM0 & DM1) EQT; split.
+  - intros m.
+    destruct (DM0 m) as (PRE & VALID0); clear DM0.
+    assert (VALID1: hdeps_valid ge hd m -> pre d ge m). { unfold valid in PRE; tauto. }
+    assert (VALID2: hdeps_valid ge hd m -> forall x : Dict.R.t, deps_eval ge d x m <> None). { unfold valid in PRE; tauto. }
+    unfold hdeps_valid in * |- *; simpl.
+    intuition (subst; eauto).
+    + eapply valid_set_proof; eauto.
+      erewrite <- EQT; eauto.
+    + exploit valid_set_decompose_1; eauto.
+      intros X1; exploit valid_set_decompose_2; eauto.
+      rewrite <- EQT; eauto.
+    + exploit valid_set_decompose_1; eauto.
+  - clear DM0. unfold deps_eval, pdeps_get, deps_get in * |- *; simpl.
+    Local Hint Resolve valid_set_decompose_1.
+    intros; case (R.eq_dec x x0).
+    + intros; subst; rewrite !Dict.set_spec_eq; simpl; eauto.
+    + intros; rewrite !Dict.set_spec_diff; simpl; eauto.
+Qed.
+Local Hint Resolve naive_set_correct.
+
+Definition equiv_hdeps ge (hd1 hd2: hdeps) := 
+      (forall m, hdeps_valid ge hd1 m <-> hdeps_valid ge hd2 m)
+   /\ (forall m x, hdeps_valid ge hd1 m -> tree_eval ge (pdeps_get hd1 x) m = tree_eval ge (pdeps_get hd2 x) m).
+
+Lemma equiv_deps_symmetry ge hd1 hd2:
+  equiv_hdeps ge hd1 hd2 -> equiv_hdeps ge hd2 hd1.
+Proof.
+  intros (V1 & P1); split.
+  - intros; symmetry; auto.
+  - intros; symmetry; eapply P1. rewrite V1; auto.
+Qed.
+
+Lemma equiv_hdeps_models ge hd1 hd2 d: 
+   deps_model ge d hd1 -> equiv_hdeps ge hd1 hd2 -> deps_model ge d hd2.
+Proof.
+  intros (VALID & EQUIV) (HEQUIV & PEQUIV); split.
+  - intros m; rewrite <- VALID; auto. symmetry; auto.
+  - intros m x H. rewrite <- EQUIV; auto. 
+    rewrite PEQUIV; auto.
+    rewrite VALID; auto.
+Qed.
+
+Definition hdeps_set (hd:hdeps) x (t:hashV tree) :=
+     DO ot <~ hdeps_get hd x None;;
+     DO b <~ phys_eq ot t;;
+     if b then
+        RET hd
+     else
+        RET {| hpre:= if failsafe (data t) then hd.(hpre) else t::hd.(hpre);
+               hpost:=Dict.set hd x t |}.
+
+Lemma hdeps_set_correct hd x ht:
+  WHEN hdeps_set hd x ht ~> nhd THEN
+    forall ge d t, deps_model ge d hd ->
+    (forall m, valid ge d m -> tree_eval ge (data ht) m = tree_eval ge t m) ->
+    deps_model ge (deps_set d x t) nhd.
+Proof.
+  intros; wlp_simplify; eapply equiv_hdeps_models; eauto; unfold equiv_hdeps, hdeps_valid; simpl.
+  + split; eauto.
+    * intros m; split.
+      - intros X1 ht0 X2; apply X1; auto.
+      - intros X1 ht0 [Y1 | Y1]. subst.
+        rewrite H; eapply deps_model_hdeps_valid_alt; eauto.
+        eauto.
+    * intros m x0 X1. case (R.eq_dec x x0).
+      - intros; subst. unfold pdeps_get at 1. rewrite Dict.set_spec_eq. congruence.
+      - intros; unfold pdeps_get; rewrite Dict.set_spec_diff; auto.
+  + split; eauto. intros m.
+    generalize (failsafe_correct ge (data ht) m); intros FAILSAFE.
+    destruct (failsafe _); simpl; intuition (subst; eauto).
+Qed.
+Local Hint Resolve hdeps_set_correct: wlp.
+Global Opaque hdeps_set.
 
 Variable debug_assign: R.t -> ?? option pstring.
 
@@ -214,59 +328,21 @@ Fixpoint hinst_deps (i: inst) (d od: hdeps): ?? hdeps :=
   | nil => RET d
   | (x, e)::i' =>
      DO dbg <~ debug_assign x;;
-     DO t0 <~ hdeps_get d x None;;
-     DO v' <~ (if failsafe (data t0) 
-      then 
-        hexp_tree e d od dbg 
-      else
-        DO t1 <~ hexp_tree e d od None;; 
-        hTerase t1 t0 dbg);;
-     hinst_deps i' (Dict.set d x v') od
+     DO ht <~ hexp_tree e d od dbg;;
+     DO nd <~ hdeps_set d x ht;;
+     hinst_deps i' nd od
   end.
 
-Lemma pset_spec_eq d x t:
-  pdeps_get (Dict.set d x t) x = (data t).
+
+Lemma hinst_deps_correct i: forall hd hod,
+  WHEN hinst_deps i hd hod ~> hd' THEN
+    forall ge od d, deps_model ge od hod -> deps_model ge d hd -> (forall m, valid ge d m -> valid ge od m) -> deps_model ge (inst_deps i d od) hd'.
 Proof.
-  unfold pdeps_get; rewrite Dict.set_spec_eq; simpl; auto.
-Qed.
-
-Lemma pset_spec_diff d x y t:
-  x <> y -> pdeps_get (Dict.set d x t) y = pdeps_get d y.
-Proof.
- unfold pdeps_get; intros; rewrite Dict.set_spec_diff; simpl; auto.
-Qed.
-
-Lemma pempty_spec x: pdeps_get Dict.empty x = Tname x.
-Proof.
- unfold pdeps_get; rewrite Dict.empty_spec; simpl; auto.
-Qed.
-
-Hint Rewrite pset_spec_eq pempty_spec: dict_rw.
-
-
-Lemma hinst_deps_correct i: forall d1 od1,
-  WHEN hinst_deps i d1 od1 ~> d1' THEN
-    forall od2 d2, (forall x, pdeps_get od1 x = deps_get od2 x) ->
-    (forall x, pdeps_get d1 x = deps_get d2 x) -> 
-    forall x, pdeps_get d1' x = deps_get (inst_deps i d2 od2) x.
-Proof.
-  induction i; simpl; wlp_simplify.
-  + cutrewrite (failsafe (deps_get d2 a0) = failsafe (data exta0)). 
-    - erewrite H0, H2; simpl; eauto. clear exta2 Hexta2 H2; auto.
-      intros x0; destruct (R.eq_dec a0 x0).
-      * subst. autorewrite with dict_rw. rewrite set_spec_eq. erewrite H1; eauto.
-      * rewrite set_spec_diff, pset_spec_diff; auto.
-    - rewrite H, H4; auto.
-  + cutrewrite (failsafe (deps_get d2 a0) = failsafe (data exta0)).
-    - erewrite H0, H3; simpl; eauto. clear exta3 Hexta3 H3; auto.
-      intros x0; destruct (R.eq_dec a0 x0).
-      * subst; autorewrite with dict_rw. rewrite H2.
-        erewrite H, H1; eauto. rewrite set_spec_eq. congruence.
-      * rewrite set_spec_diff, pset_spec_diff; auto.
-   - rewrite H, H5; auto.
+  Local Hint Resolve valid_set_proof.
+  induction i; simpl; wlp_simplify; eauto 20.
 Qed.
 Global Opaque hinst_deps.
-Hint Resolve hinst_deps_correct: wlp.
+Local Hint Resolve hinst_deps_correct: wlp.
 
 (* logging info: we log the number of inst-instructions passed ! *)
 Variable log: unit -> ?? unit. 
@@ -280,24 +356,24 @@ Fixpoint hbblock_deps_rec (p: bblock) (d: hdeps): ?? hdeps :=
      hbblock_deps_rec p' d'
   end.
 
-Lemma hbblock_deps_rec_correct p: forall d1,
-  WHEN hbblock_deps_rec p d1 ~> d1' THEN
-    forall d2, (forall x, pdeps_get d1 x = deps_get d2 x) -> forall x, pdeps_get d1' x = deps_get (bblock_deps_rec p d2) x.
+Lemma hbblock_deps_rec_correct p: forall hd,
+  WHEN hbblock_deps_rec p hd ~> hd' THEN forall ge d, deps_model ge d hd -> deps_model ge (bblock_deps_rec p d) hd'.
 Proof.
   induction p; simpl; wlp_simplify.
 Qed.
 Global Opaque hbblock_deps_rec.
-Hint Resolve hbblock_deps_rec_correct: wlp.
+Local Hint Resolve hbblock_deps_rec_correct: wlp.
 
 
 Definition hbblock_deps: bblock -> ?? hdeps
- := fun p => hbblock_deps_rec p Dict.empty.
+ := fun p => hbblock_deps_rec p {| hpre:= nil ; hpost := Dict.empty |}.
 
 Lemma hbblock_deps_correct p:
-  WHEN hbblock_deps p ~> d1 THEN forall x, pdeps_get d1 x = deps_get (bblock_deps p) x.
+  WHEN hbblock_deps p ~> hd THEN forall ge, deps_model ge (bblock_deps p) hd.
 Proof.
-  unfold bblock_deps; wlp_simplify. erewrite H; eauto.
-  intros; autorewrite with dict_rw; auto. rewrite empty_spec. reflexivity.
+  unfold bblock_deps; wlp_simplify. eapply H. clear H.
+  unfold deps_model, valid, pdeps_get, hdeps_valid, deps_eval, deps_get; simpl; intuition;
+  rewrite !Dict.empty_spec in * |- *; simpl in * |- *; try congruence.
 Qed.
 Global Opaque hbblock_deps.
 
@@ -324,11 +400,6 @@ Definition tree_hash_eq (ta tb: tree): ?? bool :=
      DO b <~ op_eq oa ob ;;
      if b then phys_eq lta ltb
      else RET false
-  | Terase t1a t2a, Terase t1b t2b =>
-      DO b <~ phys_eq t1a t1b ;;
-      if b 
-      then phys_eq t2a t2b
-      else RET false
   | _,_ => RET false
   end.
 
@@ -358,7 +429,7 @@ Qed.
 Global Opaque list_tree_hash_eq.
 Hint Resolve list_tree_hash_eq_correct: wlp.
 
-Lemma pdeps_get_intro d1 d2:
+Lemma pdeps_get_intro (d1 d2: hdeps):
   (forall x, Dict.get d1 x = Dict.get d2 x) -> (forall x, pdeps_get d1 x = pdeps_get d2 x).
 Proof.
   unfold pdeps_get; intros H x; rewrite H. destruct (Dict.get d2 x); auto.
@@ -366,6 +437,19 @@ Qed.
 
 Local Hint Resolve hbblock_deps_correct Dict.eq_test_correct: wlp.
 
+(* TODO: 
+  A REVOIR pour que Dict.test_eq qui soit insensible aux infos de debug !
+  (cf. definition ci-dessous).
+  Il faut pour généraliser hash_params sur des Setoid (et les Dict aussi, avec ListSetoid, etc)... 
+ *)
+Program Definition mk_hash_params (log: hashV tree -> ?? unit): Dict.hash_params (hashV tree) :=
+ {| (* Dict.test_eq := fun (ht1 ht2: hashV tree) => phys_eq (data ht1) (data ht2); *)
+    Dict.test_eq := phys_eq;
+    Dict.hashing := fun (ht: hashV tree) => RET (hid ht);
+    Dict.log := log |}.
+Obligation 1.
+  eauto with wlp.
+Qed.
 
 (*** A GENERIC EQ_TEST: IN ORDER TO SUPPORT SEVERAL DEBUGGING MODE !!! ***)
 
@@ -376,7 +460,6 @@ Variable dbg2: R.t -> ?? option pstring. (* log of p2 insts *)
 Variable log1: unit -> ?? unit. (* log of p1 insts *)
 Variable log2: unit -> ?? unit. (* log of p2 insts *)
 
-
 Variable hco_tree: hashConsing tree.
 Hypothesis hco_tree_correct: hCons_spec hco_tree.
 Variable hco_list: hashConsing list_tree.
@@ -385,34 +468,52 @@ Hypothesis hco_list_correct: hCons_spec hco_list.
 Variable print_error_end: hdeps -> hdeps -> ?? unit.
 Variable print_error: pstring -> ?? unit.
 
+Variable check_failpreserv: bool.
+Variable dbg_failpreserv: hashV tree -> ?? unit. (* info of additional failure of the output bbloc p2 wrt the input bbloc p1 *) 
+
 Program Definition g_bblock_simu_test (p1 p2: bblock): ?? bool :=
+  DO failure_in_failpreserv <~ make_cref false;;
   DO r <~ (TRY
     DO d1 <~ hbblock_deps (hC hco_tree) (hC hco_list) dbg1 log1 p1 ;;
     DO d2 <~ hbblock_deps (hC_known hco_tree) (hC_known hco_list) dbg2 log2 p2 ;;
     DO b <~ Dict.eq_test d1 d2 ;;
-    if b then RET true
-    else (
+    if b then (
+      if check_failpreserv then (
+          let hp := mk_hash_params dbg_failpreserv in
+          failure_in_failpreserv.(set)(true);;
+          Sets.assert_list_incl hp d2.(hpre) d1.(hpre);;
+          RET true
+      ) else RET false
+    ) else (
       print_error_end d1 d2 ;;
       RET false
     )
   CATCH_FAIL s, _ =>
-    print_error s;;
-    RET false
+    DO b <~ failure_in_failpreserv.(get)();;
+    if b then RET false 
+         else print_error s;; RET false
   ENSURE (fun b => b=true -> forall ge, bblock_simu ge p1 p2));;
   RET (`r).
 Obligation 1.
-  destruct hco_tree_correct as [X1 X2], hco_list_correct as [Y1 Y2].
+  destruct hco_tree_correct as [TEQ1 TEQ2], hco_list_correct as [LEQ1 LEQ2].
   constructor 1; wlp_simplify; try congruence.
+  destruct (H ge) as (EQPRE1&EQPOST1); destruct (H0 ge) as (EQPRE2&EQPOST2); clear H H0.
   apply bblock_deps_simu; auto.
-  intros; rewrite <- H, <- H0.
-  apply pdeps_get_intro. auto.
+  + intros m; rewrite <- EQPRE1, <- EQPRE2.
+    unfold incl, hdeps_valid in * |- *; intuition eauto.
+  + intros m0 x m1 VALID; rewrite <- EQPOST1, <- EQPOST2; auto.
+    erewrite pdeps_get_intro; auto.
+    auto.
+    erewrite <- EQPRE2; auto.
+    erewrite <- EQPRE1 in VALID.
+    unfold incl, hdeps_valid in * |- *; intuition eauto.
 Qed.
 
 Theorem g_bblock_simu_test_correct p1 p2:
   WHEN g_bblock_simu_test p1 p2 ~> b THEN b=true -> forall ge, bblock_simu ge p1 p2.
 Proof.
   wlp_simplify.
-  destruct exta; simpl in * |- *; auto.
+  destruct exta0; simpl in * |- *; auto.
 Qed.
 Global Opaque g_bblock_simu_test.
 
@@ -429,6 +530,7 @@ Definition msg_error_on_end: pstring := "mismatch in final assignments !".
 Definition msg_unknow_tree: pstring := "unknown tree node".
 Definition msg_unknow_list_tree: pstring := "unknown list node".
 Definition msg_number: pstring := "on 2nd bblock -- on inst num ".
+Definition msg_notfailpreserv: pstring := "a possible failure of 2nd bblock is absent in 1st bblock".
 
 Definition print_error_end (_ _: hdeps): ?? unit
  := println (msg_prefix +; msg_error_on_end).
@@ -437,17 +539,30 @@ Definition print_error (log: logger unit) (s:pstring): ?? unit
  := DO n <~ log_info log ();;
     println (msg_prefix +; msg_number +; n +; " -- " +; s). 
 
+Definition failpreserv_error (_: hashV tree): ?? unit
+  := println (msg_prefix +; msg_notfailpreserv).
 
 Program Definition bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log <~ count_logger ();;
   DO hco_tree <~ mk_annot (hCons tree_hash_eq (fun _ => RET msg_unknow_tree));;
   DO hco_list <~ mk_annot (hCons list_tree_hash_eq (fun _ => RET msg_unknow_list_tree));;
-  g_bblock_simu_test no_dbg no_dbg skip (log_insert log) hco_tree _ hco_list _ print_error_end (print_error log) p1 p2.
-Obligation 1.  
+  g_bblock_simu_test
+    no_dbg
+    no_dbg
+    skip
+    (log_insert log)
+    hco_tree _
+    hco_list _
+    print_error_end
+    (print_error log)
+    true (* check_failpreserv *)
+    failpreserv_error
+    p1 p2.
+Obligation 1.
   generalize (hCons_correct _ _ _ _ H0); clear H0.
   constructor 1; wlp_simplify.
 Qed.
-Obligation 2.  
+Obligation 2.
   generalize (hCons_correct _ _ _ _ H); clear H.
   constructor 1; wlp_simplify.
 Qed.
@@ -486,10 +601,6 @@ Definition print_raw_htree (td: pre_hashV tree): ?? unit :=
     DO so <~ string_of_op o;;
     DO sl <~ string_of_hashcode lid;;
     println (so +; " " +; (list_id sl))
-  | (Terase _ _), [ _ ; t1; t2 ] =>
-    DO st1 <~ string_of_hashcode t1 ;;
-    DO st2 <~ string_of_hashcode t2 ;;
-    println((tree_id st1) +; " erases " +; (tree_id st2))
   | _, _ => FAILWITH "unexpected hcodes"
   end.
 
@@ -521,9 +632,6 @@ Fixpoint string_of_tree (t: tree) (pt: pre_hashV tree) : ?? pstring :=
       DO pl <~ get_hlist lid;;
       DO sl <~ string_of_list_tree l pl;;
       RET (so +; "(" +; sl +; ")")
-    | Terase t _, [ _ ; tid; _ ] =>
-      DO pt <~ get_htree tid ;;
-      string_of_tree t pt
     | _, _ => FAILWITH "unexpected hcodes"
     end
   end
@@ -699,11 +807,13 @@ Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
      (log_debug log1)
      simple_debug
      (hlog log1 hco_tree hco_list)
-     (log_insert log2) 
-     hco_tree _ 
-     hco_list _ 
+     (log_insert log2)
+     hco_tree _
+     hco_list _
      (print_error_end1 hco_tree hco_list)
-     (print_error1 hco_tree hco_list cr log2) 
+     (print_error1 hco_tree hco_list cr log2)
+     true
+     failpreserv_error (* TODO: debug info *)
      p1 p2;;
   if result1 
   then RET true
@@ -718,10 +828,12 @@ Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
        simple_debug
        (hlog log1 hco_tree hco_list)
        (log_insert log2)
-       hco_tree _ 
-       hco_list _ 
+       hco_tree _
+       hco_list _
        (print_error_end2 hco_tree hco_list)
-       (print_error2 hco_tree hco_list cr log2) 
+       (print_error2 hco_tree hco_list cr log2)
+       false
+       (fun _ => RET tt)
        p2 p1;;
     if result2 
     then (
@@ -796,7 +908,7 @@ Proof.
 Qed.
 Global Opaque eq_test.
 
-(* get some key of a non-empty d *)
+(* ONLY FOR DEBUGGING INFO: get some key of a non-empty d *)
 Fixpoint pick {A} (d: t A): ?? R.t :=
   match d with
   | Leaf _ => FAILWITH "unexpected empty dictionary"
@@ -809,7 +921,7 @@ Fixpoint pick {A} (d: t A): ?? R.t :=
     RET (xO p)
   end. 
 
-
+(* ONLY FOR DEBUGGING INFO: find one variable on which d1 and d2 differs *)
 Fixpoint not_eq_witness {A} (d1 d2: t A): ?? option R.t :=
   match d1, d2 with
   | Leaf _, Leaf _ => RET None

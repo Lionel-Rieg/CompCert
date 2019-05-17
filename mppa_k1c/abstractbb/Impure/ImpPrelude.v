@@ -91,10 +91,36 @@ Extract Inlined Constant struct_eq => "(=)".
 Hint Resolve struct_eq_correct: wlp.
 
 
-(** Data-structure for generic hash-consing *)
+(** Data-structure for generic hash-consing, hash-set *)
 
 Axiom hashcode: Type.
 Extract Constant hashcode => "int".
+
+Module Dict.
+
+Record hash_params {A:Type} := {
+  test_eq: A -> A -> ??bool;
+  test_eq_correct: forall x y, WHEN test_eq x y ~> r THEN r=true -> x=y;
+  hashing: A -> ??hashcode;
+  log: A -> ??unit (* for debugging only *)
+}.
+Arguments hash_params: clear implicits.
+
+
+Record t {A B:Type} := {
+  set: A * B -> ?? unit;
+  get: A -> ?? option B
+}.
+Arguments t: clear implicits.
+
+End Dict.
+
+
+(* NB: hashConsing is assumed to generate hash-code in ascending order.
+   This gives a way to check that a hash-consed value is older than an other one.
+*)
+Axiom hash_older: hashcode -> hashcode -> ?? bool.
+Extract Inlined Constant hash_older => "(<=)".
 
 Record pre_hashV {A: Type} := {
   pre_data: A;
@@ -116,6 +142,7 @@ Record hashExport {A:Type}:= {
 Arguments hashExport: clear implicits.
 
 Record hashConsing {A:Type}:= {
+  (* TODO next_hashcode: unit -> ?? hashcode *) 
   hC: pre_hashV A -> ?? hashV A;
   hC_known: pre_hashV A -> ?? hashV A; (* fails on unknown inputs *)
   (**** below: debugging functions ****)
