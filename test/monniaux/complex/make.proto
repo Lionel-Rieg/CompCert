@@ -1,1 +1,2 @@
 target: complex_mat
+measures: ["c1_time"]
