@@ -280,6 +280,6 @@ int main(void)
 		}
 	}
 	destruct_binary_messages();
-	printf("total cycles = %" PRIu64 "\n", cycle_total);
+	printf("total cycles : %" PRIu64 "\n", cycle_total);
 	return 0;
 }
