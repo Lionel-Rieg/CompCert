@@ -1,4 +1,4 @@
-#!/usr/bin/python3.4
+#!/usr/bin/python3.6
 
 """ Custom Makefile generator
 
@@ -26,7 +26,7 @@ gcc_k1c = Env(compiler = Compiler("gcc", "$(K1C_CC)"), optimizations = [Optim(""
 ccomp_x86 = Env(compiler = Compiler("ccomp", "$(CCOMP)"), optimizations = [Optim("", "$(CCOMPFLAGS)")], target = "host")
 ccomp_k1c = Env(compiler = Compiler("ccomp", "$(K1C_CCOMP)"), optimizations = [Optim("", "$(K1C_CCOMPFLAGS)")], target = "k1c")
 
-environments = [gcc_x86, gcc_k1c, ccomp_x86, ccomp_k1c]
+environments = [gcc_x86, ccomp_x86, gcc_k1c, ccomp_k1c]
 
 ##
 # Argument parsing
@@ -36,7 +36,7 @@ if len(sys.argv) != 2:
 yaml_file = sys.argv[1]
 
 with open(yaml_file, "r") as f:
-  settings = yaml.load(f.read())
+  settings = yaml.load(f.read(), Loader=yaml.FullLoader)
 
 basename = settings["target"]
 objdeps = settings["objdeps"] if "objdeps" in settings else []
@@ -86,7 +86,7 @@ def make_env_list(envs):
 
 def print_measure_rule(environments, measures):
   print("measures.csv: $(PRODUCTS_OUT)")
-  print('	echo ", {}" > $@'.format(make_env_list(environments)))
+  print('	echo "benches, {}" > $@'.format(make_env_list(environments)))
   for measure in measures:
     display_measure_name = (len(measures) > 1)
     if isinstance(measure, list):

@@ -1,2 +1,3 @@
 target: memset_from_bitsliced-aes
 measures: [cycles]
+name: memset-aes
