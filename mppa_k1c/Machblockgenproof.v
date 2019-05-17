@@ -527,45 +527,6 @@ Proof.
   + intros H r; constructor 1; intro X; inversion X.
 Qed.
 
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-Lemma step_simu_cfi_step:
-  forall c e c' stk f sp rs m t s' b lb',
-  to_bblock_exit c = (Some e, c') ->
-  trans_code c' = lb' ->
-  Mach.step (inv_trans_rao rao) ge (Mach.State stk f sp c rs m) t s' ->
-  exists s2, cfi_step rao tge e (State (trans_stack stk) f sp (b::lb') rs m) t s2 /\ match_states s' s2.
-Proof.
-  intros c e c' stk f sp rs m t s' b lb'.
-  intros Hexit Htc Hstep.
-  destruct c as [|ei c]; try (contradict Hexit; discriminate).
-  destruct ei; (contradict Hexit; discriminate) || (
-    inversion Hexit; subst; inversion Hstep; subst; simpl
-  ).
-  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    apply exec_MBcall with (f := (transf_function f0)); auto.
-    rewrite find_function_ptr_same in H9; auto.
-  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    apply exec_MBtailcall with (f := (transf_function f0)); auto.
-    rewrite find_function_ptr_same in H9; auto.
-    rewrite parent_sp_preserved in H11; subst; auto.
-    rewrite parent_ra_preserved in H12; subst; auto.
-  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    eapply exec_MBbuiltin; eauto.
-  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
-    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
-  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
-    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
-  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    eapply exec_MBcond_false; eauto.
-  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
-    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
-  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
-    eapply exec_MBreturn; eauto.
-    rewrite parent_sp_preserved in H8; subst; auto.
-    rewrite parent_ra_preserved in H9; subst; auto.
-Qed.
-*)
-
 Lemma step_simu_cfi_step (i: Mach.instruction) (cfi: control_flow_inst) (c: Mach.code) (blc:code) stk f sp rs m (t:trace) (s':Mach.state) b:
   trans_inst i = MB_cfi cfi ->
   is_trans_code c blc ->
@@ -587,20 +548,21 @@ Proof.
   * eapply ex_intro.
     intuition auto.
     eapply exec_MBbuiltin ;eauto.
-  * exploit find_label_preserved. eauto. 
-    intro Hla. destruct Hla as [ h [Hla1 Hla2]].
-    exists (trans_state (Mach.State stk f sp c' rs m)).
-    intuition auto.
-    eapply exec_MBgoto; eauto.
-    
-  
-(* eapply ex_intro.
-    intuition auto.
-    eapply exec_MBcond_true;eauto. 
-*)
-
-
-Admitted.
+  * exploit find_label_transcode_preserved; eauto.
+    intros (x & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * exploit find_label_transcode_preserved; eauto.
+    intros (x & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    eapply exec_MBcond_false; eauto.
+  * exploit find_label_transcode_preserved; eauto. intros (h & X1 & X2).
+    eapply ex_intro; constructor 1; [ idtac | eapply match_states_concat_trans_code ]; eauto.
+  * eapply ex_intro; constructor 1; [ idtac | eapply match_states_trans_state ]; eauto.
+    eapply exec_MBreturn; eauto.
+    rewrite parent_sp_preserved in H0; subst; auto.
+    rewrite parent_ra_preserved in H1; subst; auto. 
+Qed.
 
 Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
   is_exit e c c' -> is_trans_code c' blc ->
@@ -632,6 +594,7 @@ Proof.
     exists s2.
     split;eauto.
 Qed.
+
 (*
 Inductive state : Type :=
     State : list stackframe ->
@@ -724,12 +687,95 @@ Qed.
 
 Axiom TODO: False. (* A ELIMINER *)
 
+Lemma t' i c:
+  exists bl,
+  trans_code_rev (rev_append c (i :: nil)) nil = 
+  trans_code_rev (i :: nil) bl.
+Proof.
+  exists (trans_code_rev c nil).
+  induction c; eauto.
+  simpl in IHc.
+  simpl.
+  unfold trans_code_rev.
+  (* TODO *)
+Admitted.
+
+Lemma cfi_dist_end_block i c: (* TODO: raccourcir *)
+(exists cfi, trans_inst i = MB_cfi cfi) ->
+dist_end_block_code (i :: c) = 0.
+Proof.
+  pose t'.
+  intro H. destruct H as [cfi H].
+  destruct i;simpl in H;try(congruence).
+  + destruct (e (Mcall s s0) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mtailcall s s0 ) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mbuiltin e0 l b ) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mgoto l) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mcond c0 l l0 ) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mjumptable m l) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+  + destruct (e (Mreturn) c) as [bl Ht].
+    unfold dist_end_block_code, trans_code; simpl.
+    rewrite Ht.
+    unfold trans_code_rev, add_to_code; simpl.
+    destruct bl; vm_compute; eauto.
+Qed.
+
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
 Proof.
   apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)
-  - intros s1 t s1' H1. elim TODO. (* A FAIRE *)
+  (* TODO: simplifier *)
+  - intros s1 t s1' H1. 
+    destruct H1; simpl; omega || (intuition auto).
+    + cutrewrite (dist_end_block_code (Mcall sig ros :: c)=0) in H2.
+      destruct H2; eauto.
+      apply cfi_dist_end_block; exists (MBcall sig ros); simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mtailcall sig ros :: c)=0) in H4.
+      destruct H4; eauto.
+      apply cfi_dist_end_block; exists (MBtailcall sig ros ); simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mbuiltin ef args res :: b)=0) in H2.
+      destruct H2; eauto.
+      apply cfi_dist_end_block; exists (MBbuiltin ef args res); simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mgoto lbl :: c)=0) in H1.
+      destruct H1; eauto.
+      apply cfi_dist_end_block; exists (MBgoto lbl); simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mcond cond args lbl  :: c)=0) in H3.
+      destruct H3; eauto.
+      apply cfi_dist_end_block; exists (MBcond cond args lbl) ; simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mjumptable arg tbl :: c)=0) in H4.
+      destruct H4; eauto.
+      apply cfi_dist_end_block; exists (MBjumptable arg tbl) ; simpl; reflexivity.
+    + cutrewrite (dist_end_block_code (Mreturn :: c)=0) in H3.
+      destruct H3; eauto.
+      apply cfi_dist_end_block; exists (MBreturn) ; simpl; reflexivity.
+    (*unfold dist_end_block_code, trans_code, trans_code_rev, add_to_code. 
+    unfold size,add_to_new_bblock, add_label, add_basic. unfold cfi_bblock. simpl.*)
+    (*elim TODO.*) (* A FAIRE *)
     (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
     destruct H1; simpl; omega || (intuition auto).
     *)
@@ -758,9 +804,9 @@ Qed.
 
 End PRESERVATION.
 
-
-
 (** Auxiliary lemmas used to prove existence of a Mach return adress from a Machblock return address. *)
+
+
 
 Lemma is_trans_code_monotonic i c b l:
    is_trans_code c (b::l) ->
@@ -771,7 +817,25 @@ Proof.
   destruct ti as [lbl|bi|cfi].
   - (*i=lbl *) cutrewrite (i = Mlabel lbl). 2:{ destruct i; simpl in * |- *; try congruence. }
     exists nil; simpl; eexists. eapply Tr_add_label; eauto.
-Admitted. (* A FINIR *)
+  - (*i=basic*)
+    destruct i'.
+    10: {exists (add_to_new_bblock (MB_basic bi)::nil).  exists b. 
+      cutrewrite ((add_to_new_bblock (MB_basic bi) :: nil) ++ (b::l)=(add_to_new_bblock (MB_basic bi) :: (b::l)));eauto.
+      rewrite Heqti.        
+      eapply  Tr_end_block; eauto.
+      rewrite <-Heqti.
+      eapply End_basic. inversion H; try(simpl; congruence).
+      simpl in H5; congruence. }
+    all: try(exists nil; simpl; eexists;  eapply  Tr_add_basic; eauto; inversion H; try(eauto || congruence)).
+  - (*i=cfi*)
+    destruct i; try(simpl in Heqti; congruence).
+    all: exists (add_to_new_bblock (MB_cfi cfi)::nil);  exists b; 
+        cutrewrite ((add_to_new_bblock (MB_cfi cfi) :: nil) ++ (b::l)=(add_to_new_bblock (MB_cfi cfi) :: (b::l)));eauto;
+        rewrite Heqti;        
+        eapply  Tr_end_block; eauto;
+        rewrite <-Heqti;
+        eapply End_cfi; congruence.
+Qed.
 
 Lemma trans_code_monotonic i c b l:
    (b::l) = trans_code c ->
