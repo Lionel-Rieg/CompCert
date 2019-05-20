@@ -595,29 +595,6 @@ Proof.
     split;eauto.
 Qed.
 
-(*
-Inductive state : Type :=
-    State : list stackframe ->
-            block -> val -> code -> regset -> mem -> state
-  | Callstate : list stackframe -> block -> regset -> mem -> state
-  | Returnstate : list stackframe -> regset -> mem -> state
-*)
-
-(* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-Proof.
-  intros H1 H2; destruct e as [ e |]; inversion_clear H2. 
-  + (* Some *) inversion H0; clear H0; subst. autorewrite with trace_rewrite.
-    exploit step_simu_cfi_step; eauto.
-    intros (s2' & H2 & H3); eapply ex_intro; intuition eauto.
-  + (* None *) 
-     destruct c as [ |i c]; simpl in H1; inversion H1.
-     - eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
-     - remember to_cfi as o. destruct o; try discriminate.
-       inversion_clear H1.
-       eapply ex_intro; intuition eauto; try eapply match_states_trans_state.
-Qed.
-*)
-
 Lemma simu_end_block:
   forall s1 t s1',
   starN (Mach.step (inv_trans_rao rao)) ge (Datatypes.S (dist_end_block s1)) s1 t s1' ->
@@ -685,22 +662,8 @@ Proof.
     eapply exec_return.
 Qed.
 
-Axiom TODO: False. (* A ELIMINER *)
 
-Lemma t' i c:
-  exists bl,
-  trans_code_rev (rev_append c (i :: nil)) nil = 
-  trans_code_rev (i :: nil) bl.
-Proof.
-  exists (trans_code_rev c nil).
-  induction c; eauto.
-  simpl in IHc.
-  simpl.
-  unfold trans_code_rev.
-  (* TODO *)
-Admitted.
-
-Lemma cfi_dist_end_block i c: (* TODO: raccourcir *)
+Lemma cfi_dist_end_block i c:
 (exists cfi, trans_inst i = MB_cfi cfi) ->
 dist_end_block_code (i :: c) = 0.
 Proof.
@@ -711,53 +674,14 @@ Proof.
     rewrite <- is_trans_code_inv in Heqbl;
     inversion Heqbl; subst; simpl in * |- *; try (reflexivity || congruence)).
 Qed.
-(*
-    - simpl.
- destruct (e (Mcall s s0) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mtailcall s s0 ) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mbuiltin e0 l b ) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mgoto l) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mcond c0 l l0 ) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mjumptable m l) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-  + destruct (e (Mreturn) c) as [bl Ht].
-    unfold dist_end_block_code, trans_code; simpl.
-    rewrite Ht.
-    unfold trans_code_rev, add_to_code; simpl.
-    destruct bl; vm_compute; eauto.
-Qed.
-*)
+
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
 Proof.
   apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)
-  (* TODO: simplifier *)
   - intros s1 t s1' H1. 
-    destruct H1; simpl; omega || (intuition auto).
+    destruct H1; simpl; omega || (intuition auto). 
     + cutrewrite (dist_end_block_code (Mcall sig ros :: c)=0) in H2.
       destruct H2; eauto.
       apply cfi_dist_end_block; exists (MBcall sig ros); simpl; reflexivity.
@@ -779,12 +703,6 @@ Proof.
     + cutrewrite (dist_end_block_code (Mreturn :: c)=0) in H3.
       destruct H3; eauto.
       apply cfi_dist_end_block; exists (MBreturn) ; simpl; reflexivity.
-    (*unfold dist_end_block_code, trans_code, trans_code_rev, add_to_code. 
-    unfold size,add_to_new_bblock, add_label, add_basic. unfold cfi_bblock. simpl.*)
-    (*elim TODO.*) (* A FAIRE *)
-    (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
-    destruct H1; simpl; omega || (intuition auto).
-    *)
 (* public_preserved *)
   - apply senv_preserved.
 (* match_initial_states *)
@@ -797,13 +715,11 @@ Proof.
 (* match_final_states *)
   - intros. simpl. destruct H. split with (r := r); auto.
 (* final_states_end_block *)
-  - intros. simpl in H0. elim TODO.
-  (* VIELLE PREUVE -- UTILE POUR S'INSPIRER ??? 
+  - intros. simpl in H0.
     inversion H0.
-    inversion H; simpl; auto. 
-    (* the remaining instructions cannot lead to a Returnstate *)
-    all: subst; discriminate.
-  *)
+    inversion H; simpl; auto.
+    all: try (subst; discriminate).
+    apply cfi_dist_end_block; exists MBreturn; eauto.
 (* simu_end_block *)
   - apply simu_end_block.
 Qed.
