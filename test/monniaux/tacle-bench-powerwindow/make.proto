@@ -5,3 +5,4 @@ objdeps: [{name: powerwindow_const_params, compiler: both}, {name: powerwindow_c
           {name: powerwindow_PW_Control_PSG_BackL, compiler: both}, {name: powerwindow_PW_Control_PSG_BackR, compiler: both},
           {name: powerwindow_PW_Control_PSG_Front, compiler: both}]
 target: powerwindow
+measures: [cycles]

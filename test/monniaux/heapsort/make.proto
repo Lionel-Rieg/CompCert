@@ -1,2 +1,3 @@
 objdeps: [{name: heapsort_run, compiler: gcc}]
 target: heapsort
+measures: [heapsort_time]

@@ -1,2 +1,2 @@
 target: binary_search
-measures: ["random fill", "search1"]
+measures: ["random fill", search1]

@@ -93,14 +93,14 @@ int main() {
 	 "c1==c6: %s\n"
 	 "c1==c7: %s\n"
 	 "c1==c8: %s\n"
-	 "c1_time = %" PRIu64 "\n"
-	 "c2_time = %" PRIu64 "\n"
-	 "c3_time = %" PRIu64 "\n"
-	 "c4_time = %" PRIu64 "\n"
-	 "c5_time = %" PRIu64 "\n"
-	 "c6_time = %" PRIu64 "\n"
-	 "c7_time = %" PRIu64 "\n"
-	 "c8_time = %" PRIu64 "\n",
+	 "c1_time : %" PRIu64 "\n"
+	 "c2_time : %" PRIu64 "\n"
+	 "c3_time : %" PRIu64 "\n"
+	 "c4_time : %" PRIu64 "\n"
+	 "c5_time : %" PRIu64 "\n"
+	 "c6_time : %" PRIu64 "\n"
+	 "c7_time : %" PRIu64 "\n"
+	 "c8_time : %" PRIu64 "\n",
 	
 	 REAL_mat_equal(m, n, c1, p, c2, p)?"true":"false",
 	 REAL_mat_equal(m, n, c1, p, c3, p)?"true":"false",

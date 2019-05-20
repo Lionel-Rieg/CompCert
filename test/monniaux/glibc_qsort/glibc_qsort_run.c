@@ -41,7 +41,7 @@ int main (void) {
   quicksort(vec, len, sizeof(data), data_compare, NULL);
   quicksort_time = get_cycle() - quicksort_time;
   printf("sorted=%s\n"
-	 "quicksort_time=%" PRIu64 "\n",
+	 "quicksort_time:%" PRIu64 "\n",
 	 data_vec_is_sorted(vec, len)?"true":"false",
 	 quicksort_time);
   free(vec);

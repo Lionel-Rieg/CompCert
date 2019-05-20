@@ -1,2 +1,3 @@
 objdeps: [{name: sha-256_run, compiler: gcc}]
 target: sha-256
+measures: ["total cycles"]

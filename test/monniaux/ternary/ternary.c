@@ -19,6 +19,6 @@ int main() {
   clock_start();
   data result = silly_computation();
   clock_stop();
-  printf("result=%" PRIu32 "\ncycles=%" PRIu64 "\n", result, get_total_clock());
+  printf("result=%" PRIu32 "\ncycles:%" PRIu64 "\n", result, get_total_clock());
   return 0;
 }
