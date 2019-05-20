@@ -499,7 +499,7 @@ Proof.
   + intros. inversion H1; subst. 
     exploit (step_simu_basic_step ); eauto. 
     destruct 1 as [ rs1 [ m1 Hs]].
-    destruct Hs as [Hs1 [Hs2 Hs3]].    
+    destruct Hs as [Hs1 [Hs2 Hs3]].
     destruct (IHis_body rs1 m1 t2 s') as [rs2 Hb]. rewrite <- Hs1; eauto.
     destruct Hb as [m2 [Hb1 [Hb2 Hb3]]].
     exists rs2, m2.
@@ -569,11 +569,10 @@ Lemma step_simu_exit_step stk f sp rs m t s1 e c c' b blc:
   starN (Mach.step (inv_trans_rao rao)) (Genv.globalenv prog) (length_opt e) (Mach.State stk f sp c rs m) t s1 ->
   exists s2, exit_step rao tge e (State (trans_stack stk) f sp (b::blc) rs m) t s2 /\ match_states s1 s2.
 Proof.
-  destruct 1. 
+  destruct 1.
   - (* None *)
     intros H0 H1. inversion H1. exists (State (trans_stack stk) f sp blc rs m).
     split; eauto.
-    Search trans_code.
     apply is_trans_code_inv in H0. 
     rewrite H0.
     apply match_states_trans_state.
@@ -587,8 +586,7 @@ Proof.
     intros H0 H1.
     inversion H1; subst. 
     exploit (step_simu_cfi_step); eauto.
-    intro Hcfi.
-    destruct Hcfi as [s2 [Hcfi1 Hcfi3]].
+    intros [s2 [Hcfi1 Hcfi3]].
     inversion H4. subst; simpl.
     autorewrite  with trace_rewrite.
     exists s2.
@@ -672,7 +670,7 @@ Proof.
   destruct i;simpl in H;try(congruence); ( 
     remember (trans_code _) as bl; 
     rewrite <- is_trans_code_inv in Heqbl;
-    inversion Heqbl; subst; simpl in * |- *; try (reflexivity || congruence)).
+    inversion Heqbl; subst; simpl in * |- *; try (congruence)).
 Qed.
 
 Theorem transf_program_correct: 
@@ -680,29 +678,9 @@ Theorem transf_program_correct:
 Proof.
   apply forward_simulation_block_trans with (dist_end_block := dist_end_block) (trans_state := trans_state).
 (* simu_mid_block *)
-  - intros s1 t s1' H1. 
-    destruct H1; simpl; omega || (intuition auto). 
-    + cutrewrite (dist_end_block_code (Mcall sig ros :: c)=0) in H2.
-      destruct H2; eauto.
-      apply cfi_dist_end_block; exists (MBcall sig ros); simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mtailcall sig ros :: c)=0) in H4.
-      destruct H4; eauto.
-      apply cfi_dist_end_block; exists (MBtailcall sig ros ); simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mbuiltin ef args res :: b)=0) in H2.
-      destruct H2; eauto.
-      apply cfi_dist_end_block; exists (MBbuiltin ef args res); simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mgoto lbl :: c)=0) in H1.
-      destruct H1; eauto.
-      apply cfi_dist_end_block; exists (MBgoto lbl); simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mcond cond args lbl  :: c)=0) in H3.
-      destruct H3; eauto.
-      apply cfi_dist_end_block; exists (MBcond cond args lbl) ; simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mjumptable arg tbl :: c)=0) in H4.
-      destruct H4; eauto.
-      apply cfi_dist_end_block; exists (MBjumptable arg tbl) ; simpl; reflexivity.
-    + cutrewrite (dist_end_block_code (Mreturn :: c)=0) in H3.
-      destruct H3; eauto.
-      apply cfi_dist_end_block; exists (MBreturn) ; simpl; reflexivity.
+  - intros s1 t s1' H1 H2.
+    destruct H1; simpl in * |- *; omega || (intuition auto);
+    destruct H2; eapply cfi_dist_end_block; simpl; eauto.
 (* public_preserved *)
   - apply senv_preserved.
 (* match_initial_states *)
