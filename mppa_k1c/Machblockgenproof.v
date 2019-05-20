@@ -704,10 +704,16 @@ Lemma cfi_dist_end_block i c: (* TODO: raccourcir *)
 (exists cfi, trans_inst i = MB_cfi cfi) ->
 dist_end_block_code (i :: c) = 0.
 Proof.
-  pose t'.
+  unfold dist_end_block_code.
   intro H. destruct H as [cfi H].
-  destruct i;simpl in H;try(congruence).
-  + destruct (e (Mcall s s0) c) as [bl Ht].
+  destruct i;simpl in H;try(congruence); ( 
+    remember (trans_code _) as bl; 
+    rewrite <- is_trans_code_inv in Heqbl;
+    inversion Heqbl; subst; simpl in * |- *; try (reflexivity || congruence)).
+Qed.
+(*
+    - simpl.
+ destruct (e (Mcall s s0) c) as [bl Ht].
     unfold dist_end_block_code, trans_code; simpl.
     rewrite Ht.
     unfold trans_code_rev, add_to_code; simpl.
@@ -743,7 +749,7 @@ Proof.
     unfold trans_code_rev, add_to_code; simpl.
     destruct bl; vm_compute; eauto.
 Qed.
-
+*)
 Theorem transf_program_correct: 
     forward_simulation (Mach.semantics (inv_trans_rao rao) prog) (Machblock.semantics rao tprog).
 Proof.
