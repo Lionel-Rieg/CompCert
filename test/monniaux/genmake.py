@@ -8,6 +8,7 @@ See the source for more info.
 """
 
 from collections import namedtuple
+from typing import *
 import sys
 import yaml
 
@@ -36,7 +37,7 @@ if len(sys.argv) != 2:
 yaml_file = sys.argv[1]
 
 with open(yaml_file, "r") as f:
-  settings = yaml.load(f.read(), Loader=yaml.FullLoader)
+  settings = yaml.load(f.read(), Loader=yaml.SafeLoader)
 
 basename = settings["target"]
 objdeps = settings["objdeps"] if "objdeps" in settings else []
@@ -56,22 +57,22 @@ for objdep in objdeps:
 # Printing the rules
 ##
 
-def make_product(env, optim):
+def make_product(env: Env, optim: Optim) -> str:
   return basename + "." + env.compiler.short + (("." + optim.short) if optim.short != "" else "") + "." + env.target
 
-def make_obj(name, env, compiler_short):
+def make_obj(name: str, env: Env, compiler_short: str) -> str:
   return name + "." + compiler_short + "." + env.target + ".o"
 
-def make_clock(env, optim):
+def make_clock(env: Env, optim: Optim) -> str:
   return "clock.gcc." + env.target
 
-def make_sources(env, optim):
+def make_sources(env: Env, optim: Optim) -> str:
   if sources:
     return "$(src:.c=." + env.compiler.short + (("." + optim.short) if optim.short != "" else "") + "." + env.target + ".o)"
   else:
     return "{product}.o".format(product = make_product(env, optim))
 
-def print_rule(env, optim):
+def print_rule(env: Env, optim: Optim) -> None:
   print("{product}: {sources} ../{clock}.o "
         .format(product = make_product(env, optim),
           sources = make_sources(env, optim), clock = make_clock(env, optim))
@@ -79,12 +80,12 @@ def print_rule(env, optim):
   print("	{compiler} {flags} $+ -o $@"
         .format(compiler = env.compiler.full, flags = optim.full))
 
-def make_env_list(envs):
+def make_env_list(envs: List[Env]) -> str:
   return ",".join([(env.compiler.short + ((" " + optim.short) if optim.short != "" else "") + " " + env.target)
                     for env in environments
                     for optim in env.optimizations])
 
-def print_measure_rule(environments, measures):
+def print_measure_rule(environments: List[Env], measures: List[Union[List[str], str]]) -> None:
   print("measures.csv: $(PRODUCTS_OUT)")
   print('	echo "benches, {}" > $@'.format(make_env_list(environments)))
   for measure in measures:

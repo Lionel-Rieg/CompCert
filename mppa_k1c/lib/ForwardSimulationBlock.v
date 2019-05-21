@@ -271,6 +271,7 @@ However, the Machblock state after a goto remains "equivalent" to the trans_stat
 
 *)
 
+
 Section ForwardSimuBlock_TRANS.
 
 Variable L1 L2: semantics.
@@ -320,3 +321,53 @@ Proof.
 Qed.
 
 End ForwardSimuBlock_TRANS.
+
+
+(* another version with a relation [trans_state_R] instead of a function [trans_state] *)
+Section ForwardSimuBlock_TRANS_R.
+
+Variable L1 L2: semantics.
+
+Variable trans_state_R: state L1 -> state L2 -> Prop.
+
+Definition match_states_R s1 s2: Prop :=
+  exists s2', trans_state_R s1 s2' /\ equiv_on_next_step _ (exists t s1', Step L1 s1 t s1') (exists r, final_state L1 s1 r) s2 s2'.
+
+Lemma match_states_trans_state_R s1 s2: trans_state_R s1 s2 -> match_states_R s1 s2.
+Proof.
+  unfold match_states, equiv_on_next_step. firstorder.
+Qed.
+
+Variable dist_end_block: state L1 -> nat.
+
+Hypothesis simu_mid_block:
+  forall s1 t s1', Step L1 s1 t s1' -> (dist_end_block s1)<>0 -> t = E0 /\ dist_end_block s1=S (dist_end_block s1').
+
+Hypothesis public_preserved:
+  forall id, Senv.public_symbol (symbolenv L2) id = Senv.public_symbol (symbolenv L1) id.
+
+Hypothesis match_initial_states:
+  forall s1, initial_state L1 s1 -> exists s2, match_states_R s1 s2 /\ initial_state L2 s2.
+
+Hypothesis match_final_states:
+  forall s1 s2 r, final_state L1 s1 r -> trans_state_R s1 s2 -> final_state L2 s2 r.
+
+Hypothesis final_states_end_block:
+  forall s1 t s1' r, Step L1 s1 t s1' -> final_state L1 s1' r -> dist_end_block s1 = 0.
+
+Hypothesis simu_end_block:
+  forall s1 t s1' s2, starN (step L1) (globalenv L1) (S (dist_end_block s1)) s1 t s1' -> trans_state_R s1 s2 -> exists s2', Step L2 s2 t s2' /\ match_states_R s1' s2'.
+
+Lemma forward_simulation_block_trans_R: forward_simulation L1 L2.
+Proof.
+  eapply forward_simulation_block_rel with (dist_end_block:=dist_end_block) (match_states:=match_states_R); try tauto.
+  + (* final_states *) intros s1 s2 r H1 (s2' & H2 & H3 & H4). rewrite H4; eauto.
+  + (* simu_end_block *)
+    intros s1 t s1' s2 H1 (s2' & H2 & H2a & H2b). exploit simu_end_block; eauto.
+    intros (x & Hx & (y & H3 & H4 & H5)). repeat (econstructor; eauto).
+    rewrite H2a; eauto.
+    inversion_clear H1. eauto.
+Qed.
+
+End ForwardSimuBlock_TRANS_R.
+
