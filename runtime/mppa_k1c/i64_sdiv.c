@@ -1,5 +1,3 @@
-extern long __divdi3 (long a, long b);
-
 #include <mppa_bare_runtime/k1c/registers.h>
 
 /* DM FIXME this is for floating point */
