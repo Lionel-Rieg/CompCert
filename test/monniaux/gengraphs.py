@@ -1,9 +1,10 @@
 #!/usr/bin/python3.6
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
+import numpy as np              # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+import pandas as pd             # type: ignore
 import sys
+from typing import *
 
 ##
 # Reading data
@@ -28,7 +29,7 @@ colors = ["forestgreen", "darkorange", "cornflowerblue", "darkorchid", "darksalm
 # Generating PDF
 ##
 
-def extract_envs(keys):
+def extract_envs(keys: List[str]) -> List[str]:
   envs = []
   for key in keys:
     words = key.split()[:-1]
@@ -36,11 +37,11 @@ def extract_envs(keys):
   return envs
 
 
-def subdivide_interv(inf, sup, n):
+def subdivide_interv(inf: float, sup: float, n: int) -> List[float]:
   return [inf + k*(sup-inf)/n for k in range(n)]
 
 
-def generate_file(f, cols):
+def generate_file(f: str, cols: List[str]) -> None:
   ind = np.arange(len(df[cols[0]]))
 
   width = 0.35  # the width of the bars
@@ -63,7 +64,7 @@ def generate_file(f, cols):
   ax.set_xticklabels(benches)
   ax.legend()
 
-  def autolabel(rects, xpos='center'):
+  def autolabel(rects: List[Any], xpos='center') -> None:
       """
       Attach a text label above each bar in *rects*, displaying its height.
 
