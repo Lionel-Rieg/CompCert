@@ -1,4 +1,4 @@
-(** Parallel Semantics of Abstract Basic Blocks and parallelizability test.s
+(** Parallel Semantics of Abstract Basic Blocks and parallelizability test.
 *)
 
 Require Setoid. (* in order to rewrite <-> *)
@@ -32,7 +32,7 @@ Fixpoint inst_prun (i: inst) (m tmp old: mem): option mem :=
      end
   end.
 
-(* [inst_prun] is generalization of [inst_run] *)   
+(* [inst_prun] is generalization of [inst_run] *)
 Lemma inst_run_prun i: forall m old,
   inst_run ge i m old = inst_prun i m m old.
 Proof.

@@ -1,6 +1,6 @@
 (** Syntax and Sequential Semantics of Abstract Basic Blocks.
 *)
-
+Require Import ImpPrelude.
 
 Module Type PseudoRegisters.
 
@@ -24,15 +24,7 @@ Parameter op: Type. (* type of operations *)
 
 Parameter genv: Type. (* environment to be used for evaluating an op *)
 
-(* NB: possible generalization
- - relation after/before.
-*)
 Parameter op_eval: genv -> op -> list value -> option value.
-
-Parameter is_constant: op -> bool.
-
-Parameter is_constant_correct: 
-  forall ge o, is_constant o = true -> op_eval ge o nil <> None.
 
 End LangParam.
 
@@ -53,6 +45,9 @@ Definition mem := R.t -> value.
 
 Definition assign (m: mem) (x:R.t) (v: value): mem 
   := fun y => if R.eq_dec x y then v else m y.
+
+
+(** expressions *)
 
 Inductive exp :=
   | PReg (x:R.t)
@@ -140,7 +135,7 @@ Proof.
 Qed.
 
 
-(** A small theory of bblock equality *)
+(** A small theory of bblock simulation *)
 
 (* equalities on bblock outputs *)
 Definition res_eq (om1 om2: option mem): Prop :=
@@ -239,6 +234,121 @@ Proof.
 Qed.
 
 End SEQLANG.
+
+Module Terms.
+
+(** terms in the symbolic evaluation 
+NB: such a term represents the successive computations in one given pseudo-register
+*)
+
+Inductive term :=
+  | Input (x:R.t) (hid:hashcode)
+  | App (o: op) (l: list_term) (hid:hashcode)
+with list_term :=
+  | LTnil (hid:hashcode)
+  | LTcons (t:term) (l:list_term) (hid:hashcode)
+  .
+
+Scheme term_mut := Induction for term Sort Prop
+with list_term_mut := Induction for list_term Sort Prop.
+
+Bind Scope pattern_scope with term.
+Delimit Scope term_scope with term.
+Delimit Scope pattern_scope with pattern.
+
+Notation "[ ]" := (LTnil _) (format "[ ]"): pattern_scope.
+Notation "[ x ]" := (LTcons x [] _): pattern_scope.
+Notation "[ x ; y ; .. ; z ]" := (LTcons x (LTcons y .. (LTcons z (LTnil _) _) .. _) _): pattern_scope.
+Notation "o @ l" := (App o l _) (at level 50, no associativity): pattern_scope.
+
+Import HConsingDefs.
+
+Notation "[ ]" := (LTnil unknown_hid) (format "[ ]"): term_scope.
+Notation "[ x ]" := (LTcons x [] unknown_hid): term_scope.
+Notation "[ x ; y ; .. ; z ]" := (LTcons x (LTcons y .. (LTcons z (LTnil unknown_hid) unknown_hid) .. unknown_hid) unknown_hid): term_scope.
+Notation "o @ l" := (App o l unknown_hid) (at level 50, no associativity): term_scope.
+
+Local Open Scope pattern_scope.
+
+Fixpoint term_eval (ge: genv) (t: term) (m: mem): option value :=
+  match t with
+  | Input x _ => Some (m x)
+  | o @ l =>
+     match list_term_eval ge l m with
+     | Some v => op_eval ge o v
+     | _ => None
+     end
+  end
+with list_term_eval ge (l: list_term) (m: mem) {struct l}: option (list value) :=
+  match l with
+  | [] => Some nil
+  | LTcons t l' _ => 
+    match term_eval ge t m, list_term_eval ge l' m with
+    | Some v, Some lv => Some (v::lv)
+    | _, _ => None
+    end
+  end.
+
+
+Definition term_get_hid (t: term): hashcode :=
+  match t with
+  | Input _ hid => hid
+  | App _ _ hid => hid
+  end.
+
+Definition list_term_get_hid (l: list_term): hashcode :=
+  match l with
+  | LTnil hid => hid
+  | LTcons _ _ hid => hid
+  end.
+
+
+Definition allvalid ge (l: list term) m := forall t, List.In t l -> term_eval ge t m <> None.
+
+Record pseudo_term: Type := {
+  valid: list term;
+  effect: term
+}.
+
+Definition match_pseudo_term (t: term) (pt: pseudo_term) :=
+      (forall ge m, term_eval ge t m <> None <-> allvalid ge pt.(valid) m)
+   /\ (forall ge m0 m1, term_eval ge t m0 = Some m1 -> term_eval ge pt.(effect) m0 = Some m1).
+
+Import ImpCore.Notations.
+Local Open Scope impure_scope.
+
+Record reduction (t:term):= {
+  result:> ?? pseudo_term;
+  result_correct: WHEN result ~> pt THEN match_pseudo_term t pt;
+}.
+Hint Resolve result_correct: wlp.
+
+Program Definition identity_reduce (t: term): reduction t := {| result := RET {| valid := [t]; effect := t |} |}.
+Obligation 1.
+  unfold match_pseudo_term, allvalid; wlp_simplify; congruence.
+Qed.
+Global Opaque identity_reduce.
+
+Program Definition failsafe_reduce (is_constant: op -> bool | forall ge o, is_constant o = true -> op_eval ge o nil <> None) (t: term) :=
+  match t with
+  | Input x _ => {| result := RET {| valid := []; effect := t |} |}
+  | o @ [] => match is_constant o with 
+              | true => {| result := RET {| valid := []; effect := t |} |}
+              | false => identity_reduce t
+              end
+  | _ => identity_reduce t
+  end.
+Obligation 1.
+  unfold match_pseudo_term, allvalid; simpl; wlp_simplify; congruence.
+Qed.
+Obligation 2.
+  unfold match_pseudo_term, allvalid; simpl; wlp_simplify.
+Qed.
+Obligation 3.
+  intuition congruence.
+Qed.
+
+End Terms.
 
 End MkSeqLanguage.
 

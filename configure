@@ -807,7 +807,7 @@ BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
     Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\
     Asmblockdeps.v DecBoolOps.v Chunks.v Peephole.v ExtValues.v\\
-    AbstractBasicBlocksDef.v DepTreeTheory.v ImpDep.v Parallelizability.v\\
+    AbstractBasicBlocksDef.v SeqSimuTheory.v ImpSimuTest.v Parallelizability.v\\
     ImpConfig.v ImpCore.v ImpExtern.v ImpHCons.v ImpIO.v ImpLoops.v ImpMonads.v ImpPrelude.v
 EOF
 fi

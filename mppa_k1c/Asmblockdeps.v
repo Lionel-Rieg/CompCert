@@ -9,7 +9,7 @@ Require Import Integers.
 Require Import Floats.
 Require Import ZArith.
 Require Import Coqlib.
-Require Import ImpDep.
+Require Import ImpSimuTest.
 Require Import Axioms.
 Require Import Parallelizability.
 Require Import Asmvliw Permutation.
@@ -302,30 +302,6 @@ Definition op_eval (o: op) (l: list value) :=
   end.
 
 
- (** Function [is_constant] is used for a small optimization inside the scheduling verifier.
-    It is good that it answers [true] as much as possible while satisfying [is_constant_correct] below.
-
-   BE CAREFUL that, [is_constant] must not depend on [ge].
-   Otherwise, we would have an easy implementation: [match op_eval o nil with Some _ => true | _ => false end]
-
-   => REM: when [is_constant] is not complete w.r.t [is_constant_correct], this should have only a very little impact
-      on the performance of the scheduling verifier...
-  *)
-
-Definition is_constant (o: op): bool :=
-  match o with
-  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
-  | _ => false
-  end.
-
-Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
-Proof.
-  destruct o; simpl; try congruence.
-  destruct ao; simpl; try congruence;
-  destruct n; simpl; try congruence;
-  unfold arith_eval; destruct Ge; simpl; try congruence.
-Qed.
-
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   match o1 with
   | OArithR n1 =>
@@ -507,7 +483,7 @@ Include MkSeqLanguage P.
 
 End L.
 
-Module IDT := ImpDepTree L ImpPosDict.
+Module IST := ImpSimu L ImpPosDict.
 
 Import L.
 Import P.
@@ -1593,16 +1569,35 @@ Definition string_of_op (op: P.op): ?? pstring :=
   | Fail => RET (Str "Fail")
   end.
 
+End SECT_BBLOCK_EQUIV.
+
+(** REWRITE RULES *)
+
+Definition is_constant (o: op): bool :=
+  match o with
+  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
+  | _ => false
+  end.
+
+Program Definition failsafe_reduce := Terms.failsafe_reduce is_constant.
+Obligation 1.
+  destruct o; simpl in * |- *; try congruence.
+  destruct ao; simpl in * |- *; try congruence;
+  destruct n; simpl in * |- *; try congruence;
+  unfold arith_eval; destruct ge; simpl in * |- *; try congruence.
+Qed.
+
+
 Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_simu_test string_of_name string_of_op (trans_block p1) (trans_block p2)
+    IST.verb_bblock_simu_test failsafe_reduce string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IDT.bblock_simu_test (trans_block p1) (trans_block p2).
+    IST.bblock_simu_test failsafe_reduce (trans_block p1) (trans_block p2).
 
-Local Hint Resolve IDT.bblock_simu_test_correct bblock_simu_reduce IDT.verb_bblock_simu_test_correct: wlp.
+Local Hint Resolve IST.bblock_simu_test_correct bblock_simu_reduce IST.verb_bblock_simu_test_correct: wlp.
 
 Theorem bblock_simu_test_correct verb p1 p2 :
-  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
   wlp_simplify.
 Qed.
@@ -1614,7 +1609,7 @@ Import UnsafeImpure.
 
 Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
 
-Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: Ge = Genv ge fn -> pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
    intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
@@ -1622,9 +1617,7 @@ Qed.
 
 Definition bblock_simub: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_simu_test true.
 
-Lemma bblock_simub_correct p1 p2 ge fn: Ge = Genv ge fn -> bblock_simub p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Lemma bblock_simub_correct p1 p2 ge fn: bblock_simub p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
  eapply (pure_bblock_simu_test_correct true).
 Qed.
-
-End SECT_BBLOCK_EQUIV.
