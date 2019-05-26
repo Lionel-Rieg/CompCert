@@ -306,12 +306,12 @@ Definition list_term_get_hid (l: list_term): hashcode :=
 Definition allvalid ge (l: list term) m := forall t, List.In t l -> term_eval ge t m <> None.
 
 Record pseudo_term: Type := {
-  valid: list term;
+  mayfail: list term;
   effect: term
 }.
 
 Definition match_pseudo_term (t: term) (pt: pseudo_term) :=
-      (forall ge m, term_eval ge t m <> None <-> allvalid ge pt.(valid) m)
+      (forall ge m, term_eval ge t m <> None <-> allvalid ge pt.(mayfail) m)
    /\ (forall ge m0 m1, term_eval ge t m0 = Some m1 -> term_eval ge pt.(effect) m0 = Some m1).
 
 Import ImpCore.Notations.
@@ -323,7 +323,7 @@ Record reduction (t:term):= {
 }.
 Hint Resolve result_correct: wlp.
 
-Program Definition identity_reduce (t: term): reduction t := {| result := RET {| valid := [t]; effect := t |} |}.
+Program Definition identity_reduce (t: term): reduction t := {| result := RET {| mayfail := [t]; effect := t |} |}.
 Obligation 1.
   unfold match_pseudo_term, allvalid; wlp_simplify; congruence.
 Qed.
@@ -331,9 +331,9 @@ Global Opaque identity_reduce.
 
 Program Definition failsafe_reduce (is_constant: op -> bool | forall ge o, is_constant o = true -> op_eval ge o nil <> None) (t: term) :=
   match t with
-  | Input x _ => {| result := RET {| valid := []; effect := t |} |}
+  | Input x _ => {| result := RET {| mayfail := []; effect := t |} |}
   | o @ [] => match is_constant o with 
-              | true => {| result := RET {| valid := []; effect := t |} |}
+              | true => {| result := RET {| mayfail := []; effect := t |} |}
               | false => identity_reduce t
               end
   | _ => identity_reduce t

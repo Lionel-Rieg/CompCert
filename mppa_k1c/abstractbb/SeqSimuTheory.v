@@ -337,16 +337,16 @@ Proof.
   unfold smem_empty; simpl. auto.
 Qed.
 
-Definition svalid ge d m := pre d ge m /\ forall x, smem_eval ge d x m <> None.
+Definition smem_valid ge d m := pre d ge m /\ forall x, smem_eval ge d x m <> None.
 
 Theorem bblock_smem_simu p1 p2:
-  (forall m, svalid ge (bblock_smem p1) m -> svalid ge (bblock_smem p2) m) ->
-  (forall m0 x m1, svalid ge (bblock_smem p1) m0 -> smem_eval ge (bblock_smem p1) x m0 = Some m1 ->
+  (forall m, smem_valid ge (bblock_smem p1) m -> smem_valid ge (bblock_smem p2) m) ->
+  (forall m0 x m1, smem_valid ge (bblock_smem p1) m0 -> smem_eval ge (bblock_smem p1) x m0 = Some m1 ->
                    smem_eval ge (bblock_smem p2) x m0 = Some m1) ->
    bblock_simu ge p1 p2.
 Proof.
   Local Hint Resolve bblock_smem_valid bblock_smem_Some_correct1.
-  unfold svalid; intros INCL EQUIV m DONTFAIL.
+  unfold smem_valid; intros INCL EQUIV m DONTFAIL.
   destruct (run ge p1 m) as [m1|] eqn: RUN1; simpl; try congruence.
   assert (X: forall x, smem_eval ge (bblock_smem p1) x m = Some (m1 x)); eauto.
   eapply bblock_smem_Some_correct2; eauto.
@@ -356,28 +356,28 @@ Proof.
     congruence.
 Qed.
 
-Lemma svalid_set_decompose_1 d t x m:
-  svalid ge (smem_set d x t) m -> svalid ge d m.
+Lemma smem_valid_set_decompose_1 d t x m:
+  smem_valid ge (smem_set d x t) m -> smem_valid ge d m.
 Proof.
-  unfold svalid; intros ((PRE1 & PRE2) & VALID); split.
+  unfold smem_valid; intros ((PRE1 & PRE2) & VALID); split.
   + intuition.
   + intros x0 H. case (R.eq_dec x x0).
     * intuition congruence.
     * intros DIFF; eapply VALID. erewrite set_spec_diff; eauto.
 Qed.
 
-Lemma svalid_set_decompose_2 d t x m:
-  svalid ge (smem_set d x t) m -> term_eval ge t m <> None.
+Lemma smem_valid_set_decompose_2 d t x m:
+  smem_valid ge (smem_set d x t) m -> term_eval ge t m <> None.
 Proof.
-  unfold svalid; intros ((PRE1 & PRE2) & VALID) H.
+  unfold smem_valid; intros ((PRE1 & PRE2) & VALID) H.
   generalize (VALID x); autorewrite with dict_rw.
   tauto.
 Qed.
 
-Lemma svalid_set_proof d x t m:
-  svalid ge d m -> term_eval ge t m <> None -> svalid ge (smem_set d x t) m.
+Lemma smem_valid_set_proof d x t m:
+  smem_valid ge d m -> term_eval ge t m <> None -> smem_valid ge (smem_set d x t) m.
 Proof.
-  unfold svalid; intros (PRE & VALID) PREt. split.
+  unfold smem_valid; intros (PRE & VALID) PREt. split.
   + split; auto.
   + intros x0; case (R.eq_dec x x0).
     - intros; subst; autorewrite with dict_rw. auto.

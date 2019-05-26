@@ -231,20 +231,20 @@ Global Opaque hsmem_get.
 Hint Resolve hsmem_get_correct: wlp.
 
 Definition smem_model ge (d: smem) (hd:hsmem): Prop :=
-  (forall m, allvalid ge hd.(hpre) m <-> svalid ge d m) 
-  /\ (forall m x, svalid ge d m -> smem_eval ge hd x m = (smem_eval ge d x m)).
+  (forall m, allvalid ge hd.(hpre) m <-> smem_valid ge d m) 
+  /\ (forall m x, smem_valid ge d m -> smem_eval ge hd x m = (smem_eval ge d x m)).
 
-Lemma smem_model_svalid_alt ge d hd: smem_model ge d hd -> 
- forall m x, svalid ge d m -> smem_eval ge hd x m <> None.
+Lemma smem_model_smem_valid_alt ge d hd: smem_model ge d hd -> 
+ forall m x, smem_valid ge d m -> smem_eval ge hd x m <> None.
 Proof.
   intros (H1 & H2) m x H. rewrite H2; auto.
-  unfold svalid in H. intuition eauto.
+  unfold smem_valid in H. intuition eauto.
 Qed.
 
 Lemma smem_model_allvalid_alt ge d hd: smem_model ge d hd -> 
  forall m x, allvalid ge hd.(hpre) m -> smem_eval ge hd x m <> None.
 Proof.
-  intros (H1 & H2) m x H. eapply smem_model_svalid_alt.
+  intros (H1 & H2) m x H. eapply smem_model_smem_valid_alt.
   - split; eauto.
   - rewrite <- H1; auto.
 Qed.
@@ -254,24 +254,24 @@ Definition naive_set (hd:hsmem) x (t:term) :=
 
 Lemma naive_set_correct hd x ht ge d t:
     smem_model ge d hd ->
-    (forall m, svalid ge d m -> term_eval ge ht m = term_eval ge t m) ->
+    (forall m, smem_valid ge d m -> term_eval ge ht m = term_eval ge t m) ->
     smem_model ge (smem_set d x t) (naive_set hd x ht).
 Proof.
   unfold naive_set; intros (DM0 & DM1) EQT; split.
   - intros m.
     destruct (DM0 m) as (PRE & VALID0); clear DM0.
-    assert (VALID1: allvalid ge hd.(hpre) m -> pre d ge m). { unfold svalid in PRE; tauto. }
-    assert (VALID2: allvalid ge hd.(hpre) m -> forall x : Dict.R.t, smem_eval ge d x m <> None). { unfold svalid in PRE; tauto. }
+    assert (VALID1: allvalid ge hd.(hpre) m -> pre d ge m). { unfold smem_valid in PRE; tauto. }
+    assert (VALID2: allvalid ge hd.(hpre) m -> forall x : Dict.R.t, smem_eval ge d x m <> None). { unfold smem_valid in PRE; tauto. }
     unfold allvalid in * |- *; simpl.
     intuition (subst; eauto).
-    + eapply svalid_set_proof; eauto.
+    + eapply smem_valid_set_proof; eauto.
       erewrite <- EQT; eauto.
-    + exploit svalid_set_decompose_1; eauto.
-      intros X1; exploit svalid_set_decompose_2; eauto.
+    + exploit smem_valid_set_decompose_1; eauto.
+      intros X1; exploit smem_valid_set_decompose_2; eauto.
       rewrite <- EQT; eauto.
-    + exploit svalid_set_decompose_1; eauto.
+    + exploit smem_valid_set_decompose_1; eauto.
   - clear DM0. unfold smem_eval, smem_eval, smem_get in * |- *; simpl.
-    Local Hint Resolve svalid_set_decompose_1.
+    Local Hint Resolve smem_valid_set_decompose_1.
     intros; case (R.eq_dec x x0).
     + intros; subst; rewrite !Dict.set_spec_eq; simpl; eauto.
     + intros; rewrite !Dict.set_spec_diff; simpl; eauto.
@@ -387,7 +387,7 @@ Global Opaque smart_set.
 
 Definition hsmem_set (hd:hsmem) x (t:term) :=
   DO pt <~ reduce t;;
-  DO lht <~ hterm_append pt.(valid) hd.(hpre);;
+  DO lht <~ hterm_append pt.(mayfail) hd.(hpre);;
   DO ht <~ hterm_lift pt.(effect);;
   log_new_hterm ht;;
   DO nd <~ smart_set hd x ht;;
@@ -396,7 +396,7 @@ Definition hsmem_set (hd:hsmem) x (t:term) :=
 Lemma hsmem_set_correct hd x ht:
   WHEN hsmem_set hd x ht ~> nhd THEN
     forall ge d t, smem_model ge d hd ->
-    (forall m, svalid ge d m -> term_eval ge ht m = term_eval ge t m) ->
+    (forall m, smem_valid ge d m -> term_eval ge ht m = term_eval ge t m) ->
     smem_model ge (smem_set d x t) nhd.
 Proof.
   intros; wlp_simplify.
@@ -418,34 +418,79 @@ Qed.
 Local Hint Resolve hsmem_set_correct: wlp.
 Global Opaque hsmem_set.
 
+(* VARIANTE: we do not hash-cons the term from the expression
 Lemma exp_hterm_correct ge e hod od:
   smem_model ge od hod ->
  forall hd d,
   smem_model ge d hd ->
-  forall m, svalid ge d m -> svalid ge od m -> term_eval ge (exp_term e hd hod) m = term_eval ge (exp_term e d od) m.
+  forall m, smem_valid ge d m -> smem_valid ge od m -> term_eval ge (exp_term e hd hod) m = term_eval ge (exp_term e d od) m.
 Proof.
   intro H.
   induction e using exp_mut with (P0:=fun le =>  forall d hd,
-     smem_model ge d hd -> forall m, svalid ge d m -> svalid ge od m -> list_term_eval ge (list_exp_term le hd hod) m = list_term_eval ge (list_exp_term le d od) m); 
+     smem_model ge d hd -> forall m, smem_valid ge d m -> smem_valid ge od m -> list_term_eval ge (list_exp_term le hd hod) m = list_term_eval ge (list_exp_term le d od) m); 
      unfold smem_model in * |- * ; simpl; intuition eauto.
   - erewrite IHe; eauto.
   - erewrite IHe0, IHe; eauto.
 Qed.
 Local Hint Resolve exp_hterm_correct: wlp.
+*)
+
+Fixpoint hexp_term (e: exp) (d od: hsmem): ?? term :=
+  match e with
+  | PReg x => hsmem_get d x
+  | Op o le =>
+     DO lt <~ hlist_exp_term le d od;; 
+     hApp o lt
+  | Old e => hexp_term e od od
+  end
+with hlist_exp_term (le: list_exp) (d od: hsmem): ?? list_term :=
+  match le with
+  | Enil => hLTnil tt
+  | Econs e le' => 
+     DO t <~ hexp_term e d od;;
+     DO lt <~ hlist_exp_term le' d od;;
+     hLTcons t lt
+  | LOld le => hlist_exp_term le od od
+  end.
+
+Lemma hexp_term_correct_x ge e hod od:
+   smem_model ge od hod ->
+  forall hd d,
+   smem_model ge d hd ->
+  WHEN hexp_term e hd hod ~> t THEN forall m, smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = term_eval ge (exp_term e d od) m.
+ Proof.
+   intro H.
+   induction e using exp_mut with (P0:=fun le =>  forall d hd,
+     smem_model ge d hd ->
+     WHEN hlist_exp_term le hd hod ~> lt THEN forall m, smem_valid ge d m -> smem_valid ge od m -> list_term_eval ge lt m = list_term_eval ge (list_exp_term le d od) m); 
+     unfold smem_model, smem_eval in * |- * ; simpl; wlp_simplify.
+  - rewrite H1, <- H4; auto.
+  - rewrite H4, <- H0; simpl; auto.
+  - rewrite H5, <- H0, <- H4; simpl; auto.
+Qed.
+Global Opaque hexp_term.
+
+Lemma hexp_term_correct e hd hod:
+  WHEN hexp_term e hd hod ~> t THEN forall ge od d m, smem_model ge od hod -> smem_model ge d hd -> smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = term_eval ge (exp_term e d od) m.
+Proof.
+  unfold wlp; intros; eapply hexp_term_correct_x; eauto.
+Qed.
+Hint Resolve hexp_term_correct: wlp.
 
 Fixpoint hinst_smem (i: inst) (hd hod: hsmem): ?? hsmem :=
   match i with
   | nil => RET hd
   | (x, e)::i' =>
-     DO nd <~ hsmem_set hd x (exp_term e hd hod);;
+     DO ht <~ hexp_term e hd hod;;
+     DO nd <~ hsmem_set hd x ht;;
      hinst_smem i' nd hod
   end.
 
 Lemma hinst_smem_correct i: forall hd hod,
   WHEN hinst_smem i hd hod ~> hd' THEN
-    forall ge od d, smem_model ge od hod -> smem_model ge d hd -> (forall m, svalid ge d m -> svalid ge od m) -> smem_model ge (inst_smem i d od) hd'.
+    forall ge od d, smem_model ge od hod -> smem_model ge d hd -> (forall m, smem_valid ge d m -> smem_valid ge od m) -> smem_model ge (inst_smem i d od) hd'.
 Proof.
-  Local Hint Resolve svalid_set_proof.
+  Local Hint Resolve smem_valid_set_proof.
   induction i; simpl; wlp_simplify; eauto 15 with wlp.
 Qed.
 Global Opaque hinst_smem.
@@ -479,7 +524,7 @@ Lemma hbblock_smem_correct p:
   WHEN hbblock_smem p ~> hd THEN forall ge, smem_model ge (bblock_smem p) hd.
 Proof.
   unfold bblock_smem; wlp_simplify. eapply H. clear H.
-  unfold smem_model, svalid, smem_eval, allvalid, smem_eval, smem_get; simpl; intuition;
+  unfold smem_model, smem_valid, smem_eval, allvalid, smem_eval, smem_get; simpl; intuition;
   rewrite !Dict.empty_spec in * |- *; simpl in * |- *; try congruence.
 Qed.
 Global Opaque hbblock_smem.
