@@ -325,6 +325,13 @@ Record pseudo_term: Type := intro_fail {
   effect: term
 }.
 
+Lemma inf_option_equivalence (A:Type) (o1 o2: option A):
+  (o1 <> None -> o1 = o2) <-> (forall m1, o1 = Some m1 -> o2 = Some m1).
+Proof.
+  destruct o1; intuition (congruence || eauto).
+  symmetry; eauto.
+Qed.
+
 Definition match_pt (t: term) (pt: pseudo_term) :=
       (forall ge m, term_eval ge t m <> None <-> allvalid ge pt.(mayfail) m)
    /\ (forall ge m0 m1, term_eval ge t m0 = Some m1 -> term_eval ge pt.(effect) m0 = Some m1).
@@ -383,15 +390,12 @@ Hint Resolve match_pt_term_equiv: wlp.
 Definition app_fail (l: list term) (pt: pseudo_term): pseudo_term :=
   {| mayfail := List.rev_append l pt.(mayfail); effect := pt.(effect) |}.
 
-Lemma app_fail_correct l pt t1 t2: 
-  match_pt t1 pt -> 
-  match_pt t2 {| mayfail:=t1::l; effect:=t1 |} ->
-  match_pt t2 (app_fail l pt).
+Lemma app_fail_allvalid_correct l pt t1 t2: forall
+  (V1: forall (ge : genv) (m : mem), term_eval ge t1 m <> None <-> allvalid ge (mayfail pt) m)
+  (V2: forall (ge : genv) (m : mem), term_eval ge t2 m <> None <-> allvalid ge (mayfail {| mayfail := t1 :: l; effect := t1 |}) m)
+  (ge : genv) (m : mem), term_eval ge t2 m <> None <-> allvalid ge (mayfail (app_fail l pt)) m.
 Proof.
-  unfold match_pt in * |- *.
-  intros (XV & XE) (YV & YE).
-  split; intros ge m; try (simpl; auto; fail).
-  generalize (XV ge m) (YV ge m); rewrite !allvalid_extensionality; simpl. clear XV XE YV YE.
+  intros; generalize (V1 ge m) (V2 ge m); rewrite !allvalid_extensionality; simpl. clear V1 V2.
   intuition subst.
   + rewrite rev_append_rev, in_app_iff, <- in_rev in H3. destruct H3; eauto.
   + eapply H3; eauto.
@@ -399,10 +403,16 @@ Proof.
     * eapply H2; eauto. intros; eapply H0; eauto. rewrite rev_append_rev, in_app_iff; auto.
     * intros; eapply H0; eauto. rewrite rev_append_rev, in_app_iff, <- in_rev; auto.
 Qed.
-Hint Resolve app_fail_correct: wlp.
-Extraction Inline app_fail.
-Global Opaque app_fail.
+Local Hint Resolve app_fail_allvalid_correct.
 
+Lemma app_fail_correct l pt t1 t2: 
+  match_pt t1 pt -> 
+  match_pt t2 {| mayfail:=t1::l; effect:=t1 |} ->
+  match_pt t2 (app_fail l pt).
+Proof.
+  unfold match_pt in * |- *; intros (V1 & E1) (V2 & E2); split; intros ge m; try (eauto; fail).
+Qed.
+Extraction Inline app_fail.
 
 Import ImpCore.Notations.
 Local Open Scope impure_scope.
