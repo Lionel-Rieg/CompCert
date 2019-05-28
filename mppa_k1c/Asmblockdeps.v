@@ -1579,20 +1579,31 @@ Definition is_constant (o: op): bool :=
   | _ => false
   end.
 
-Program Definition failsafe_reduce := Terms.failsafe_reduce is_constant.
-Obligation 1.
+Lemma is_constant_correct ge o: is_constant o = true -> op_eval ge o [] <> None.
+Proof.
   destruct o; simpl in * |- *; try congruence.
   destruct ao; simpl in * |- *; try congruence;
   destruct n; simpl in * |- *; try congruence;
   unfold arith_eval; destruct ge; simpl in * |- *; try congruence.
 Qed.
 
+Definition main_reduce (t: Terms.term):= RET (Terms.nofail is_constant t).
+
+Local Hint Resolve is_constant_correct: wlp.
+
+Lemma main_reduce_correct t:
+ WHEN main_reduce t ~> pt THEN Terms.match_pt t pt.
+Proof.
+  wlp_simplify.
+Qed.
+
+Definition reduce := {| Terms.result := main_reduce; Terms.result_correct := main_reduce_correct |}.
 
 Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
   if verb then
-    IST.verb_bblock_simu_test failsafe_reduce string_of_name string_of_op (trans_block p1) (trans_block p2)
+    IST.verb_bblock_simu_test reduce string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IST.bblock_simu_test failsafe_reduce (trans_block p1) (trans_block p2).
+    IST.bblock_simu_test reduce (trans_block p1) (trans_block p2).
 
 Local Hint Resolve IST.bblock_simu_test_correct bblock_simu_reduce IST.verb_bblock_simu_test_correct: wlp.
 

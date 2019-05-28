@@ -67,20 +67,20 @@ Declare Module CoreL: ISeqLanguage.
 Import CoreL.
 Import Terms.
 
-Parameter bblock_simu_test: (forall t : term, reduction t) -> bblock -> bblock -> ?? bool.
+Parameter bblock_simu_test: reduction -> bblock -> bblock -> ?? bool.
 
-Parameter bblock_simu_test_correct: forall (reduce: forall t, reduction t) (p1 p2 : bblock),
+Parameter bblock_simu_test_correct: forall reduce (p1 p2 : bblock),
     WHEN bblock_simu_test reduce p1 p2 ~> b
     THEN b = true -> forall ge : genv, bblock_simu ge p1 p2.
 
 
 Parameter verb_bblock_simu_test
-     : (forall t : term, reduction t) ->
+     : reduction ->
        (R.t -> ?? pstring) ->
        (op -> ?? pstring) -> bblock -> bblock -> ?? bool.
 
 Parameter verb_bblock_simu_test_correct: 
-   forall (reduce: forall t, reduction t)
+   forall reduce
           (string_of_name : R.t -> ?? pstring)
           (string_of_op : op -> ?? pstring) 
           (p1 p2 : bblock),
@@ -128,7 +128,7 @@ Module D:=ImpPrelude.Dict.
 
 Section SimuWithReduce.
 
-Variable reduce: forall t, reduction t.
+Variable reduce: reduction.
 
 Section CanonBuilding.
 
@@ -230,6 +230,8 @@ Qed.
 Global Opaque hsmem_get.
 Hint Resolve hsmem_get_correct: wlp.
 
+Local Opaque allvalid.
+
 Definition smem_model ge (d: smem) (hd:hsmem): Prop :=
   (forall m, allvalid ge hd.(hpre) m <-> smem_valid ge d m) 
   /\ (forall m x, smem_valid ge d m -> smem_eval ge hd x m = (smem_eval ge d x m)).
@@ -262,7 +264,7 @@ Proof.
     destruct (DM0 m) as (PRE & VALID0); clear DM0.
     assert (VALID1: allvalid ge hd.(hpre) m -> pre d ge m). { unfold smem_valid in PRE; tauto. }
     assert (VALID2: allvalid ge hd.(hpre) m -> forall x : Dict.R.t, smem_eval ge d x m <> None). { unfold smem_valid in PRE; tauto. }
-    unfold allvalid in * |- *; simpl.
+    rewrite !allvalid_extensionality in * |- *; simpl.
     intuition (subst; eauto).
     + eapply smem_valid_set_proof; eauto.
       erewrite <- EQT; eauto.
@@ -351,8 +353,10 @@ Lemma hterm_append_correct l: forall lh,
   WHEN hterm_append l lh ~> lh' THEN (forall ge m, allvalid ge lh' m <-> (allvalid ge l m /\ allvalid ge lh m)).
 Proof.
   Local Hint Resolve eq_trans: localhint.
-  unfold allvalid; induction l as [|t l']; simpl; wlp_xsimplify ltac:(eauto with wlp).
-  intros REC ge m; rewrite REC; clear IHl' REC. intuition (subst; eauto with wlp localhint).
+  induction l as [|t l']; simpl; wlp_xsimplify ltac:(eauto with wlp).
+  - intros; rewrite! allvalid_extensionality; intuition eauto.
+  - intros REC ge m; rewrite REC; clear IHl' REC. rewrite !allvalid_extensionality.
+    simpl; intuition (subst; eauto with wlp localhint).
 Qed.
 (*Local Hint Resolve hterm_append_correct: wlp.*)
 Global Opaque hterm_append.
@@ -406,14 +410,14 @@ Proof.
   eapply equiv_hsmem_models; eauto; unfold equiv_hsmem; simpl. 
   destruct H as (VALID & EFFECT); split.
   - intros; rewrite APPEND, <- VALID.
-    unfold allvalid; simpl; intuition (subst; eauto).
+    rewrite !allvalid_extensionality in * |- *; simpl; intuition (subst; eauto).
   - intros m x0 ALLVALID; rewrite SMART.
     destruct (term_eval ge ht m) eqn: Hht.
     * case (R.eq_dec x x0).
       + intros; subst. unfold smem_eval; unfold smem_get; simpl. rewrite !Dict.set_spec_eq.
         erewrite LIFT, EFFECT; eauto.
       + intros; unfold smem_eval; unfold smem_get; simpl. rewrite !Dict.set_spec_diff; auto.
-    * destruct (ALLVALID ht); simpl; auto.
+    * rewrite allvalid_extensionality in ALLVALID; destruct (ALLVALID ht); simpl; auto.
 Qed.
 Local Hint Resolve hsmem_set_correct: wlp.
 Global Opaque hsmem_set.
@@ -520,11 +524,13 @@ Local Hint Resolve hbblock_smem_rec_correct: wlp.
 Definition hbblock_smem: bblock -> ?? hsmem
  := fun p => hbblock_smem_rec p {| hpre:= nil ; hpost := Dict.empty |}.
 
+Transparent allvalid.
+
 Lemma hbblock_smem_correct p:
   WHEN hbblock_smem p ~> hd THEN forall ge, smem_model ge (bblock_smem p) hd.
 Proof.
   unfold bblock_smem; wlp_simplify. eapply H. clear H.
-  unfold smem_model, smem_valid, smem_eval, allvalid, smem_eval, smem_get; simpl; intuition;
+  unfold smem_model, smem_valid, smem_eval, smem_get; simpl; intuition;
   rewrite !Dict.empty_spec in * |- *; simpl in * |- *; try congruence.
 Qed.
 Global Opaque hbblock_smem.
@@ -649,12 +655,14 @@ Obligation 1.
   destruct (H ge) as (EQPRE1&EQPOST1); destruct (H0 ge) as (EQPRE2&EQPOST2); clear H H0.
   apply bblock_smem_simu; auto.
   + intros m; rewrite <- EQPRE1, <- EQPRE2.
-    unfold incl, allvalid in * |- *; intuition eauto.
+    rewrite ! allvalid_extensionality.
+    unfold incl in * |- *; intuition eauto.
   + intros m0 x m1 VALID; rewrite <- EQPOST1, <- EQPOST2; auto.
     erewrite smem_eval_intro; eauto.
     erewrite <- EQPRE2; auto.
     erewrite <- EQPRE1 in VALID.
-    unfold incl, allvalid in * |- *; intuition eauto.
+    rewrite ! allvalid_extensionality in * |- *.
+    unfold incl in * |- *; intuition eauto.
 Qed.
 
 Theorem g_bblock_simu_test_correct p1 p2:
@@ -1011,9 +1019,10 @@ Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
     DO cr <~ make_cref None;;
     DO hco_term <~ mk_annot (hCons hht);;
     DO hco_list <~ mk_annot (hCons hlht);;
-    DO result2 <~ g_bblock_simu_test 
+    DO result2 <~ g_bblock_simu_test
        (log_assign dict_info log1)
-       (log_new_term (msg_term cr))
+       (*fun _ _ => RET no_log_new_term*)  (* REM: too weak !! *)
+       (log_new_term (msg_term cr))        (* REM: too strong ?? *)
        (hlog log1 hco_term hco_list)
        (log_insert log2)
        hco_term _
