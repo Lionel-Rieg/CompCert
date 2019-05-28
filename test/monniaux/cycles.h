@@ -1,7 +1,13 @@
 typedef unsigned long cycle_t;
 
 #ifdef __K1C__
+#ifdef __K1C_COS__
+#include <hal/cos_registers.h>
+#define K1_SFR_PMC COS_SFR_PMC
+#define K1_SFR_PM0 COS_SFR_PM0
+#else
 #include <mppa_bare_runtime/k1c/registers.h>
+#endif
 static inline void cycle_count_config(void)
 {
         /* config pmc for cycle count */
