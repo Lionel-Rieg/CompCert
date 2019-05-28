@@ -173,10 +173,10 @@ module Target (*: TARGET*) =
 (* Associate labels to floating-point constants and to symbols. *)
 
     let print_tbl oc (lbl, tbl) =
-      fprintf oc "	.balign 4\n";
+      fprintf oc "	.balign 8\n";
       fprintf oc "%a:\n" label lbl;
       List.iter
-        (fun l -> fprintf oc "	.4byte	%a\n"
+        (fun l -> fprintf oc "	.8byte	%a\n"
                     print_label l)
         tbl
 
@@ -408,9 +408,9 @@ module Target (*: TARGET*) =
          fprintf oc "%s jumptable [ " comment;
          List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
          fprintf oc "]\n";
-         fprintf oc "    make    %a = %a\n    ;;\n" ireg base_reg label lbl; 
-         fprintf oc "    lwz.xs  %a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
-         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg;
+         fprintf oc "    make	%a = %a\n    ;;\n" ireg base_reg label lbl; 
+         fprintf oc "    ld.xs	%a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
+         fprintf oc "    igoto	%a\n    ;;\n" ireg base_reg;
          section oc Section_jumptable;
          print_tbl oc (lbl, tbl);
          section oc Section_text
