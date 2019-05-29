@@ -55,7 +55,7 @@ __compcert_i32_divmod_fp:
 #endif
 	;;
 # a in r1, b in r7
-	floatud.rn $r5 = $r7, 0
+	floatud.rn.s $r5 = $r7, 0
 #ifndef NO_SHORTCUT
 	compd.eq $r8 = $r7, 1
 	cb.wnez $r8? .LESS # shortcut if a < b
@@ -63,27 +63,27 @@ __compcert_i32_divmod_fp:
 	;;
 # b (double) in r5
 	make $r6 = 0x3ff0000000000000 # 1.0
-	fnarrowdw.rn $r11 = $r5
+	fnarrowdw.rn.s $r11 = $r5
 #	cb.wnez $r8, .RET1 # if b=1
 	;;
 # b (single) in r11
-	floatud.rn $r10 = $r1, 0
-	finvw.rn $r11 = $r11
+	floatud.rn.s $r10 = $r1, 0
+	finvw.rn.s $r11 = $r11
 	;;
-	fwidenlwd $r11 = $r11
+	fwidenlwd.s $r11 = $r11
 	;;
 # invb0 in r11
 	copyd $r9 = $r11
-	ffmsd.rn $r6 = $r11, $r5
+	ffmsd.rn.s $r6 = $r11, $r5
 # alpha in r6
 	;;
-	ffmad.rn $r9 = $r11, $r6
+	ffmad.rn.s $r9 = $r11, $r6
 # 1/b in r9
 	;;
-	fmuld.rn $r0 = $r10, $r9
+	fmuld.rn.s $r0 = $r10, $r9
 # a/b in r1
 	;;
-	fixedud.rn $r0 = $r0, 0
+	fixedud.rn.s $r0 = $r0, 0
 	;;
 	msbfd $r1 = $r0, $r7
 	;;
