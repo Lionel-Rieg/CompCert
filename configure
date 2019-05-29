@@ -461,7 +461,7 @@ if test "$arch" = "mppa_k1c"; then
   libdir="$HOME/.usr/lib"
   clinker_options="$model_options -L$libdir -Wl,-rpath=$libdir"
   cprepro="$k1base-gcc"
-  cprepro_options="$model_options -D __K1C_$osupper__ -std=c99 -E -include ccomp_k1c_fixes.h"
+  cprepro_options="$model_options -D __K1C_"$osupper"__ -std=c99 -E -include ccomp_k1c_fixes.h"
   libmath="-lm"
   system="linux"
 fi
