@@ -42,8 +42,13 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ocast16signed => op1 (sign_ext 16 nv)
   | Oadd => op2 (modarith nv)
   | Oaddimm n => op1 (modarith nv)
+  | Oaddx _ => op2 (default nv)
+  | Oaddximm _ _ => op1 (default nv)
   | Oneg => op1 (modarith nv)
   | Osub => op2 (default nv)
+  | Orevsubimm _ => op1 (default nv)
+  | Orevsubx _ => op2 (default nv)
+  | Orevsubximm _ _ => op1 (default nv)
   | Omul => op2 (modarith nv)
   | Omulimm _ => op1 (modarith nv)
   | Omulhs | Omulhu | Odiv | Odivu | Omod | Omodu => op2 (default nv)
@@ -72,12 +77,18 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshrximm n => op1 (default nv)
   | Omadd => op3 (modarith nv)
   | Omaddimm n => op2 (modarith nv)
+  | Omsub => op3 (modarith nv)
   | Omakelong => op2 (default nv)
   | Olowlong | Ohighlong => op1 (default nv)
   | Ocast32signed => op1 (default nv)
   | Ocast32unsigned => op1 (default nv)
   | Oaddl => op2 (default nv)
   | Oaddlimm n => op1 (default nv)
+  | Oaddxl _ => op2 (default nv)
+  | Oaddxlimm _ _ => op1 (default nv)
+  | Orevsublimm _ => op1 (default nv)
+  | Orevsubxl _ => op2 (default nv)
+  | Orevsubxlimm _ _ => op1 (default nv)
   | Onegl => op1 (default nv)
   | Osubl => op2 (default nv)
   | Omull => op2 (default nv)
@@ -107,6 +118,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshrxlimm n => op1 (default nv)
   | Omaddl => op3 (default nv)
   | Omaddlimm n => op2 (default nv)
+  | Omsubl => op3 (default nv)
   | Onegf | Oabsf => op1 (default nv)
   | Oaddf | Osubf | Omulf | Odivf => op2 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
@@ -227,6 +239,26 @@ Proof.
   - unfold Val.addl.
     destruct v1; destruct v2; trivial; destruct Archi.ptr64; trivial.
   - apply Val.addl_lessdef; trivial.
+Qed.
+
+Lemma subl_lessdef:
+  forall v1 v1' v2 v2',
+  Val.lessdef v1 v1' -> Val.lessdef v2 v2' -> Val.lessdef (Val.subl v1 v2) (Val.subl v1' v2').
+Proof.
+  intros. inv H. inv H0. auto. destruct v1'; simpl; auto. simpl; auto.
+Qed.
+
+Lemma subl_sound:
+  forall v1 w1 v2 w2 x,
+  vagree v1 w1 (default x) -> vagree v2 w2 (default x) ->
+  vagree (Val.subl v1 v2) (Val.subl w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; simpl in *; trivial.
+  - unfold Val.subl.
+    destruct v1; destruct v2; trivial; destruct Archi.ptr64; simpl; trivial.
+    destruct (eq_block _ _) ; simpl; trivial.
+  - apply subl_lessdef; trivial.
 Qed.
 
 
@@ -423,7 +455,7 @@ Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
 Qed.
-
+  
 Lemma needs_of_operation_sound:
   forall op args v nv args',
   eval_operation ge (Vptr sp Ptrofs.zero) op args m1 = Some v ->
@@ -466,8 +498,19 @@ Proof.
   (* madd *)
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
+- repeat rewrite ExtValues.sub_add_neg.
+  apply add_sound; trivial.
+  apply neg_sound; trivial.
+  rewrite modarith_idem.
+  apply mul_sound;
+  rewrite modarith_idem; trivial.
   (* maddl *)
 - apply addl_sound; trivial.
+  apply mull_sound; trivial.
+  rewrite default_idem; trivial.
+  rewrite default_idem; trivial.
+  (* msubl *)
+- apply subl_sound; trivial.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.

@@ -183,6 +183,75 @@ Proof.
   auto.
 Qed.
 
+Theorem eval_addimm_shlimm:
+  forall sh k2, unary_constructor_sound (addimm_shlimm sh k2) (fun x => ExtValues.addx sh x (Vint k2)).
+Proof.
+  red; unfold addimm_shlimm; intros.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
+  - TrivialExists. simpl.
+    f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e1.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e1.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e2.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e2.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e3.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e3.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e4.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e4.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    discriminate.
+  - unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+  }
+  { unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+    }
+Qed.
+
 Theorem eval_addimm:
   forall n, unary_constructor_sound (addimm n) (fun x => Val.add x (Vint n)).
 Proof.
@@ -198,9 +267,57 @@ Proof.
     + econstructor; split. EvalOp. simpl; eauto. 
       destruct sp; simpl; auto.
     + TrivialExists; simpl. subst x. rewrite Val.add_assoc. rewrite Int.add_commut. auto.
+    + TrivialExists; simpl. subst x.
+      destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+      rewrite Int.add_assoc. rewrite Int.add_commut.
+      reflexivity.
+    + pose proof eval_addimm_shlimm as ADDX.
+      unfold unary_constructor_sound in ADDX.
+      unfold addx in ADDX.
+      rewrite Val.add_commut.
+      subst x.
+      apply ADDX; assumption.
     + TrivialExists.
 Qed.
 
+Lemma eval_addx: forall n, binary_constructor_sound (add_shlimm n) (ExtValues.addx n).
+Proof.
+  red.
+  intros.
+  unfold add_shlimm.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
+  - TrivialExists.
+    simpl.
+    f_equal. f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      rewrite <- e1.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      rewrite <- e2.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      rewrite <- e3.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      rewrite <- e4.
+      apply Int.repr_unsigned. }
+    discriminate.
+  - TrivialExists;
+      repeat econstructor; eassumption.
+  }
+  { TrivialExists;
+      repeat econstructor; eassumption.
+  }
+Qed.
+  
 Theorem eval_add: binary_constructor_sound add Val.add.
 Proof.
   red; intros until y.
@@ -238,6 +355,15 @@ Proof.
     subst. TrivialExists.
   - (* Omaddimm rev *)
     subst. rewrite Val.add_commut. TrivialExists.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    rewrite Val.add_commut.
+    apply ADDX; assumption.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    apply ADDX; assumption.
   - TrivialExists.
 Qed.
 
@@ -251,6 +377,12 @@ Proof.
     apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_l. apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_r. apply eval_addimm; EvalOp.
+  - TrivialExists. simpl. subst. reflexivity.
+  - TrivialExists. simpl. subst.
+    rewrite sub_add_neg.
+    rewrite neg_mul_distr_r.
+    unfold Val.neg.
+    reflexivity.
   - TrivialExists.
 Qed.
 
@@ -1297,7 +1429,7 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
-  - destruct (Compopts.optim_fxsaddr tt).
+  - destruct (Compopts.optim_xsaddr tt).
     + destruct (Z.eq_dec _ _).
       * exists (v1 :: v2 :: nil); split.
         repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
@@ -1309,6 +1441,25 @@ Proof.
         repeat (constructor; auto). econstructor.
         repeat (constructor; auto). eassumption. simpl. congruence.
         simpl. congruence.
+  - unfold addxl in *.
+    destruct (Compopts.optim_xsaddr tt).
+    + unfold int_of_shift1_4 in *.
+      destruct (Z.eq_dec _ _).
+      * exists (v0 :: v1 :: nil); split.
+        repeat (constructor; auto). simpl.
+        congruence.
+      * eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
+        simpl. congruence.
+    + eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
+        simpl. unfold int_of_shift1_4 in *. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.

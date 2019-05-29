@@ -79,8 +79,13 @@ Inductive operation : Type :=
   | Ocast16signed            (**r [rd] is 16-bit sign extension of [r1] *)
   | Oadd                     (**r [rd = r1 + r2] *)
   | Oaddimm (n: int)         (**r [rd = r1 + n] *)
+  | Oaddx (shift: shift1_4)         (**r [rd = r1 << shift + r2] *)
+  | Oaddximm (shift: shift1_4) (n: int) (**r [rd = r1 << shift + n] *)
   | Oneg                     (**r [rd = - r1]   *)                     
   | Osub                     (**r [rd = r1 - r2] *)
+  | Orevsubimm (n: int)      (**r [rd = n - r1] *)
+  | Orevsubx (shift: shift1_4)         (**r [rd = r2 -r1 << shift] *)
+  | Orevsubximm (shift: shift1_4) (n: int) (**r [rd = n -r1 << shift] *)
   | Omul                     (**r [rd = r1 * r2] *)
   | Omulimm (n: int)         (**r [rd = r1 * n] *)
   | Omulhs                   (**r [rd = high part of r1 * r2, signed] *)
@@ -116,6 +121,7 @@ Inductive operation : Type :=
   | Ororimm (n: int)         (**r rotate right immediate *)
   | Omadd                    (**r [rd = rd + r1 * r2] *)
   | Omaddimm (n: int)        (**r [rd = rd + r1 * imm] *)
+  | Omsub                    (**r [rd = rd - r1 * r2] *)
 (*c 64-bit integer arithmetic: *)
   | Omakelong                (**r [rd = r1 << 32 | r2] *)
   | Olowlong                 (**r [rd = low-word(r1)] *)
@@ -124,6 +130,11 @@ Inductive operation : Type :=
   | Ocast32unsigned          (**r [rd] is 32-bit zero extension of [r1] *)
   | Oaddl                    (**r [rd = r1 + r2] *)
   | Oaddlimm (n: int64)      (**r [rd = r1 + n] *)
+  | Oaddxl (shift: shift1_4)         (**r [rd = r1 << shift + r2] *)
+  | Oaddxlimm (shift: shift1_4) (n: int64) (**r [rd = r1 << shift + n] *)
+  | Orevsublimm (n: int64)      (**r [rd = n - r1] *)
+  | Orevsubxl (shift: shift1_4)         (**r [rd = r2 -r1 << shift] *)
+  | Orevsubxlimm (shift: shift1_4) (n: int64) (**r [rd = n -r1 << shift] *)
   | Onegl                    (**r [rd = - r1] *)
   | Osubl                    (**r [rd = r1 - r2] *)
   | Omull                    (**r [rd = r1 * r2] *)
@@ -160,6 +171,7 @@ Inductive operation : Type :=
   | Oshrxlimm (n: int)       (**r [rd = r1 / 2^n] (signed) *)
   | Omaddl                   (**r [rd = rd + r1 * r2] *)
   | Omaddlimm (n: int64)     (**r [rd = rd + r1 * imm] *)
+  | Omsubl                   (**r [rd = rd - r1 * r2] *)
 (*c Floating-point arithmetic: *)
   | Onegf                    (**r [rd = - r1] *)
   | Oabsf                    (**r [rd = abs(r1)] *)
@@ -235,9 +247,14 @@ Proof.
   decide equality.
 Defined.
 
+Definition eq_shift1_4 (x y : shift1_4): {x=y} + {x<>y}.
+Proof.
+  decide equality.
+Defined.
+
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec; intros.
+  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec eq_shift1_4; intros.
   decide equality.
 Defined.
 
@@ -386,8 +403,13 @@ Definition eval_operation
   | Ocast16signed, v1 :: nil => Some (Val.sign_ext 16 v1)
   | Oadd, v1 :: v2 :: nil => Some (Val.add v1 v2)
   | Oaddimm n, v1 :: nil => Some (Val.add v1 (Vint n))
+  | Oaddx s14, v1 :: v2 :: nil => Some (addx (int_of_shift1_4 s14) v1 v2)
+  | Oaddximm s14 n, v1 :: nil => Some (addx (int_of_shift1_4 s14) v1 (Vint n))
   | Oneg, v1 :: nil => Some (Val.neg v1)
   | Osub, v1 :: v2 :: nil => Some (Val.sub v1 v2)
+  | Orevsubimm n, v1 :: nil => Some (Val.sub (Vint n) v1)
+  | Orevsubx shift, v1 :: v2 :: nil => Some (ExtValues.revsubx (int_of_shift1_4 shift) v1 v2)
+  | Orevsubximm shift n, v1 :: nil => Some (ExtValues.revsubx (int_of_shift1_4 shift) v1 (Vint n))
   | Omul, v1 :: v2 :: nil => Some (Val.mul v1 v2)
   | Omulimm n, v1 :: nil => Some (Val.mul v1 (Vint n))
   | Omulhs, v1::v2::nil => Some (Val.mulhs v1 v2)
@@ -423,6 +445,7 @@ Definition eval_operation
   | Oshrximm n, v1::nil => Val.shrx v1 (Vint n)
   | Omadd, v1::v2::v3::nil => Some (Val.add v1 (Val.mul v2 v3))
   | (Omaddimm n), v1::v2::nil => Some (Val.add v1 (Val.mul v2 (Vint n)))
+  | Omsub, v1::v2::v3::nil => Some (Val.sub v1 (Val.mul v2 v3))
                                      
   | Omakelong, v1::v2::nil => Some (Val.longofwords v1 v2)
   | Olowlong, v1::nil => Some (Val.loword v1)
@@ -431,8 +454,13 @@ Definition eval_operation
   | Ocast32unsigned, v1 :: nil => Some (Val.longofintu v1)
   | Oaddl, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Oaddlimm n, v1::nil => Some (Val.addl v1 (Vlong n))
+  | Oaddxl s14, v1 :: v2 :: nil => Some (addxl (int_of_shift1_4 s14) v1 v2)
+  | Oaddxlimm s14 n, v1 :: nil => Some (addxl (int_of_shift1_4 s14) v1 (Vlong n))
   | Onegl, v1::nil => Some (Val.negl v1)
   | Osubl, v1::v2::nil => Some (Val.subl v1 v2)
+  | Orevsublimm n, v1 :: nil => Some (Val.subl (Vlong n) v1)
+  | Orevsubxl shift, v1 :: v2 :: nil => Some (ExtValues.revsubxl (int_of_shift1_4 shift) v1 v2)
+  | Orevsubxlimm shift n, v1 :: nil => Some (ExtValues.revsubxl (int_of_shift1_4 shift) v1 (Vlong n))
   | Omull, v1::v2::nil => Some (Val.mull v1 v2)
   | Omullimm n, v1::nil => Some (Val.mull v1 (Vlong n))
   | Omullhs, v1::v2::nil => Some (Val.mullhs v1 v2)
@@ -467,6 +495,7 @@ Definition eval_operation
   | Oshrxlimm n, v1::nil => Val.shrxl v1 (Vint n)
   | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
   | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
+  | Omsubl, v1::v2::v3::nil => Some (Val.subl v1 (Val.mull v2 v3))
                                       
   | Onegf, v1::nil => Some (Val.negf v1)
   | Oabsf, v1::nil => Some (Val.absf v1)
@@ -583,8 +612,13 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocast16signed => (Tint :: nil, Tint)
   | Oadd => (Tint :: Tint :: nil, Tint)
   | Oaddimm _ => (Tint :: nil, Tint)
+  | Oaddx _ => (Tint :: Tint :: nil, Tint)
+  | Oaddximm _ _ => (Tint :: nil, Tint)
   | Oneg => (Tint :: nil, Tint)
   | Osub => (Tint :: Tint :: nil, Tint)
+  | Orevsubimm _ => (Tint :: nil, Tint)
+  | Orevsubx _ => (Tint :: Tint :: nil, Tint)
+  | Orevsubximm _ _ => (Tint :: nil, Tint)
   | Omul => (Tint :: Tint :: nil, Tint)
   | Omulimm _ => (Tint :: nil, Tint)
   | Omulhs => (Tint :: Tint :: nil, Tint)
@@ -620,6 +654,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ororimm _ => (Tint :: nil, Tint)
   | Omadd => (Tint :: Tint :: Tint :: nil, Tint)
   | Omaddimm _ => (Tint :: Tint :: nil, Tint)
+  | Omsub => (Tint :: Tint :: Tint :: nil, Tint)
                    
   | Omakelong => (Tint :: Tint :: nil, Tlong)
   | Olowlong => (Tlong :: nil, Tint)
@@ -628,6 +663,11 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocast32unsigned => (Tint :: nil, Tlong)
   | Oaddl => (Tlong :: Tlong :: nil, Tlong)
   | Oaddlimm _ => (Tlong :: nil, Tlong)
+  | Oaddxl _ => (Tlong :: Tlong :: nil, Tlong)
+  | Oaddxlimm _ _ => (Tlong :: nil, Tlong)
+  | Orevsublimm _ => (Tlong :: nil, Tlong)
+  | Orevsubxl _ => (Tlong :: Tlong :: nil, Tlong)
+  | Orevsubxlimm _ _ => (Tlong :: nil, Tlong)
   | Onegl => (Tlong :: nil, Tlong)
   | Osubl => (Tlong :: Tlong :: nil, Tlong)
   | Omull => (Tlong :: Tlong :: nil, Tlong)
@@ -664,6 +704,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oshrxlimm _ => (Tlong :: nil, Tlong)
   | Omaddl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
   | Omaddlimm _ => (Tlong :: Tlong :: nil, Tlong)
+  | Omsubl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
 
   | Onegf => (Tfloat :: nil, Tfloat)
   | Oabsf => (Tfloat :: nil, Tfloat)
@@ -736,6 +777,32 @@ Proof.
   intros. unfold Val.has_type, Val.addl. destruct Archi.ptr64, v1, v2; auto.
 Qed.
 
+Remark type_sub:
+  forall v1 v2, Val.has_type (Val.sub v1 v2) Tint.
+Proof.
+  intros. unfold Val.has_type, Val.sub. destruct Archi.ptr64, v1, v2; simpl; auto.
+  destruct (eq_block _ _); auto.
+Qed.
+
+Remark type_subl:
+  forall v1 v2, Val.has_type (Val.subl v1 v2) Tlong.
+Proof.
+  intros. unfold Val.has_type, Val.subl. destruct Archi.ptr64, v1, v2; simpl; auto.
+  destruct (eq_block _ _); auto.
+Qed.
+
+Remark type_shl:
+  forall v1 v2, Val.has_type (Val.shl v1 v2) Tint.
+Proof.
+  destruct v1, v2; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial.
+Qed.
+
+Remark type_shll:
+  forall v1 v2, Val.has_type (Val.shll v1 v2) Tlong.
+Proof.
+  destruct v1, v2; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial.
+Qed.
+
 Lemma type_of_operation_sound:
   forall op vl sp v m,
   op <> Omove ->
@@ -761,9 +828,18 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* add, addimm *)
   - apply type_add.
   - apply type_add.
+  (* addx, addximm *)
+  - apply type_add.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - destruct v0...
-  - unfold Val.sub. destruct v0; destruct v1... 
+  - apply type_sub.
+  (* revsubimm, revsubx, revsubximm *)
+  - destruct v0...
+  - apply type_sub.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* mul, mulimm, mulhs, mulhu *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -819,8 +895,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* shrimm *)
   - destruct v0; simpl...   
   (* madd *)
-  - destruct v0; destruct v1; destruct v2...   
-  - destruct v0; destruct v1...
+  - apply type_add.
+  - apply type_add.
+  (* msub *)
+  - apply type_sub.
   (* makelong, lowlong, highlong *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -831,11 +909,17 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* addl, addlimm *)
   - apply type_addl.
   - apply type_addl.
+  (* addxl addxlimm *)
+  - apply type_addl.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
   - destruct v0...
-  - unfold Val.subl. destruct v0; destruct v1... 
-    unfold Val.has_type; destruct Archi.ptr64...
-    destruct (eq_block b b0)...
+  - apply type_subl.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
+  - destruct v0...
+  - apply type_subl.
   (* mull, mullhs, mullhu *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -889,10 +973,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* shrxl *)
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 63)); inv H0...
   (* maddl, maddlim *)
-  - destruct v0; destruct v1; destruct v2; simpl; trivial.
-    destruct Archi.ptr64; simpl; trivial.
-  - destruct v0; destruct v1; simpl; trivial.
-    destruct Archi.ptr64; simpl; trivial.
+  - apply type_addl.
+  - apply type_addl.
+  (* msubl *)
+  - apply type_subl.
   (* negf, absf *)
   - destruct v0...
   - destruct v0...
@@ -1359,9 +1443,19 @@ Proof.
   (* add, addimm *)
   - apply Val.add_inject; auto.
   - apply Val.add_inject; auto.
+  (* addx, addximm *)
+  - apply Val.add_inject; trivial.
+    inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - inv H4; simpl; auto.
   - apply Val.sub_inject; auto.
+  (* revsubimm, revsubx, revsubximm *)
+  - inv H4; simpl; trivial.
+  - apply Val.sub_inject; trivial.
+    inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; try destruct (Int.ltu _ _); simpl; auto.
   (* mul, mulimm, mulhs, mulhu *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1424,6 +1518,9 @@ Proof.
   (* madd, maddim *)
   - inv H2; inv H3; inv H4; simpl; auto.
   - inv H2; inv H4; simpl; auto.
+  (* msub *)
+  - apply Val.sub_inject; auto.
+    inv H3; inv H2; simpl; auto.
   (* makelong, highlong, lowlong *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1434,7 +1531,19 @@ Proof.
   (* addl, addlimm *)
   - apply Val.addl_inject; auto.
   - apply Val.addl_inject; auto.
+  (* addxl, addxlimm *)
+  - apply Val.addl_inject; auto.
+    inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
+  - inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
+  - inv H4; simpl; auto.
+  - apply Val.subl_inject; auto.
+    inv H4; inv H2; simpl; trivial;
+    destruct (Int.ltu _ _); simpl; trivial.
+  - inv H4; simpl; trivial;
+      destruct (Int.ltu _ _); simpl; trivial.
   - inv H4; simpl; auto.
   - apply Val.subl_inject; auto.
   (* mull, mullhs, mullhu *)
@@ -1500,6 +1609,9 @@ Proof.
     inv H2; inv H3; inv H4; simpl; auto.
   - apply Val.addl_inject; auto.
     inv H4; inv H2; simpl; auto.
+  (* msubl, msublimm *)
+  - apply Val.subl_inject; auto.
+    inv H2; inv H3; inv H4; simpl; auto.
     
   (* negf, absf *)
   - inv H4; simpl; auto.

@@ -1405,12 +1405,14 @@ Definition string_of_name_rf64 (n: arith_name_rf64): pstring :=
 
 Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   match n with
-    Pcompw _ => "Pcompw"
+  | Pcompw _ => "Pcompw"
   | Pcompl _ => "Pcompl"
   | Pfcompw _ => "Pfcompw"
   | Pfcompl _ => "Pfcompl"
   | Paddw => "Paddw"
+  | Paddxw _ => "Paddxw"
   | Psubw => "Psubw"
+  | Prevsubxw _ => "Prevsubxw"
   | Pmulw => "Pmulw"
   | Pandw => "Pandw"
   | Pnandw => "Pnandw"
@@ -1425,7 +1427,9 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Psrxw => "Psrxw"
   | Psllw => "Psllw"
   | Paddl => "Paddl"
+  | Paddxl _ => "Paddxl"
   | Psubl => "Psubl"
+  | Prevsubxl _ => "Prevsubxl"
   | Pandl => "Pandl"
   | Pnandl => "Pnandl"
   | Porl => "Porl"
@@ -1451,6 +1455,9 @@ Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   match n with
     Pcompiw _ => "Pcompiw"
   | Paddiw => "Paddiw"
+  | Paddxiw _ => "Paddxiw"
+  | Prevsubiw => "Prevsubiw"
+  | Prevsubxiw _ => "Prevsubxiw"
   | Pmuliw => "Pmuliw"
   | Pandiw => "Pandiw"
   | Pnandiw => "Pnandiw"
@@ -1475,6 +1482,9 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   match n with
     Pcompil _ => "Pcompil"
   | Paddil => "Paddil"
+  | Prevsubil => "Prevsubil"
+  | Paddxil _ => "Paddxil"
+  | Prevsubxil _ => "Prevsubxil"
   | Pmulil => "Pmulil"
   | Pandil => "Pandil"
   | Pnandil => "Pnandil"
@@ -1490,6 +1500,8 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   match n with
   | Pmaddw  => "Pmaddw"
   | Pmaddl  => "Pmaddl"
+  | Pmsubw  => "Pmsubw"
+  | Pmsubl  => "Pmsubl"
   | Pcmove _ => "Pcmove"
   | Pcmoveu _ => "Pcmoveu"
   end.

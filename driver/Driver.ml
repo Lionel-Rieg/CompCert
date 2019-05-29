@@ -375,7 +375,8 @@ let cmdline_actions =
   @ f_opt "globaladdrtmp" option_fglobaladdrtmp
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
-  @ f_opt "coalesce-mem" option_coalesce_mem
+  @ f_opt "addx" option_faddx
+  @ f_opt "coalesce-mem" option_fcoalesce_mem
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
