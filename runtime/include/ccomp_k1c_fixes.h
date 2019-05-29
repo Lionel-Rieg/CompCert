@@ -18,3 +18,7 @@ extern __int128 __compcert_acswapd(void *address, unsigned long long new_value, 
 #define __builtin_k1_acswapw __compcert_acswapw
 extern __int128 __compcert_acswapw(void *address, unsigned long long new_value, unsigned long long old_value);
 #endif
+
+#define __builtin_expect(x, y) (x)
+#define __builtin_ctz(x) __builtin_k1_ctzw(x)
+#define __builtin_clz(x) __builtin_k1_clzw(x)

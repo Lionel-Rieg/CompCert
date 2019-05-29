@@ -1,7 +1,7 @@
 PREFIX=/home/monniaux/work/Kalray/ternary/CompCert
 INCLUDES=-I$PREFIX/test/monniaux/bitsliced-tea
 CCOMP_K1="$PREFIX/ccomp -fno-unprototyped -O3 $INCLUDES"
-GCC_K1="k1-mbr-gcc -Werror=implicit -O3 $INCLUDES"
+GCC_K1="k1-cos-gcc -Werror=implicit -O3 $INCLUDES"
 GCC_HOST="gcc -Werror=implicit -O3 $INCLUDES"
 FILE=bstea.c
 
