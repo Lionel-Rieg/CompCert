@@ -4,8 +4,8 @@
 D. Monniaux, CNRS, VERIMAG */
 
 	
-	.globl __compcert_i32_sdiv
-__compcert_i32_sdiv:
+	.globl __compcert_i32_sdiv_fp
+__compcert_i32_sdiv_fp:
 	compw.lt $r2 = $r0, 0
 	compw.lt $r3 = $r1, 0
 	absw $r0 = $r0
@@ -13,27 +13,27 @@ __compcert_i32_sdiv:
 	;;
 	xord $r2 = $r2, $r3
 	make $r3 = 0
-	goto __compcert_i32_divmod
+	goto __compcert_i32_divmod_fp
 	;;
 	
-	.globl __compcert_i32_smod
-__compcert_i32_smod:
+	.globl __compcert_i32_smod_fp
+__compcert_i32_smod_fp:
 	compw.lt $r2 = $r0, 0
 	absw $r0 = $r0
 	absw $r1 = $r1
 	make $r3 = 1
-	goto __compcert_i32_divmod
+	goto __compcert_i32_divmod_fp
 	;;
 	
-	.globl __compcert_i32_umod
-__compcert_i32_umod:
+	.globl __compcert_i32_umod_fp
+__compcert_i32_umod_fp:
 	make $r2 = 0
 	make $r3 = 1
-	goto __compcert_i32_divmod
+	goto __compcert_i32_divmod_fp
 	;;
 
-	.globl __compcert_i32_udiv
-__compcert_i32_udiv:
+	.globl __compcert_i32_udiv_fp
+__compcert_i32_udiv_fp:
 	make $r2 = 0
 	make $r3 = 0
 	;;
@@ -45,8 +45,8 @@ r2 : negate result?
 r3 : return mod?
 */
 
-	.globl __compcert_i32_divmod
-__compcert_i32_divmod:
+	.globl __compcert_i32_divmod_fp
+__compcert_i32_divmod_fp:
 	zxwd $r7 = $r1
 	zxwd $r1 = $r0
 #ifndef NO_SHORTCUT

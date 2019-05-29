@@ -23,8 +23,9 @@ OBJS=i64_dtou.o i64_utod.o i64_utof.o vararg.o
 else ifeq ($(ARCH),powerpc64)
 OBJS=i64_dtou.o i64_stof.o i64_utod.o i64_utof.o vararg.o
 else ifeq ($(ARCH),mppa_k1c)
-OBJS=i64_umod.o i64_udiv.o i64_udivmod.o i64_sdiv.o i64_smod.o i32_divmod.o \
-                 vararg.o
+OBJS=i64_umod.o i64_udiv.o i64_udivmod.o i64_sdiv.o i64_smod.o \
+     i64_udivmod_stsud.o i32_divmod.o \
+     vararg.o
 # Missing: i64_utod.o i64_utof.o i64_stod.o i64_stof.o
 DOMAKE:=$(shell (cd mppa_k1c && make))
 else
