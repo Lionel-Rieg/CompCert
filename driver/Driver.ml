@@ -265,9 +265,13 @@ let num_input_files = ref 0
 let cmdline_actions =
   let f_opt name ref =
     [Exact("-f" ^ name), Set ref; Exact("-fno-" ^ name), Unset ref] in
-  let f_opt_str name ref strref =
+  let f_opt_str name ref strref default =
     [Exact("-f" ^ name ^ "="), String 
-      (fun s -> (strref := (if s == "" then "list" else s)); ref := true)
+      (fun s -> (strref := (if s == "" then default else s)); ref := true)
+     ] in
+  let f_str name strref default =
+    [Exact("-f" ^ name ^ "="), String 
+      (fun s -> (strref := (if s == "" then default else s)))
      ] in
   [
 (* Getting help *)
@@ -369,13 +373,15 @@ let cmdline_actions =
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
-  @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
+  @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched "list"
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
   @ f_opt "globaladdrtmp" option_fglobaladdrtmp
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
   @ f_opt "coalesce-mem" option_coalesce_mem
+  @ f_str "div-i32" option_div_i32 "stsud"
+  @ f_str "div-i64" option_div_i64 "stsud"
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)

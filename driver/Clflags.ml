@@ -71,3 +71,6 @@ let option_fglobaladdrtmp = ref false
 let option_fglobaladdroffset = ref false
 let option_fxsaddr = ref true  
 let option_coalesce_mem = ref true  
+
+let option_div_i32 = ref "stsud"
+let option_div_i64 = ref "stsud" 

@@ -39,8 +39,14 @@ module Target (*: TARGET*) =
       | Idiv_stsud
       | Idiv_fp;;
 
-    let idiv_function_kind_32bit () = Idiv_fp;;
-    let idiv_function_kind_64bit () = Idiv_stsud;;
+    let idiv_function_kind = function
+        "stsud" -> Idiv_stsud
+      | "system" -> Idiv_system
+      | "fp" -> Idiv_fp
+      | _ -> failwith "unknown integer division kind";;
+    
+    let idiv_function_kind_32bit () = idiv_function_kind !Clflags.option_div_i32;;
+    let idiv_function_kind_64bit () = idiv_function_kind !Clflags.option_div_i64;;
     
     let subst_symbol = function
         "__compcert_i64_udiv" ->
