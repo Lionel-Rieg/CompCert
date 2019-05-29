@@ -603,9 +603,9 @@ let rec_to_usage r =
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Srsw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
-  | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
+  | Srsw | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 
