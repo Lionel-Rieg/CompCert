@@ -43,16 +43,19 @@ Parameter optim_redundancy: unit -> bool.
 Parameter optim_postpass: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fglobaladdrtmp. Use a temporary register for loading the address of global variables (default false) *)
-Parameter optim_fglobaladdrtmp: unit -> bool.
+Parameter optim_globaladdrtmp: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fglobaladdroffset. Fold offsets into global addresses  (default false) *)
-Parameter optim_fglobaladdroffset: unit -> bool.
+Parameter optim_globaladdroffset: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fxsaddr. Use .xs addressing mode (default true) *)
-Parameter optim_fxsaddr: unit -> bool.
+Parameter optim_xsaddr: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
 Parameter optim_coalesce_mem: unit -> bool.
+
+(** FIXME TEMPORARY Flag -faddx. Fuse (default false) *)
+Parameter optim_addx: unit -> bool.
 
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.

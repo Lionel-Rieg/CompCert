@@ -119,6 +119,76 @@ Proof.
 - TrivialExists.
 Qed.
 
+
+Theorem eval_addlimm_shllimm:
+  forall sh k2, unary_constructor_sound (addlimm_shllimm sh k2) (fun x => ExtValues.addxl sh x (Vlong k2)).
+Proof.
+  red; unfold addlimm_shllimm; intros.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
+  - TrivialExists. simpl.
+    f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e1.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e1.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e2.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e2.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e3.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e3.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e4.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e4.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    discriminate.
+  - unfold addxl. rewrite Val.addl_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+  }
+  { unfold addxl. rewrite Val.addl_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+  }
+Qed.
+
 Theorem eval_addlimm: forall n, unary_constructor_sound (addlimm n) (fun v => Val.addl v (Vlong n)).
 Proof.
   unfold addlimm; intros; red; intros.
@@ -127,7 +197,7 @@ Proof.
   destruct x; simpl; rewrite ?Int64.add_zero, ?Ptrofs.add_zero; auto.
   destruct (addlimm_match a); InvEval.
 - econstructor; split. apply eval_longconst. rewrite Int64.add_commut; auto.
-- destruct (Compopts.optim_fglobaladdroffset _).
+- destruct (Compopts.optim_globaladdroffset _).
   + econstructor; split. EvalOp. simpl; eauto. 
     unfold Genv.symbol_address. destruct (Genv.find_symbol ge s); simpl; auto. 
     destruct Archi.ptr64; auto. rewrite Ptrofs.add_commut; auto.
@@ -136,7 +206,56 @@ Proof.
   destruct sp; simpl; auto. destruct Archi.ptr64; auto. 
   rewrite Ptrofs.add_assoc, (Ptrofs.add_commut m0). auto. 
 - subst x. rewrite Val.addl_assoc. rewrite Int64.add_commut. TrivialExists.
+- TrivialExists; simpl. subst x.
+      destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+      rewrite Int64.add_assoc. rewrite Int64.add_commut.
+      reflexivity.
+-  pose proof eval_addlimm_shllimm as ADDXL.
+      unfold unary_constructor_sound in ADDXL.
+      unfold addxl in ADDXL.
+      rewrite Val.addl_commut.
+      subst x.
+      apply ADDXL; assumption.
 - TrivialExists.
+Qed.
+
+Lemma eval_addxl: forall n, binary_constructor_sound (addl_shllimm n) (ExtValues.addxl n).
+Proof.
+  red.
+  intros.
+  unfold addl_shllimm.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
+  - TrivialExists.
+    simpl.
+    f_equal. f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      rewrite <- e1.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      rewrite <- e2.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      rewrite <- e3.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      rewrite <- e4.
+      apply Int.repr_unsigned. }
+    discriminate.
+    (* Oaddxl *)
+  - TrivialExists;
+      repeat econstructor; eassumption.
+  }
+  { TrivialExists;
+      repeat econstructor; eassumption.
+  }
 Qed.
 
 Theorem eval_addl: binary_constructor_sound addl Val.addl.
@@ -193,6 +312,14 @@ Proof.
   - subst. rewrite Val.addl_commut. TrivialExists.
   - subst. TrivialExists.
   - subst. rewrite Val.addl_commut. TrivialExists.
+  - subst. pose proof eval_addxl as ADDXL.
+    unfold binary_constructor_sound in ADDXL.
+    rewrite Val.addl_commut.
+    apply ADDXL; assumption.
+    (* Oaddxl *)
+  - subst. pose proof eval_addxl as ADDXL.
+    unfold binary_constructor_sound in ADDXL.
+    apply ADDXL; assumption.
   - TrivialExists.
 Qed.
 
@@ -208,6 +335,23 @@ Proof.
 - subst. rewrite Val.subl_addl_l. apply eval_addlimm; EvalOp.
 - subst. rewrite Val.subl_addl_r.
   apply eval_addlimm; EvalOp.
+- TrivialExists. simpl. subst. reflexivity.
+- TrivialExists. simpl. subst.
+  destruct v1; destruct x; simpl; trivial.
+  + f_equal. f_equal.
+    rewrite <- Int64.neg_mul_distr_r.
+    rewrite Int64.sub_add_opp.
+    reflexivity.
+  + destruct (Archi.ptr64) eqn:ARCHI64; simpl; trivial.
+    f_equal. f_equal.
+    rewrite <- Int64.neg_mul_distr_r.
+    rewrite Ptrofs.sub_add_opp.
+    unfold Ptrofs.add.
+    f_equal. f_equal.
+    rewrite (Ptrofs.agree64_neg ARCHI64 (Ptrofs.of_int64 (Int64.mul i n)) (Int64.mul i n)).
+    rewrite (Ptrofs.agree64_of_int ARCHI64  (Int64.neg (Int64.mul i n))).
+    reflexivity.
+    apply (Ptrofs.agree64_of_int ARCHI64).
 - TrivialExists.
 Qed.
 
@@ -371,7 +515,7 @@ Proof.
     auto. }
   generalize (Int64.one_bits'_decomp n); intros D.
   destruct (Int64.one_bits' n) as [ | i [ | j [ | ? ? ]]] eqn:B.
-- apply DEFAULT.
+- TrivialExists.
 - replace (Val.mull x (Vlong n)) with (Val.shll x (Vint i)).
   apply eval_shllimm; auto.
   simpl in D. rewrite D, Int64.add_zero. destruct x; simpl; auto.
@@ -389,7 +533,7 @@ Proof.
   rewrite (Int64.one_bits'_range n) in B2 by (rewrite B; auto with coqlib).
   inv B1; inv B2. simpl in B3; inv B3.
   rewrite Int64.mul_add_distr_r. rewrite <- ! Int64.shl'_mul. auto.
-- apply DEFAULT.
+- TrivialExists.
 Qed.
 
 Theorem eval_mullimm: forall n, unary_constructor_sound (mullimm n) (fun v => Val.mull v (Vlong n)).

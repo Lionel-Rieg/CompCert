@@ -66,18 +66,38 @@ Definition longofintu (e: expr) :=
 
 (** ** Integer addition and pointer addition *)
 
+Definition addlimm_shllimm sh k2 e1 :=
+  if Compopts.optim_addx tt
+  then
+    match shift1_4_of_z (Int.unsigned sh) with
+    | Some s14 => Eop (Oaddxlimm s14 k2) (e1:::Enil)
+    | None => Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil)
+    end
+  else Eop (Oaddlimm k2) ((Eop (Oshllimm sh) (e1:::Enil)):::Enil).
+
 Nondetfunction addlimm (n: int64) (e: expr) :=
   if Int64.eq n Int64.zero then e else
   match e with
   | Eop (Olongconst m) Enil => longconst (Int64.add n m)
   | Eop (Oaddrsymbol s m) Enil   =>
-    (if Compopts.optim_fglobaladdroffset tt
+    (if Compopts.optim_globaladdroffset tt
      then Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
      else Eop (Oaddlimm n) (e ::: Enil))
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int64 n) m)) Enil
   | Eop (Oaddlimm m) (t ::: Enil) => Eop (Oaddlimm(Int64.add n m)) (t ::: Enil)
+  | Eop (Oaddxlimm sh m) (t ::: Enil) => Eop (Oaddxlimm sh (Int64.add n m)) (t ::: Enil)
+  | Eop (Oshllimm sh) (t1:::Enil) => addlimm_shllimm sh n t1
   | _ => Eop (Oaddlimm n) (e ::: Enil)
   end.
+
+Definition addl_shllimm n e1 e2 :=
+  if Compopts.optim_addx tt
+  then
+    match shift1_4_of_z (Int.unsigned n) with
+    | Some s14 => Eop (Oaddxl s14) (e1:::e2:::Enil)
+    | None => Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil)
+    end
+  else Eop Oaddl (e2:::(Eop (Oshllimm n) (e1:::Enil)):::Enil).
 
 Nondetfunction addl (e1: expr) (e2: expr) :=
   if Archi.splitlong then SplitLong.addl e1 e2 else
@@ -102,6 +122,10 @@ Nondetfunction addl (e1: expr) (e2: expr) :=
       Eop (Omaddlimm n) (t1:::t2:::Enil)
   | (Eop (Omullimm n) (t2:::Enil)), t1 =>
       Eop (Omaddlimm n) (t1:::t2:::Enil)
+  | (Eop (Oshllimm n) (t1:::Enil)), t2 =>
+    addl_shllimm n t1 t2
+  | t2, (Eop (Oshllimm n) (t1:::Enil)) =>
+    addl_shllimm n t1 t2
   | _, _ => Eop Oaddl (e1:::e2:::Enil)
   end.
 
@@ -118,6 +142,10 @@ Nondetfunction subl (e1: expr) (e2: expr) :=
       addlimm n1 (Eop Osubl (t1:::t2:::Enil))
   | t1, Eop (Oaddlimm n2) (t2:::Enil) =>
       addlimm (Int64.neg n2) (Eop Osubl (t1:::t2:::Enil))
+  | t1, (Eop Omull (t2:::t3:::Enil)) =>
+      Eop Omsubl (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omullimm n) (t2:::Enil)) =>
+      Eop (Omaddlimm (Int64.neg n)) (t1:::t2:::Enil)
   | _, _ => Eop Osubl (e1:::e2:::Enil)
   end.
 
@@ -225,7 +253,7 @@ Definition mullimm_base (n1: int64) (e2: expr) :=
   | i :: j :: nil =>
       Elet e2 (addl (shllimm (Eletvar 0) i) (shllimm (Eletvar 0) j))
   | _ =>
-      Eop Omull (e2 ::: longconst n1 ::: Enil)
+      Eop (Omullimm n1) (e2 ::: Enil)
   end.
 
 Nondetfunction mullimm (n1: int64) (e2: expr) :=

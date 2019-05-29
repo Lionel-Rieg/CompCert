@@ -443,12 +443,33 @@ Definition transl_op
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n ::i k)
+  | Oaddx shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Paddxw shift rd rs1 rs2 ::i k)
+  | Oaddximm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Paddxiw shift rd rs n ::i k)
+  | Oaddxl shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Paddxl shift rd rs1 rs2 ::i k)
+  | Oaddxlimm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Paddxil shift rd rs n ::i k)
   | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pnegw rd rs ::i k)
   | Osub, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubw rd rs1 rs2 ::i k)
+  | Orevsubimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubiw rd rs n ::i k)
+  | Orevsubx shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Prevsubxw shift rd rs1 rs2 ::i k)
+  | Orevsubximm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubxiw shift rd rs n ::i k)
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 ::i k)
@@ -543,6 +564,12 @@ Definition transl_op
       do r1 <- ireg_of a1;
       do r2 <- ireg_of a2;
         OK (Pmaddiw r1 r2 n ::i k)
+  | Omsub, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmsubw r1 r2 r3 ::i k)
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
@@ -567,6 +594,15 @@ Definition transl_op
   | Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 ::i k)
+  | Orevsubxl shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Prevsubxl shift rd rs1 rs2 ::i k)
+  | Orevsublimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubil rd rs n ::i k)
+  | Orevsubxlimm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubxil shift rd rs n ::i k)
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
@@ -662,6 +698,12 @@ Definition transl_op
       do r1 <- ireg_of a1;
       do r2 <- ireg_of a2;
         OK (Pmaddil r1 r2 n ::i k)
+  | Omsubl, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmsubl r1 r2 r3 ::i k)
   | Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs ::i k)
