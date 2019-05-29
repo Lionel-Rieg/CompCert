@@ -10,6 +10,7 @@
 #include <mppa_bare_runtime/k1c/registers.h>
 #endif
 
+/* #define COMPCERT_FE_EXCEPT */
 #ifdef COMPCERT_FE_EXCEPT
 /* DM FIXME this is for floating point */
 int fetestexcept(int excepts) {
