@@ -29,10 +29,13 @@ let option_fcse = ref true
 let option_fredundancy = ref true
 let option_fpostpass = ref true
 let option_fpostpass_sched = ref "list"
+let option_fifconversion = ref true
+let option_ffavor_branchless = ref false
 let option_falignfunctions = ref (None: int option)
 let option_falignbranchtargets = ref 0
 let option_faligncondbranchs = ref 0
 let option_finline_asm = ref false
+let option_fcommon = ref true
 let option_mthumb = ref (Configuration.model = "armv7m")
 let option_Osize = ref false
 let option_finline = ref true

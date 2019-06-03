@@ -73,6 +73,7 @@ Extract Constant Iteration.GenIter.iterate =>
 (* Selection *)
 
 Extract Constant Selection.compile_switch => "Switchaux.compile_switch".
+Extract Constant Selection.if_conversion_heuristic => "Selectionaux.if_conversion_heuristic".
 
 (* RTLgen *)
 Extract Constant RTLgen.more_likely => "RTLgenaux.more_likely".
@@ -166,11 +167,11 @@ Load extractionMachdep.
 Extraction Blacklist List String Int.
 
 (* Cutting the dependency to R. *)
-Extract Inlined Constant Fcore_defs.F2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.FF2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.B2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.round_mode => "fun _ -> assert false".
-Extract Inlined Constant Fcalc_bracket.inbetween_loc => "fun _ -> assert false".
+Extract Inlined Constant Defs.F2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.FF2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.B2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.round_mode => "fun _ -> assert false".
+Extract Inlined Constant Bracket.inbetween_loc => "fun _ -> assert false".
 
 (* Needed in Coq 8.4 to avoid problems with Function definitions. *)
 Set Extraction AccessOpaque.

@@ -12,7 +12,7 @@
 
 (** Correctness of instruction selection for integer division *)
 
-Require Import Zquot Coqlib.
+Require Import Zquot Coqlib Zbits.
 Require Import AST Integers Floats Values Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
 Require Import OpHelpers OpHelpersproof.
@@ -58,13 +58,13 @@ Proof.
     apply Z.mul_nonneg_nonneg; omega.
   assert (k * n <= two_p (N + l) - two_p l).
     apply Z.le_trans with (two_p l * n).
-    apply Zmult_le_compat_r. omega. omega.
+    apply Z.mul_le_mono_nonneg_r; omega.
     replace (N + l) with (l + N) by omega.
     rewrite two_p_is_exp.
     replace (two_p l * two_p N - two_p l)
        with (two_p l * (two_p N - 1))
          by ring.
-    apply Zmult_le_compat_l. omega. exploit (two_p_gt_ZERO l). omega. omega.
+    apply Z.mul_le_mono_nonneg_l. omega. exploit (two_p_gt_ZERO l). omega. omega.
     omega. omega.
   assert (0 <= two_p (N + l) * r).
     apply Z.mul_nonneg_nonneg.
@@ -73,7 +73,7 @@ Proof.
   assert (two_p (N + l) * r <= two_p (N + l) * d - two_p (N + l)).
     replace (two_p (N + l) * d - two_p (N + l))
        with (two_p (N + l) * (d - 1)) by ring.
-    apply Zmult_le_compat_l.
+    apply Z.mul_le_mono_nonneg_l. 
     omega.
     exploit (two_p_gt_ZERO (N + l)). omega. omega.
   assert (0 <= m * n - two_p (N + l) * q).
@@ -139,13 +139,13 @@ Proof.
   rewrite H2.
   assert (k * n <= two_p (N + l)).
     rewrite Z.add_comm. rewrite two_p_is_exp; try omega.
-    apply Z.le_trans with (two_p l * n). apply Zmult_le_compat_r. omega. omega.
-    apply Zmult_le_compat_l. omega. exploit (two_p_gt_ZERO l). omega. omega.
+    apply Z.le_trans with (two_p l * n). apply Z.mul_le_mono_nonneg_r; omega.
+    apply Z.mul_le_mono_nonneg_l. omega. exploit (two_p_gt_ZERO l). omega. omega.
   assert (two_p (N + l) * r <= two_p (N + l) * d - two_p (N + l)).
     replace (two_p (N + l) * d - two_p (N + l))
        with (two_p (N + l) * (d - 1))
          by ring.
-    apply Zmult_le_compat_l. omega. exploit (two_p_gt_ZERO (N + l)). omega. omega.
+    apply Z.mul_le_mono_nonneg_l. exploit (two_p_gt_ZERO (N + l)). omega. omega. omega.
   omega.
 Qed.
 
@@ -247,10 +247,11 @@ Proof.
   unfold Int.max_signed; omega.
   apply Zdiv_interval_1. generalize Int.min_signed_neg; omega. apply Int.half_modulus_pos.
   apply Int.modulus_pos.
-  split. apply Z.le_trans with (Int.min_signed * m). apply Zmult_le_compat_l_neg. omega. generalize Int.min_signed_neg; omega.
-  apply Zmult_le_compat_r. unfold n; generalize (Int.signed_range x); tauto. tauto.
+  split. apply Z.le_trans with (Int.min_signed * m). 
+  apply Z.mul_le_mono_nonpos_l. generalize Int.min_signed_neg; omega. omega.
+  apply Z.mul_le_mono_nonneg_r. omega. unfold n; generalize (Int.signed_range x); tauto.
   apply Z.le_lt_trans with (Int.half_modulus * m).
-  apply Zmult_le_compat_r. generalize (Int.signed_range x); unfold n, Int.max_signed; omega. tauto.
+  apply Z.mul_le_mono_nonneg_r. tauto. generalize (Int.signed_range x); unfold n, Int.max_signed; omega.
   apply Zmult_lt_compat_l. generalize Int.half_modulus_pos; omega. tauto.
   assert (32 < Int.max_unsigned) by (compute; auto). omega.
   unfold Int.lt; fold n. rewrite Int.signed_zero. destruct (zlt n 0); apply Int.eqm_unsigned_repr.
@@ -291,7 +292,7 @@ Proof.
   apply Int.eqm_sym. eapply Int.eqm_trans. apply Int.eqm_signed_unsigned.
   apply Int.eqm_unsigned_repr_l. apply Int.eqm_refl2.
   apply (f_equal (fun x => n * x / Int.modulus)).
-  rewrite Int.signed_repr_eq. rewrite Zmod_small by assumption.
+  rewrite Int.signed_repr_eq. rewrite Z.mod_small by assumption.
   apply zlt_false. assumption.
 Qed.
 
@@ -378,7 +379,7 @@ Qed.
 Remark int64_shr'_div_two_p:
   forall x y, Int64.shr' x y = Int64.repr (Int64.signed x / two_p (Int.unsigned y)).
 Proof.
-  intros; unfold Int64.shr'. rewrite Int64.Zshiftr_div_two_p; auto. generalize (Int.unsigned_range y); omega.
+  intros; unfold Int64.shr'. rewrite Zshiftr_div_two_p; auto. generalize (Int.unsigned_range y); omega.
 Qed.
 
 Lemma divls_mul_shift_gen:
@@ -401,8 +402,9 @@ Proof.
   unfold Int64.max_signed; omega.
   apply Zdiv_interval_1. generalize Int64.min_signed_neg; omega. apply Int64.half_modulus_pos.
   apply Int64.modulus_pos.
-  split. apply Z.le_trans with (Int64.min_signed * m). apply Zmult_le_compat_l_neg. omega. generalize Int64.min_signed_neg; omega.
-  apply Zmult_le_compat_r. unfold n; generalize (Int64.signed_range x); tauto. tauto.
+  split. apply Z.le_trans with (Int64.min_signed * m).
+  apply Z.mul_le_mono_nonpos_l. generalize Int64.min_signed_neg; omega. omega.
+  apply Z.mul_le_mono_nonneg_r. tauto. unfold n; generalize (Int64.signed_range x); tauto.
   apply Z.le_lt_trans with (Int64.half_modulus * m).
   apply Zmult_le_compat_r. generalize (Int64.signed_range x); unfold n, Int64.max_signed; omega. tauto.
   apply Zmult_lt_compat_l. generalize Int64.half_modulus_pos; omega. tauto.
@@ -445,14 +447,14 @@ Proof.
   apply Int64.eqm_sym. eapply Int64.eqm_trans. apply Int64.eqm_signed_unsigned.
   apply Int64.eqm_unsigned_repr_l. apply Int64.eqm_refl2.
   apply (f_equal (fun x => n * x / Int64.modulus)).
-  rewrite Int64.signed_repr_eq. rewrite Zmod_small by assumption.
+  rewrite Int64.signed_repr_eq. rewrite Z.mod_small by assumption.
   apply zlt_false. assumption.
 Qed.
 
 Remark int64_shru'_div_two_p:
   forall x y, Int64.shru' x y = Int64.repr (Int64.unsigned x / two_p (Int.unsigned y)).
 Proof.
-  intros; unfold Int64.shru'. rewrite Int64.Zshiftr_div_two_p; auto. generalize (Int.unsigned_range y); omega.
+  intros; unfold Int64.shru'. rewrite Zshiftr_div_two_p; auto. generalize (Int.unsigned_range y); omega.
 Qed.
 
 Theorem divlu_mul_shift:
