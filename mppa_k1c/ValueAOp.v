@@ -282,10 +282,6 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Osingleoflong, v1::nil => singleoflong v1
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
-  | (Oselect cond), v0::v1::vselect::nil => eval_static_select cond v0 v1 vselect
-  | (Oselectl cond), v0::v1::vselect::nil => eval_static_selectl cond v0 v1 vselect               
-  | (Oselectf cond), v0::v1::vselect::nil => eval_static_selectf cond v0 v1 vselect
-  | (Oselectfs cond), v0::v1::vselect::nil => eval_static_selectfs cond v0 v1 vselect
   | (Oextfz stop start), v0::nil => eval_static_extfz stop start v0
   | (Oextfs stop start), v0::nil => eval_static_extfs stop start v0
   | (Oextfzl stop start), v0::nil => eval_static_extfzl stop start v0
@@ -411,46 +407,6 @@ Proof.
     + eauto with va.
     + destruct a1; destruct shift; reflexivity.
   - apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
-  (* select *)
-  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
-    rewrite eval_select_to2.
-    unfold eval_select2.
-    inv Hcond; trivial; try constructor.
-    + apply binop_int_sound; assumption.
-    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      apply vmatch_ifptr_i.
-    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      apply vmatch_ifptr_i.
-  (* selectl *)
-  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
-    rewrite eval_selectl_to2.
-    unfold eval_selectl2.
-    inv Hcond; trivial; try constructor.
-    + apply binop_long_sound; assumption.
-    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      apply vmatch_ifptr_l.
-    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      apply vmatch_ifptr_l.
-  (* selectf *)
-  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
-    rewrite eval_selectf_to2.
-    unfold eval_selectf2.
-    inv Hcond; trivial; try constructor.
-    + apply binop_float_sound; assumption.
-    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      constructor.
-    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      constructor.
-  (* selectfs *)
-  - assert (Hcond : (cmatch (eval_condition0 cond a2 m) (eval_static_condition0 cond b2))) by (apply eval_static_condition0_sound; assumption).
-    rewrite eval_selectfs_to2.
-    unfold eval_selectfs2.
-    inv Hcond; trivial; try constructor.
-    + apply binop_single_sound; assumption.
-    + destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      constructor.
-    + destruct (eval_condition0 cond a2 m); destruct a1; destruct a0; try apply vmatch_ifptr_undef.
-      constructor.
 
   (* extfz *)
   - unfold extfz, eval_static_extfz.

@@ -216,7 +216,6 @@ Definition two_address_op (op: operation) : bool :=
   | Omadd | Omaddimm _
   | Omaddl | Omaddlimm _
   | Omsub | Omsubl
-  | Oselect _ | Oselectl _ | Oselectf _ | Oselectfs _
   | Oinsf _ _ | Oinsfl _ _ => true
   | _ => false
   end.

@@ -609,7 +609,7 @@ Proof.
   change (Int.ltu (Int.repr 32) Int64.iwordsize') with true; simpl.
   apply Val.lessdef_same. f_equal. 
   transitivity (Int.repr (Z.shiftr (Int.signed i * Int.signed i0) 32)).
-  unfold Int.mulhs; f_equal. rewrite Int.Zshiftr_div_two_p by omega. reflexivity.
+  unfold Int.mulhs; f_equal. rewrite Zbits.Zshiftr_div_two_p by omega. reflexivity.
   apply Int.same_bits_eq; intros n N.
   change Int.zwordsize with 32 in *.
   assert (N1: 0 <= n < 64) by omega.
@@ -637,7 +637,7 @@ Proof.
   change (Int.ltu (Int.repr 32) Int64.iwordsize') with true; simpl.
   apply Val.lessdef_same. f_equal. 
   transitivity (Int.repr (Z.shiftr (Int.unsigned i * Int.unsigned i0) 32)).
-  unfold Int.mulhu; f_equal. rewrite Int.Zshiftr_div_two_p by omega. reflexivity.
+  unfold Int.mulhu; f_equal. rewrite Zbits.Zshiftr_div_two_p by omega. reflexivity.
   apply Int.same_bits_eq; intros n N.
   change Int.zwordsize with 32 in *.
   assert (N1: 0 <= n < 64) by omega.
@@ -756,83 +756,6 @@ Proof.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
   - (*orn*) TrivialExists; simpl; congruence.
   - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
-  - (* select *)
-    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
-    TrivialExists.
-    simpl in *.
-    unfold eval_select.
-    f_equal.
-    inv H6.
-    inv H7.
-    inv H9.
-    inv H11.
-    unfold same_expr_pure in PURE.
-    destruct y0; try congruence.
-    destruct y1; try congruence.
-    destruct (ident_eq i i0); try congruence.
-    rewrite <- e0 in *. clear e0. clear PURE.
-    inv H2. inv H5.
-    replace v8 with v4 in * by congruence.
-    rename v4 into vselect.
-    destruct vselect; simpl; trivial;
-    destruct v5; simpl; trivial; destruct v9; simpl; trivial;
-    destruct (Int.eq i1 Int.zero); simpl; trivial.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_zero.
-      reflexivity.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.or_commut.
-      rewrite Int.or_zero.
-      reflexivity.
-  - (* select unsigned *)
-    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
-    TrivialExists.
-    simpl in *.
-    unfold eval_select.
-    f_equal.
-    inv H6.
-    inv H7.
-    inv H9.
-    inv H11.
-    unfold same_expr_pure in PURE.
-    destruct y0; try congruence.
-    destruct y1; try congruence.
-    destruct (ident_eq i i0); try congruence.
-    rewrite <- e0 in *. clear e0. clear PURE.
-    inv H2. inv H5.
-    replace v8 with v4 in * by congruence.
-    rename v4 into vselect.
-    destruct vselect; simpl; trivial;
-    destruct v5; simpl; trivial;
-    destruct v9; simpl; trivial;
-    destruct (Int.eq i1 Int.zero); simpl; trivial.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_zero.
-      reflexivity.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.or_commut.
-      rewrite Int.or_zero.
-      reflexivity.
   - set (zstop := (int_highest_bit mask)).
     set (zstart := (Int.unsigned start)).
     destruct (is_bitfield _ _) eqn:Risbitfield.
@@ -1486,6 +1409,22 @@ Proof.
   repeat constructor; auto.
 + constructor; auto.
 - constructor; auto.
+Qed.
+
+(* ternary *)
+
+Theorem eval_select: 
+  forall le ty cond al vl a1 v1 a2 v2 a b,
+  select ty cond al a1 a2 = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  eval_condition cond vl m = Some b ->
+  exists v, 
+     eval_expr ge sp e m le a v
+  /\ Val.lessdef (Val.select (Some b) v1 v2 ty) v.
+Proof.
+  discriminate.
 Qed.
 
 (* floating-point division *)

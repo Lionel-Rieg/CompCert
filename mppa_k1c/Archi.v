@@ -17,8 +17,8 @@
 (** Architecture-dependent parameters for RISC-V *)
 
 Require Import ZArith.
-Require Import Fappli_IEEE.
-Require Import Fappli_IEEE_bits.
+(*From Flocq*)
+Require Import Binary Bits.
 
 Definition ptr64 := true.
 
@@ -41,23 +41,26 @@ Qed.
    We need to extend the [choose_binop_pl] functions to account for
    this case. *)
 
-Program Definition default_pl_64 : bool * nan_pl 53 :=
-  (false, iter_nat 51 _ xO xH).
+Definition default_nan_64 : { x : binary64 | is_nan _ _ x = true } :=
+  exist _ (B754_nan 53 1024 true (iter_nat 51 _ xO xH) (eq_refl true)) (eq_refl true).
 
-Definition choose_binop_pl_64 (s1: bool) (pl1: nan_pl 53) (s2: bool) (pl2: nan_pl 53) :=
+Definition choose_binop_pl_64 (pl1 pl2 : positive) :=
   false.                        (**r always choose first NaN *)
 
-Program Definition default_pl_32 : bool * nan_pl 24 :=
-  (false, iter_nat 22 _ xO xH).
+Definition default_nan_32 : { x : binary32 | is_nan _ _ x = true } :=
+  exist _ (B754_nan 24 128 true (iter_nat 22 _ xO xH) (eq_refl true)) (eq_refl true).
 
-Definition choose_binop_pl_32 (s1: bool) (pl1: nan_pl 24) (s2: bool) (pl2: nan_pl 24) :=
+Definition choose_binop_pl_32 (pl1 pl2 : positive) :=
   false.                        (**r always choose first NaN *)
+
+(* TODO check *)
+Definition fpu_returns_default_qNaN := false.
 
 Definition float_of_single_preserves_sNaN := false.
 
 Global Opaque ptr64 big_endian splitlong
-              default_pl_64 choose_binop_pl_64
-              default_pl_32 choose_binop_pl_32
+              default_nan_64 choose_binop_pl_64
+              default_nan_32 choose_binop_pl_32
               float_of_single_preserves_sNaN.
 
 (** Whether to generate position-independent code or not *)

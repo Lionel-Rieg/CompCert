@@ -129,7 +129,6 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ointofsingle | Ointuofsingle | Osingleofint | Osingleofintu => op1 (default nv)
   | Olongofsingle | Olonguofsingle | Osingleoflong | Osingleoflongu => op1 (default nv)
   | Ocmp c => needs_of_condition c
-  | Oselect _ | Oselectl _ | Oselectf _ | Oselectfs _ => op3 (default nv)
   | Oextfz _ _ | Oextfs _ _  | Oextfzl _ _ | Oextfsl _ _ => op1 (default nv)
   | Oinsf _ _ | Oinsfl _ _ => op2 (default nv)
   end.
@@ -277,179 +276,6 @@ Proof.
     trivial.
 Qed.
   
-Lemma select_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_select cond v0 v1 v2 m1) (eval_select cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_select_to2.
-    rewrite eval_select_to2.
-    unfold eval_select2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-      apply iagree_refl.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-      apply iagree_refl.
-  - rewrite eval_select_to2.
-    rewrite eval_select_to2.
-    unfold eval_select2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectl_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectl cond v0 v1 v2 m1) (eval_selectl cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectl_to2.
-    rewrite eval_selectl_to2.
-    unfold eval_selectl2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectl_to2.
-    rewrite eval_selectl_to2.
-    unfold eval_selectl2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectf_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectf cond v0 v1 v2 m1) (eval_selectf cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectf_to2.
-    rewrite eval_selectf_to2.
-    unfold eval_selectf2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectf_to2.
-    rewrite eval_selectf_to2.
-    unfold eval_selectf2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectfs_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectfs cond v0 v1 v2 m1) (eval_selectfs cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectfs_to2.
-    rewrite eval_selectfs_to2.
-    unfold eval_selectfs2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectfs_to2.
-    rewrite eval_selectfs_to2.
-    unfold eval_selectfs2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
 
 Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
@@ -514,14 +340,6 @@ Proof.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
-  (* select *)
-- apply select_sound; trivial.
-  (* selectl *)
-- apply selectl_sound; trivial.
-  (* selectf *)
-- apply selectf_sound; trivial.
-  (* selectfs *)
-- apply selectfs_sound; trivial.
 Qed.
 
 Lemma operation_is_redundant_sound:

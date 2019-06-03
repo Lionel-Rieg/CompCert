@@ -287,10 +287,10 @@ Proof.
   intros.
   apply Int.eqm_samerepr.
   unfold Int.eqm.
-  unfold Int.eqmod.
+  unfold Zbits.eqmod.
   pose proof (Int64.eqm_unsigned_repr x) as H64.
   unfold Int64.eqm in H64.
-  unfold Int64.eqmod in H64.
+  unfold Zbits.eqmod in H64.
   destruct H64 as [k64 H64].
   change Int64.modulus with 18446744073709551616 in *.
   change Int.modulus with 4294967296.
@@ -367,7 +367,7 @@ Proof.
         apply Int.eqm_samerepr.
         unfold Int.eqm.
         change (Int64.unsigned (Int64.repr (-2147483648))) with 18446744071562067968.
-        unfold Int.eqmod.
+        unfold Zbits.eqmod.
         change Int.modulus with 4294967296.
         exists (-4294967296).
         compute.
