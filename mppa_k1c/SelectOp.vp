@@ -65,12 +65,54 @@ Section SELECT.
 
 Context {hf: helper_functions}.
 
+Nondetfunction cond_to_condition0 (cond : condition) (args : exprlist) :=
+  match cond, args with
+  | (Ccomp c), (e1 ::: (Eop (Ointconst x) Enil) ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccomp0 c), e1)
+    else None
+  | (Ccomp c), ((Eop (Ointconst x) Enil) ::: e2 ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccomp0 (swap_comparison c)), e2)
+    else None
+  | (Ccompu c), (e1 ::: (Eop (Ointconst x) Enil) ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccompu0 c), e1)
+    else None
+  | (Ccompu c), ((Eop (Ointconst x) Enil) ::: e2 ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccompu0 (swap_comparison c)), e2)
+    else None
+
+  | (Ccompl c), (e1 ::: (Eop (Olongconst x) Enil) ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccompl0 c), e1)
+    else None
+  | (Ccompl c), ((Eop (Olongconst x) Enil) ::: e2 ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccompl0 (swap_comparison c)), e2)
+    else None
+  | (Ccomplu c), (e1 ::: (Eop (Olongconst x) Enil) ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccomplu0 c), e1)
+    else None
+  | (Ccomplu c), ((Eop (Olongconst x) Enil) ::: e2 ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccomplu0 (swap_comparison c)), e2)
+    else None
+  | _, _ => None
+  end.
+  
 (** Ternary operator *)
 Definition select0 (ty : typ) (cond0 : condition0) (e1 e2 eC: expr) :=
   (Eop (Osel cond0 ty) (e1 ::: e2 ::: eC ::: Enil)).
 
 Definition select (ty : typ) (cond : condition) (args : exprlist) (e1 e2: expr)  : option expr :=
-  Some (select0 ty (Ccomp0 Cne) e1 e2 (Eop (Ocmp cond) args)).
+  Some(
+  match cond_to_condition0 cond args with
+  | None => select0 ty (Ccomp0 Cne) e1 e2 (Eop (Ocmp cond) args)
+  | Some(cond0, ec) => select0 ty cond0 e1 e2 ec
+  end).
 
 				      
 (** ** Constants **)

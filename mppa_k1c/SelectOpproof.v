@@ -1412,6 +1412,98 @@ Proof.
 Qed.
 
 (* ternary *)
+(* does not work due to possible nondeterminism
+Lemma cond_to_condition0_correct :
+  forall cond : condition,
+  forall al : exprlist,
+    match (cond_to_condition0 cond al) with
+    | None => True
+    | Some(cond0, e1) =>
+      forall le vl v1,
+      eval_expr ge sp e m le e1 v1 ->
+      eval_exprlist ge sp e m le al vl ->
+      (eval_condition0 cond0 v1 m) = (eval_condition cond vl m)
+    end.
+Proof.
+  intros.
+  unfold cond_to_condition0.
+  case (cond_to_condition0_match cond al); trivial.
+  {
+    intros.
+    destruct (Int.eq_dec _ _); trivial.
+    intros until v1.
+    intros He1 Hel.
+    InvEval.
+    simpl.
+    f_equal.
+    eapply eval_expr_determ. eassumption.
+  }
+Qed.
+*)
+
+Lemma eval_select0: 
+  forall le ty cond0 ac vc a1 v1 a2 v2,
+  eval_expr ge sp e m le ac vc ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  exists v, 
+     eval_expr ge sp e m le (select0 ty cond0 a1 a2 ac) v
+  /\ Val.lessdef (Val.select (eval_condition0 cond0 vc m) v1 v2 ty) v.
+Proof.
+  intros.
+  econstructor; split.
+  {
+    unfold select0.
+    repeat (try econstructor; try eassumption).
+  }
+  constructor.
+Qed.
+
+Lemma bool_cond0_ne:
+  forall ob : option bool,
+  forall m,
+    (eval_condition0 (Ccomp0 Cne) (Val.of_optbool ob) m) = ob.
+Proof.
+  destruct ob; simpl; trivial.
+  intro.
+  destruct b; reflexivity.
+Qed.
+
+Lemma eval_condition_ccomp_swap :
+  forall c x y m,
+    eval_condition (Ccomp (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccomp c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmp_bool.
+Qed.
+
+Lemma eval_condition_ccompu_swap :
+  forall c x y m,
+    eval_condition (Ccompu (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccompu c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmpu_bool.
+Qed.
+
+Lemma eval_condition_ccompl_swap :
+  forall c x y m,
+    eval_condition (Ccompl (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccompl c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmpl_bool.
+Qed.
+
+Lemma eval_condition_ccomplu_swap :
+  forall c x y m,
+    eval_condition (Ccomplu (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccomplu c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmplu_bool.
+Qed.
 
 Theorem eval_select: 
   forall le ty cond al vl a1 v1 a2 v2 a b,
@@ -1428,15 +1520,139 @@ Proof.
   intros until b.
   intro Hop; injection Hop; clear Hop; intro; subst a.
   intros HeL He1 He2 HeC.
-  econstructor; split.
+  unfold cond_to_condition0.
+  destruct (cond_to_condition0_match cond al).
   {
-    repeat (try econstructor; try eassumption).
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      simpl.
+      change (Val.cmp_bool c v0 (Vint Int.zero))
+        with (eval_condition0 (Ccomp0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmp_bool c v0 (Vint x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
   }
-  apply Val.select_lessdef; trivial.
-  right.
-  rewrite HeC.
+  {
+    InvEval.
+    rewrite <- HeC.
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      rewrite <- eval_condition_ccomp_swap.
+      simpl.
+      change (Val.cmp_bool (swap_comparison c) v3 (Vint Int.zero))
+        with (eval_condition0 (Ccomp0 (swap_comparison c)) v3 m).
+      eapply eval_select0; eassumption.
+    }
+    rewrite <- eval_condition_ccomp_swap.
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmp_bool  (swap_comparison c) v3 (Vint x))).
+    rewrite Val.swap_cmp_bool.
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      simpl.
+      change (Val.cmpu_bool (Mem.valid_pointer m) c v0 (Vint Int.zero))
+        with (eval_condition0 (Ccompu0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpu_bool (Mem.valid_pointer m) c v0 (Vint x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      rewrite <- eval_condition_ccompu_swap.
+      simpl.
+      change (Val.cmpu_bool (Mem.valid_pointer m) (swap_comparison c) v3
+                            (Vint Int.zero))
+      with (eval_condition0 (Ccompu0 (swap_comparison c)) v3 m).
+      eapply eval_select0; eassumption.
+    }
+    rewrite <- eval_condition_ccompu_swap.
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpu_bool (Mem.valid_pointer m) (swap_comparison c) v3 (Vint x))).
+    rewrite Val.swap_cmpu_bool.
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      simpl.
+      change (Val.cmpl_bool c v0 (Vlong Int64.zero))
+      with (eval_condition0 (Ccompl0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpl_bool c v0 (Vlong x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      rewrite <- eval_condition_ccompl_swap.
+      simpl.
+      change (Val.cmpl_bool (swap_comparison c) v3 (Vlong Int64.zero))
+      with (eval_condition0 (Ccompl0 (swap_comparison c)) v3 m).
+      eapply eval_select0; eassumption.
+    }
+    rewrite <- eval_condition_ccompl_swap.
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpl_bool (swap_comparison c) v3 (Vlong x))).
+    rewrite Val.swap_cmpl_bool.
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      simpl.
+      change (Val.cmplu_bool  (Mem.valid_pointer m) c v0 (Vlong Int64.zero))
+      with (eval_condition0 (Ccomplu0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) c v0 (Vlong x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      rewrite <- eval_condition_ccomplu_swap.
+      simpl.
+      change (Val.cmplu_bool  (Mem.valid_pointer m) (swap_comparison c) v3 (Vlong Int64.zero))
+      with (eval_condition0 (Ccomplu0 (swap_comparison c)) v3 m).
+      eapply eval_select0; eassumption.
+    }
+    rewrite <- eval_condition_ccomplu_swap.
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) (swap_comparison c) v3 (Vlong x))).
+    rewrite Val.swap_cmplu_bool.
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  TrivialExists.
+  repeat (try econstructor; try eassumption).
   simpl.
-  destruct b; reflexivity.
+  f_equal.
+  rewrite HeC.
+  destruct b; simpl; reflexivity.
 Qed.
 
 (* floating-point division *)
