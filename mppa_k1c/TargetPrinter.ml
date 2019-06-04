@@ -717,6 +717,12 @@ module Target (*: TARGET*) =
       | Pcmove (bt, rd, rcond, rs) | Pcmoveu (bt, rd, rcond, rs) ->
          fprintf oc "	cmoved.%a %a? %a = %a\n"
            bcond bt ireg rcond ireg rd ireg rs
+      | Pcmoveiw (bt, rd, rcond, imm) | Pcmoveuiw (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint imm
+      | Pcmoveil (bt, rd, rcond, imm) | Pcmoveuil (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint64 imm
         
     let get_section_names name =
       let (text, lit) =

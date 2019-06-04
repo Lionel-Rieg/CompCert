@@ -527,10 +527,14 @@ Inductive arith_name_arrr : Type :=
 
 Inductive arith_name_arri32 : Type :=
   | Pmaddiw                                           (**r multiply add word *)
+  | Pcmoveiw (bt: btest)
+  | Pcmoveuiw (bt: btest)
 .
 
 Inductive arith_name_arri64 : Type :=
   | Pmaddil                                           (**r multiply add long *)
+  | Pcmoveil (bt: btest)
+  | Pcmoveuil (bt: btest)
 .
 
 Inductive arith_name_arr : Type :=
@@ -1120,44 +1124,48 @@ Definition arith_eval_rri64 n v i :=
   | Prevsubxil shift => ExtValues.revsubxl (int_of_shift1_4 shift) v (Vlong i)
   end.
 
+Definition cmove bt v1 v2 v3 :=
+  match cmp_for_btest bt with
+  | (Some c, Int)  =>
+    match Val.cmp_bool c v2 (Vint Int.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (Some c, Long) =>
+    match Val.cmpl_bool c v2 (Vlong Int64.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (None, _) => Vundef
+  end.
+
+Definition cmoveu bt v1 v2 v3 :=
+  match cmpu_for_btest bt with
+  | (Some c, Int)  =>
+    match Val_cmpu_bool c v2 (Vint Int.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (Some c, Long) =>
+    match Val_cmplu_bool c v2 (Vlong Int64.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (None, _) => Vundef
+  end.
+
 Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
   | Pmsubw => Val.sub v1 (Val.mul v2 v3)
   | Pmsubl => Val.subl v1 (Val.mull v2 v3)
-  | Pcmove bt =>
-    match cmp_for_btest bt with
-    | (Some c, Int)  =>
-      match Val.cmp_bool c v2 (Vint Int.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (Some c, Long) =>
-      match Val.cmpl_bool c v2 (Vlong Int64.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (None, _) => Vundef
-    end
-  | Pcmoveu bt =>
-    match cmpu_for_btest bt with
-    | (Some c, Int)  =>
-      match Val_cmpu_bool c v2 (Vint Int.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (Some c, Long) =>
-      match Val_cmplu_bool c v2 (Vlong Int64.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (None, _) => Vundef
-    end
+  | Pcmove bt => cmove bt v1 v2 v3
+  | Pcmoveu bt => cmoveu bt v1 v2 v3
   end.
 
 Definition arith_eval_arr n v1 v2 :=
@@ -1169,11 +1177,15 @@ Definition arith_eval_arr n v1 v2 :=
 Definition arith_eval_arri32 n v1 v2 v3 :=
   match n with
   | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
+  | Pcmoveiw bt => cmove bt v1 v2 (Vint v3)
+  | Pcmoveuiw bt => cmoveu bt v1 v2 (Vint v3)
   end.
 
 Definition arith_eval_arri64 n v1 v2 v3 :=
   match n with
   | Pmaddil => Val.addl v1 (Val.mull v2 (Vlong v3))
+  | Pcmoveil bt => cmove bt v1 v2 (Vlong v3)
+  | Pcmoveuil bt => cmoveu bt v1 v2 (Vlong v3)
   end.
 
 Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=

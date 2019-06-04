@@ -154,7 +154,17 @@ let arith_arrr_str = function
   | Pmsubl -> "Pmsubl"
   | Pcmove _ -> "Pcmove"
   | Pcmoveu _ -> "Pcmoveu"
-            
+
+let arith_arri32_str = function
+  | Pmaddiw -> "Pmaddiw"
+  | Pcmoveiw _ -> "Pcmoveiw"
+  | Pcmoveuiw _ -> "Pcmoveuiw"
+
+let arith_arri64_str = function
+  | Pmaddil -> "Pmaddil"
+  | Pcmoveil _ -> "Pcmoveil"
+  | Pcmoveuil _ -> "Pcmoveuil"
+
 let arith_ri32_str = "Pmake"
 
 let arith_ri64_str = "Pmakel"
@@ -194,9 +204,9 @@ let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Re
 
 let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
-let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+let arith_arri32_rec i rd rs imm32 = { inst = arith_arri32_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
 
-let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+let arith_arri64_rec i rd rs imm64 = { inst = arith_arri64_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
 
 let arith_arr_rec i rd rs = { inst = arith_arr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
 
@@ -215,8 +225,8 @@ let arith_rec i =
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithARR (i, rd, rs) -> arith_arr_rec i (IR rd) (IR rs)
   (* Seems like single constant constructor types are elided *)
-  | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
-  | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
+  | PArithARRI32 (i, rd, rs, imm32) -> arith_arri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
+  | PArithARRI64 (i, rd, rs, imm64) -> arith_arri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}

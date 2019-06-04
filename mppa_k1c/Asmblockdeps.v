@@ -1515,11 +1515,15 @@ Definition string_of_name_arr (n: arith_name_arr): pstring :=
 Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
   match n with
   | Pmaddiw => "Pmaddw"
+  | Pcmoveiw _ => "Pcmoveiw"
+  | Pcmoveuiw _ => "Pcmoveuiw"
   end.
 
 Definition string_of_name_arri64 (n: arith_name_arri64): pstring :=
   match n with
   | Pmaddil => "Pmaddl"
+  | Pcmoveil _ => "Pcmoveil"
+  | Pcmoveuil _ => "Pcmoveuil"
   end.
 
 Definition string_of_arith (op: arith_op): pstring :=

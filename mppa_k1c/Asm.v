@@ -273,6 +273,10 @@ Inductive instruction : Type :=
   | Pmaddil             (rd rs: ireg) (imm: int64)  (**r multiply add imm long *)
   | Pcmove (bt: btest) (rcond rd rs : ireg) (** conditional move *) 
   | Pcmoveu (bt: btest) (rcond rd rs : ireg) (** conditional move, unsigned semantics *) 
+  | Pcmoveiw (bt: btest) (rcond rd : ireg) (imm: int) (** conditional move *) 
+  | Pcmoveuiw (bt: btest) (rcond rd : ireg) (imm: int) (** conditional move, unsigned semantics *) 
+  | Pcmoveil (bt: btest) (rcond rd : ireg) (imm: int64) (** conditional move *) 
+  | Pcmoveuil (bt: btest) (rcond rd : ireg) (imm: int64) (** conditional move, unsigned semantics *) 
 .
 
 (** Correspondance between Asmblock and Asm *)
@@ -447,10 +451,13 @@ Definition basic_to_instruction (b: basic) :=
 
   (** ARRI32 *)
   | PArithARRI32 Asmvliw.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
+  | PArithARRI32 (Asmvliw.Pcmoveiw cond) rd rs1 imm => Pcmoveiw cond rd rs1 imm
+  | PArithARRI32 (Asmvliw.Pcmoveuiw cond) rd rs1 imm => Pcmoveuiw cond rd rs1 imm
 
   (** ARRI64 *)
   | PArithARRI64 Asmvliw.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
-                                                          
+  | PArithARRI64 (Asmvliw.Pcmoveil cond) rd rs1 imm => Pcmoveil cond rd rs1 imm
+  | PArithARRI64 (Asmvliw.Pcmoveuil cond) rd rs1 imm => Pcmoveuil cond rd rs1 imm                                                          
   (** Load *)
   | PLoadRRO Asmvliw.Plb rd ra ofs   => Plb rd ra (AOff ofs)
   | PLoadRRO Asmvliw.Plbu rd ra ofs  => Plbu rd ra (AOff ofs)

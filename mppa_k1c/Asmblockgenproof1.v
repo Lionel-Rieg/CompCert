@@ -1759,9 +1759,11 @@ Opaque Int.eq.
       destruct (Int.ltu _ _); simpl; trivial.
     * intros.
       rewrite Pregmap.gso; trivial.
+      
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
+  
 - (* Osel *)
   unfold conditional_move in *.
   destruct (ireg_eq _ _).
@@ -1784,6 +1786,7 @@ Opaque Int.eq.
     econstructor; split; try (apply exec_straight_one; constructor);
     split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
     unfold Val.select; simpl;
+    unfold cmove, cmoveu;   
     rewrite Pregmap.gss;
     destruct (rs x1); simpl; trivial;
     try rewrite int_ltu_to_neq;
