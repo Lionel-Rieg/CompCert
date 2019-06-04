@@ -456,8 +456,8 @@ Definition eval_operation
   | (Oinsf stop start), v0::v1::nil => Some (insf stop start v0 v1)
   | (Oinsfl stop start), v0::v1::nil => Some (insfl stop start v0 v1)
   | Osel c ty, v1::v2::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 v2 ty)
-  | Oselimm c imm, v1::v2::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vint imm) Tint)
-  | Osellimm c imm, v1::v2::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vlong imm) Tlong)
+  | Oselimm c imm, v1::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vint imm) Tint)
+  | Osellimm c imm, v1::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vlong imm) Tlong)
   | _, _ => None
   end.
 
@@ -662,8 +662,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oinsf _ _ => (Tint :: Tint :: nil, Tint)
   | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
   | Osel c ty => (ty :: ty :: arg_type_of_condition0 c :: nil, ty)
-  | Oselimm c ty => (Tint :: Tint :: arg_type_of_condition0 c :: nil, Tint)
-  | Osellimm c ty => (Tlong :: Tlong :: arg_type_of_condition0 c :: nil, Tlong)
+  | Oselimm c ty => (Tint :: arg_type_of_condition0 c :: nil, Tint)
+  | Osellimm c ty => (Tlong :: arg_type_of_condition0 c :: nil, Tlong)
   end.
 
 (* FIXME: two Tptr ?! *)
@@ -1614,7 +1614,7 @@ Proof.
 
  (* Oselimm *)
   - apply Val.select_inject; trivial.
-    destruct (eval_condition0 c0 v2 m1) eqn:Hcond.
+    destruct (eval_condition0 _ _ _) eqn:Hcond.
     + right.
       symmetry.
       eapply eval_condition0_inj; eassumption.
@@ -1622,7 +1622,7 @@ Proof.
 
  (* Osellimm *)
   - apply Val.select_inject; trivial.
-    destruct (eval_condition0 c0 v2 m1) eqn:Hcond.
+    destruct (eval_condition0 _ _ _) eqn:Hcond.
     + right.
       symmetry.
       eapply eval_condition0_inj; eassumption.

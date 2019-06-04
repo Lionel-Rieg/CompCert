@@ -551,7 +551,7 @@ let ab_inst_to_real = function
   | "Pfixedudrzz" -> Fixedudz
   | "Pfixeddrzz_i32" -> Fixeddz
   | "Pfixedudrzz_i32" -> Fixedudz
-  | "Pcmove" | "Pcmoveu" -> Cmoved
+  | "Pcmove" | "Pcmoveu"   | "Pcmoveiw" | "Pcmoveuiw" | "Pcmoveil" | "Pcmoveuil" -> Cmoved
   
   | "Plb" -> Lbs
   | "Plbu" -> Lbz

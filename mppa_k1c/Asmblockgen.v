@@ -375,6 +375,34 @@ Definition conditional_move (cond0 : condition0) (rc rd rs : ireg) :
          OK (PArith (Pcmoveu bt rd rc rs))
      end).
 
+Definition conditional_move_imm32 (cond0 : condition0) (rc rd : ireg) (imm : int) : res basic :=
+  match cond0 with
+  | Ccomp0 cmp =>
+    OK (PArith (Pcmoveiw (btest_for_cmpswz cmp) rd rc imm))
+  | Ccompu0 cmp =>
+    do bt <- btest_for_cmpuwz cmp;
+      OK (PArith (Pcmoveuiw bt rd rc imm))
+  | Ccompl0 cmp =>
+    OK (PArith (Pcmoveiw (btest_for_cmpsdz cmp) rd rc imm))
+  | Ccomplu0 cmp =>
+    do bt <- btest_for_cmpudz cmp;
+      OK (PArith (Pcmoveuiw bt rd rc imm))
+  end.
+
+Definition conditional_move_imm64 (cond0 : condition0) (rc rd : ireg) (imm : int64) : res basic :=
+  match cond0 with
+  | Ccomp0 cmp =>
+    OK (PArith (Pcmoveil (btest_for_cmpswz cmp) rd rc imm))
+  | Ccompu0 cmp =>
+    do bt <- btest_for_cmpuwz cmp;
+      OK (PArith (Pcmoveuil bt rd rc imm))
+  | Ccompl0 cmp =>
+    OK (PArith (Pcmoveil (btest_for_cmpsdz cmp) rd rc imm))
+  | Ccomplu0 cmp =>
+    do bt <- btest_for_cmpudz cmp;
+      OK (PArith (Pcmoveuil bt rd rc imm))
+  end.
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -846,6 +874,21 @@ Definition transl_op
       do rF <- ireg_of aF;
       do rC <- ireg_of aC;
       do op <- conditional_move (negate_condition0 cond0) rC rT rF;
+      OK (op ::i k)
+
+  | Oselimm cond0 imm, aT :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rC <- ireg_of aC;
+      do op <- conditional_move_imm32 (negate_condition0 cond0) rC rT imm;
+      OK (op ::i k)
+      
+
+  | Osellimm cond0 imm, aT :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rC <- ireg_of aC;
+      do op <- conditional_move_imm64 (negate_condition0 cond0) rC rT imm;
       OK (op ::i k)
       
   | _, _ =>

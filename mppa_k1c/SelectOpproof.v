@@ -1451,12 +1451,10 @@ Lemma eval_select0:
   /\ Val.lessdef (Val.select (eval_condition0 cond0 vc m) v1 v2 ty) v.
 Proof.
   intros.
-  econstructor; split.
-  {
-    unfold select0.
-    repeat (try econstructor; try eassumption).
-  }
-  constructor.
+  unfold select0.
+  destruct (select0_match ty cond0 a1 a2 ac).
+  all: InvEval; econstructor; split;
+        repeat (try econstructor; try eassumption).
 Qed.
 
 Lemma bool_cond0_ne:
@@ -1578,12 +1576,11 @@ Proof.
     erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) c v0 (Vlong x))).
     eapply eval_select0; repeat (try econstructor; try eassumption).
   }
-  TrivialExists.
-  repeat (try econstructor; try eassumption).
+  erewrite <- (bool_cond0_ne (Some b)).
+  eapply eval_select0; repeat (try econstructor; try eassumption).
+  rewrite <- HeC.
   simpl.
-  f_equal.
-  rewrite HeC.
-  destruct b; simpl; reflexivity.
+  reflexivity.
 Qed.
 
 (* floating-point division *)

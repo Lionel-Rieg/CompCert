@@ -1799,6 +1799,54 @@ Opaque Int.eq.
     try destruct (_ || _);
     trivial;
     try apply Val.lessdef_normalize.
+
+- (* Oselimm *)
+  unfold conditional_move_imm32 in *.
+  destruct c0; simpl in *.
+
+  all:
+    destruct c; simpl in *; inv EQ0;
+    econstructor; split; try (apply exec_straight_one; constructor);
+    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
+    unfold Val.select; simpl;
+    unfold cmove, cmoveu;   
+    rewrite Pregmap.gss;
+    destruct (rs x0); simpl; trivial;
+    try rewrite int_ltu_to_neq;
+    try rewrite int64_ltu_to_neq;
+    try change (Int64.eq Int64.zero Int64.zero) with true;
+    try destruct Archi.ptr64;
+    repeat rewrite if_neg;
+    simpl;
+    trivial;
+    try destruct (_ || _);
+    trivial;
+    try apply Val.lessdef_normalize.
+
+
+- (* Osellimm *)
+  unfold conditional_move_imm64 in *.
+  destruct c0; simpl in *.
+
+  all:
+    destruct c; simpl in *; inv EQ0;
+    econstructor; split; try (apply exec_straight_one; constructor);
+    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
+    unfold Val.select; simpl;
+    unfold cmove, cmoveu;   
+    rewrite Pregmap.gss;
+    destruct (rs x0); simpl; trivial;
+    try rewrite int_ltu_to_neq;
+    try rewrite int64_ltu_to_neq;
+    try change (Int64.eq Int64.zero Int64.zero) with true;
+    try destruct Archi.ptr64;
+    repeat rewrite if_neg;
+    simpl;
+    trivial;
+    try destruct (_ || _);
+    trivial;
+    try apply Val.lessdef_normalize.
+
 Qed.
 
 (** Memory accesses *)
