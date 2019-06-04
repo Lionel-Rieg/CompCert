@@ -342,8 +342,8 @@ Definition btest_for_cmpuwz (c: comparison) :=
   | Ceq => OK BTweqz
   | Clt => Error (msg "btest_for_compuwz: Clt")
   | Cge => Error (msg "btest_for_compuwz: Cge")
-  | Cle => Error (msg "btest_for_compuwz: Cle")
-  | Cgt => Error (msg "btest_for_compuwz: Cgt")
+  | Cle => OK BTweqz
+  | Cgt => OK BTwnez
   end.
 
 (* CoMPare Unsigned Words to Zero *)
@@ -353,8 +353,8 @@ Definition btest_for_cmpudz (c: comparison) :=
   | Ceq => OK BTdeqz
   | Clt => Error (msg "btest_for_compudz: Clt")
   | Cge => Error (msg "btest_for_compudz: Cge")
-  | Cle => Error (msg "btest_for_compudz: Cle")
-  | Cgt => Error (msg "btest_for_compudz: Cgt")
+  | Cle => OK BTdeqz
+  | Cgt => OK BTdnez
   end.
 
 Definition conditional_move (cond0 : condition0) (rc rd rs : ireg) :

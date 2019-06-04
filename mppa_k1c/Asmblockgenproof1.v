@@ -1668,6 +1668,30 @@ Proof.
   destruct a; reflexivity.
 Qed.
 
+Lemma int_ltu_to_neq:
+  forall x,
+    Int.ltu Int.zero x = negb (Int.eq x Int.zero).
+Proof.
+  intros.
+  unfold Int.ltu, Int.eq.
+  change (Int.unsigned Int.zero) with 0.
+  pose proof (Int.unsigned_range x) as RANGE.
+  unfold zlt, zeq.
+  destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
+Qed.
+
+Lemma int64_ltu_to_neq:
+  forall x,
+    Int64.ltu Int64.zero x = negb (Int64.eq x Int64.zero).
+Proof.
+  intros.
+  unfold Int64.ltu, Int64.eq.
+  change (Int64.unsigned Int64.zero) with 0.
+  pose proof (Int64.unsigned_range x) as RANGE.
+  unfold zlt, zeq.
+  destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
+Qed.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1754,28 +1778,24 @@ Opaque Int.eq.
   }
 
   destruct c0; simpl in *.
-  1, 2, 3:
+
+  all:
     destruct c; simpl in *; inv EQ2;
     econstructor; split; try (apply exec_straight_one; constructor);
     split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
     unfold Val.select; simpl;
     rewrite Pregmap.gss;
     destruct (rs x1); simpl; trivial;
-    rewrite if_neg;
-    apply Val.lessdef_normalize.
-  
-    destruct c; simpl in *; inv EQ2;
-    econstructor; split; try (apply exec_straight_one; constructor);
-    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
-    unfold Val.select; simpl;
-    rewrite Pregmap.gss;
-    destruct (rs x1); simpl; trivial;
-    rewrite if_neg;
-    try apply Val.lessdef_normalize;
-    
-    destruct Archi.ptr64; simpl; replace (Int64.eq Int64.zero Int64.zero) with true by reflexivity; simpl; trivial;
-    destruct (_ || _); trivial;
-    apply Val.lessdef_normalize.
+    try rewrite int_ltu_to_neq;
+    try rewrite int64_ltu_to_neq;
+    try change (Int64.eq Int64.zero Int64.zero) with true;
+    try destruct Archi.ptr64;
+    repeat rewrite if_neg;
+    simpl;
+    trivial;
+    try destruct (_ || _);
+    trivial;
+    try apply Val.lessdef_normalize.
 Qed.
 
 (** Memory accesses *)
