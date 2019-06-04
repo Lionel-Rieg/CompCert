@@ -209,7 +209,8 @@ Inductive operation : Type :=
   | Oextfzl (stop : Z) (start : Z)
   | Oextfsl (stop : Z) (start : Z)
   | Oinsf (stop : Z) (start : Z)
-  | Oinsfl (stop : Z) (start : Z).
+  | Oinsfl (stop : Z) (start : Z)
+  | Osel (c0 : condition0) (ty : typ).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -250,7 +251,7 @@ Defined.
 
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec eq_shift1_4; intros.
+  generalize typ_eq Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec eq_shift1_4; intros.
   decide equality.
 Defined.
 
@@ -528,6 +529,7 @@ Definition eval_operation
   | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
   | (Oinsf stop start), v0::v1::nil => Some (insf stop start v0 v1)
   | (Oinsfl stop start), v0::v1::nil => Some (insfl stop start v0 v1)
+  | Osel c ty, v1::v2::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 v2 ty)
   | _, _ => None
   end.
 
@@ -731,6 +733,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
   | Oinsf _ _ => (Tint :: Tint :: nil, Tint)
   | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
+  | Osel c ty => (ty :: ty :: arg_type_of_condition0 c :: nil, ty)
   end.
 
 (* FIXME: two Tptr ?! *)
@@ -1040,6 +1043,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
     + destruct v0; destruct v1; simpl; trivial.
       destruct (Int.ltu _ _); simpl; trivial.
     + constructor.
+ (* Osel *)
+  - unfold Val.select. destruct (eval_condition0 _ _ m).
+    + apply Val.normalize_type.
+    + constructor.
 Qed.
 
 End SOUNDNESS.
@@ -1200,6 +1207,10 @@ Definition op_depends_on_memory (op: operation) : bool :=
   | Ocmp (Ccompuimm _ _) => negb Archi.ptr64
   | Ocmp (Ccomplu _) => Archi.ptr64
   | Ocmp (Ccompluimm _ _) => Archi.ptr64
+  
+  | Osel (Ccompu0 _) _ => negb Archi.ptr64
+  | Osel (Ccomplu0 _) _ => Archi.ptr64
+
   | _ => false
   end.
 
@@ -1208,10 +1219,13 @@ Lemma op_depends_on_memory_correct:
   op_depends_on_memory op = false ->
   eval_operation ge sp op args m1 = eval_operation ge sp op args m2.
 Proof.
-  intros until m2. destruct op; simpl; try congruence;
-                     
-  destruct cond; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
-  unfold eval_selecti, eval_selectl, eval_selectf, eval_selectfs, eval_condition0, Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  intros until m2. destruct op; simpl; try congruence.
+  - destruct cond; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  - destruct c0; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
 Qed.
 
 (** Global variables mentioned in an operation or addressing mode *)
@@ -1645,6 +1659,14 @@ Proof.
       simpl. destruct (Int.ltu _ _); trivial.
       simpl. trivial.
     + trivial.
+
+ (* Osel *)
+  - apply Val.select_inject; trivial.
+    destruct (eval_condition0 c0 v2 m1) eqn:Hcond.
+    + right.
+      symmetry.
+      eapply eval_condition0_inj; eassumption.
+    + left. trivial.
 Qed.
 
 Lemma eval_addressing_inj:

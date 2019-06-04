@@ -28,6 +28,7 @@ Definition op2 (nv: nval) := nv :: nv :: nil.
 Definition op3 (nv: nval) := nv :: nv :: nv :: nil.
 
 Definition needs_of_condition (cond: condition): list nval := nil.
+Definition needs_of_condition0 (cond0: condition0): list nval := nil.
 
 Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   match op with
@@ -131,6 +132,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ocmp c => needs_of_condition c
   | Oextfz _ _ | Oextfs _ _  | Oextfzl _ _ | Oextfsl _ _ => op1 (default nv)
   | Oinsf _ _ | Oinsfl _ _ => op2 (default nv)
+  | Osel c ty => nv :: nv :: needs_of_condition0 c
   end.
 
 Definition operation_is_redundant (op: operation) (nv: nval): bool :=
@@ -340,6 +342,11 @@ Proof.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
+  (* select *)
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto.
+  simpl; auto with na.
 Qed.
 
 Lemma operation_is_redundant_sound:

@@ -51,30 +51,6 @@ Definition eval_static_condition0 (cond : condition0) (v : aval) : abool :=
   | Ccomplu0 c => cmplu_bool c v (L Int64.zero)
   end.
   
-Definition eval_static_select (cond : condition0) (v0 v1 vselect : aval) : aval :=
-  match eval_static_condition0 cond vselect with
-  | Just b => binop_int (fun x0 x1 => if b then x1 else x0) v0 v1
-  | _ => Vtop
-  end.
-
-Definition eval_static_selectl (cond : condition0) (v0 v1 vselect : aval) : aval :=
-  match eval_static_condition0 cond vselect with
-  | Just b => binop_long (fun x0 x1 => if b then x1 else x0) v0 v1
-  | _ => Vtop
-  end.
-
-Definition eval_static_selectf (cond : condition0) (v0 v1 vselect : aval) : aval :=
-  match eval_static_condition0 cond vselect with
-  | Just b => binop_float (fun x0 x1 => if b then x1 else x0) v0 v1
-  | _ => Vtop
-  end.
-
-Definition eval_static_selectfs (cond : condition0) (v0 v1 vselect : aval) : aval :=
-  match eval_static_condition0 cond vselect with
-  | Just b => binop_single (fun x0 x1 => if b then x1 else x0) v0 v1
-  | _ => Vtop
-  end.
-  
 
 Definition eval_static_extfs (stop : Z) (start : Z) (v : aval) :=
   if is_bitfield stop start
@@ -288,6 +264,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oextfsl stop start), v0::nil => eval_static_extfsl stop start v0
   | (Oinsf stop start), v0::v1::nil => eval_static_insf stop start v0 v1
   | (Oinsfl stop start), v0::v1::nil => eval_static_insfl stop start v0 v1
+  | Osel c ty, v1::v2::vc::nil => select (eval_static_condition0 c vc) v1 v2
   | _, _ => Vbot
   end.
 
@@ -367,7 +344,7 @@ Theorem eval_static_operation_sound:
   list_forall2 (vmatch bc) vargs aargs ->
   vmatch bc vres (eval_static_operation op aargs).
 Proof.
-  unfold eval_operation, eval_static_operation, eval_static_select, eval_static_selectl, eval_static_selectf, eval_static_selectfs, addx, revsubx, addxl, revsubxl; intros.
+  unfold eval_operation, eval_static_operation, addx, revsubx, addxl, revsubxl; intros.
   destruct op; InvHyps; eauto with va.
   - destruct (propagate_float_constants tt); constructor.
   - destruct (propagate_float_constants tt); constructor.
@@ -442,6 +419,8 @@ Proof.
     destruct (is_bitfieldl _ _).
     + inv H1; inv H0; simpl; try constructor; destruct (Int.ltu _ _); simpl; constructor.
     + constructor.
+    (* select *)
+  - apply select_sound; auto. eapply eval_static_condition0_sound; eauto.
 Qed.
 
 End SOUNDNESS.
