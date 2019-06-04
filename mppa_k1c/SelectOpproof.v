@@ -1424,7 +1424,19 @@ Theorem eval_select:
      eval_expr ge sp e m le a v
   /\ Val.lessdef (Val.select (Some b) v1 v2 ty) v.
 Proof.
-  discriminate.
+  unfold select.
+  intros until b.
+  intro Hop; injection Hop; clear Hop; intro; subst a.
+  intros HeL He1 He2 HeC.
+  econstructor; split.
+  {
+    repeat (try econstructor; try eassumption).
+  }
+  apply Val.select_lessdef; trivial.
+  right.
+  rewrite HeC.
+  simpl.
+  destruct b; reflexivity.
 Qed.
 
 (* floating-point division *)

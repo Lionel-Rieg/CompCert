@@ -66,7 +66,10 @@ Section SELECT.
 Context {hf: helper_functions}.
 
 (** Ternary operator *)
-Definition select (ty : typ) (cond : condition) (args : exprlist) (e1 e2: expr)  : option expr := None.
+(** TODO *)
+Definition select (ty : typ) (cond : condition) (args : exprlist) (e1 e2: expr)  : option expr :=
+  Some (Eop (Osel (Ccomp0 Cne) ty) (e1 ::: e2 :::
+       (Eop (Ocmp cond) args) ::: Enil)).
 
 				      
 (** ** Constants **)

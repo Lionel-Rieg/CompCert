@@ -76,7 +76,7 @@ let fast_cmove ty =
   | "riscV", _ -> false
   | "x86", _ -> 
      (match ty with Tint -> true | Tlong -> Archi.ptr64 | _ -> false)
-  | "mppa_k1c", _ -> false (* TODO DM *)
+  | "mppa_k1c", _ -> true
   | a, m -> failwith (Printf.sprintf "fast_cmove: unknown arch %s %s" a m)
 
 (* The if-conversion heuristic depend on the
