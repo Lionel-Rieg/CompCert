@@ -1538,23 +1538,6 @@ Proof.
   }
   {
     InvEval.
-    rewrite <- HeC.
-    destruct (Int.eq_dec x Int.zero).
-    { subst x.
-      rewrite <- eval_condition_ccomp_swap.
-      simpl.
-      change (Val.cmp_bool (swap_comparison c) v3 (Vint Int.zero))
-        with (eval_condition0 (Ccomp0 (swap_comparison c)) v3 m).
-      eapply eval_select0; eassumption.
-    }
-    rewrite <- eval_condition_ccomp_swap.
-    simpl.
-    erewrite <- (bool_cond0_ne (Val.cmp_bool  (swap_comparison c) v3 (Vint x))).
-    rewrite Val.swap_cmp_bool.
-    eapply eval_select0; repeat (try econstructor; try eassumption).
-  }
-  {
-    InvEval.
     rewrite <- HeC. 
     destruct (Int.eq_dec x Int.zero).
     { subst x.
@@ -1565,24 +1548,6 @@ Proof.
     }
     simpl.
     erewrite <- (bool_cond0_ne (Val.cmpu_bool (Mem.valid_pointer m) c v0 (Vint x))).
-    eapply eval_select0; repeat (try econstructor; try eassumption).
-  }
-  {
-    InvEval.
-    rewrite <- HeC. 
-    destruct (Int.eq_dec x Int.zero).
-    { subst x.
-      rewrite <- eval_condition_ccompu_swap.
-      simpl.
-      change (Val.cmpu_bool (Mem.valid_pointer m) (swap_comparison c) v3
-                            (Vint Int.zero))
-      with (eval_condition0 (Ccompu0 (swap_comparison c)) v3 m).
-      eapply eval_select0; eassumption.
-    }
-    rewrite <- eval_condition_ccompu_swap.
-    simpl.
-    erewrite <- (bool_cond0_ne (Val.cmpu_bool (Mem.valid_pointer m) (swap_comparison c) v3 (Vint x))).
-    rewrite Val.swap_cmpu_bool.
     eapply eval_select0; repeat (try econstructor; try eassumption).
   }
   {
@@ -1604,23 +1569,6 @@ Proof.
     rewrite <- HeC. 
     destruct (Int64.eq_dec x Int64.zero).
     { subst x.
-      rewrite <- eval_condition_ccompl_swap.
-      simpl.
-      change (Val.cmpl_bool (swap_comparison c) v3 (Vlong Int64.zero))
-      with (eval_condition0 (Ccompl0 (swap_comparison c)) v3 m).
-      eapply eval_select0; eassumption.
-    }
-    rewrite <- eval_condition_ccompl_swap.
-    simpl.
-    erewrite <- (bool_cond0_ne (Val.cmpl_bool (swap_comparison c) v3 (Vlong x))).
-    rewrite Val.swap_cmpl_bool.
-    eapply eval_select0; repeat (try econstructor; try eassumption).
-  }
-  {
-    InvEval.
-    rewrite <- HeC. 
-    destruct (Int64.eq_dec x Int64.zero).
-    { subst x.
       simpl.
       change (Val.cmplu_bool  (Mem.valid_pointer m) c v0 (Vlong Int64.zero))
       with (eval_condition0 (Ccomplu0 c) v0 m).
@@ -1628,23 +1576,6 @@ Proof.
     }
     simpl.
     erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) c v0 (Vlong x))).
-    eapply eval_select0; repeat (try econstructor; try eassumption).
-  }
-  {
-    InvEval.
-    rewrite <- HeC. 
-    destruct (Int64.eq_dec x Int64.zero).
-    { subst x.
-      rewrite <- eval_condition_ccomplu_swap.
-      simpl.
-      change (Val.cmplu_bool  (Mem.valid_pointer m) (swap_comparison c) v3 (Vlong Int64.zero))
-      with (eval_condition0 (Ccomplu0 (swap_comparison c)) v3 m).
-      eapply eval_select0; eassumption.
-    }
-    rewrite <- eval_condition_ccomplu_swap.
-    simpl.
-    erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) (swap_comparison c) v3 (Vlong x))).
-    rewrite Val.swap_cmplu_bool.
     eapply eval_select0; repeat (try econstructor; try eassumption).
   }
   TrivialExists.

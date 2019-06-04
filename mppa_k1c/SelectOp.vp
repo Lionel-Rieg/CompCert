@@ -67,39 +67,26 @@ Context {hf: helper_functions}.
 
 Nondetfunction cond_to_condition0 (cond : condition) (args : exprlist) :=
   match cond, args with
-  | (Ccomp c), (e1 ::: (Eop (Ointconst x) Enil) ::: Enil) =>
+  | (Ccompimm c x), (e1 ::: Enil) =>
     if Int.eq_dec x Int.zero
     then Some ((Ccomp0 c), e1)
     else None
-  | (Ccomp c), ((Eop (Ointconst x) Enil) ::: e2 ::: Enil) =>
-    if Int.eq_dec x Int.zero
-    then Some ((Ccomp0 (swap_comparison c)), e2)
-    else None
-  | (Ccompu c), (e1 ::: (Eop (Ointconst x) Enil) ::: Enil) =>
+           
+  | (Ccompuimm c x), (e1 ::: Enil) =>
     if Int.eq_dec x Int.zero
     then Some ((Ccompu0 c), e1)
     else None
-  | (Ccompu c), ((Eop (Ointconst x) Enil) ::: e2 ::: Enil) =>
-    if Int.eq_dec x Int.zero
-    then Some ((Ccompu0 (swap_comparison c)), e2)
-    else None
 
-  | (Ccompl c), (e1 ::: (Eop (Olongconst x) Enil) ::: Enil) =>
+  | (Ccomplimm c x), (e1 ::: Enil) =>
     if Int64.eq_dec x Int64.zero
     then Some ((Ccompl0 c), e1)
     else None
-  | (Ccompl c), ((Eop (Olongconst x) Enil) ::: e2 ::: Enil) =>
-    if Int64.eq_dec x Int64.zero
-    then Some ((Ccompl0 (swap_comparison c)), e2)
-    else None
-  | (Ccomplu c), (e1 ::: (Eop (Olongconst x) Enil) ::: Enil) =>
+           
+  | (Ccompluimm c x), (e1 ::: Enil) =>
     if Int64.eq_dec x Int64.zero
     then Some ((Ccomplu0 c), e1)
     else None
-  | (Ccomplu c), ((Eop (Olongconst x) Enil) ::: e2 ::: Enil) =>
-    if Int64.eq_dec x Int64.zero
-    then Some ((Ccomplu0 (swap_comparison c)), e2)
-    else None
+           
   | _, _ => None
   end.
   
