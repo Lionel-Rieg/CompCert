@@ -334,6 +334,47 @@ Definition transl_cond_notfloat64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) 
   | Reversed ft => Pfcompl ft rd r2 r1 ::i k
   end.
 
+
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpuwz (c: comparison) :=
+  match c with
+  | Cne => OK BTwnez
+  | Ceq => OK BTweqz
+  | Clt => Error (msg "btest_for_compuwz: Clt")
+  | Cge => Error (msg "btest_for_compuwz: Cge")
+  | Cle => Error (msg "btest_for_compuwz: Cle")
+  | Cgt => Error (msg "btest_for_compuwz: Cgt")
+  end.
+
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpudz (c: comparison) :=
+  match c with
+  | Cne => OK BTdnez
+  | Ceq => OK BTdeqz
+  | Clt => Error (msg "btest_for_compudz: Clt")
+  | Cge => Error (msg "btest_for_compudz: Cge")
+  | Cle => Error (msg "btest_for_compudz: Cle")
+  | Cgt => Error (msg "btest_for_compudz: Cgt")
+  end.
+
+Definition conditional_move (cond0 : condition0) (rc rd rs : ireg) :
+  res basic :=
+  if ireg_eq rd rs
+  then OK Pnop
+  else
+    (match cond0 with
+     | Ccomp0 cmp =>
+       OK (PArith (Pcmove (btest_for_cmpswz cmp) rd rc rs))
+     | Ccompu0 cmp =>
+       do bt <- btest_for_cmpuwz cmp;
+         OK (PArith (Pcmoveu bt rd rc rs))
+     | Ccompl0 cmp =>
+       OK (PArith (Pcmove (btest_for_cmpsdz cmp) rd rc rs))
+     | Ccomplu0 cmp =>
+       do bt <- btest_for_cmpudz cmp;
+         OK (PArith (Pcmoveu bt rd rc rs))
+     end).
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -376,28 +417,6 @@ Definition transl_cond_op
   | _, _ =>
       Error(msg "Asmblockgen.transl_cond_op")
 end.
-
-(* CoMPare Unsigned Words to Zero *)
-Definition btest_for_cmpuwz (c: comparison) :=
-  match c with
-  | Cne => OK BTwnez
-  | Ceq => OK BTweqz
-  | Clt => Error (msg "btest_for_compuwz: Clt")
-  | Cge => Error (msg "btest_for_compuwz: Cge")
-  | Cle => Error (msg "btest_for_compuwz: Cle")
-  | Cgt => Error (msg "btest_for_compuwz: Cgt")
-  end.
-
-(* CoMPare Unsigned Words to Zero *)
-Definition btest_for_cmpudz (c: comparison) :=
-  match c with
-  | Cne => OK BTdnez
-  | Ceq => OK BTdeqz
-  | Clt => Error (msg "btest_for_compudz: Clt")
-  | Cge => Error (msg "btest_for_compudz: Cge")
-  | Cle => Error (msg "btest_for_compudz: Cle")
-  | Cgt => Error (msg "btest_for_compudz: Cgt")
-  end.
 
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
@@ -821,6 +840,14 @@ Definition transl_op
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pinsfl stop start rd rs ::i k)
 
+  | Osel cond0 ty, aT :: aF :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rF <- ireg_of aF;
+      do rC <- ireg_of aC;
+      do op <- conditional_move (negate_condition0 cond0) rC rT rF;
+      OK (op ::i k)
+      
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.

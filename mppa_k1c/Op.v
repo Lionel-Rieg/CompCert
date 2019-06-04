@@ -301,89 +301,13 @@ Definition eval_condition0 (cond: condition0) (v1: val) (m: mem): option bool :=
   | Ccomplu0 c => Val.cmplu_bool (Mem.valid_pointer m) c v1 (Vlong Int64.zero)
   end.
 
-Definition eval_selecti (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vint i0, Vint i1, Some bval => Vint (if bval then i1 else i0)
-    | _,_,_ => Vundef
+Definition negate_condition0 (cond0 : condition0) : condition0 :=
+  match cond0 with
+  | Ccomp0 c => Ccomp0 (negate_comparison c)
+  | Ccompu0 c => Ccompu0 (negate_comparison c)
+  | Ccompl0 c => Ccompl0 (negate_comparison c)
+  | Ccomplu0 c => Ccomplu0 (negate_comparison c)
   end.
-
-Definition eval_selecti2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vint i0, Vint i1 => Vint (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selecti_to2: forall cond v0 v1 vselect m,
-    (eval_selecti cond v0 v1 vselect m) =
-    (eval_selecti2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selecti2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectl (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vlong i0, Vlong i1, Some bval => Vlong (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectl2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vlong i0, Vlong i1 => Vlong (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectl_to2: forall cond v0 v1 vselect m,
-    (eval_selectl cond v0 v1 vselect m) =
-    (eval_selectl2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectl2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectf (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vfloat i0, Vfloat i1, Some bval => Vfloat (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectf2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vfloat i0, Vfloat i1 => Vfloat (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectf_to2: forall cond v0 v1 vselect m,
-    (eval_selectf cond v0 v1 vselect m) =
-    (eval_selectf2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectf2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectfs (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vsingle i0, Vsingle i1, Some bval => Vsingle (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectfs2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vsingle i0, Vsingle i1 => Vsingle (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectfs_to2: forall cond v0 v1 vselect m,
-    (eval_selectfs cond v0 v1 vselect m) =
-    (eval_selectfs2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectfs2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
 
 Definition eval_operation
     (F V: Type) (genv: Genv.t F V) (sp: val)

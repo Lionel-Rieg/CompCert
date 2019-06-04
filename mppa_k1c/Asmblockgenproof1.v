@@ -1649,6 +1649,25 @@ Proof.
   destruct (Z.eq_dec _ _); destruct (Z.eq_dec _ _); congruence.
 Qed.
 
+Lemma select_same_lessdef:
+  forall ty c v,
+    Val.lessdef (Val.select c v v ty) v.
+Proof.
+  intros.
+  unfold Val.select.
+  destruct c; try econstructor.
+  replace (if b then v else v) with v by (destruct b ; trivial).
+  destruct v; destruct ty; simpl; econstructor.
+Qed.
+
+Lemma if_neg : forall X,
+    forall a,
+    forall b c : X,
+    (if (negb a) then b else c) = (if a then c else b).
+Proof.
+  destruct a; reflexivity.
+Qed.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1719,6 +1738,44 @@ Opaque Int.eq.
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
+- (* Osel *)
+  unfold conditional_move in *.
+  destruct (ireg_eq _ _).
+  {
+    subst x. inv EQ2.
+    econstructor; split.
+    {
+      apply exec_straight_one.
+      simpl. reflexivity.
+    }
+    split.
+    { apply select_same_lessdef. } 
+    intros; trivial.
+  }
+
+  destruct c0; simpl in *.
+  1, 2, 3:
+    destruct c; simpl in *; inv EQ2;
+    econstructor; split; try (apply exec_straight_one; constructor);
+    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
+    unfold Val.select; simpl;
+    rewrite Pregmap.gss;
+    destruct (rs x1); simpl; trivial;
+    rewrite if_neg;
+    apply Val.lessdef_normalize.
+  
+    destruct c; simpl in *; inv EQ2;
+    econstructor; split; try (apply exec_straight_one; constructor);
+    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
+    unfold Val.select; simpl;
+    rewrite Pregmap.gss;
+    destruct (rs x1); simpl; trivial;
+    rewrite if_neg;
+    try apply Val.lessdef_normalize;
+    
+    destruct Archi.ptr64; simpl; replace (Int64.eq Int64.zero Int64.zero) with true by reflexivity; simpl; trivial;
+    destruct (_ || _); trivial;
+    apply Val.lessdef_normalize.
 Qed.
 
 (** Memory accesses *)
