@@ -130,6 +130,8 @@ print_measure_rule(environments, measures)
 
 
 print("""
+.SECONDARY:
+
 .PHONY:
 clean:
 	rm -f *.o *.s *.k1c *.csv
