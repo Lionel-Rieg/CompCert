@@ -95,8 +95,12 @@ Nondetfunction select0 (ty : typ) (cond0 : condition0) (e1 e2 e3: expr) :=
   match ty, cond0, e1, e2, e3 with
   | Tint, cond0, e1, (Eop (Ointconst imm) Enil), e3 =>
     (Eop (Oselimm cond0 imm) (e1 ::: e3 ::: Enil))
+  | Tint, cond0, (Eop (Ointconst imm) Enil), e2, e3 =>
+    (Eop (Oselimm (negate_condition0 cond0) imm) (e2 ::: e3 ::: Enil))
   | Tlong, cond0, e1, (Eop (Olongconst imm) Enil), e3 =>
     (Eop (Osellimm cond0 imm) (e1 ::: e3 ::: Enil))
+  | Tlong, cond0, (Eop (Olongconst imm) Enil), e2, e3 =>
+    (Eop (Osellimm (negate_condition0 cond0) imm) (e2 ::: e3 ::: Enil))
   | _, _, _ => (Eop (Osel cond0 ty) (e1 ::: e2 ::: e3 ::: Enil))
   end.
 

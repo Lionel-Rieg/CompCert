@@ -1441,6 +1441,31 @@ Proof.
 Qed.
 *)
 
+Lemma eval_neg_condition0:
+  forall cond0: condition0,
+  forall v1: val,
+  forall m: mem,
+    (eval_condition0 (negate_condition0 cond0) v1 m) =
+    option_map negb (eval_condition0 cond0 v1 m).
+Proof.
+  intros.
+  destruct cond0; simpl;
+  try rewrite Val.negate_cmp_bool;
+  try rewrite Val.negate_cmpu_bool;
+  try rewrite Val.negate_cmpl_bool;
+  try rewrite Val.negate_cmplu_bool;
+  reflexivity.
+Qed.
+
+Lemma select_neg:
+  forall a b c,
+    Val.select (option_map negb a) b c =
+    Val.select a c b.
+Proof.
+  destruct a; simpl; trivial.
+  destruct b; simpl; trivial.
+Qed.
+
 Lemma eval_select0: 
   forall le ty cond0 ac vc a1 v1 a2 v2,
   eval_expr ge sp e m le ac vc ->
@@ -1454,7 +1479,8 @@ Proof.
   unfold select0.
   destruct (select0_match ty cond0 a1 a2 ac).
   all: InvEval; econstructor; split;
-        repeat (try econstructor; try eassumption).
+    try  repeat (try econstructor; try eassumption).
+  all: rewrite eval_neg_condition0; rewrite select_neg; constructor.
 Qed.
 
 Lemma bool_cond0_ne:
