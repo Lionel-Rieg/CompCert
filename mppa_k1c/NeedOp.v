@@ -133,6 +133,8 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oextfz _ _ | Oextfs _ _  | Oextfzl _ _ | Oextfsl _ _ => op1 (default nv)
   | Oinsf _ _ | Oinsfl _ _ => op2 (default nv)
   | Osel c ty => nv :: nv :: needs_of_condition0 c
+  | Oselimm c imm
+  | Osellimm c imm => nv :: needs_of_condition0 c
   end.
 
 Definition operation_is_redundant (op: operation) (nv: nval): bool :=
@@ -346,6 +348,16 @@ Proof.
 - destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
   erewrite needs_of_condition0_sound by eauto.
   apply select_sound; auto.
+  simpl; auto with na.
+  (* select imm *)
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  { erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto with na. }
+  simpl; auto with na.
+  (* select long imm *)
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  { erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto with na. }
   simpl; auto with na.
 Qed.
 

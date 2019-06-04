@@ -265,6 +265,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | (Oinsf stop start), v0::v1::nil => eval_static_insf stop start v0 v1
   | (Oinsfl stop start), v0::v1::nil => eval_static_insfl stop start v0 v1
   | Osel c ty, v1::v2::vc::nil => select (eval_static_condition0 c vc) v1 v2
+  | Oselimm c imm, v1::v2::vc::nil => select (eval_static_condition0 c vc) v1 (I imm)
+  | Osellimm c imm, v1::v2::vc::nil => select (eval_static_condition0 c vc) v1 (L imm)
   | _, _ => Vbot
   end.
 
@@ -421,6 +423,10 @@ Proof.
     + constructor.
     (* select *)
   - apply select_sound; auto. eapply eval_static_condition0_sound; eauto.
+    (* select imm *)
+  - apply select_sound; auto with va. eapply eval_static_condition0_sound; eauto.
+    (* select long imm *)
+  - apply select_sound; auto with va. eapply eval_static_condition0_sound; eauto.
 Qed.
 
 End SOUNDNESS.
