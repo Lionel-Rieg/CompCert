@@ -607,10 +607,14 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
-  | Nxord | Andnd | Ornd | Cmoved -> 
+  | Nxord | Andnd | Ornd ->
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
+  |Cmoved ->
+      (match encoding with None | Some U6 | Some S10 -> alu_lite
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | Some E27U27L10 -> alu_lite_y)
   | Addxw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_lite 
                           | Some U27L5 | Some U27L10 -> alu_lite_x
