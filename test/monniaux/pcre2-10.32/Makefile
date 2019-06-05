@@ -48,14 +48,14 @@ include ../rules.mk
 
 $(K1C_GCC_SFILES) $(K1C_CCOMP_SFILES): $(HFILES)
 
-pcre2test.gcc.k1c: $(K1C_GCC_OFILES)
-	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
+pcre2test.gcc.k1c: $(K1C_GCC_OFILES) ../clock.gcc.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+
 
-pcre2test.gcc.o1.k1c: $(K1C_GCC_OFILES_O1)
-	$(K1C_CC) $(K1C_CFLAGS_O1) -o $@ $+ ../clock.gcc.k1c.o
+pcre2test.gcc.o1.k1c: $(K1C_GCC_OFILES_O1) ../clock.gcc.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS_O1) -o $@ $+
 
-pcre2test.ccomp.k1c: $(K1C_CCOMP_OFILES)
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+ ../clock.gcc.k1c.o
+pcre2test.ccomp.k1c: $(K1C_CCOMP_OFILES) ../clock.gcc.k1c.o
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+
 
 .PHONY: clean
 
