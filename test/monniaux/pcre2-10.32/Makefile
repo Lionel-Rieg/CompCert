@@ -37,6 +37,7 @@ K1C_GCC_OFILES_O1=$(CFILES:.c=.gcc.o1.k1c.o)
 K1C_CCOMP_OFILES=$(CFILES:.c=.ccomp.k1c.o)
 K1C_GCC_SFILES=$(CFILES:.c=.gcc.k1c.s)
 K1C_CCOMP_SFILES=$(CFILES:.c=.ccomp.k1c.s)
+HOST_GCC_OFILES=$(CFILES:.c=.gcc.host.o)
 
 all:	pcre2test.gcc.o1.k1c.out pcre2test.gcc.k1c.out pcre2test.ccomp.k1c.out $(K1C_GCC_SFILES) $(K1C_CCOMP_SFILES)
 
@@ -46,7 +47,10 @@ EXECUTE_ARGS = testdata/testinput6
 include ../rules.mk
 
 
-$(K1C_GCC_SFILES) $(K1C_CCOMP_SFILES): $(HFILES)
+$(K1C_GCC_SFILES) $(K1C_GCC_OFILES_O1) $(K1C_CCOMP_SFILES) $(HOST_GCC_OFILES): $(HFILES)
+
+pcre2test.gcc.host: $(HOST_GCC_OFILES)
+	$(CC) $(CFLAGS) -o $@ $+ ../clock.gcc.host.o
 
 pcre2test.gcc.k1c: $(K1C_GCC_OFILES)
 	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
