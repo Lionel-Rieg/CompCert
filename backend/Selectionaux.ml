@@ -114,9 +114,5 @@ let if_conversion_heuristic cond ifso ifnot ty =
   if !Clflags.option_ffavor_branchless then true else
   if not (fast_cmove ty) then false else
   let c1 = cost_expr ifso and c2 = cost_expr ifnot in
-<<<<<<< HEAD
-  c1 + c2 <= 30 && abs (c1 - c2) <= 8
-=======
   c1 + c2 <= 24 && abs (c1 - c2) <= 8
->>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
 
