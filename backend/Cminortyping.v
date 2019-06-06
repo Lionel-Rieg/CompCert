@@ -124,11 +124,10 @@ Definition type_assign (e: S.typenv) (id: ident) (a: expr) : res S.typenv :=
       S.set e1 id (type_of_chunk chunk)
   end.
 
-Definition opt_set (e: S.typenv) (optid: option ident) (optty: option typ) : res S.typenv :=
-  match optid, optty with
-  | None, _ => OK e
-  | Some id, Some ty => S.set e id ty
-  | _, _ => Error (msg "inconsistent call")
+Definition opt_set (e: S.typenv) (optid: option ident) (ty: typ) : res S.typenv :=
+  match optid with
+  | None => OK e
+  | Some id => S.set e id ty
   end.
 
 Fixpoint type_stmt (tret: option typ) (e: S.typenv) (s: stmt) : res S.typenv :=
@@ -140,7 +139,11 @@ Fixpoint type_stmt (tret: option typ) (e: S.typenv) (s: stmt) : res S.typenv :=
   | Scall optid sg fn args =>
       do e1 <- type_expr e fn Tptr;
       do e2 <- type_exprlist e1 args sg.(sig_args);
+<<<<<<< HEAD
       opt_set e2 optid sg.(sig_res)
+=======
+      opt_set e2 optid (proj_sig_res sg)
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
   | Stailcall sg fn args =>
       assertion (opt_typ_eq sg.(sig_res) tret);
       do e1 <- type_expr e fn Tptr;
@@ -148,7 +151,11 @@ Fixpoint type_stmt (tret: option typ) (e: S.typenv) (s: stmt) : res S.typenv :=
   | Sbuiltin optid ef args =>
       let sg := ef_sig ef in
       do e1 <- type_exprlist e args sg.(sig_args);
+<<<<<<< HEAD
       opt_set e1 optid sg.(sig_res)
+=======
+      opt_set e1 optid (proj_sig_res sg)
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
   | Sseq s1 s2 =>
       do e1 <- type_stmt tret e s1; type_stmt tret e1 s2
   | Sifthenelse a s1 s2 =>
@@ -164,9 +171,15 @@ Fixpoint type_stmt (tret: option typ) (e: S.typenv) (s: stmt) : res S.typenv :=
   | Sswitch sz a tbl dfl =>
       type_expr e a (if sz then Tlong else Tint)
   | Sreturn opta =>
+<<<<<<< HEAD
       match tret, opta with
       | None, None => OK e
       | Some t, Some a => type_expr e a t
+=======
+      match opta, tret with
+      | None, _ => OK e
+      | Some a, Some t => type_expr e a t
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
       | _, _ => Error (msg "inconsistent return")
       end
   | Slabel lbl s1 =>
@@ -207,7 +220,14 @@ Inductive wt_expr: expr -> typ -> Prop :=
       wt_expr (Eload chunk a1) (type_of_chunk chunk).
 
 Definition wt_opt_assign (optid: option ident) (optty: option typ) : Prop :=
+<<<<<<< HEAD
   match optid with Some id => optty = Some (env id) | _ => True end.
+=======
+  match optid with
+  | Some id => match optty with Some ty => ty | None => Tint end = env id
+  | _ => True
+  end.
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
 
 Inductive wt_stmt: stmt -> Prop :=
   | wt_Sskip:
@@ -248,7 +268,10 @@ Inductive wt_stmt: stmt -> Prop :=
       wt_expr a (if sz then Tlong else Tint) ->
       wt_stmt (Sswitch sz a tbl dfl)
   | wt_Sreturn_none:
+<<<<<<< HEAD
       tret = None ->
+=======
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
       wt_stmt (Sreturn None)
   | wt_Sreturn_some: forall a t,
       tret = Some t -> wt_expr a t ->
@@ -359,12 +382,22 @@ Proof.
 Qed.
 Hint Resolve opt_set_incr: ty.
 
+<<<<<<< HEAD
 Lemma opt_set_sound: forall te optid optty e e',
     opt_set e optid optty = OK e' -> S.satisf te e' -> wt_opt_assign te optid optty.
 Proof.
   unfold opt_set; intros; red. destruct optid; [destruct optty |]; try (monadInv H).
 - erewrite S.set_sound by eauto. auto.
 - auto.
+=======
+Lemma opt_set_sound: forall te optid sg e e',
+    opt_set e optid (proj_sig_res sg) = OK e' -> S.satisf te e' ->
+    wt_opt_assign te optid sg.(sig_res).
+Proof.
+  unfold opt_set; intros; red. destruct optid.
+- erewrite S.set_sound by eauto. auto.
+- inv H. auto.
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
 Qed.
 
 Lemma type_stmt_incr: forall te tret s e e',
@@ -660,7 +693,11 @@ Proof.
 - inv WT_CONT. econstructor; eauto using wt_Sskip. inv H.
 - inv WT_CONT. econstructor; eauto using wt_Sexit. inv H.
 - econstructor; eauto using wt_Sexit.
+<<<<<<< HEAD
 - inv WT_STMT. econstructor; eauto using call_cont_wt. rewrite H0; exact I.
+=======
+- inv WT_STMT. econstructor; eauto using call_cont_wt. exact I.
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
 - inv WT_STMT. econstructor; eauto using call_cont_wt.
   rewrite H2. eapply wt_eval_expr; eauto.
 - inv WT_STMT. econstructor; eauto.

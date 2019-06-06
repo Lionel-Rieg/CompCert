@@ -1102,7 +1102,11 @@ Proof.
   destruct (find_label lbl x (Kseq x0 k')) as [[sy ky] | ];
   intuition. apply IHs2; auto.
 (* ifthenelse *)
+<<<<<<< HEAD
 - destruct (if_conversion ki env e s1 s2) as [s|] eqn:IFC.
+=======
+  destruct (if_conversion ki env e s1 s2) as [s|] eqn:IFC.
+>>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
   inv SE. exploit if_conversion_nolabel; eauto. intros (A & B & C).
   rewrite A, B, C. auto.
   monadInv SE; simpl.
