@@ -21,6 +21,11 @@
 *  along with GLPK. If not, see <http://www.gnu.org/licenses/>.
 ***********************************************************************/
 
+#define VERIMAG
+#ifdef VERIMAG
+#include "../../clock.h"
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1373,7 +1378,12 @@ err2:    {  xprintf("MathProg model processing error\n");
       }
       /*--------------------------------------------------------------*/
       /* solve the problem */
+
       start = glp_time();
+#ifdef VERIMAG
+      clock_prepare();
+      clock_start();
+#endif
       if (csa->solution == SOL_BASIC)
       {  if (!csa->exact)
          {  glp_set_bfcp(csa->prob, &csa->bfcp);
@@ -1426,6 +1436,10 @@ err2:    {  xprintf("MathProg model processing error\n");
          xassert(csa != csa);
       /*--------------------------------------------------------------*/
       /* display statistics */
+#ifdef VERIMAG
+      clock_stop();
+      print_total_clock();
+#endif
       xprintf("Time used:   %.1f secs\n", glp_difftime(glp_time(),
          start));
 #if 0 /* 16/II-2012 */

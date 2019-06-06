@@ -25,6 +25,9 @@ glpsol.gcc.o1.k1c: $(src:.c=.gcc.o1.k1c.o) ../clock.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS_O1) $+  $(LIBS) -o $@
 glpsol.ccomp.k1c: $(src:.c=.ccomp.k1c.o) ../clock.gcc.k1c.o 
 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+  $(LIBS) -o $@
+
+EXECUTE_ARGS=--math examples/prod.mod
+
 measures.csv: $(PRODUCTS_OUT)
 	echo "benches, gcc host,ccomp host,gcc k1c,gcc o1 k1c,ccomp k1c" > $@
 
