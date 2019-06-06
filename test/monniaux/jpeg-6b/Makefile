@@ -1,4 +1,4 @@
-all: cjpeg.gcc.k1c djpeg.gcc.k1c
+all: cjpeg.gcc.k1c.out djpeg.gcc.k1c.out
 
 LIBSOURCES= jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c \
         jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c \
@@ -18,3 +18,11 @@ cjpeg.gcc.k1c: $(LIB_K1C_GCC_OFILES) cjpeg.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
 djpeg.gcc.k1c: $(LIB_K1C_GCC_OFILES) djpeg.gcc.k1c.o
 	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
+
+djpeg.%.out: djpeg.%
+	$(EXECUTE_CYCLES) $< -dct int -ppm -outfile $@.ppm testorig.jpg 2> $@
+	cmp $@.ppm testout.ppm 2>> $@
+
+cjpeg.%.out: cjpeg.%
+	$(EXECUTE_CYCLES) $< -dct int -outfile $@.jpg testimg.ppm 2> $@
+	cmp $@.jpg testimg.jpg 2>> $@
