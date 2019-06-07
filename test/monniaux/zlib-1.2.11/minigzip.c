@@ -15,6 +15,11 @@
 
 /* @(#) $Id$ */
 
+#define VERIMAG
+#ifdef VERIMAG
+#include "../clock.h"
+#endif
+
 #include "zlib.h"
 #include <stdio.h>
 
@@ -611,7 +616,15 @@ int main(argc, argv)
         } else {
             file = gzdopen(fileno(stdout), outmode);
             if (file == NULL) error("can't gzdopen stdout");
+#ifdef VERIMAG
+	  clock_prepare();
+	  clock_start();
+#endif
             gz_compress(stdin, file);
+#ifdef VERIMAG
+	    clock_stop();
+	    printerr_total_clock();
+#endif		       
         }
     } else {
         if (copyout) {
@@ -637,7 +650,6 @@ int main(argc, argv)
                     } else {
                         file = gzdopen(fileno(stdout), outmode);
                         if (file == NULL) error("can't gzdopen stdout");
-
                         gz_compress(in, file);
                     }
 
