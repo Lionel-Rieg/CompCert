@@ -24,6 +24,10 @@
 
 // VERIMAG
 #define _POSIX_C_SOURCE 2
+#define VERIMAG 1
+#ifdef VERIMAG
+#include "../clock.h"
+#endif
 
 #include "tif_config.h"
 
@@ -277,6 +281,10 @@ main(int argc, char* argv[])
 		TIFFSetField(out, TIFFTAG_YRESOLUTION, resolution);
 		TIFFSetField(out, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
 	}
+#ifdef VERIMAG
+	clock_prepare();
+	clock_start();
+#endif
 	for (row = 0; row < h; row++) {
 		if (fread(buf, linebytes, 1, in) != 1) {
 			fprintf(stderr, "%s: scanline %lu: Read error.\n",
@@ -286,6 +294,10 @@ main(int argc, char* argv[])
 		if (TIFFWriteScanline(out, buf, row, 0) < 0)
 			break;
 	}
+#ifdef VERIMAG
+	clock_stop();
+	print_total_clock();
+#endif
 	(void) TIFFClose(out);
 	if (buf)
 		_TIFFfree(buf);
