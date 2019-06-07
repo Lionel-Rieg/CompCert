@@ -1,0 +1,4 @@
+sources: "$(wildcard *.c)"
+target: minigzip
+measures: [cycles]
+name: zlib
