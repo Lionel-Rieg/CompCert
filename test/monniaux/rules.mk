@@ -1,4 +1,4 @@
-ALL_CCOMPFLAGS=-fno-unprototyped
+ALL_CCOMPFLAGS+=-fno-unprototyped
 CCOMP=ccomp-x86
 CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
 
