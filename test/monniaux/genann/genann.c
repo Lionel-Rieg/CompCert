@@ -76,7 +76,13 @@ double static inline genann_act_sigmoid(const genann *ann unused, double a) {
 }
 
 void genann_init_sigmoid_lookup(const genann *ann) {
-        const double f = (sigmoid_dom_max - sigmoid_dom_min) / LOOKUP_SIZE;
+        const double f = (sigmoid_dom_max - sigmoid_dom_min)
+#ifdef VERIMAG
+	  * 0x1.0p-12
+#else
+	  / LOOKUP_SIZE
+#endif
+	  ;
         int i;
 
         interval = LOOKUP_SIZE / (sigmoid_dom_max - sigmoid_dom_min);
