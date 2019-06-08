@@ -44,7 +44,32 @@ End ISeqLanguage.
 
 Module Type ImpDict.
 
-Include PseudoRegDictionary.
+Declare Module R: PseudoRegisters.
+
+Parameter t: Type -> Type.
+
+Parameter get: forall {A}, t A -> R.t -> option A.
+
+Parameter set: forall {A}, t A -> R.t -> A -> t A.
+
+Parameter set_spec_eq: forall A d x (v: A),
+  get (set d x v) x = Some v.
+
+Parameter set_spec_diff: forall A d x y (v: A),
+  x <> y -> get (set d x v) y = get d y.
+
+Parameter rem: forall {A}, t A -> R.t -> t A.
+
+Parameter rem_spec_eq: forall A (d: t A) x,
+  get (rem d x) x = None.
+
+Parameter rem_spec_diff: forall A (d: t A) x y,
+  x <> y -> get (rem d x) y = get d y.
+
+Parameter empty: forall {A}, t A.
+
+Parameter empty_spec: forall A x,
+  get (empty (A:=A)) x = None.
 
 Parameter eq_test: forall {A}, t A -> t A -> ?? bool.
 
@@ -95,9 +120,10 @@ Module ImpSimu (L: ISeqLanguage) (Dict: ImpDict with Module R:=L.LP.R): ImpSimuI
 
 Module CoreL:=L.
 
-Module ST := SimuTheory L Dict.
+Module ST := SimuTheory L.
 
 Import ST.
+Import Terms.
 
 Definition term_set_hid (t: term) (hid: hashcode): term :=
   match t with
@@ -212,9 +238,14 @@ Hint Resolve hLTcons_correct: wlp.
 
 (* Second, we use these hashed constructors ! *)
 
-Record hsmem:= {hpre: list term; hpost: Dict.t term}.
+Record hsmem:= {hpre: list term; hpost:> Dict.t term}.
 
-Coercion hpost: hsmem >-> Dict.t.
+(** evaluation of the post-condition *)
+Definition hsmem_post_eval ge (hd: Dict.t term) x (m:mem) :=
+   match Dict.get hd x with 
+   | None => Some (m x)
+   | Some ht => term_eval ge ht m
+   end.
 
 Definition hsmem_get (d:hsmem) x: ?? term :=
    match Dict.get d x with 
@@ -223,9 +254,9 @@ Definition hsmem_get (d:hsmem) x: ?? term :=
    end.
 
 Lemma hsmem_get_correct (d:hsmem) x:
-  WHEN hsmem_get d x ~> t THEN forall ge m, term_eval ge t m = smem_eval ge d x m.
+  WHEN hsmem_get d x ~> t THEN forall ge m, term_eval ge t m = hsmem_post_eval ge d x m.
 Proof.
-  unfold hsmem_get, smem_eval, smem_get; destruct (Dict.get d x); wlp_simplify.
+  unfold hsmem_get, hsmem_post_eval; destruct (Dict.get d x); wlp_simplify.
 Qed.
 Global Opaque hsmem_get.
 Hint Resolve hsmem_get_correct: wlp.
@@ -234,17 +265,17 @@ Local Opaque allvalid.
 
 Definition smem_model ge (d: smem) (hd:hsmem): Prop :=
   (forall m, allvalid ge hd.(hpre) m <-> smem_valid ge d m) 
-  /\ (forall m x, smem_valid ge d m -> smem_eval ge hd x m = (smem_eval ge d x m)).
+  /\ (forall m x, smem_valid ge d m -> hsmem_post_eval ge hd x m = (ST.term_eval ge (d x) m)).
 
 Lemma smem_model_smem_valid_alt ge d hd: smem_model ge d hd -> 
- forall m x, smem_valid ge d m -> smem_eval ge hd x m <> None.
+ forall m x, smem_valid ge d m -> hsmem_post_eval ge hd x m <> None.
 Proof.
   intros (H1 & H2) m x H. rewrite H2; auto.
   unfold smem_valid in H. intuition eauto.
 Qed.
 
 Lemma smem_model_allvalid_alt ge d hd: smem_model ge d hd -> 
- forall m x, allvalid ge hd.(hpre) m -> smem_eval ge hd x m <> None.
+ forall m x, allvalid ge hd.(hpre) m -> hsmem_post_eval ge hd x m <> None.
 Proof.
   intros (H1 & H2) m x H. eapply smem_model_smem_valid_alt.
   - split; eauto.
@@ -256,14 +287,14 @@ Definition naive_set (hd:hsmem) x (t:term) :=
 
 Lemma naive_set_correct hd x ht ge d t:
     smem_model ge d hd ->
-    (forall m, smem_valid ge d m -> term_eval ge ht m = term_eval ge t m) ->
+    (forall m, smem_valid ge d m -> term_eval ge ht m = ST.term_eval ge t m) ->
     smem_model ge (smem_set d x t) (naive_set hd x ht).
 Proof.
   unfold naive_set; intros (DM0 & DM1) EQT; split.
   - intros m.
     destruct (DM0 m) as (PRE & VALID0); clear DM0.
     assert (VALID1: allvalid ge hd.(hpre) m -> pre d ge m). { unfold smem_valid in PRE; tauto. }
-    assert (VALID2: allvalid ge hd.(hpre) m -> forall x : Dict.R.t, smem_eval ge d x m <> None). { unfold smem_valid in PRE; tauto. }
+    assert (VALID2: allvalid ge hd.(hpre) m -> forall x : Dict.R.t, ST.term_eval ge (d x) m <> None). { unfold smem_valid in PRE; tauto. }
     rewrite !allvalid_extensionality in * |- *; simpl.
     intuition (subst; eauto).
     + eapply smem_valid_set_proof; eauto.
@@ -272,7 +303,7 @@ Proof.
       intros X1; exploit smem_valid_set_decompose_2; eauto.
       rewrite <- EQT; eauto.
     + exploit smem_valid_set_decompose_1; eauto.
-  - clear DM0. unfold smem_eval, smem_eval, smem_get in * |- *; simpl.
+  - clear DM0. unfold hsmem_post_eval, hsmem_post_eval in * |- *; simpl.
     Local Hint Resolve smem_valid_set_decompose_1.
     intros; case (R.eq_dec x x0).
     + intros; subst; rewrite !Dict.set_spec_eq; simpl; eauto.
@@ -282,7 +313,7 @@ Local Hint Resolve naive_set_correct.
 
 Definition equiv_hsmem ge (hd1 hd2: hsmem) := 
       (forall m, allvalid ge hd1.(hpre) m <-> allvalid ge hd2.(hpre) m)
-   /\ (forall m x, allvalid ge hd1.(hpre) m -> smem_eval ge hd1 x m = smem_eval ge hd2 x m).
+   /\ (forall m x, allvalid ge hd1.(hpre) m -> hsmem_post_eval ge hd1 x m = hsmem_post_eval ge hd2 x m).
 
 Lemma equiv_smem_symmetry ge hd1 hd2:
   equiv_hsmem ge hd1 hd2 -> equiv_hsmem ge hd2 hd1.
@@ -363,11 +394,9 @@ Global Opaque hterm_append.
 
 Definition smart_set (hd:hsmem) x (ht:term) :=
      match ht with
-     | Input _ _ =>
-       DO ot <~ hsmem_get hd x;;
-       DO b <~ phys_eq ot ht;;
-       if b then
-          RET (hd.(hpost))
+     | Input y _ =>
+       if R.eq_dec x y then
+          RET (Dict.rem hd x)
        else (
           log_assign x ht;;
           RET (Dict.set hd x ht)
@@ -379,12 +408,12 @@ Definition smart_set (hd:hsmem) x (ht:term) :=
 
 Lemma smart_set_correct hd x ht:
   WHEN smart_set hd x ht ~> d THEN
-    forall ge m y, smem_eval ge d y m = smem_eval ge (Dict.set hd x ht) y m.
+    forall ge m y, hsmem_post_eval ge d y m = hsmem_post_eval ge (Dict.set hd x ht) y m.
 Proof.
   destruct ht; wlp_simplify.
-  unfold smem_eval at 2; unfold smem_get; simpl; case (R.eq_dec x y).
-  - intros; subst. rewrite Dict.set_spec_eq. congruence.
-  - intros; rewrite Dict.set_spec_diff; auto.
+  unfold hsmem_post_eval; simpl. case (R.eq_dec x0 y).
+  - intros; subst. rewrite Dict.set_spec_eq, Dict.rem_spec_eq. simpl; congruence.
+  - intros; rewrite Dict.set_spec_diff, Dict.rem_spec_diff; auto.
 Qed.
 (*Local Hint Resolve smart_set_correct: wlp.*)
 Global Opaque smart_set.
@@ -400,7 +429,7 @@ Definition hsmem_set (hd:hsmem) x (t:term) :=
 Lemma hsmem_set_correct hd x ht:
   WHEN hsmem_set hd x ht ~> nhd THEN
     forall ge d t, smem_model ge d hd ->
-    (forall m, smem_valid ge d m -> term_eval ge ht m = term_eval ge t m) ->
+    (forall m, smem_valid ge d m -> term_eval ge ht m = ST.term_eval ge t m) ->
     smem_model ge (smem_set d x t) nhd.
 Proof.
   intros; wlp_simplify.
@@ -414,9 +443,9 @@ Proof.
   - intros m x0 ALLVALID; rewrite SMART.
     destruct (term_eval ge ht m) eqn: Hht.
     * case (R.eq_dec x x0).
-      + intros; subst. unfold smem_eval; unfold smem_get; simpl. rewrite !Dict.set_spec_eq.
+      + intros; subst. unfold hsmem_post_eval; simpl. rewrite !Dict.set_spec_eq.
         erewrite LIFT, EFFECT; eauto.
-      + intros; unfold smem_eval; unfold smem_get; simpl. rewrite !Dict.set_spec_diff; auto.
+      + intros; unfold hsmem_post_eval; simpl. rewrite !Dict.set_spec_diff; auto.
     * rewrite allvalid_extensionality in ALLVALID; destruct (ALLVALID ht); simpl; auto.
 Qed.
 Local Hint Resolve hsmem_set_correct: wlp.
@@ -439,53 +468,53 @@ Qed.
 Local Hint Resolve exp_hterm_correct: wlp.
 *)
 
-Fixpoint hexp_term (e: exp) (d od: hsmem): ?? term :=
+Fixpoint exp_hterm (e: exp) (hd hod: hsmem): ?? term :=
   match e with
-  | PReg x => hsmem_get d x
+  | PReg x => hsmem_get hd x
   | Op o le =>
-     DO lt <~ hlist_exp_term le d od;; 
+     DO lt <~ list_exp_hterm le hd hod;; 
      hApp o lt
-  | Old e => hexp_term e od od
+  | Old e => exp_hterm e hod hod
   end
-with hlist_exp_term (le: list_exp) (d od: hsmem): ?? list_term :=
+with list_exp_hterm (le: list_exp) (hd hod: hsmem): ?? list_term :=
   match le with
   | Enil => hLTnil tt
   | Econs e le' => 
-     DO t <~ hexp_term e d od;;
-     DO lt <~ hlist_exp_term le' d od;;
+     DO t <~ exp_hterm e hd hod;;
+     DO lt <~ list_exp_hterm le' hd hod;;
      hLTcons t lt
-  | LOld le => hlist_exp_term le od od
+  | LOld le => list_exp_hterm le hod hod
   end.
 
-Lemma hexp_term_correct_x ge e hod od:
+Lemma exp_hterm_correct_x ge e hod od:
    smem_model ge od hod ->
   forall hd d,
    smem_model ge d hd ->
-  WHEN hexp_term e hd hod ~> t THEN forall m, smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = term_eval ge (exp_term e d od) m.
+  WHEN exp_hterm e hd hod ~> t THEN forall m, smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = ST.term_eval ge (exp_term e d od) m.
  Proof.
    intro H.
    induction e using exp_mut with (P0:=fun le =>  forall d hd,
      smem_model ge d hd ->
-     WHEN hlist_exp_term le hd hod ~> lt THEN forall m, smem_valid ge d m -> smem_valid ge od m -> list_term_eval ge lt m = list_term_eval ge (list_exp_term le d od) m); 
-     unfold smem_model, smem_eval in * |- * ; simpl; wlp_simplify.
+     WHEN list_exp_hterm le hd hod ~> lt THEN forall m, smem_valid ge d m -> smem_valid ge od m -> list_term_eval ge lt m = ST.list_term_eval ge (list_exp_term le d od) m); 
+     unfold smem_model, hsmem_post_eval in * |- * ; simpl; wlp_simplify.
   - rewrite H1, <- H4; auto.
   - rewrite H4, <- H0; simpl; auto.
   - rewrite H5, <- H0, <- H4; simpl; auto.
 Qed.
-Global Opaque hexp_term.
+Global Opaque exp_hterm.
 
-Lemma hexp_term_correct e hd hod:
-  WHEN hexp_term e hd hod ~> t THEN forall ge od d m, smem_model ge od hod -> smem_model ge d hd -> smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = term_eval ge (exp_term e d od) m.
+Lemma exp_hterm_correct e hd hod:
+  WHEN exp_hterm e hd hod ~> t THEN forall ge od d m, smem_model ge od hod -> smem_model ge d hd -> smem_valid ge d m -> smem_valid ge od m -> term_eval ge t m = ST.term_eval ge (exp_term e d od) m.
 Proof.
-  unfold wlp; intros; eapply hexp_term_correct_x; eauto.
+  unfold wlp; intros; eapply exp_hterm_correct_x; eauto.
 Qed.
-Hint Resolve hexp_term_correct: wlp.
+Hint Resolve exp_hterm_correct: wlp.
 
 Fixpoint hinst_smem (i: inst) (hd hod: hsmem): ?? hsmem :=
   match i with
   | nil => RET hd
   | (x, e)::i' =>
-     DO ht <~ hexp_term e hd hod;;
+     DO ht <~ exp_hterm e hd hod;;
      DO nd <~ hsmem_set hd x ht;;
      hinst_smem i' nd hod
   end.
@@ -503,37 +532,41 @@ Local Hint Resolve hinst_smem_correct: wlp.
 (* logging info: we log the number of inst-instructions passed ! *)
 Variable log_new_inst: unit -> ?? unit. 
 
-Fixpoint hbblock_smem_rec (p: bblock) (d: hsmem): ?? hsmem :=
+Fixpoint bblock_hsmem_rec (p: bblock) (d: hsmem): ?? hsmem :=
   match p with
   | nil => RET d
   | i::p' =>
      log_new_inst tt;;
      DO d' <~ hinst_smem i d d;;
-     hbblock_smem_rec p' d'
+     bblock_hsmem_rec p' d'
   end.
 
-Lemma hbblock_smem_rec_correct p: forall hd,
-  WHEN hbblock_smem_rec p hd ~> hd' THEN forall ge d, smem_model ge d hd -> smem_model ge (bblock_smem_rec p d) hd'.
+Lemma bblock_hsmem_rec_correct p: forall hd,
+  WHEN bblock_hsmem_rec p hd ~> hd' THEN forall ge d, smem_model ge d hd -> smem_model ge (bblock_smem_rec p d) hd'.
 Proof.
   induction p; simpl; wlp_simplify.
 Qed.
-Global Opaque hbblock_smem_rec.
-Local Hint Resolve hbblock_smem_rec_correct: wlp.
+Global Opaque bblock_hsmem_rec.
+Local Hint Resolve bblock_hsmem_rec_correct: wlp.
 
+Definition hsmem_empty: hsmem := {| hpre:= nil ; hpost := Dict.empty |}.
 
-Definition hbblock_smem: bblock -> ?? hsmem
- := fun p => hbblock_smem_rec p {| hpre:= nil ; hpost := Dict.empty |}.
-
-Transparent allvalid.
-
-Lemma hbblock_smem_correct p:
-  WHEN hbblock_smem p ~> hd THEN forall ge, smem_model ge (bblock_smem p) hd.
+Lemma hsmem_empty_correct ge: smem_model ge smem_empty hsmem_empty.
 Proof.
-  unfold bblock_smem; wlp_simplify. eapply H. clear H.
-  unfold smem_model, smem_valid, smem_eval, smem_get; simpl; intuition;
-  rewrite !Dict.empty_spec in * |- *; simpl in * |- *; try congruence.
+  unfold smem_model, smem_valid, hsmem_post_eval; simpl; intuition try congruence.
+  rewrite !Dict.empty_spec; simpl; auto.
 Qed.
-Global Opaque hbblock_smem.
+
+Definition bblock_hsmem: bblock -> ?? hsmem
+ := fun p => bblock_hsmem_rec p hsmem_empty.
+
+Lemma bblock_hsmem_correct p:
+  WHEN bblock_hsmem p ~> hd THEN forall ge, smem_model ge (bblock_smem p) hd.
+Proof.
+  Local Hint Resolve hsmem_empty_correct.
+  wlp_simplify.
+Qed.
+Global Opaque bblock_hsmem.
 
 End CanonBuilding.
 
@@ -586,13 +619,13 @@ Qed.
 Global Opaque list_term_hash_eq.
 Hint Resolve list_term_hash_eq_correct: wlp.
 
-Lemma smem_eval_intro (d1 d2: hsmem):
-  (forall x, Dict.get d1 x = Dict.get d2 x) -> (forall ge x m, smem_eval ge d1 x m = smem_eval ge d2 x m).
+Lemma hsmem_post_eval_intro (d1 d2: hsmem):
+  (forall x, Dict.get d1 x = Dict.get d2 x) -> (forall ge x m, hsmem_post_eval ge d1 x m = hsmem_post_eval ge d2 x m).
 Proof.
-  unfold smem_eval, smem_get; intros H ge x m; rewrite H. destruct (Dict.get d2 x); auto.
+  unfold hsmem_post_eval; intros H ge x m; rewrite H. destruct (Dict.get d2 x); auto.
 Qed.
 
-Local Hint Resolve hbblock_smem_correct Dict.eq_test_correct: wlp.
+Local Hint Resolve bblock_hsmem_correct Dict.eq_test_correct: wlp.
 
 Program Definition mk_hash_params (log: term -> ?? unit): Dict.hash_params term :=
  {|
@@ -629,9 +662,9 @@ Variable dbg_failpreserv: term -> ?? unit. (* info of additional failure of the 
 Program Definition g_bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO failure_in_failpreserv <~ make_cref false;;
   DO r <~ (TRY
-    DO d1 <~ hbblock_smem hco_term.(hC) hco_list.(hC) log_assign no_log_new_term log_inst1 p1;;
+    DO d1 <~ bblock_hsmem hco_term.(hC) hco_list.(hC) log_assign no_log_new_term log_inst1 p1;;
     DO log_new_term <~ log_new_term hco_term hco_list;;
-    DO d2 <~ hbblock_smem hco_term.(hC) hco_list.(hC) no_log_assign log_new_term log_inst2 p2;;
+    DO d2 <~ bblock_hsmem hco_term.(hC) hco_list.(hC) no_log_assign log_new_term log_inst2 p2;;
     DO b <~ Dict.eq_test d1 d2 ;;
     if b then (
       if check_failpreserv then (
@@ -653,12 +686,12 @@ Program Definition g_bblock_simu_test (p1 p2: bblock): ?? bool :=
 Obligation 1.
   constructor 1; wlp_simplify; try congruence.
   destruct (H ge) as (EQPRE1&EQPOST1); destruct (H0 ge) as (EQPRE2&EQPOST2); clear H H0.
-  apply bblock_smem_simu; auto.
+  apply bblock_smem_simu; auto. split.
   + intros m; rewrite <- EQPRE1, <- EQPRE2.
     rewrite ! allvalid_extensionality.
     unfold incl in * |- *; intuition eauto.
-  + intros m0 x m1 VALID; rewrite <- EQPOST1, <- EQPOST2; auto.
-    erewrite smem_eval_intro; eauto.
+  + intros m0 x VALID; rewrite <- EQPOST1, <- EQPOST2; auto.
+    erewrite hsmem_post_eval_intro; eauto.
     erewrite <- EQPRE2; auto.
     erewrite <- EQPRE1 in VALID.
     rewrite ! allvalid_extensionality in * |- *.
@@ -677,8 +710,8 @@ End Prog_Eq_Gen.
 
 
 
-Definition hht: hashH term := {| hash_eq := term_hash_eq; get_hid:=term_get_hid; set_hid:=term_set_hid |}. 
-Definition hlht: hashH list_term := {| hash_eq := list_term_hash_eq; get_hid:=list_term_get_hid; set_hid:=list_term_set_hid |}.
+Definition hpt: hashP term := {| hash_eq := term_hash_eq; get_hid:=term_get_hid; set_hid:=term_set_hid |}. 
+Definition hplt: hashP list_term := {| hash_eq := list_term_hash_eq; get_hid:=list_term_get_hid; set_hid:=list_term_set_hid |}.
 
 Definition recover_hcodes (t:term): ??(hashinfo term) :=
   match t with
@@ -746,8 +779,8 @@ Local Hint Resolve term_eval_set_hid_equiv list_term_eval_set_hid_equiv.
 
 Program Definition bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log <~ count_logger ();;
-  DO hco_term <~ mk_annot (hCons hht);;
-  DO hco_list <~ mk_annot (hCons hlht);;
+  DO hco_term <~ mk_annot (hCons hpt);;
+  DO hco_list <~ mk_annot (hCons hplt);;
   g_bblock_simu_test
     no_log_assign
     (log_new_term (fun _ => RET msg_unknow_term))
@@ -996,8 +1029,8 @@ Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log1 <~ count_logger ();;
   DO log2 <~ count_logger ();;
   DO cr <~ make_cref None;;
-  DO hco_term <~ mk_annot (hCons hht);;
-  DO hco_list <~ mk_annot (hCons hlht);;
+  DO hco_term <~ mk_annot (hCons hpt);;
+  DO hco_list <~ mk_annot (hCons hplt);;
   DO result1 <~ g_bblock_simu_test
      (log_assign dict_info log1)
      (log_new_term (msg_term cr))
@@ -1017,8 +1050,8 @@ Program Definition verb_bblock_simu_test (p1 p2: bblock): ?? bool :=
     DO log1 <~ count_logger ();;
     DO log2 <~ count_logger ();;
     DO cr <~ make_cref None;;
-    DO hco_term <~ mk_annot (hCons hht);;
-    DO hco_list <~ mk_annot (hCons hlht);;
+    DO hco_term <~ mk_annot (hCons hpt);;
+    DO hco_list <~ mk_annot (hCons hplt);;
     DO result2 <~ g_bblock_simu_test
        (log_assign dict_info log1)
        (*fun _ _ => RET no_log_new_term*)  (* REM: too weak !! *)
@@ -1074,9 +1107,60 @@ End ImpSimu.
 
 Require Import FMapPositive.
 
+
+Require Import PArith.
+Require Import FMapPositive.
+
 Module ImpPosDict <: ImpDict with Module R:=Pos.
 
-Include PosDict.
+Module R:=Pos.
+
+Definition t:=PositiveMap.t.
+
+Definition get {A} (d:t A) (x:R.t): option A 
+ := PositiveMap.find x d.
+
+Definition set {A} (d:t A) (x:R.t) (v:A): t A
+ := PositiveMap.add x v d.
+
+Local Hint Unfold PositiveMap.E.eq.
+
+Lemma set_spec_eq A d x (v: A):
+  get (set d x v) x = Some v.
+Proof.
+  unfold get, set; apply PositiveMap.add_1; auto.
+Qed.
+
+Lemma set_spec_diff A d x y (v: A):
+  x <> y -> get (set d x v) y = get d y.
+Proof.
+  unfold get, set; intros; apply PositiveMap.gso; auto.
+Qed.
+
+Definition rem {A} (d:t A) (x:R.t): t A
+ := PositiveMap.remove x d.
+
+Lemma rem_spec_eq A (d: t A) x:
+  get (rem d x) x = None.
+Proof.
+  unfold get, rem; apply PositiveMap.grs; auto.
+Qed.
+
+Lemma rem_spec_diff A (d: t A) x y:
+  x <> y -> get (rem d x) y = get d y.
+Proof.
+  unfold get, rem; intros; apply PositiveMap.gro; auto.
+Qed.
+
+
+Definition empty {A}: t A := PositiveMap.empty A.
+
+Lemma empty_spec A x:
+  get (empty (A:=A)) x = None.
+Proof.
+  unfold get, empty; apply PositiveMap.gempty; auto.
+Qed.
+
 Import PositiveMap.
 
 Fixpoint eq_test {A} (d1 d2: t A): ?? bool :=
