@@ -1,0 +1,3 @@
+sources: "$(wildcard *.c)"
+target: lustrec_heater_control
+measures: [cycles]

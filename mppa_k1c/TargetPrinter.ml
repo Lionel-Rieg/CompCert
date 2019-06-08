@@ -145,6 +145,12 @@ module Target (*: TARGET*) =
       | RA   -> "$ra"
       | _ -> assert false
 
+    let scale_of_shift1_4 = let open ExtValues in function
+      | SHIFT1 -> 2
+      | SHIFT2 -> 4
+      | SHIFT3 -> 8
+      | SHIFT4 -> 16;;
+    
 (* Names of sections *)
 
     let name_of_section = function
@@ -173,10 +179,10 @@ module Target (*: TARGET*) =
 (* Associate labels to floating-point constants and to symbols. *)
 
     let print_tbl oc (lbl, tbl) =
-      fprintf oc "	.balign 4\n";
+      fprintf oc "	.balign 8\n";
       fprintf oc "%a:\n" label lbl;
       List.iter
-        (fun l -> fprintf oc "	.4byte	%a\n"
+        (fun l -> fprintf oc "	.8byte	%a\n"
                     print_label l)
         tbl
 
@@ -408,9 +414,9 @@ module Target (*: TARGET*) =
          fprintf oc "%s jumptable [ " comment;
          List.iter (fun l -> fprintf oc "%a " print_label l) tbl;
          fprintf oc "]\n";
-         fprintf oc "    make    %a = %a\n    ;;\n" ireg base_reg label lbl; 
-         fprintf oc "    lwz.xs  %a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
-         fprintf oc "    igoto   %a\n    ;;\n" ireg base_reg;
+         fprintf oc "    make	%a = %a\n    ;;\n" ireg base_reg label lbl; 
+         fprintf oc "    ld.xs	%a = %a[%a]\n    ;;\n" ireg base_reg ireg idx_reg ireg base_reg;
+         fprintf oc "    igoto	%a\n    ;;\n" ireg base_reg;
          section oc Section_jumptable;
          print_tbl oc (lbl, tbl);
          section oc Section_text
@@ -528,8 +534,14 @@ module Target (*: TARGET*) =
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Paddxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Psubw (rd, rs1, rs2) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
+      | Prevsubxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	subx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Pmulw (rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pandw (rd, rs1, rs2) ->
@@ -558,22 +570,30 @@ module Target (*: TARGET*) =
          fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddw (rd, rs1, rs2) ->
          fprintf oc "	maddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmsubw (rd, rs1, rs2) ->
+         fprintf oc "	msbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
-      | Paddl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Paddl (rd, rs1, rs2) ->
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Paddxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Psubl (rd, rs1, rs2) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Pandl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Prevsubxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
+      | Pandl (rd, rs1, rs2) ->
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnandl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnandl (rd, rs1, rs2) ->
          fprintf oc "	nandd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Porl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Porl (rd, rs1, rs2) ->
          fprintf oc "	ord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnorl (rd, rs1, rs2) ->
          fprintf oc "	nord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pxorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pxorl (rd, rs1, rs2) ->
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnxorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnxorl (rd, rs1, rs2) -> 
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pandnl (rd, rs1, rs2) -> 
          fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -591,6 +611,8 @@ module Target (*: TARGET*) =
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddl (rd, rs1, rs2) ->
          fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmsubl (rd, rs1, rs2) ->
+         fprintf oc "	msbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pfaddd (rd, rs1, rs2) ->
          fprintf oc "	faddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -610,6 +632,14 @@ module Target (*: TARGET*) =
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint imm
       | Paddiw (rd, rs, imm) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Paddxiw (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
+      | Prevsubiw (rd, rs, imm) ->
+         fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Prevsubxiw (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
       | Pmuliw (rd, rs, imm) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pandiw (rd, rs, imm) ->
@@ -655,6 +685,14 @@ module Target (*: TARGET*) =
          fprintf oc "	compd.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint64 imm
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Paddxil (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
+      | Prevsubil (rd, rs, imm) ->
+         fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Prevsubxil (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint64 imm
       | Pmulil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	muld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
@@ -679,6 +717,12 @@ module Target (*: TARGET*) =
       | Pcmove (bt, rd, rcond, rs) | Pcmoveu (bt, rd, rcond, rs) ->
          fprintf oc "	cmoved.%a %a? %a = %a\n"
            bcond bt ireg rcond ireg rd ireg rs
+      | Pcmoveiw (bt, rd, rcond, imm) | Pcmoveuiw (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint imm
+      | Pcmoveil (bt, rd, rcond, imm) | Pcmoveuil (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint64 imm
         
     let get_section_names name =
       let (text, lit) =

@@ -109,7 +109,7 @@ let atom_location a =
 
 let comp_env : composite_env ref = ref Maps.PTree.empty
 
-(** Hooks -- overriden in machine-dependent CPragmas module *)
+(** Hooks -- overridden in machine-dependent CPragmas module *)
 
 let process_pragma_hook = ref (fun (_: string) -> false)
 
@@ -703,12 +703,12 @@ let z_of_str hex str fst =
 
 let checkFloatOverflow f typ =
   match f with
-  | Fappli_IEEE.B754_finite _ -> ()
-  | Fappli_IEEE.B754_zero _ ->
+  | Binary.B754_finite _ -> ()
+  | Binary.B754_zero _ ->
       warning Diagnostics.Literal_range "magnitude of floating-point constant too small for type '%s'"  typ
-  | Fappli_IEEE.B754_infinity _ ->
+  | Binary.B754_infinity _ ->
       warning Diagnostics.Literal_range "magnitude of floating-point constant too large for type '%s'"  typ
-  | Fappli_IEEE.B754_nan _ ->
+  | Binary.B754_nan _ ->
       warning Diagnostics.Literal_range "floating-point converts converts to 'NaN'"
 
 let convertFloat f kind =

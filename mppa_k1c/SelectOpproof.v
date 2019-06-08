@@ -183,6 +183,75 @@ Proof.
   auto.
 Qed.
 
+Theorem eval_addimm_shlimm:
+  forall sh k2, unary_constructor_sound (addimm_shlimm sh k2) (fun x => ExtValues.addx sh x (Vint k2)).
+Proof.
+  red; unfold addimm_shlimm; intros.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned sh)) as [s14 |] eqn:SHIFT.
+  - TrivialExists. simpl.
+    f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e1.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e1.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e2.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e2.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e3.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e3.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      destruct x; simpl; trivial.
+      replace (Int.ltu _ _) with true by reflexivity.
+      unfold Int.ltu.
+      rewrite e4.
+      replace (if zlt _ _ then true else false) with true by reflexivity.
+      rewrite <- e4.
+      rewrite Int.repr_unsigned.
+      reflexivity.
+    }
+    discriminate.
+  - unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+  }
+  { unfold addx. rewrite Val.add_commut.
+    TrivialExists.
+    repeat (try eassumption; try econstructor).
+    simpl.
+    reflexivity.
+    }
+Qed.
+
 Theorem eval_addimm:
   forall n, unary_constructor_sound (addimm n) (fun x => Val.add x (Vint n)).
 Proof.
@@ -198,9 +267,57 @@ Proof.
     + econstructor; split. EvalOp. simpl; eauto. 
       destruct sp; simpl; auto.
     + TrivialExists; simpl. subst x. rewrite Val.add_assoc. rewrite Int.add_commut. auto.
+    + TrivialExists; simpl. subst x.
+      destruct v1; simpl; trivial.
+      destruct (Int.ltu _ _); simpl; trivial.
+      rewrite Int.add_assoc. rewrite Int.add_commut.
+      reflexivity.
+    + pose proof eval_addimm_shlimm as ADDX.
+      unfold unary_constructor_sound in ADDX.
+      unfold addx in ADDX.
+      rewrite Val.add_commut.
+      subst x.
+      apply ADDX; assumption.
     + TrivialExists.
 Qed.
 
+Lemma eval_addx: forall n, binary_constructor_sound (add_shlimm n) (ExtValues.addx n).
+Proof.
+  red.
+  intros.
+  unfold add_shlimm.
+  destruct (Compopts.optim_addx tt).
+  {
+  destruct (shift1_4_of_z (Int.unsigned n)) as [s14 |] eqn:SHIFT.
+  - TrivialExists.
+    simpl.
+    f_equal. f_equal.
+    unfold shift1_4_of_z, int_of_shift1_4, z_of_shift1_4 in *.
+    destruct (Z.eq_dec _ _) as [e1|].
+    { replace s14 with SHIFT1 by congruence.
+      rewrite <- e1.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e2|].
+    { replace s14 with SHIFT2 by congruence.
+      rewrite <- e2.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e3|].
+    { replace s14 with SHIFT3 by congruence.
+      rewrite <- e3.
+      apply Int.repr_unsigned. }
+    destruct (Z.eq_dec _ _) as [e4|].
+    { replace s14 with SHIFT4 by congruence.
+      rewrite <- e4.
+      apply Int.repr_unsigned. }
+    discriminate.
+  - TrivialExists;
+      repeat econstructor; eassumption.
+  }
+  { TrivialExists;
+      repeat econstructor; eassumption.
+  }
+Qed.
+  
 Theorem eval_add: binary_constructor_sound add Val.add.
 Proof.
   red; intros until y.
@@ -238,6 +355,15 @@ Proof.
     subst. TrivialExists.
   - (* Omaddimm rev *)
     subst. rewrite Val.add_commut. TrivialExists.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    rewrite Val.add_commut.
+    apply ADDX; assumption.
+    (* Oaddx *)
+  - subst. pose proof eval_addx as ADDX.
+    unfold binary_constructor_sound in ADDX.
+    apply ADDX; assumption.
   - TrivialExists.
 Qed.
 
@@ -251,6 +377,12 @@ Proof.
     apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_l. apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_r. apply eval_addimm; EvalOp.
+  - TrivialExists. simpl. subst. reflexivity.
+  - TrivialExists. simpl. subst.
+    rewrite sub_add_neg.
+    rewrite neg_mul_distr_r.
+    unfold Val.neg.
+    reflexivity.
   - TrivialExists.
 Qed.
 
@@ -477,7 +609,7 @@ Proof.
   change (Int.ltu (Int.repr 32) Int64.iwordsize') with true; simpl.
   apply Val.lessdef_same. f_equal. 
   transitivity (Int.repr (Z.shiftr (Int.signed i * Int.signed i0) 32)).
-  unfold Int.mulhs; f_equal. rewrite Int.Zshiftr_div_two_p by omega. reflexivity.
+  unfold Int.mulhs; f_equal. rewrite Zbits.Zshiftr_div_two_p by omega. reflexivity.
   apply Int.same_bits_eq; intros n N.
   change Int.zwordsize with 32 in *.
   assert (N1: 0 <= n < 64) by omega.
@@ -505,7 +637,7 @@ Proof.
   change (Int.ltu (Int.repr 32) Int64.iwordsize') with true; simpl.
   apply Val.lessdef_same. f_equal. 
   transitivity (Int.repr (Z.shiftr (Int.unsigned i * Int.unsigned i0) 32)).
-  unfold Int.mulhu; f_equal. rewrite Int.Zshiftr_div_two_p by omega. reflexivity.
+  unfold Int.mulhu; f_equal. rewrite Zbits.Zshiftr_div_two_p by omega. reflexivity.
   apply Int.same_bits_eq; intros n N.
   change Int.zwordsize with 32 in *.
   assert (N1: 0 <= n < 64) by omega.
@@ -624,83 +756,6 @@ Proof.
     exists (Val.ror v1 (Vint n2)); split. EvalOp. rewrite Val.or_commut. apply ROR; auto.
   - (*orn*) TrivialExists; simpl; congruence.
   - (*orn reversed*) rewrite Val.or_commut. TrivialExists; simpl; congruence.
-  - (* select *)
-    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
-    TrivialExists.
-    simpl in *.
-    unfold eval_select.
-    f_equal.
-    inv H6.
-    inv H7.
-    inv H9.
-    inv H11.
-    unfold same_expr_pure in PURE.
-    destruct y0; try congruence.
-    destruct y1; try congruence.
-    destruct (ident_eq i i0); try congruence.
-    rewrite <- e0 in *. clear e0. clear PURE.
-    inv H2. inv H5.
-    replace v8 with v4 in * by congruence.
-    rename v4 into vselect.
-    destruct vselect; simpl; trivial;
-    destruct v5; simpl; trivial; destruct v9; simpl; trivial;
-    destruct (Int.eq i1 Int.zero); simpl; trivial.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_zero.
-      reflexivity.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.or_commut.
-      rewrite Int.or_zero.
-      reflexivity.
-  - (* select unsigned *)
-    destruct (same_expr_pure y0 y1) eqn:PURE; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero0 Int.zero; simpl; try exact DEFAULT.
-    predSpec Int.eq Int.eq_spec zero1 Int.zero; simpl; try exact DEFAULT.
-    TrivialExists.
-    simpl in *.
-    unfold eval_select.
-    f_equal.
-    inv H6.
-    inv H7.
-    inv H9.
-    inv H11.
-    unfold same_expr_pure in PURE.
-    destruct y0; try congruence.
-    destruct y1; try congruence.
-    destruct (ident_eq i i0); try congruence.
-    rewrite <- e0 in *. clear e0. clear PURE.
-    inv H2. inv H5.
-    replace v8 with v4 in * by congruence.
-    rename v4 into vselect.
-    destruct vselect; simpl; trivial;
-    destruct v5; simpl; trivial;
-    destruct v9; simpl; trivial;
-    destruct (Int.eq i1 Int.zero); simpl; trivial.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.or_zero.
-      reflexivity.
-    + rewrite Int.neg_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_zero.
-      rewrite Int.and_commut.
-      rewrite Int.and_mone.
-      rewrite Int.or_commut.
-      rewrite Int.or_zero.
-      reflexivity.
   - set (zstop := (int_highest_bit mask)).
     set (zstart := (Int.unsigned start)).
     destruct (is_bitfield _ _) eqn:Risbitfield.
@@ -1297,7 +1352,7 @@ Proof.
   - exists (v1 :: nil); split. eauto with evalexpr. simpl.
     destruct v1; simpl in H; try discriminate. destruct Archi.ptr64 eqn:SF; inv H. 
     simpl. auto.
-  - destruct (Compopts.optim_fxsaddr tt).
+  - destruct (Compopts.optim_xsaddr tt).
     + destruct (Z.eq_dec _ _).
       * exists (v1 :: v2 :: nil); split.
         repeat (constructor; auto). simpl. rewrite Int.repr_unsigned. destruct v2; simpl in *; congruence.
@@ -1309,6 +1364,25 @@ Proof.
         repeat (constructor; auto). econstructor.
         repeat (constructor; auto). eassumption. simpl. congruence.
         simpl. congruence.
+  - unfold addxl in *.
+    destruct (Compopts.optim_xsaddr tt).
+    + unfold int_of_shift1_4 in *.
+      destruct (Z.eq_dec _ _).
+      * exists (v0 :: v1 :: nil); split.
+        repeat (constructor; auto). simpl.
+        congruence.
+      * eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
+        simpl. congruence.
+    + eexists; split.
+        repeat (constructor; auto). eassumption.
+        econstructor.
+        repeat (constructor; auto). eassumption. simpl.
+        reflexivity.
+        simpl. unfold int_of_shift1_4 in *. congruence.
   - exists (v1 :: v0 :: nil); split. repeat (constructor; auto). simpl. congruence.
   - exists (v :: nil);  split. eauto with evalexpr. subst. simpl. rewrite Ptrofs.add_zero; auto.
 Qed.
@@ -1335,6 +1409,204 @@ Proof.
   repeat constructor; auto.
 + constructor; auto.
 - constructor; auto.
+Qed.
+
+(* ternary *)
+(* does not work due to possible nondeterminism
+Lemma cond_to_condition0_correct :
+  forall cond : condition,
+  forall al : exprlist,
+    match (cond_to_condition0 cond al) with
+    | None => True
+    | Some(cond0, e1) =>
+      forall le vl v1,
+      eval_expr ge sp e m le e1 v1 ->
+      eval_exprlist ge sp e m le al vl ->
+      (eval_condition0 cond0 v1 m) = (eval_condition cond vl m)
+    end.
+Proof.
+  intros.
+  unfold cond_to_condition0.
+  case (cond_to_condition0_match cond al); trivial.
+  {
+    intros.
+    destruct (Int.eq_dec _ _); trivial.
+    intros until v1.
+    intros He1 Hel.
+    InvEval.
+    simpl.
+    f_equal.
+    eapply eval_expr_determ. eassumption.
+  }
+Qed.
+*)
+
+Lemma eval_neg_condition0:
+  forall cond0: condition0,
+  forall v1: val,
+  forall m: mem,
+    (eval_condition0 (negate_condition0 cond0) v1 m) =
+    option_map negb (eval_condition0 cond0 v1 m).
+Proof.
+  intros.
+  destruct cond0; simpl;
+  try rewrite Val.negate_cmp_bool;
+  try rewrite Val.negate_cmpu_bool;
+  try rewrite Val.negate_cmpl_bool;
+  try rewrite Val.negate_cmplu_bool;
+  reflexivity.
+Qed.
+
+Lemma select_neg:
+  forall a b c,
+    Val.select (option_map negb a) b c =
+    Val.select a c b.
+Proof.
+  destruct a; simpl; trivial.
+  destruct b; simpl; trivial.
+Qed.
+
+Lemma eval_select0: 
+  forall le ty cond0 ac vc a1 v1 a2 v2,
+  eval_expr ge sp e m le ac vc ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  exists v, 
+     eval_expr ge sp e m le (select0 ty cond0 a1 a2 ac) v
+  /\ Val.lessdef (Val.select (eval_condition0 cond0 vc m) v1 v2 ty) v.
+Proof.
+  intros.
+  unfold select0.
+  destruct (select0_match ty cond0 a1 a2 ac).
+  all: InvEval; econstructor; split;
+    try  repeat (try econstructor; try eassumption).
+  all: rewrite eval_neg_condition0; rewrite select_neg; constructor.
+Qed.
+
+Lemma bool_cond0_ne:
+  forall ob : option bool,
+  forall m,
+    (eval_condition0 (Ccomp0 Cne) (Val.of_optbool ob) m) = ob.
+Proof.
+  destruct ob; simpl; trivial.
+  intro.
+  destruct b; reflexivity.
+Qed.
+
+Lemma eval_condition_ccomp_swap :
+  forall c x y m,
+    eval_condition (Ccomp (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccomp c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmp_bool.
+Qed.
+
+Lemma eval_condition_ccompu_swap :
+  forall c x y m,
+    eval_condition (Ccompu (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccompu c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmpu_bool.
+Qed.
+
+Lemma eval_condition_ccompl_swap :
+  forall c x y m,
+    eval_condition (Ccompl (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccompl c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmpl_bool.
+Qed.
+
+Lemma eval_condition_ccomplu_swap :
+  forall c x y m,
+    eval_condition (Ccomplu (swap_comparison c)) (x :: y :: nil) m=
+    eval_condition (Ccomplu c) (y :: x :: nil) m.
+Proof.
+  intros; unfold eval_condition;
+  apply Val.swap_cmplu_bool.
+Qed.
+
+Theorem eval_select: 
+  forall le ty cond al vl a1 v1 a2 v2 a b,
+  select ty cond al a1 a2 = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  eval_condition cond vl m = Some b ->
+  exists v, 
+     eval_expr ge sp e m le a v
+  /\ Val.lessdef (Val.select (Some b) v1 v2 ty) v.
+Proof.
+  unfold select.
+  intros until b.
+  intro Hop; injection Hop; clear Hop; intro; subst a.
+  intros HeL He1 He2 HeC.
+  unfold cond_to_condition0.
+  destruct (cond_to_condition0_match cond al).
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      simpl.
+      change (Val.cmp_bool c v0 (Vint Int.zero))
+        with (eval_condition0 (Ccomp0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmp_bool c v0 (Vint x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int.eq_dec x Int.zero).
+    { subst x.
+      simpl.
+      change (Val.cmpu_bool (Mem.valid_pointer m) c v0 (Vint Int.zero))
+        with (eval_condition0 (Ccompu0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpu_bool (Mem.valid_pointer m) c v0 (Vint x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      simpl.
+      change (Val.cmpl_bool c v0 (Vlong Int64.zero))
+      with (eval_condition0 (Ccompl0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmpl_bool c v0 (Vlong x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  {
+    InvEval.
+    rewrite <- HeC. 
+    destruct (Int64.eq_dec x Int64.zero).
+    { subst x.
+      simpl.
+      change (Val.cmplu_bool  (Mem.valid_pointer m) c v0 (Vlong Int64.zero))
+      with (eval_condition0 (Ccomplu0 c) v0 m).
+      eapply eval_select0; eassumption.
+    }
+    simpl.
+    erewrite <- (bool_cond0_ne (Val.cmplu_bool (Mem.valid_pointer m) c v0 (Vlong x))).
+    eapply eval_select0; repeat (try econstructor; try eassumption).
+  }
+  erewrite <- (bool_cond0_ne (Some b)).
+  eapply eval_select0; repeat (try econstructor; try eassumption).
+  rewrite <- HeC.
+  simpl.
+  reflexivity.
 Qed.
 
 (* floating-point division *)

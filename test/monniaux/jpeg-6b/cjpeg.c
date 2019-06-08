@@ -23,6 +23,11 @@
  * works regardless of which command line style is used.
  */
 
+#define VERIMAG
+#ifdef VERIMAG
+#include "../clock.h"
+#endif
+
 #include "cdjpeg.h"		/* Common decls for cjpeg/djpeg applications */
 #include "jversion.h"		/* for version message */
 
@@ -576,6 +581,10 @@ main (int argc, char **argv)
   /* Specify data destination for compression */
   jpeg_stdio_dest(&cinfo, output_file);
 
+#ifdef VERIMAG
+  clock_prepare();
+  clock_start();
+#endif
   /* Start compressor */
   jpeg_start_compress(&cinfo, TRUE);
 
@@ -584,6 +593,10 @@ main (int argc, char **argv)
     num_scanlines = (*src_mgr->get_pixel_rows) (&cinfo, src_mgr);
     (void) jpeg_write_scanlines(&cinfo, src_mgr->buffer, num_scanlines);
   }
+#ifdef VERIMAG
+  clock_stop();
+  printerr_total_clock();
+#endif
 
   /* Finish compression and release memory */
   (*src_mgr->finish_input) (&cinfo, src_mgr);

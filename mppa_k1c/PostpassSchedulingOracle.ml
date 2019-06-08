@@ -61,7 +61,9 @@ let arith_rrr_str = function
   | Pfcompw ft -> "Pfcompw"
   | Pfcompl ft -> "Pfcompl"
   | Paddw -> "Paddw"
+  | Paddxw _ -> "Paddxw"
   | Psubw -> "Psubw"
+  | Prevsubxw _ -> "Psubxw"
   | Pmulw -> "Pmulw"
   | Pandw -> "Pandw"
   | Pnandw -> "Pnandw"
@@ -76,7 +78,9 @@ let arith_rrr_str = function
   | Psrxw -> "Psrxw"
   | Psllw -> "Psllw"
   | Paddl -> "Paddl"
+  | Paddxl _ -> "Paddxl"
   | Psubl -> "Psubl"
+  | Prevsubxl _ -> "Psubxl"
   | Pandl -> "Pandl"
   | Pnandl -> "Pnandl"
   | Porl -> "Porl"
@@ -100,6 +104,9 @@ let arith_rrr_str = function
 let arith_rri32_str = function
   | Pcompiw it -> "Pcompiw"
   | Paddiw -> "Paddiw"
+  | Paddxiw _ -> "Paddxiw"
+  | Prevsubiw -> "Psubiw"
+  | Prevsubxiw _ -> "Psubxiw"
   | Pmuliw -> "Pmuliw"
   | Pandiw -> "Pandiw"
   | Pnandiw -> "Pnandiw"
@@ -122,6 +129,9 @@ let arith_rri32_str = function
 let arith_rri64_str = function
   | Pcompil it -> "Pcompil"
   | Paddil -> "Paddil"
+  | Prevsubil -> "Psubil"
+  | Paddxil _ -> "Paddxil"
+  | Prevsubxil _ -> "Psubxil"
   | Pmulil -> "Pmulil"
   | Pandil -> "Pandil"
   | Pnandil -> "Pnandil"
@@ -140,9 +150,21 @@ let arith_arr_str = function
 let arith_arrr_str = function
   | Pmaddw -> "Pmaddw"
   | Pmaddl -> "Pmaddl"
+  | Pmsubw -> "Pmsubw"
+  | Pmsubl -> "Pmsubl"
   | Pcmove _ -> "Pcmove"
   | Pcmoveu _ -> "Pcmoveu"
-            
+
+let arith_arri32_str = function
+  | Pmaddiw -> "Pmaddiw"
+  | Pcmoveiw _ -> "Pcmoveiw"
+  | Pcmoveuiw _ -> "Pcmoveuiw"
+
+let arith_arri64_str = function
+  | Pmaddil -> "Pmaddil"
+  | Pcmoveil _ -> "Pcmoveil"
+  | Pcmoveuil _ -> "Pcmoveuil"
+
 let arith_ri32_str = "Pmake"
 
 let arith_ri64_str = "Pmakel"
@@ -182,9 +204,9 @@ let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Re
 
 let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
-let arith_arri32_rec i rd rs imm32 = { inst = "Pmaddiw"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+let arith_arri32_rec i rd rs imm32 = { inst = arith_arri32_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
 
-let arith_arri64_rec i rd rs imm64 = { inst = "Pmaddil"; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+let arith_arri64_rec i rd rs imm64 = { inst = arith_arri64_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
 
 let arith_arr_rec i rd rs = { inst = arith_arr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
 
@@ -203,8 +225,8 @@ let arith_rec i =
   | PArithRRR (i, rd, rs1, rs2) -> arith_rrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithARR (i, rd, rs) -> arith_arr_rec i (IR rd) (IR rs)
   (* Seems like single constant constructor types are elided *)
-  | PArithARRI32 ((* i,*) rd, rs, imm32) -> arith_arri32_rec () (IR rd) (IR rs) (Some (I32 imm32))
-  | PArithARRI64 ((* i,*) rd, rs, imm64) -> arith_arri64_rec () (IR rd) (IR rs) (Some (I64 imm64))
+  | PArithARRI32 (i, rd, rs, imm32) -> arith_arri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
+  | PArithARRI64 (i, rd, rs, imm64) -> arith_arri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
   | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
   | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
@@ -269,7 +291,7 @@ let ctl_flow_rec = function
   | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None ; is_control = true}
   | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
   | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
-  | Pjumptable (r, _) -> { inst = "Pjumptable"; write_locs = [Reg (IR GPR62); Reg (IR GPR63)]; read_locs = [Reg (IR r)]; imm = None ; is_control = true}
+  | Pjumptable (r, _) -> raise OpaqueInstruction (* { inst = "Pjumptable"; write_locs = [Reg (IR GPR62); Reg (IR GPR63)]; read_locs = [Reg (IR r)]; imm = None ; is_control = true} *)
 
 let control_rec i =
   match i with
@@ -393,6 +415,10 @@ let alu_lite_x : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 2 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
   in Array.of_list (List.map resmap resource_names)
 
+let alu_lite_y : int array = let resmap = fun r -> match r with 
+  | "ISSUE" -> 3 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  in Array.of_list (List.map resmap resource_names)
+
 let alu_full : int array = let resmap = fun r -> match r with
   | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
@@ -452,8 +478,9 @@ type real_instruction =
   | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
   | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Srsd | Xord
   | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
-  | Maddw | Maddd | Cmoved
+  | Maddw | Maddd | Msbfw | Msbfd | Cmoved
   | Make | Nop | Extfz | Extfs | Insf
+  | Addxw | Addxd
   (* LSU *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
   | Sb | Sh | Sw | Sd | Sq | So
@@ -467,6 +494,8 @@ type real_instruction =
 
 let ab_inst_to_real = function
   | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
+  | "Paddxw" | "Paddxiw" -> Addxw
+  | "Paddxl" | "Paddxil" -> Addxd
   | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
   | "Pandw" | "Pandiw" -> Andw
   | "Pnandw" | "Pnandiw" -> Nandw
@@ -493,6 +522,7 @@ let ab_inst_to_real = function
   | "Psllw" | "Pslliw" -> Sllw
   | "Proriw" -> Rorw
   | "Pmaddw" | "Pmaddiw" -> Maddw
+  | "Pmsubw" | "Pmsubiw" -> Msbfw
   | "Pslll" | "Psllil" -> Slld
   | "Pxorw" | "Pxoriw" -> Xorw
   | "Pnxorw" | "Pnxoriw" -> Nxorw
@@ -502,7 +532,8 @@ let ab_inst_to_real = function
   | "Pnxorl" | "Pnxoril" -> Nxord
   | "Pandnl" | "Pandnil" -> Andnd
   | "Pornl" | "Pornil" -> Ornd
-  | "Pmaddl" -> Maddd
+  | "Pmaddl" | "Pmaddil" -> Maddd
+  | "Pmsubl" | "Pmsubil" -> Msbfd
   | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
   | "Pnop" | "Pcvtw2l" -> Nop
   | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
@@ -520,7 +551,7 @@ let ab_inst_to_real = function
   | "Pfixedudrzz" -> Fixedudz
   | "Pfixeddrzz_i32" -> Fixeddz
   | "Pfixedudrzz_i32" -> Fixedudz
-  | "Pcmove" | "Pcmoveu" -> Cmoved
+  | "Pcmove" | "Pcmoveu"   | "Pcmoveiw" | "Pcmoveuiw" | "Pcmoveil" | "Pcmoveuil" -> Cmoved
   
   | "Plb" -> Lbs
   | "Plbu" -> Lbz
@@ -571,15 +602,27 @@ let rec_to_usage r =
   and real_inst = ab_inst_to_real r.inst
   in match real_inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
-  | Nxorw | Andnw | Ornw  -> 
+  | Nxorw | Andnw | Ornw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
-  | Nxord | Andnd | Ornd | Cmoved -> 
+  | Nxord | Andnd | Ornd ->
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
                           | Some E27U27L10 -> alu_tiny_y)
+  |Cmoved ->
+      (match encoding with None | Some U6 | Some S10 -> alu_lite
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | Some E27U27L10 -> alu_lite_y)
+  | Addxw -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_lite 
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | _ -> raise InvalidEncoding)
+  | Addxd -> 
+      (match encoding with None | Some U6 | Some S10 -> alu_lite 
+                          | Some U27L5 | Some U27L10 -> alu_lite_x
+                          | Some E27U27L10 -> alu_lite_y)
   | Compw -> (match encoding with None -> alu_tiny
                                 | Some U6 | Some S10 | Some U27L5 -> alu_tiny_x
                                 | _ -> raise InvalidEncoding)
@@ -596,16 +639,16 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw| Maddw -> (match encoding with None -> mau
+  | Mulw| Maddw | Msbfw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Maddd | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
-  | Sraw | Srlw | Srsw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
+  | Sraw | Srlw | Sllw | Srad | Srld | Slld -> (match encoding with None | Some U6 -> alu_tiny | _ -> raise InvalidEncoding)
   (* TODO: check *)
-  | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
+  | Srsw | Srsd | Rorw -> (match encoding with None | Some U6 -> alu_lite | _ -> raise InvalidEncoding)
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 
@@ -629,10 +672,10 @@ let real_inst_to_latency = function
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Srad | Srsd | Srld | Slld | Xord | Make
-  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved
+  | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved | Addxw | Addxd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
-  | Mulw | Muld | Maddw | Maddd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
+  | Mulw | Muld | Maddw | Maddd | Msbfw | Msbfd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 3
   | Sb | Sh | Sw | Sd | Sq | So -> 1 (* See k1c-Optimization.pdf page 19 *)
   | Get -> 1

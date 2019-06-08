@@ -2,6 +2,42 @@ Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
 
+Inductive shift1_4 : Type :=
+| SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
+
+Definition z_of_shift1_4 (x : shift1_4) :=
+  match x with
+  | SHIFT1 => 1
+  | SHIFT2 => 2
+  | SHIFT3 => 3
+  | SHIFT4 => 4
+  end.
+
+Definition shift1_4_of_z (x : Z) :=
+  if Z.eq_dec x 1 then Some SHIFT1
+  else if Z.eq_dec x 2 then Some SHIFT2
+  else if Z.eq_dec x 3 then Some SHIFT3
+  else if Z.eq_dec x 4 then Some SHIFT4
+  else None.
+
+Lemma shift1_4_of_z_correct :
+  forall z,
+    match shift1_4_of_z z with
+    | Some x => z_of_shift1_4 x = z
+    | None => True
+    end.
+Proof.
+  intro. unfold shift1_4_of_z.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  destruct (Z.eq_dec _ _); simpl; try congruence.
+  trivial.
+Qed.
+
+Definition int_of_shift1_4 (x : shift1_4) :=
+  Int.repr (z_of_shift1_4 x).
+
 Definition is_bitfield stop start :=
   (Z.leb start stop)
     && (Z.geb start Z.zero)
@@ -251,10 +287,10 @@ Proof.
   intros.
   apply Int.eqm_samerepr.
   unfold Int.eqm.
-  unfold Int.eqmod.
+  unfold Zbits.eqmod.
   pose proof (Int64.eqm_unsigned_repr x) as H64.
   unfold Int64.eqm in H64.
-  unfold Int64.eqmod in H64.
+  unfold Zbits.eqmod in H64.
   destruct H64 as [k64 H64].
   change Int64.modulus with 18446744073709551616 in *.
   change Int.modulus with 4294967296.
@@ -331,7 +367,7 @@ Proof.
         apply Int.eqm_samerepr.
         unfold Int.eqm.
         change (Int64.unsigned (Int64.repr (-2147483648))) with 18446744071562067968.
-        unfold Int.eqmod.
+        unfold Zbits.eqmod.
         change Int.modulus with 4294967296.
         exists (-4294967296).
         compute.
@@ -577,3 +613,61 @@ Proof.
     }
   }
 Qed.
+
+Lemma sub_add_neg :
+  forall x y, Val.sub x y = Val.add x (Val.neg y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int.sub_add_opp.
+Qed.
+
+Lemma neg_mul_distr_r :
+  forall x y, Val.neg (Val.mul x y) = Val.mul x (Val.neg y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int.neg_mul_distr_r.
+Qed.
+
+(* pointer diff
+Lemma sub_addl_negl :
+  forall x y, Val.subl x y = Val.addl x (Val.negl y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  + f_equal. apply Int64.sub_add_opp.
+  + destruct (Archi.ptr64) eqn:ARCHI64; trivial.
+    f_equal. rewrite Ptrofs.sub_add_opp.
+    pose (Ptrofs.agree64_neg ARCHI64 (Ptrofs.of_int64 i0) i0) as Hagree.
+    unfold Ptrofs.agree64 in Hagree.
+    unfold Ptrofs.add.
+    f_equal. f_equal.
+    rewrite Hagree.
+    pose (Ptrofs.agree64_of_int ARCHI64 (Int64.neg i0)) as Hagree2.
+    rewrite Hagree2.
+    reflexivity.
+    exact (Ptrofs.agree64_of_int ARCHI64 i0).
+  +  destruct (Archi.ptr64) eqn:ARCHI64; simpl; trivial.
+     destruct (eq_block _ _); simpl; trivial.
+Qed.
+ *)
+
+Lemma negl_mull_distr_r :
+  forall x y, Val.negl (Val.mull x y) = Val.mull x (Val.negl y).
+Proof.
+  destruct x; destruct y; simpl; trivial.
+  f_equal.
+  apply Int64.neg_mul_distr_r.
+Qed.
+
+Definition addx sh v1 v2 :=
+  Val.add v2 (Val.shl v1 (Vint sh)).
+
+Definition addxl sh v1 v2 :=
+  Val.addl v2 (Val.shll v1 (Vint sh)).
+
+Definition revsubx sh v1 v2 :=
+  Val.sub v2 (Val.shl v1 (Vint sh)).
+
+Definition revsubxl sh v1 v2 :=
+  Val.subl v2 (Val.shll v1 (Vint sh)).

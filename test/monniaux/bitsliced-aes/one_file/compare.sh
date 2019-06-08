@@ -1,7 +1,7 @@
 #!/bin/bash
 ROOT=/home/monniaux/work/Kalray/CompCert
 SRC=bitsliced-aes.c
-k1-mbr-gcc -Werror=implicit -Werror=uninitialized -O3 $SRC $ROOT/test/monniaux/clock.gcc.k1c.o -o bitsliced-aes.gcc.k1c &&
+k1-cos-gcc -Werror=implicit -Werror=uninitialized -O3 $SRC $ROOT/test/monniaux/clock.gcc.k1c.o -o bitsliced-aes.gcc.k1c &&
 $ROOT/ccomp -O3 -fno-unprototyped -O3 $SRC $ROOT/test/monniaux/clock.gcc.k1c.o -o bitsliced-aes.ccomp.k1c &&
 gcc -Werror=implicit -Werror=uninitialized -O3 $SRC  $ROOT/test/monniaux/clock.gcc.host.o -o bitsliced-aes.gcc.host &&
 valgrind ./bitsliced-aes.gcc.host &&

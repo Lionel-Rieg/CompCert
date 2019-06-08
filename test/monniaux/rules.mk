@@ -1,11 +1,11 @@
-ALL_CCOMPFLAGS=-fno-unprototyped
+ALL_CCOMPFLAGS+=-fno-unprototyped
 CCOMP=ccomp-x86
 CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
 
 CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
-K1C_CC=k1-mbr-gcc
-K1C_CFLAGS =-std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+K1C_CC=k1-cos-gcc
+K1C_CFLAGS = -D__K1C_COS__ -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 K1C_CFLAGS_O1 =-std=c99 -O1 -fschedule-insns2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CCOMP = ../../../ccomp

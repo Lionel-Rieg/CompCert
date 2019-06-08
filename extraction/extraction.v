@@ -73,6 +73,7 @@ Extract Constant Iteration.GenIter.iterate =>
 (* Selection *)
 
 Extract Constant Selection.compile_switch => "Switchaux.compile_switch".
+Extract Constant Selection.if_conversion_heuristic => "Selectionaux.if_conversion_heuristic".
 
 (* RTLgen *)
 Extract Constant RTLgen.more_likely => "RTLgenaux.more_likely".
@@ -117,14 +118,16 @@ Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
   "fun _ -> !Clflags.option_g".
-Extract Constant Compopts.optim_fglobaladdrtmp =>
+Extract Constant Compopts.optim_globaladdrtmp =>
   "fun _ -> !Clflags.option_fglobaladdrtmp".
-Extract Constant Compopts.optim_fglobaladdroffset =>
+Extract Constant Compopts.optim_globaladdroffset =>
   "fun _ -> !Clflags.option_fglobaladdroffset".
-Extract Constant Compopts.optim_fxsaddr =>
+Extract Constant Compopts.optim_xsaddr =>
   "fun _ -> !Clflags.option_fxsaddr".
+Extract Constant Compopts.optim_addx =>
+  "fun _ -> !Clflags.option_faddx".
 Extract Constant Compopts.optim_coalesce_mem =>
-  "fun _ -> !Clflags.option_coalesce_mem".
+  "fun _ -> !Clflags.option_fcoalesce_mem".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -164,11 +167,11 @@ Load extractionMachdep.
 Extraction Blacklist List String Int.
 
 (* Cutting the dependency to R. *)
-Extract Inlined Constant Fcore_defs.F2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.FF2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.B2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.round_mode => "fun _ -> assert false".
-Extract Inlined Constant Fcalc_bracket.inbetween_loc => "fun _ -> assert false".
+Extract Inlined Constant Defs.F2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.FF2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.B2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.round_mode => "fun _ -> assert false".
+Extract Inlined Constant Bracket.inbetween_loc => "fun _ -> assert false".
 
 (* Needed in Coq 8.4 to avoid problems with Function definitions. *)
 Set Extraction AccessOpaque.

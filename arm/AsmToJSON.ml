@@ -29,7 +29,7 @@ let mnemonic_names = [ "Padc"; "Padd"; "Padds"; "Pand";"Pannot"; "Pasr"; "Pb"; "
                        "Pfsts"; "Pfsubd"; "Pfsubs"; "Pftosizd"; "Pftosizs"; "Pftouizd";
                        "Pftouizs"; "Pfuitod"; "Pfuitos"; "Pinlineasm"; "Pisb"; "Plabel"; "Pldr";
                        "Ploadsymbol_lbl"; "Pldr_p"; "Pldrb"; "Pldrb_p"; "Pldrh"; "Pldrh_p"; "Pldrsb";
-                       "Pldrsh"; "Plsl"; "Plsr"; "Pmla"; "Pmov"; "Pmovite";
+                       "Pldrsh"; "Plsl"; "Plsr"; "Pmla"; "Pmov"; "Pmovite"; "Pfmovite";
                        "Pmovt"; "Pmovw"; "Pmul"; "Pmvn";  "Ploadsymbol_imm"; "Pnop"; "Porr";
                        "Ppush"; "Prev"; "Prev16"; "Prsb"; "Prsbs"; "Prsc"; "Psbc"; "Psbfx"; "Psdiv"; "Psmull";
                        "Pstr"; "Pstr_p"; "Pstrb"; "Pstrb_p"; "Pstrh"; "Pstrh_p"; "Psub"; "Psubs"; "Pudiv";
@@ -259,7 +259,8 @@ let pp_instructions pp ic =
     | Pmla(r1, r2, r3, r4) -> instruction pp "Pmla" [Ireg r1; Ireg r2; Ireg r3; Ireg r4]
     | Pmov(r1, so) -> instruction pp "Pmov" [Ireg r1; Shift so]
     | Pmovite(cond, r1, so1, so2) -> instruction pp "Pmovite" [Ireg r1; Condition (TargetPrinter.condition_name cond); Shift so1; Condition (TargetPrinter.neg_condition_name cond); Shift so2]
-    | Pmovt(r1, n) -> instruction pp "Pmovt" [Ireg r1; Long n]
+    | Pfmovite(cond, r1, r2, r3) -> instruction pp "Pfmovite" [DFreg r1; Condition (TargetPrinter.condition_name cond); DFreg r2; Condition (TargetPrinter.neg_condition_name cond); DFreg r3] 
+   | Pmovt(r1, n) -> instruction pp "Pmovt" [Ireg r1; Long n]
     | Pmovw(r1, n) -> instruction pp "Pmovw" [Ireg r1; Long n]
     | Pmul(r1, r2, r3) -> instruction pp "Pmul" [Ireg r1; Ireg r2; Ireg r3]
     | Pmvn(r1, so) -> instruction pp "Pmvn" [Ireg r1; Shift so]

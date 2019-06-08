@@ -334,6 +334,75 @@ Definition transl_cond_notfloat64 (cmp: comparison) (rd r1 r2: ireg) (k: bcode) 
   | Reversed ft => Pfcompl ft rd r2 r1 ::i k
   end.
 
+
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpuwz (c: comparison) :=
+  match c with
+  | Cne => OK BTwnez
+  | Ceq => OK BTweqz
+  | Clt => Error (msg "btest_for_compuwz: Clt")
+  | Cge => Error (msg "btest_for_compuwz: Cge")
+  | Cle => OK BTweqz
+  | Cgt => OK BTwnez
+  end.
+
+(* CoMPare Unsigned Words to Zero *)
+Definition btest_for_cmpudz (c: comparison) :=
+  match c with
+  | Cne => OK BTdnez
+  | Ceq => OK BTdeqz
+  | Clt => Error (msg "btest_for_compudz: Clt")
+  | Cge => Error (msg "btest_for_compudz: Cge")
+  | Cle => OK BTdeqz
+  | Cgt => OK BTdnez
+  end.
+
+Definition conditional_move (cond0 : condition0) (rc rd rs : ireg) :
+  res basic :=
+  if ireg_eq rd rs
+  then OK Pnop
+  else
+    (match cond0 with
+     | Ccomp0 cmp =>
+       OK (PArith (Pcmove (btest_for_cmpswz cmp) rd rc rs))
+     | Ccompu0 cmp =>
+       do bt <- btest_for_cmpuwz cmp;
+         OK (PArith (Pcmoveu bt rd rc rs))
+     | Ccompl0 cmp =>
+       OK (PArith (Pcmove (btest_for_cmpsdz cmp) rd rc rs))
+     | Ccomplu0 cmp =>
+       do bt <- btest_for_cmpudz cmp;
+         OK (PArith (Pcmoveu bt rd rc rs))
+     end).
+
+Definition conditional_move_imm32 (cond0 : condition0) (rc rd : ireg) (imm : int) : res basic :=
+  match cond0 with
+  | Ccomp0 cmp =>
+    OK (PArith (Pcmoveiw (btest_for_cmpswz cmp) rd rc imm))
+  | Ccompu0 cmp =>
+    do bt <- btest_for_cmpuwz cmp;
+      OK (PArith (Pcmoveuiw bt rd rc imm))
+  | Ccompl0 cmp =>
+    OK (PArith (Pcmoveiw (btest_for_cmpsdz cmp) rd rc imm))
+  | Ccomplu0 cmp =>
+    do bt <- btest_for_cmpudz cmp;
+      OK (PArith (Pcmoveuiw bt rd rc imm))
+  end.
+
+Definition conditional_move_imm64 (cond0 : condition0) (rc rd : ireg) (imm : int64) : res basic :=
+  match cond0 with
+  | Ccomp0 cmp =>
+    OK (PArith (Pcmoveil (btest_for_cmpswz cmp) rd rc imm))
+  | Ccompu0 cmp =>
+    do bt <- btest_for_cmpuwz cmp;
+      OK (PArith (Pcmoveuil bt rd rc imm))
+  | Ccompl0 cmp =>
+    OK (PArith (Pcmoveil (btest_for_cmpsdz cmp) rd rc imm))
+  | Ccomplu0 cmp =>
+    do bt <- btest_for_cmpudz cmp;
+      OK (PArith (Pcmoveuil bt rd rc imm))
+  end.
+
 Definition transl_cond_op
            (cond: condition) (rd: ireg) (args: list mreg) (k: bcode) :=
   match cond, args with
@@ -376,28 +445,6 @@ Definition transl_cond_op
   | _, _ =>
       Error(msg "Asmblockgen.transl_cond_op")
 end.
-
-(* CoMPare Unsigned Words to Zero *)
-Definition btest_for_cmpuwz (c: comparison) :=
-  match c with
-  | Cne => OK BTwnez
-  | Ceq => OK BTweqz
-  | Clt => Error (msg "btest_for_compuwz: Clt")
-  | Cge => Error (msg "btest_for_compuwz: Cge")
-  | Cle => Error (msg "btest_for_compuwz: Cle")
-  | Cgt => Error (msg "btest_for_compuwz: Cgt")
-  end.
-
-(* CoMPare Unsigned Words to Zero *)
-Definition btest_for_cmpudz (c: comparison) :=
-  match c with
-  | Cne => OK BTdnez
-  | Ceq => OK BTdeqz
-  | Clt => Error (msg "btest_for_compudz: Clt")
-  | Cge => Error (msg "btest_for_compudz: Cge")
-  | Cle => Error (msg "btest_for_compudz: Cle")
-  | Cgt => Error (msg "btest_for_compudz: Cgt")
-  end.
 
 (** Translation of the arithmetic operation [r <- op(args)].
   The corresponding instructions are prepended to [k]. *)
@@ -443,12 +490,33 @@ Definition transl_op
   | Oaddimm n, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (addimm32 rd rs n ::i k)
+  | Oaddx shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Paddxw shift rd rs1 rs2 ::i k)
+  | Oaddximm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Paddxiw shift rd rs n ::i k)
+  | Oaddxl shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Paddxl shift rd rs1 rs2 ::i k)
+  | Oaddxlimm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Paddxil shift rd rs n ::i k)
   | Oneg, a1 :: nil =>
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pnegw rd rs ::i k)
   | Osub, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubw rd rs1 rs2 ::i k)
+  | Orevsubimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubiw rd rs n ::i k)
+  | Orevsubx shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Prevsubxw shift rd rs1 rs2 ::i k)
+  | Orevsubximm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubxiw shift rd rs n ::i k)
   | Omul, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmulw rd rs1 rs2 ::i k)
@@ -543,6 +611,12 @@ Definition transl_op
       do r1 <- ireg_of a1;
       do r2 <- ireg_of a2;
         OK (Pmaddiw r1 r2 n ::i k)
+  | Omsub, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmsubw r1 r2 r3 ::i k)
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
@@ -567,6 +641,15 @@ Definition transl_op
   | Osubl, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Psubl rd rs1 rs2 ::i k)
+  | Orevsubxl shift, a1 :: a2 :: nil =>
+      do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
+      OK (Prevsubxl shift rd rs1 rs2 ::i k)
+  | Orevsublimm n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubil rd rs n ::i k)
+  | Orevsubxlimm shift n, a1 :: nil =>
+      do rd  <- ireg_of res; do rs <- ireg_of a1;
+      OK (Prevsubxil shift rd rs n ::i k)
   | Omull, a1 :: a2 :: nil =>
       do rd <- ireg_of res; do rs1 <- ireg_of a1; do rs2 <- ireg_of a2;
       OK (Pmull rd rs1 rs2 ::i k)
@@ -662,6 +745,12 @@ Definition transl_op
       do r1 <- ireg_of a1;
       do r2 <- ireg_of a2;
         OK (Pmaddil r1 r2 n ::i k)
+  | Omsubl, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+      do r1 <- ireg_of a1;
+      do r2 <- ireg_of a2;
+      do r3 <- ireg_of a3;
+        OK (Pmsubl r1 r2 r3 ::i k)
   | Oabsf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfabsd rd rs ::i k)
@@ -742,31 +831,10 @@ Definition transl_op
   | Olonguofsingle , _ => Error (msg "Asmblockgen.transl_op: Olonguofsingle")
 
 
-
   | Ocmp cmp, _ =>
       do rd <- ireg_of res;
       transl_cond_op cmp rd args k
 
-  | Oselect cond, a0 :: a1 :: aS :: nil
-  | Oselectl cond, a0 :: a1 :: aS :: nil
-  | Oselectf cond, a0 :: a1 :: aS :: nil
-  | Oselectfs cond, a0 :: a1 :: aS :: nil  =>
-    assertion (mreg_eq a0 res);
-      do r0 <- ireg_of a0;
-      do r1 <- ireg_of a1;
-      do rS <- ireg_of aS;
-      (match cond with
-       | Ccomp0 cmp =>
-         OK (Pcmove (btest_for_cmpswz cmp) r0 rS r1 ::i k)
-       | Ccompu0 cmp =>
-         do bt <- btest_for_cmpuwz cmp;
-           OK (Pcmoveu bt r0 rS r1 ::i k)
-       | Ccompl0 cmp =>
-         OK (Pcmove (btest_for_cmpsdz cmp) r0 rS r1 ::i k)
-       | Ccomplu0 cmp =>
-         do bt <- btest_for_cmpudz cmp;
-           OK (Pcmoveu bt r0 rS r1 ::i k)
-       end)
 
   | Oextfz stop start, a1 :: nil =>
     assertion (ExtValues.is_bitfield stop start);
@@ -800,6 +868,29 @@ Definition transl_op
       do rd  <- ireg_of res; do rs <- ireg_of a1;
       OK (Pinsfl stop start rd rs ::i k)
 
+  | Osel cond0 ty, aT :: aF :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rF <- ireg_of aF;
+      do rC <- ireg_of aC;
+      do op <- conditional_move (negate_condition0 cond0) rC rT rF;
+      OK (op ::i k)
+
+  | Oselimm cond0 imm, aT :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rC <- ireg_of aC;
+      do op <- conditional_move_imm32 (negate_condition0 cond0) rC rT imm;
+      OK (op ::i k)
+      
+
+  | Osellimm cond0 imm, aT :: aC :: nil =>
+    assertion (mreg_eq aT res);
+      do rT <- ireg_of aT;
+      do rC <- ireg_of aC;
+      do op <- conditional_move_imm64 (negate_condition0 cond0) rC rT imm;
+      OK (op ::i k)
+      
   | _, _ =>
       Error(msg "Asmgenblock.transl_op")
   end.

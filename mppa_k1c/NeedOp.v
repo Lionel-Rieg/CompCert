@@ -28,6 +28,7 @@ Definition op2 (nv: nval) := nv :: nv :: nil.
 Definition op3 (nv: nval) := nv :: nv :: nv :: nil.
 
 Definition needs_of_condition (cond: condition): list nval := nil.
+Definition needs_of_condition0 (cond0: condition0): list nval := nil.
 
 Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   match op with
@@ -42,8 +43,13 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ocast16signed => op1 (sign_ext 16 nv)
   | Oadd => op2 (modarith nv)
   | Oaddimm n => op1 (modarith nv)
+  | Oaddx _ => op2 (default nv)
+  | Oaddximm _ _ => op1 (default nv)
   | Oneg => op1 (modarith nv)
   | Osub => op2 (default nv)
+  | Orevsubimm _ => op1 (default nv)
+  | Orevsubx _ => op2 (default nv)
+  | Orevsubximm _ _ => op1 (default nv)
   | Omul => op2 (modarith nv)
   | Omulimm _ => op1 (modarith nv)
   | Omulhs | Omulhu | Odiv | Odivu | Omod | Omodu => op2 (default nv)
@@ -72,12 +78,18 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshrximm n => op1 (default nv)
   | Omadd => op3 (modarith nv)
   | Omaddimm n => op2 (modarith nv)
+  | Omsub => op3 (modarith nv)
   | Omakelong => op2 (default nv)
   | Olowlong | Ohighlong => op1 (default nv)
   | Ocast32signed => op1 (default nv)
   | Ocast32unsigned => op1 (default nv)
   | Oaddl => op2 (default nv)
   | Oaddlimm n => op1 (default nv)
+  | Oaddxl _ => op2 (default nv)
+  | Oaddxlimm _ _ => op1 (default nv)
+  | Orevsublimm _ => op1 (default nv)
+  | Orevsubxl _ => op2 (default nv)
+  | Orevsubxlimm _ _ => op1 (default nv)
   | Onegl => op1 (default nv)
   | Osubl => op2 (default nv)
   | Omull => op2 (default nv)
@@ -107,6 +119,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oshrxlimm n => op1 (default nv)
   | Omaddl => op3 (default nv)
   | Omaddlimm n => op2 (default nv)
+  | Omsubl => op3 (default nv)
   | Onegf | Oabsf => op1 (default nv)
   | Oaddf | Osubf | Omulf | Odivf => op2 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
@@ -117,9 +130,11 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Ointofsingle | Ointuofsingle | Osingleofint | Osingleofintu => op1 (default nv)
   | Olongofsingle | Olonguofsingle | Osingleoflong | Osingleoflongu => op1 (default nv)
   | Ocmp c => needs_of_condition c
-  | Oselect _ | Oselectl _ | Oselectf _ | Oselectfs _ => op3 (default nv)
   | Oextfz _ _ | Oextfs _ _  | Oextfzl _ _ | Oextfsl _ _ => op1 (default nv)
   | Oinsf _ _ | Oinsfl _ _ => op2 (default nv)
+  | Osel c ty => nv :: nv :: needs_of_condition0 c
+  | Oselimm c imm
+  | Osellimm c imm => nv :: needs_of_condition0 c
   end.
 
 Definition operation_is_redundant (op: operation) (nv: nval): bool :=
@@ -229,6 +244,26 @@ Proof.
   - apply Val.addl_lessdef; trivial.
 Qed.
 
+Lemma subl_lessdef:
+  forall v1 v1' v2 v2',
+  Val.lessdef v1 v1' -> Val.lessdef v2 v2' -> Val.lessdef (Val.subl v1 v2) (Val.subl v1' v2').
+Proof.
+  intros. inv H. inv H0. auto. destruct v1'; simpl; auto. simpl; auto.
+Qed.
+
+Lemma subl_sound:
+  forall v1 w1 v2 w2 x,
+  vagree v1 w1 (default x) -> vagree v2 w2 (default x) ->
+  vagree (Val.subl v1 v2) (Val.subl w1 w2) x.
+Proof.
+  unfold default; intros.
+  destruct x; simpl in *; trivial.
+  - unfold Val.subl.
+    destruct v1; destruct v2; trivial; destruct Archi.ptr64; simpl; trivial.
+    destruct (eq_block _ _) ; simpl; trivial.
+  - apply subl_lessdef; trivial.
+Qed.
+
 
 Lemma mull_sound:
   forall v1 w1 v2 w2 x,
@@ -245,185 +280,12 @@ Proof.
     trivial.
 Qed.
   
-Lemma select_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_select cond v0 v1 v2 m1) (eval_select cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_select_to2.
-    rewrite eval_select_to2.
-    unfold eval_select2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-      apply iagree_refl.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-      apply iagree_refl.
-  - rewrite eval_select_to2.
-    rewrite eval_select_to2.
-    unfold eval_select2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectl_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectl cond v0 v1 v2 m1) (eval_selectl cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectl_to2.
-    rewrite eval_selectl_to2.
-    unfold eval_selectl2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectl_to2.
-    rewrite eval_selectl_to2.
-    unfold eval_selectl2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectf_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectf cond v0 v1 v2 m1) (eval_selectf cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectf_to2.
-    rewrite eval_selectf_to2.
-    unfold eval_selectf2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectf_to2.
-    rewrite eval_selectf_to2.
-    unfold eval_selectf2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
-
-Lemma selectfs_sound:
-  forall cond v0 w0 v1 w1 v2 w2 x,
-    vagree v0 w0 (default x) ->
-    vagree v1 w1 (default x) ->
-    vagree v2 w2 (default x) ->
-    vagree (eval_selectfs cond v0 v1 v2 m1) (eval_selectfs cond w0 w1 w2 m2) x.
-Proof.
-  intros.
-  destruct x; simpl in *; trivial.
-  - rewrite eval_selectfs_to2.
-    rewrite eval_selectfs_to2.
-    unfold eval_selectfs2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-      destruct w1; trivial.
-  - rewrite eval_selectfs_to2.
-    rewrite eval_selectfs_to2.
-    unfold eval_selectfs2.
-    assert (Hneedstrue := (needs_of_condition0_sound cond v2 true w2)).
-    assert (Hneedsfalse := (needs_of_condition0_sound cond v2 false w2)).
-    destruct (eval_condition0 cond v2 m1) in *; simpl in *; trivial.
-    destruct b.
-    + rewrite Hneedstrue; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-    + rewrite Hneedsfalse; trivial.
-      inv H; trivial.
-      destruct w0; trivial.
-      inv H0; trivial.
-Qed.
 
 Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
 Qed.
-
+  
 Lemma needs_of_operation_sound:
   forall op args v nv args',
   eval_operation ge (Vptr sp Ptrofs.zero) op args m1 = Some v ->
@@ -466,19 +328,37 @@ Proof.
   (* madd *)
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
 - apply add_sound; try apply mul_sound; auto with na; rewrite modarith_idem; assumption.
+- repeat rewrite ExtValues.sub_add_neg.
+  apply add_sound; trivial.
+  apply neg_sound; trivial.
+  rewrite modarith_idem.
+  apply mul_sound;
+  rewrite modarith_idem; trivial.
   (* maddl *)
 - apply addl_sound; trivial.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
+  (* msubl *)
+- apply subl_sound; trivial.
+  apply mull_sound; trivial.
+  rewrite default_idem; trivial.
+  rewrite default_idem; trivial.
   (* select *)
-- apply select_sound; trivial.
-  (* selectl *)
-- apply selectl_sound; trivial.
-  (* selectf *)
-- apply selectf_sound; trivial.
-  (* selectfs *)
-- apply selectfs_sound; trivial.
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto.
+  simpl; auto with na.
+  (* select imm *)
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  { erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto with na. }
+  simpl; auto with na.
+  (* select long imm *)
+- destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
+  { erewrite needs_of_condition0_sound by eauto.
+  apply select_sound; auto with na. }
+  simpl; auto with na.
 Qed.
 
 Lemma operation_is_redundant_sound:

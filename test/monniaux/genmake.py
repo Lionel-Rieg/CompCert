@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/env python3
 
 """ Custom Makefile generator
 
@@ -77,7 +77,7 @@ def print_rule(env: Env, optim: Optim) -> None:
         .format(product = make_product(env, optim),
           sources = make_sources(env, optim), clock = make_clock(env, optim))
           + " ".join([make_obj(objdep["name"], env, (objdep["compiler"] if objdep["compiler"] != "both" else env.compiler.short)) for objdep in objdeps]))
-  print("	{compiler} {flags} $+ -o $@"
+  print("	{compiler} {flags} $+ -lm -o $@"
         .format(compiler = env.compiler.full, flags = optim.full))
 
 def make_env_list(envs: List[Env]) -> str:
@@ -130,6 +130,8 @@ print_measure_rule(environments, measures)
 
 
 print("""
+.SECONDARY:
+
 .PHONY:
 clean:
 	rm -f *.o *.s *.k1c *.csv
