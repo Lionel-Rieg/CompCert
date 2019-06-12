@@ -424,7 +424,7 @@ Qed.
 (*
 Lemma signed_0_eqb :
   forall x, (Z.eqb (Int.signed x) 0) = Int.eq x Int.zero.
-Admitted.
+Qed.
  *)
 
 Lemma Z_quot_le: forall a b,
