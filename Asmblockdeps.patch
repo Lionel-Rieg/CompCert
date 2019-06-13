@@ -1,0 +1,20 @@
+--- extraction/Asmblockdeps.ml	2019-06-13 15:06:55.493592984 +0200
++++ Asmblockdeps.mod.ml	2019-06-13 15:04:55.900122958 +0200
+@@ -2243,5 +2243,15 @@
+ 
+ (** val bblock_simub : bblock -> bblock -> bool **)
+ 
+-let bblock_simub =
+-  pure_bblock_simu_test true
++let bblock_simub bb tbb =
++  let nb_instructions = Camlcoq.Z.to_int64 @@ Asmvliw.size bb
++  in let start_time = (Unix.times ()).Unix.tms_utime
++  in let simub = pure_bblock_simu_test true bb tbb
++  in let refer = ref false
++  in begin
++    for i = 1 to 1000-1 do
++      refer := (if i > 0 then pure_bblock_simu_test true bb tbb else false); (* dumb i > 0 test to lure warning 35 *)
++    done;
++    Printf.printf "%Ld: %f\n" nb_instructions ((Unix.times ()).Unix.tms_utime -. start_time);
++    simub
++  end
