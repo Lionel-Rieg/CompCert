@@ -3,14 +3,14 @@ include ../../Makefile.config
 CCOMP=../../ccomp
 CCOMPFLAGS=$(CCOMPOPTS) -stdlib ../../runtime -dc -dclight -dasm
 
-CFLAGS=-O1 -Wall
+CFLAGS+=-O1 -Wall
 
 LIBS=$(LIBMATH)
 
-TIME=xtime -o /dev/null -mintime 2.0     # Xavier's hack
-#TIME=time >/dev/null                    # Otherwise
+#TIME=xtime -o /dev/null -mintime 2.0     # Xavier's hack
+TIME=time >/dev/null                    # Otherwise
 
-PROGS=fib qsort fftw sha1 sha3 aes \
+PROGS?=fib qsort fftw sha1 sha3 aes \
   lists binarytrees fannkuch \
   nsieve nsievebits vmach \
   chomp perlin siphash24\
@@ -31,28 +31,28 @@ all_gcc: $(PROGS:%=%.gcc)
 %.gcc: %.c
 	$(CC) $(CFLAGS) -o $*.gcc $*.c $(LIBS)
 
-test:
+test: all
 	@for i in $(PROGS); do \
-	   if $(SIMU) ./$$i.compcert | cmp -s - Results/$$i; \
+	   if $(EXECUTE) ./$$i.compcert | cmp -s - Results/$$i; \
            then echo "$$i: passed"; \
            else echo "$$i: FAILED"; exit 2; \
 	   fi; \
          done
 
-test_gcc:
+test_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   if ./$$i.gcc | cmp -s - Results/$$i; \
+	   if $(EXECUTE) ./$$i.gcc | cmp -s - Results/$$i; \
            then echo "$$i: passed"; \
            else echo "$$i: FAILED"; \
 	   fi; \
          done
 
-bench_gcc:
+bench_gcc: all_gcc
 	@for i in $(PROGS); do \
 	   echo -n "$$i: "; $(TIME) ./$$i.gcc; \
          done
 
-bench:
+bench: all
 	@for i in $(PROGS); do \
 	   echo -n "$$i: "; $(TIME) ./$$i.compcert; \
          done
