@@ -28,9 +28,9 @@ x = [coord[0] for coord in coords]
 y = [coord[1] for coord in coords]
 plt.plot(x, y, "b+")
 
-ax.set_ylabel("Time (s)")
+ax.set_ylabel("Time x1000 (s)")
 ax.set_title("Verification time")
-ax.set_xlabel("Size of basic block")
+ax.set_xlabel("Size of basic blocks")
 
 plt.savefig("compile-times.pdf")
 
