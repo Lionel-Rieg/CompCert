@@ -699,20 +699,56 @@ let instruction_usages bb =
  * Latency constraints building
  *)
 
-type access = { inst: int; loc: location }
+(* type access = { inst: int; loc: location } *)
 
-let rec get_accesses llocs laccs =
-  let accesses loc laccs = List.filter (fun acc -> acc.loc = loc) laccs
-  in match llocs with
-  | [] -> []
-  | loc :: llocs -> (accesses loc laccs) @ (get_accesses llocs laccs)
+let preg2int pr = Camlcoq.P.to_int @@ Asmblockdeps.ppos pr
+
+let loc2int = function
+  | Mem -> 1
+  | Reg pr -> preg2int pr
+
+module OrderedLoc : Map.OrderedType = struct
+  type t = location
+  let compare l l' = compare (loc2int l) (loc2int l')
+end
+
+module LocMap = Map.Make(OrderedLoc)
 
 let rec intlist n =
   if n < 0 then failwith "intlist: n < 0"
   else if n = 0 then []
   else (n-1) :: (intlist (n-1))
 
-let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
+let rec list2locmap v = function
+  | [] -> LocMap.empty
+  | loc :: l -> LocMap.add loc v (list2locmap v l)
+
+let get_accesses locs locmap = List.map (fun l _ -> List.mem l locs) locmap
+
+let latency_constraints bb =
+  let written = ref LocMap.empty
+  and read = ref LocMap.empty
+  and count = ref 0
+  and constraints = ref []
+  and instr_infos = instruction_infos bb
+  in let step (i: inst_info) =
+    let write_accesses = list2locmap !count i.write_locs
+    and read_accesses = list2locmap !count i.read_locs
+    in let raw = get_accesses i.read_locs !written
+    and waw = get_accesses i.write_locs !written
+    and war = get_accesses i.write_locs !read
+    in begin
+      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
+      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
+      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
+      if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
+      written := Map.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !written write_accesses;
+      read := Map.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !read read_accesses;
+      count := !count + 1
+    end
+  in (List.iter step instr_infos; !constraints)
+
+(* let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
   and read = ref []
   and count = ref 0
@@ -734,6 +770,7 @@ let latency_constraints bb = (* failwith "latency_constraints: not implemented" 
       count := !count + 1
     end
   in (List.iter step instr_infos; !constraints)
+*)
 
 (**
  * Using the InstructionScheduler
@@ -829,7 +866,7 @@ let print_bb oc bb =
   let asm_instructions = Asm.unfold_bblock bb
   in List.iter (print_inst oc) asm_instructions
 
-let do_schedule bb =
+let real_do_schedule bb =
   let problem = build_problem bb
   in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
                       validated_scheduler cascaded_scheduler
@@ -849,6 +886,19 @@ let do_schedule bb =
         Printf.eprintf "--------------------------------\n"
       end;
       bundles)
+
+let do_schedule bb =
+  let nb_instructions = Camlcoq.Z.to_int64 @@ Asmvliw.size bb
+  in let start_time = (Gc.major(); (Unix.times ()).Unix.tms_utime)
+  in let sched = real_do_schedule bb
+  in let refer = ref sched
+  in begin
+    for i = 1 to 100-1 do
+      refer := (if i > 0 then real_do_schedule bb else real_do_schedule bb);
+    done;
+    Printf.printf "%Ld: %f\n" nb_instructions ((Unix.times ()).Unix.tms_utime -. start_time);
+    sched
+  end
 
 (**
  * Dumb schedule if the above doesn't work
