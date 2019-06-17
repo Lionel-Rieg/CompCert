@@ -749,7 +749,7 @@ let latency_constraints bb =
                     LocHash.replace written loc [!count];
                     LocHash.replace read loc []; (* Clearing all the entries of "read" hashmap when a register is written *)
                   end) i.write_locs;
-      List.iter (fun loc -> LocHash.replace read loc (LocHash.find read loc)) i.read_locs;
+      List.iter (fun loc -> LocHash.replace read loc ((!count) :: (LocHash.find read loc))) i.read_locs;
       count := !count + 1
     end
   in (List.iter step instr_infos; !constraints)
