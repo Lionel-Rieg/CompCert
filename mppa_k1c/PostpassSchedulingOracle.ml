@@ -707,7 +707,7 @@ let loc2int = function
   | Mem -> 1
   | Reg pr -> preg2int pr
 
-module OrderedLoc : Map.OrderedType = struct
+module OrderedLoc = struct
   type t = location
   let compare l l' = compare (loc2int l) (loc2int l')
 end
@@ -723,7 +723,7 @@ let rec list2locmap v = function
   | [] -> LocMap.empty
   | loc :: l -> LocMap.add loc v (list2locmap v l)
 
-let get_accesses locs locmap = List.map (fun l _ -> List.mem l locs) locmap
+let get_accesses locs locmap = LocMap.filter (fun l _ -> List.mem l locs) locmap
 
 let latency_constraints bb =
   let written = ref LocMap.empty
@@ -738,12 +738,12 @@ let latency_constraints bb =
     and waw = get_accesses i.write_locs !written
     and war = get_accesses i.write_locs !read
     in begin
-      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
-      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
-      Map.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
+      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
+      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
+      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
       if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
-      written := Map.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !written write_accesses;
-      read := Map.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !read read_accesses;
+      written := LocMap.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !written write_accesses;
+      read := LocMap.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !read read_accesses;
       count := !count + 1
     end
   in (List.iter step instr_infos; !constraints)
