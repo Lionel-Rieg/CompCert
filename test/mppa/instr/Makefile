@@ -1,4 +1,6 @@
-K1CC ?= k1-mbr-gcc
+SHELL := /bin/bash
+
+K1CC ?= k1-cos-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 OPTIM ?= -O2
@@ -48,7 +50,7 @@ NC=\033[0m
 .PHONY: 
 test: $(X86_GCC_OUT) $(GCC_OUT)
 	@echo "Comparing x86 gcc output to k1 gcc.."
-	@for test in $(TESTNAMES); do\
+	for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
 		if $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\

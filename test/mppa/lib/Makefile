@@ -1,5 +1,5 @@
-K1CC ?= k1-mbr-gcc
-K1AR ?= k1-mbr-ar
+K1CC ?= k1-cos-gcc
+K1AR ?= k1-cos-ar
 CC ?= gcc
 AR ?= gcc-ar
 CCOMP ?= ccomp
