@@ -707,26 +707,59 @@ let loc2int = function
   | Mem -> 1
   | Reg pr -> preg2int pr
 
-module OrderedLoc = struct
-  type t = location
-  let compare l l' = compare (loc2int l) (loc2int l')
+module HashedLoc = struct
+  type t = { loc: location; key: int }
+  let equal l1 l2 = (l1.key = l2.key)
+  let hash l = l.key
+  let create (l:location) : t = { loc=l; key = loc2int l }
 end
 
-module LocMap = Map.Make(OrderedLoc)
+module LocHash = Hashtbl.Make(HashedLoc)
+
+(* Hash table : location => list of instruction ids *)
 
 let rec intlist n =
   if n < 0 then failwith "intlist: n < 0"
   else if n = 0 then []
   else (n-1) :: (intlist (n-1))
 
+(* Returns a list of instruction ids *)
+let rec get_accesses hashloc = function
+  | [] -> []
+  | loc :: llocs -> (LocHash.find hashloc loc) @ (get_accesses hashloc llocs)
+
+let latency_constraints bb =
+  let written = LocHash.create 0
+  and read = LocHash.create 0
+  and count = ref 0
+  and constraints = ref []
+  and instr_infos = instruction_infos bb
+  in let step (i: inst_info) =
+    let raw = get_accesses i.read_locs written
+    and waw = get_accesses i.write_locs written
+    and war = get_accesses i.write_locs read
+    in begin
+      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
+      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
+      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
+      if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
+      (* Updating "read" and "written" hashmaps *)
+      List.iter (fun loc ->
+                  begin 
+                    LocHash.replace written loc [!count];
+                    LocHash.replace read loc []; (* Clearing all the entries of "read" hashmap when a register is written *)
+                  end) i.write_locs;
+      List.iter (fun loc -> LocHash.replace read loc (LocHash.find read loc)) i.read_locs;
+      count := !count + 1
+    end
+  in (List.iter step instr_infos; !constraints)
+
+(*
 let rec list2locmap v = function
   | [] -> LocMap.empty
   | loc :: l -> LocMap.add loc v (list2locmap v l)
 
-let get_accesses locs locmap = LocMap.filter (fun l _ -> List.mem l locs) locmap
-
-let latency_constraints bb =
-  let written = ref LocMap.empty
+  let written = ref (LocHash.create 0)
   and read = ref LocMap.empty
   and count = ref 0
   and constraints = ref []
@@ -747,6 +780,7 @@ let latency_constraints bb =
       count := !count + 1
     end
   in (List.iter step instr_infos; !constraints)
+  *)
 
 (* let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
   let written = ref []
