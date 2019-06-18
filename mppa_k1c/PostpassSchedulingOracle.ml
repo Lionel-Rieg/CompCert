@@ -707,14 +707,15 @@ let loc2int = function
   | Mem -> 1
   | Reg pr -> preg2int pr
 
-module HashedLoc = struct
+(* module HashedLoc = struct
   type t = { loc: location; key: int }
   let equal l1 l2 = (l1.key = l2.key)
   let hash l = l.key
   let create (l:location) : t = { loc=l; key = loc2int l }
-end
+end *)
 
-module LocHash = Hashtbl.Make(HashedLoc)
+(* module LocHash = Hashtbl.Make(HashedLoc) *)
+module LocHash = Hashtbl
 
 (* Hash table : location => list of instruction ids *)
 
@@ -723,21 +724,26 @@ let rec intlist n =
   else if n = 0 then []
   else (n-1) :: (intlist (n-1))
 
+let find_in_hash hashloc loc =
+  match LocHash.find_opt hashloc loc with
+  | Some idl -> idl
+  | None -> []
+
 (* Returns a list of instruction ids *)
-let rec get_accesses hashloc = function
+let rec get_accesses hashloc (ll: location list) = match ll with
   | [] -> []
-  | loc :: llocs -> (LocHash.find hashloc loc) @ (get_accesses hashloc llocs)
+  | loc :: llocs -> (find_in_hash hashloc loc) @ (get_accesses hashloc llocs)
 
 let latency_constraints bb =
-  let written = LocHash.create 0
-  and read = LocHash.create 0
+  let written = LocHash.create 70
+  and read = LocHash.create 70
   and count = ref 0
   and constraints = ref []
   and instr_infos = instruction_infos bb
   in let step (i: inst_info) =
-    let raw = get_accesses i.read_locs written
-    and waw = get_accesses i.write_locs written
-    and war = get_accesses i.write_locs read
+    let raw = get_accesses written i.read_locs
+    and waw = get_accesses written i.write_locs
+    and war = get_accesses read i.write_locs
     in begin
       List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
       List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
@@ -749,7 +755,7 @@ let latency_constraints bb =
                     LocHash.replace written loc [!count];
                     LocHash.replace read loc []; (* Clearing all the entries of "read" hashmap when a register is written *)
                   end) i.write_locs;
-      List.iter (fun loc -> LocHash.replace read loc ((!count) :: (LocHash.find read loc))) i.read_locs;
+      List.iter (fun loc -> LocHash.replace read loc ((!count) :: (find_in_hash read loc))) i.read_locs;
       count := !count + 1
     end
   in (List.iter step instr_infos; !constraints)
