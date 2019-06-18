@@ -906,7 +906,7 @@ let print_bb oc bb =
   let asm_instructions = Asm.unfold_bblock bb
   in List.iter (print_inst oc) asm_instructions
 
-let real_do_schedule bb =
+let do_schedule bb =
   let problem = build_problem bb
   in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
                       validated_scheduler cascaded_scheduler
@@ -926,19 +926,6 @@ let real_do_schedule bb =
         Printf.eprintf "--------------------------------\n"
       end;
       bundles)
-
-let do_schedule bb =
-  let nb_instructions = Camlcoq.Z.to_int64 @@ Asmvliw.size bb
-  in let start_time = (Gc.major(); (Unix.times ()).Unix.tms_utime)
-  in let sched = real_do_schedule bb
-  in let refer = ref sched
-  in begin
-    for i = 1 to 100-1 do
-      refer := (if i > 0 then real_do_schedule bb else real_do_schedule bb);
-    done;
-    Printf.printf "%Ld: %f\n" nb_instructions ((Unix.times ()).Unix.tms_utime -. start_time);
-    sched
-  end
 
 (**
  * Dumb schedule if the above doesn't work
