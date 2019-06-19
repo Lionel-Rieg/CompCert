@@ -10,9 +10,9 @@ from typing import *
 # Reading data
 ##
 
-if len(sys.argv) != 2:
-  raise Exception("Only 1 argument should be given to this script: the make.proto file")
-csv_file = sys.argv[1]
+if len(sys.argv) != 3:
+  raise Exception("Arguments for this script: the csv file, the base name of the output PDF file")
+_, csv_file, output_basename = sys.argv
 
 with open(csv_file, "r") as f:
   df = pd.read_csv(csv_file)
@@ -90,5 +90,5 @@ def generate_file(f: str, cols: List[str]) -> None:
 
   plt.savefig(f)
 
-generate_file("measures-host.pdf", host_measures_cols)
-generate_file("measures-k1c.pdf", k1c_measures_cols)
+generate_file(output_basename + ".host.pdf", host_measures_cols)
+generate_file(output_basename + ".k1c.pdf", k1c_measures_cols)

@@ -19,8 +19,5 @@ for bench in $benches; do
   fi
 done
 
-nawk 'FNR==1 && NR!=1{next;}{print}' $benches_csv > measures.csv
-echo "measures.csv done"
-
-./gengraphs.py measures.csv
-echo "Graphs done"
+nawk 'FNR==1 && NR!=1{next;}{print}' $benches_csv > $1
+echo "$1 done"
