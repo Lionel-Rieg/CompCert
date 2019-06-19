@@ -9,58 +9,40 @@ from typing import *
 # Reading data
 ##
 
-if len(sys.argv) != 2:
-  raise Exception("Only 1 argument should be given to this script: the file with the compile times")
-data_file = sys.argv[1]
+if len(sys.argv) != 4:
+  raise Exception("Three arguments are expected: the verifier times, the oracle times, and the output PDF")
+_, verifier_file, oracle_file, output_file = sys.argv
 
-coords: List[Tuple[int, float]] = []
-with open(data_file, "r") as f:
-  for line in f:
-    nb_inst_s, time_s = line.split(":")
-    coords.append((int(nb_inst_s), float(time_s)))
+def get_coords(filename: str) -> List[Tuple[int, float]]:
+  coords = []
+  with open(filename, "r") as f:
+    for line in f:
+      nb_inst_s, time_s = line.split(":")
+      coords.append((int(nb_inst_s), float(time_s)))
+  return coords
+
+verifier_coords = get_coords(verifier_file)
+oracle_coords = get_coords(oracle_file)
 
 ##
 # Generating PDF
 ##
 
 fig, ax = plt.subplots()
-x = [coord[0] for coord in coords]
-y = [coord[1] for coord in coords]
-plt.plot(x, y, "b+")
+
+def do_plot(coords: List[Tuple[int, float]], style: str, label: str):
+  x = [coord[0] for coord in coords]
+  y = [coord[1] for coord in coords]
+  plt.plot(x, y, style, label=label)
+
+plt.xscale("log")
+plt.yscale("log")
+do_plot(verifier_coords, "b+", "Verifier")
+do_plot(oracle_coords, "g+", "Oracle")
 
 ax.set_ylabel("Time x1000 (s)")
-ax.set_title("Verification time")
+ax.set_title("Compilation time")
 ax.set_xlabel("Size of basic blocks")
+ax.legend()
 
-plt.savefig("compile-times.pdf")
-
-
-#def generate_file(f: str, cols: List[str]) -> None:
-#  ind = np.arange(len(df[cols[0]]))
-#
-#  width = 0.25  # the width of the bars
-#
-#  compilers = extract_compilers(cols)
-#  start_inds = subdivide_interv(ind, ind+2*width, len(compilers))
-#  heights: Dict[str, List[float]] = make_relative_heights(df, cols)
-#
-#  fig, ax = plt.subplots()
-#  rects = []
-#  for i, compiler in enumerate(compilers):
-#    rects.append(ax.bar(start_inds[i], heights[compiler], width, color=colors[i], label=compiler))
-#
-#  # Add some text for labels, title and custom x-axis tick labels, etc.
-#  ax.set_ylabel('Cycles (%)')
-#  ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
-#  ax.set_title('TITLE')
-#  ax.set_xticks(ind)
-#  ax.set_xticklabels(benches)
-#  ax.legend()
-#
-#  plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
-#  plt.xticks(size=5)
-#
-#  plt.savefig(f)
-#
-#generate_file("measures-host.pdf", host_measures_cols)
-#generate_file("measures-k1c.pdf", k1c_measures_cols)
+plt.savefig(output_file)
