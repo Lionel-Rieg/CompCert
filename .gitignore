@@ -45,6 +45,9 @@
 /riscV/ConstpropOp.v
 /riscV/SelectOp.v
 /riscV/SelectLong.v
+/mppa_k1c/ConstpropOp.v
+/mppa_k1c/SelectOp.v
+/mppa_k1c/SelectLong.v
 /backend/SelectDiv.v
 /backend/SplitLong.v
 /cparser/Parser.v
