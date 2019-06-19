@@ -41,7 +41,7 @@ do_plot(verifier_coords, "b+", "Verifier")
 do_plot(oracle_coords, "g+", "Oracle")
 
 ax.set_ylabel("Time x1000 (s)")
-ax.set_title("Compilation time")
+ax.set_title("Scheduling pass time")
 ax.set_xlabel("Size of basic blocks")
 ax.legend()
 
