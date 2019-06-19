@@ -2,7 +2,7 @@
 
 CCOMP?=ccomp
 
-all: compile_times.pdf
+all: compile_times.pdf measure_times.k1c.pdf
 
 verifier_times.txt: Asmblockdeps.patch
 	patch ../../extraction/Asmblockdeps.ml < $<
@@ -16,9 +16,17 @@ oracle_times.txt: PostpassSchedulingOracle.patch
 	bash clean_benches.sh
 	bash build_benches.sh $@
 
+measures.csv:
+	(cd ../../ && make -j20 && make install)
+	bash build_benches.sh
+	bash run_benches.sh $@
+
 compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
 	python3.6 $^ $@
 
+measure_times.k1c.pdf: gengraphs.py measures.csv
+	python3.6 $^ $(basename $(basename $@))
+
 .PHONY:
 clean:
-	rm -f verifier_times.txt oracle_times.txt compile_times.pdf
+	rm -f verifier_times.txt oracle_times.txt compile_times.pdf measure_times.k1c.pdf measures.csv
