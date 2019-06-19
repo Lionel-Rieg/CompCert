@@ -9,6 +9,8 @@ compile_times.pdf
 measure_times.host.pdf
 measure_times.k1c.pdf
 
+/.mypy_cache/
+
 binary_search/Makefile
 bitsliced-aes/Makefile
 bitsliced-tea/Makefile

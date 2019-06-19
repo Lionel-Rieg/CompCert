@@ -47,18 +47,18 @@ def subdivide_interv(inf: Any, sup: float, n: int) -> List[float]:
 # df associates the environment string (e.g. "gcc host") to the cycles
 # envs is the list of environments to compare
 # The returned value will be a dictionnary associating the compiler (e.g. "gcc") to his relative comparison on the best result
-def make_relative_heights(data: Any, envs: List[str]) -> Dict[str, List[float]]:
-  n_benches: int = len((data.values)) # type: ignore
-  cols: Dict[str, List[int]] = {extract_compiler(env):data[env] for env in envs}
+def make_relative_heights(data: Dict[str, List[float]], envs: List[str]) -> Dict[str, List[float]]:
+  n_benches: int = len(data["benches"])
+  cols: Dict[str, List[float]] = {extract_compiler(env):data[env] for env in envs}
 
   ret: Dict[str, List[float]] = {}
   for compiler in cols:
     ret[compiler] = []
 
   for i in range(n_benches):
-    max_time: int = max([cols[compiler][i] for compiler in cols])
+    maximum: float = max([cols[compiler][i] for compiler in cols])
     for compiler in cols:
-      ret[compiler].append(cols[compiler][i] / float(max_time))
+      ret[compiler].append(cols[compiler][i] / float(maximum))
 
   return ret
 
@@ -70,7 +70,8 @@ def generate_file(f: str, cols: List[str]) -> None:
 
   compilers = extract_compilers(cols)
   start_inds = subdivide_interv(ind, ind+2*width, len(compilers))
-  heights: Dict[str, List[float]] = make_relative_heights(df, cols)
+  inverse_cycles = {key:[1./x if isinstance(x, int) else x for x in list(df[key])] for key in df.columns}
+  heights: Dict[str, List[float]] = make_relative_heights(inverse_cycles, cols)
 
   fig, ax = plt.subplots()
   rects = []
@@ -78,7 +79,7 @@ def generate_file(f: str, cols: List[str]) -> None:
     rects.append(ax.bar(start_inds[i], heights[compiler], width, color=colors[i], label=compiler))
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
-  ax.set_ylabel('Cycles (%)')
+  ax.set_ylabel('1/cycles (%)')
   ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
   ax.set_title('TITLE')
   ax.set_xticks(ind)
