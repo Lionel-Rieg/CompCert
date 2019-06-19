@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 TMPFILE=/tmp/1513times.txt
 
