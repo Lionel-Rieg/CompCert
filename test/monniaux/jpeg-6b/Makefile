@@ -34,7 +34,7 @@ djpeg.ccomp.k1c: $(LIB_K1C_CCOMP_OFILES) djpeg.gcc.k1c.o
 
 djpeg.%.out: djpeg.%
 	$(EXECUTE_CYCLES) $< -dct int -ppm -outfile $@.ppm testorig.jpg 2> $@
-	cmp $@.ppm testout.ppm 2>> $@
+	cmp $@.ppm testimg.ppm 2>> $@
 
 cjpeg.%.out: cjpeg.%
 	$(EXECUTE_CYCLES) $< -dct int -outfile $@.jpg testimg.ppm 2> $@
