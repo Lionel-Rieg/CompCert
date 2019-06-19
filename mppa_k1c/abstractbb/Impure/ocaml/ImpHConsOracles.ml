@@ -1,6 +1,5 @@
 open ImpPrelude
-
-exception Stop;;
+open HConsingDefs
 
 let make_dict (type key) (p: key Dict.hash_params) =
   let module MyHashedType = struct
@@ -16,10 +15,15 @@ let make_dict (type key) (p: key Dict.hash_params) =
   }
 
 
-let xhCons (type a) (hash_eq, error: (a -> a -> bool)*(a pre_hashV -> a hashV)) =
+exception Stop;;
+
+let xhCons (type a) (hp:a hashP) =
+  (* We use a hash-table, but a hash-set would be sufficient !                    *)
+  (* Thus, we could use a weak hash-set, but prefer avoid it for easier debugging *)
+  (* Ideally, a parameter would allow to select between the weak or full version  *)
   let module MyHashedType = struct
-    type t = a pre_hashV
-    let equal x y = hash_eq x.pre_data y.pre_data
+    type t = a hashinfo
+    let equal x y = hp.hash_eq x.hdata y.hdata
     let hash x = Hashtbl.hash x.hcodes 
   end in
   let module MyHashtbl = Hashtbl.Make(MyHashedType) in
@@ -34,21 +38,18 @@ let xhCons (type a) (hash_eq, error: (a -> a -> bool)*(a pre_hashV -> a hashV)) 
   let t = MyHashtbl.create 1000 in
   let logs = ref [] in
   {
-   hC = (fun (x:a pre_hashV) ->
-     match MyHashtbl.find_opt t x with
-     | Some x' -> x'
+   hC = (fun (k:a hashinfo) ->
+     match MyHashtbl.find_opt t k with
+     | Some d -> d
      | None -> (*print_string "+";*)
-        let x' = { data = x.pre_data ;
-                   hid = MyHashtbl.length t }
-        in MyHashtbl.add t x x'; x');
-   hC_known = (fun (x:a pre_hashV) ->
-     match MyHashtbl.find_opt t x with
-     | Some x' -> x'
-     | None -> error x);
+        let d = hp.set_hid k.hdata (MyHashtbl.length t) in
+        MyHashtbl.add t {k with hdata = d } d; d);
    next_log = (fun info -> logs := (MyHashtbl.length t, info)::(!logs));
+   next_hid = (fun () -> MyHashtbl.length t);
+   remove = (fun (x:a hashinfo) -> MyHashtbl.remove t x);
    export = fun () ->
      match pick t with
-     | None -> { get_hashV = (fun _ -> raise Not_found);  iterall = (fun _ -> ()) } 
+     | None -> { get_info = (fun _ -> raise Not_found);  iterall = (fun _ -> ()) } 
      | Some (k,_) ->
         (* the state is fully copied at export ! *)
         let logs = ref (List.rev_append (!logs) []) in
@@ -57,9 +58,9 @@ let xhCons (type a) (hash_eq, error: (a -> a -> bool)*(a pre_hashV -> a hashV)) 
           | (j, info)::l' when i>=j -> logs:=l'; info::(step_log i)
           | _ -> []
         in let a = Array.make (MyHashtbl.length t) k in
-           MyHashtbl.iter (fun k d -> a.(d.hid) <- k) t;
+           MyHashtbl.iter (fun k d -> a.(hp.get_hid d) <- k) t;
            {
-             get_hashV = (fun i -> a.(i));
+             get_info = (fun i -> a.(i));
              iterall = (fun iter_node -> Array.iteri (fun i k -> iter_node (step_log i) i k) a)
            }    
   }

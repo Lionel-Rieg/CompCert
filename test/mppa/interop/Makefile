@@ -1,4 +1,6 @@
-K1CC ?= k1-mbr-gcc
+SHELL := /bin/bash
+
+K1CC ?= k1-cos-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2 -Wno-varargs

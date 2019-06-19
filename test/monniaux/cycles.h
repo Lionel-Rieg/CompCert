@@ -23,6 +23,14 @@ static inline void cycle_count_config(void) { }
 #ifdef  __x86_64__
 #include <x86intrin.h>
 static inline cycle_t get_cycle(void) { return __rdtsc(); }
+
+#elif __riscv
+static inline cycle_t get_cycle(void) {
+  cycle_t cycles;
+  asm volatile ("rdcycle %0" : "=r" (cycles));
+  return cycles;
+}
+
 #else
 static inline cycle_t get_cycle(void) { return 0; }
 #endif

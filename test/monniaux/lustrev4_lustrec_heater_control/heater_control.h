@@ -8,7 +8,7 @@
 
 /* Imports standard library */
 #include <stdint.h>
-#include "/opt/lustrec/1.6/include/lustrec/arrow.h"
+#include "arrow.h"
 
 
 /* Import dependencies */

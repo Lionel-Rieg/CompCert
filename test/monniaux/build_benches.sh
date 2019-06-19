@@ -1,10 +1,20 @@
+#!/usr/bin/bash
+
+TMPFILE=/tmp/1513times.txt
 
 source benches.sh
 
 rm -f commands.txt
+rm -f $TMPFILE
 for bench in $benches; do
-  #echo "(cd $bench && make -j5 $1)" >> commands.txt
-  (cd $bench && make -j20 $1)
+  if [ "$1" == "" ]; then 
+    (cd $bench && make -j20)
+  else
+    (cd $bench && make -j20) | grep -P "\d+: \d+\.\d+" >> $TMPFILE
+  fi
 done
 
-#cat commands.txt | xargs -n1 -I{} -P4 bash -c '{}'
+if [ "$1" != "" ]; then
+  cat $TMPFILE | sort -n -k 1 > $1
+fi
+
