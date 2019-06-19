@@ -307,7 +307,8 @@ let priority_list_scheduler (order : list_scheduler_order)
 
 let list_scheduler = priority_list_scheduler CRITICAL_PATH_ORDER;;
 
-(** FIXME - warning fix *)
+(* FIXME DUMMY CODE to placate warnings
+ *)
 let _ = priority_list_scheduler INSTRUCTION_ORDER;;
 
 type bundle = int list;;
@@ -367,7 +368,7 @@ let bundles_to_schedule problem bundles : solution =
 let greedy_scheduler (problem : problem) : solution option =
   let bundles = make_bundles problem 0 in
   Some (bundles_to_schedule problem bundles);;
-
+  
 (* alternate implementation
 let swap_array_elements a i j =
   let x = a.(i) in
@@ -426,6 +427,7 @@ let max_scheduled_time solution =
   done;
   !time;;
 
+(* DM: I think this is buggy *)
 let schedule_reversed (scheduler : problem -> solution option)
     (problem : problem) =
   match scheduler (reverse_problem problem) with
@@ -1107,17 +1109,6 @@ let ilp_print_problem channel problem pb_type =
     mapper_final_predecessors = predecessors.(nr_instructions)
   };;
 
-(* Guess what? Cplex sometimes outputs 11.000000004 instead of integer 11 *)
-
-let positive_float_round x = truncate (x +. 0.5)
-                           
-let float_round (x : float) : int =
-  if x > 0.0
-  then positive_float_round x
-  else - (positive_float_round (-. x))
-  
-let rounded_int_of_string x =  float_round (float_of_string x)
-                             
 let ilp_read_solution mapper channel =
   let times = Array.make
                 (match mapper.mapper_pb_type with
@@ -1143,7 +1134,7 @@ let ilp_read_solution mapper channel =
                (if tnumber < 0 || tnumber >= (Array.length times)
                 then failwith (Printf.sprintf "bad ilp output: not a correct variable number: %d (%d)" tnumber (Array.length times)));
                let value =
-                 try rounded_int_of_string (String.sub line (space+1) ((String.length line)-space-1))
+                 try int_of_string (String.sub line (space+1) ((String.length line)-space-1))
                  with Failure _ ->
                    failwith "bad ilp output: not a time number"
                in
@@ -1162,22 +1153,15 @@ let ilp_read_solution mapper channel =
     times;;
 
 let ilp_solver = ref "ilp_solver"
-
-let problem_nr = ref 0
-
-let do_with_resource destroy x f =
-  try
-    let r = f x in
-    destroy x; r
-  with exn -> destroy x; raise exn;;
-
+               
 let ilp_scheduler pb_type problem =
   try
-    let filename_in = Printf.sprintf  "problem%05d.lp" !problem_nr
-    and filename_out = Printf.sprintf "problem%05d.sol" !problem_nr in
-    incr problem_nr;
-    let mapper = do_with_resource close_out (open_out filename_in)
-                   (fun opb_problem -> ilp_print_problem opb_problem problem pb_type) in
+    let filename_in = "problem.lp"
+    and filename_out = "problem.sol" in
+    let opb_problem = open_out filename_in in
+    let mapper = ilp_print_problem opb_problem problem pb_type in
+    close_out opb_problem;
+
     begin
       match Unix.system (!ilp_solver ^ " " ^ filename_in ^ " " ^ filename_out) with
       | Unix.WEXITED 0 ->
@@ -1190,20 +1174,33 @@ let ilp_scheduler pb_type problem =
     end
   with
   | Unschedulable -> None;;
-     
+
+let current_utime_all () =
+  let t = Unix.times() in
+  t.Unix.tms_cutime +. t.Unix.tms_utime;;
+
+let utime_all_fn fn arg =
+  let utime_start = current_utime_all () in
+  let output = fn arg in
+  let utime_end = current_utime_all () in
+  (output, utime_end -. utime_start);;
+    
 let cascaded_scheduler (problem : problem) =
-  match validated_scheduler list_scheduler problem with
+  let (some_initial_solution, list_scheduler_time) =
+    utime_all_fn (validated_scheduler list_scheduler) problem in
+  match some_initial_solution with
   | None -> None
   | Some initial_solution ->
-     let solution = reoptimizing_scheduler (validated_scheduler (ilp_scheduler SATISFIABILITY)) initial_solution problem in
+     let (solution, reoptimizing_time) = utime_all_fn (reoptimizing_scheduler (validated_scheduler (ilp_scheduler SATISFIABILITY)) initial_solution) problem in
      begin
        let latency2 = get_max_latency solution
        and latency1 = get_max_latency initial_solution in
-       if latency2 < latency1
-       then Printf.printf "REOPTIMIZING SUCCEEDED %d < %d for %d instructions\n" latency2 latency1 (Array.length problem.instruction_usages)
-       else if latency2 = latency1
-       then Printf.printf "%d unchanged\n" latency1
-       else failwith "optimizing not optimizing"
+       Printf.printf "postpass %s: %d, %d, %d, %g, %g\n"
+		     (if latency2 < latency1 then "REOPTIMIZED" else "unchanged")
+		     (get_nr_instructions problem)
+		     latency1 latency2
+		     list_scheduler_time reoptimizing_time;
+       flush stdout
      end;
      Some solution;;
 
