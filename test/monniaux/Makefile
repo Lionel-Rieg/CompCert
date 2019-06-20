@@ -22,10 +22,10 @@ measures.csv:
 	bash run_benches.sh $@
 
 compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
-	python3.6 $^ $@
+	python3.5 $^ $@
 
 measure_times.k1c.pdf: gengraphs.py measures.csv
-	python3.6 $^ $(basename $(basename $@))
+	python3.5 $^ $(basename $(basename $@))
 
 .PHONY:
 clean:

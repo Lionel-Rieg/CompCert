@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3.5
 
 import numpy as np              # type: ignore
 import matplotlib.pyplot as plt # type: ignore
