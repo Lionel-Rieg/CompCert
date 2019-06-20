@@ -33,7 +33,7 @@ def extract_compiler(env: str) -> str:
   return " ".join(words)
 
 def extract_compilers(envs: List[str]) -> List[str]:
-  compilers: List[str] = []
+  compilers = []
   for env in envs:
     compiler = extract_compiler(env)
     if compiler not in compilers:
