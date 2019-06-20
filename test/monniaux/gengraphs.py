@@ -48,15 +48,19 @@ def subdivide_interv(inf: Any, sup: float, n: int) -> List[float]:
 # envs is the list of environments to compare
 # The returned value will be a dictionnary associating the compiler (e.g. "gcc") to his relative comparison on the best result
 def make_relative_heights(data: Dict[str, List[float]], envs: List[str]) -> Dict[str, List[float]]:
-  n_benches: int = len(data["benches"])
-  cols: Dict[str, List[float]] = {extract_compiler(env):data[env] for env in envs}
+  #n_benches: int = len(data["benches"])
+  #cols: Dict[str, List[float]] = {extract_compiler(env):data[env] for env in envs}
+  n_benches = len(data["benches"])
+  cols = {extract_compiler(env):data[env] for env in envs}
 
-  ret: Dict[str, List[float]] = {}
+  #ret: Dict[str, List[float]] = {}
+  ret = {}
   for compiler in cols:
     ret[compiler] = []
 
   for i in range(n_benches):
-    maximum: float = max([cols[compiler][i] for compiler in cols])
+    #maximum: float = max([cols[compiler][i] for compiler in cols])
+    maximum = max([cols[compiler][i] for compiler in cols])
     for compiler in cols:
       ret[compiler].append(cols[compiler][i] / float(maximum))
 
@@ -71,7 +75,8 @@ def generate_file(f: str, cols: List[str]) -> None:
   compilers = extract_compilers(cols)
   start_inds = subdivide_interv(ind, ind+2*width, len(compilers))
   inverse_cycles = {key:[1./x if isinstance(x, int) else x for x in list(df[key])] for key in df.columns}
-  heights: Dict[str, List[float]] = make_relative_heights(inverse_cycles, cols)
+  #heights: Dict[str, List[float]] = make_relative_heights(inverse_cycles, cols)
+  heights = make_relative_heights(inverse_cycles, cols)
 
   fig, ax = plt.subplots()
   rects = []
