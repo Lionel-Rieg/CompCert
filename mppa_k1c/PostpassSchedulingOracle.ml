@@ -912,6 +912,8 @@ let do_schedule bb =
                       validated_scheduler cascaded_scheduler
                     else if !Clflags.option_fpostpass_sched = "list" then
                       validated_scheduler list_scheduler
+                    else if !Clflags.option_fpostpass_sched = "revlist" then
+                      validated_scheduler reverse_list_scheduler
                     else if !Clflags.option_fpostpass_sched = "greedy" then
                       greedy_scheduler else failwith ("Invalid scheduler:" ^ !Clflags.option_fpostpass_sched)) problem
   in match solution with
