@@ -390,32 +390,36 @@ let array_reverse a =
   a';;
  *)
 
+(* unneeded
 let array_reverse a =
   let n=Array.length a in
   Array.init n (fun i -> a.(n-1-i));;
+ *)
 
 let reverse_constraint nr_instructions ctr =
-  if ctr.instr_to < nr_instructions
-  then Some
-    { instr_to = nr_instructions -1 -ctr.instr_from;
-      instr_from =  nr_instructions -1 - ctr.instr_to;
-      latency = ctr.latency }
-  else None;;
+  { instr_to = nr_instructions -ctr.instr_from;
+    instr_from =  nr_instructions - ctr.instr_to;
+    latency = ctr.latency };;
 
+(* unneeded
 let rec list_map_filter f = function
   | [] ->  []                                      
   | h::t ->
      (match f h with
       | None ->  list_map_filter f t
       | Some x -> x :: (list_map_filter f t));;
+ *)
 
 let reverse_problem problem =
   let nr_instructions = get_nr_instructions problem in
   {
     max_latency = problem.max_latency;
     resource_bounds = problem.resource_bounds;
-    instruction_usages = array_reverse problem.instruction_usages;
-    latency_constraints = list_map_filter (reverse_constraint nr_instructions)
+    instruction_usages = Array.init (nr_instructions + 1)
+      (fun i ->
+        if i=0
+        then Array.map (fun _ -> 0) problem.resource_bounds                             else problem.instruction_usages.(nr_instructions - i));
+    latency_constraints = List.map (reverse_constraint nr_instructions)
                             problem.latency_constraints
   };;
 
@@ -427,6 +431,7 @@ let max_scheduled_time solution =
   done;
   !time;;
 
+(*
 let recompute_makespan problem solution =
   let n = (Array.length solution) - 1 and ms = ref 0 in
   List.iter (fun cstr ->
@@ -434,21 +439,17 @@ let recompute_makespan problem solution =
       then ms := max !ms (solution.(cstr.instr_from) + cstr.latency) 
     ) problem.latency_constraints;
   !ms;;
+ *)
 
-(* Does not take into account latencies to exit point *)
 let schedule_reversed (scheduler : problem -> solution option)
     (problem : problem) =
   match scheduler (reverse_problem problem) with
   | None -> None
   | Some solution ->
-     let nr_instructions = get_nr_instructions problem
-     and maxi = max_scheduled_time solution in
-     let ret = Array.init (Array.length solution)
-             (fun i ->
-               if i < nr_instructions
-               then maxi-solution.(nr_instructions-1-i)
-               else solution.(i)) in
-     ret.(nr_instructions) <- recompute_makespan problem ret;
+     let nr_instructions = get_nr_instructions problem in
+     let makespan = max_scheduled_time solution in
+     let ret = Array.init (nr_instructions + 1)
+             (fun i -> makespan-solution.(nr_instructions-i)) in
      Some ret;;
 
 (** Schedule the problem using a greedy list scheduling algorithm, from the end. *)
