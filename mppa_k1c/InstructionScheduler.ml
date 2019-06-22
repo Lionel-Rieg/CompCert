@@ -449,7 +449,9 @@ let schedule_reversed (scheduler : problem -> solution option)
      let nr_instructions = get_nr_instructions problem in
      let makespan = max_scheduled_time solution in
      let ret = Array.init (nr_instructions + 1)
-             (fun i -> makespan-solution.(nr_instructions-i)) in
+                 (fun i -> makespan-solution.(nr_instructions-i)) in
+     ret.(nr_instructions) <- max ((max_scheduled_time ret) + 1)
+                                (ret.(nr_instructions));
      Some ret;;
 
 (** Schedule the problem using a greedy list scheduling algorithm, from the end. *)
