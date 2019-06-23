@@ -148,7 +148,7 @@ Definition gpreg_o_expand (x : gpreg_o) : gpreg * gpreg * gpreg * gpreg :=
   | R56R57R58R59 => (GPR56, GPR57, GPR58, GPR59)
   | R60R61R62R63 => (GPR60, GPR61, GPR62, GPR63)
   end.
-    
+
 Lemma gpreg_o_eq : forall (x y : gpreg_o), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
@@ -1553,16 +1553,16 @@ Definition incrPC size_b (rs: regset) :=
 Definition parexec_exit (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
   := parexec_control f ext (incrPC size_b rsr) rsw mw.
 
-Definition parexec_wio_bblock_aux f bdy ext size_b (rsr rsw: regset) (mr mw: mem): outcome :=
-  match parexec_wio_body bdy rsr rsw mr mw with
-  | Next rsw mw => parexec_exit f ext size_b rsr rsw mw
+Definition parexec_wio f bdy ext size_b (rs: regset) (m: mem): outcome :=
+  match parexec_wio_body bdy rs rs m m with
+  | Next rsw mw => parexec_exit f ext size_b rs rsw mw
   | Stuck => Stuck
   end.
 
 (** non-deterministic (out-of-order writes) parallel execution of bundles *)
 Definition parexec_bblock (f: function) (bundle: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
    exists bdy1 bdy2, Permutation (bdy1++bdy2) (body bundle) /\ 
-      o=match parexec_wio_bblock_aux f bdy1 (exit bundle) (Ptrofs.repr (size bundle)) rs rs m m with
+      o=match parexec_wio f bdy1 (exit bundle) (Ptrofs.repr (size bundle)) rs m with
       | Next rsw mw => parexec_wio_body bdy2 rs rsw m mw
       | Stuck => Stuck
       end.
@@ -1689,7 +1689,7 @@ Inductive step: state -> trace -> state -> Prop :=
 
 (** parallel in-order writes execution of bundles *)
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
-  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
+  parexec_wio f (body b) (exit b) (Ptrofs.repr (size b)) rs m.
 
 
 Lemma parexec_bblock_write_in_order f b rs m:
@@ -1699,7 +1699,7 @@ Proof.
    constructor 1.
    - rewrite app_nil_r; auto.
    - unfold parexec_wio_bblock.
-     destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
+     destruct (parexec_wio f _ _ _); simpl; auto.
 Qed.
 
 
@@ -1777,9 +1777,9 @@ Ltac Det_WIO X :=
 - (* determ *) intros s t1 s1 t2 s2 H H0. inv H; Det_WIO X1;
   inv H0; Det_WIO X2; Equalities.
   + split. constructor. auto. 
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X1. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+  + unfold parexec_wio_bblock, parexec_wio in X1. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
     rewrite H8 in X1. discriminate.
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X2. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+  + unfold parexec_wio_bblock, parexec_wio in X2. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
     rewrite H4 in X2. discriminate.
   + assert (vargs0 = vargs) by (eapply eval_builtin_args_determ; eauto). subst vargs0.
     exploit external_call_determ. eexact H6. eexact H13. intros [A B].
