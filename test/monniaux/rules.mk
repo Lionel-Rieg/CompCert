@@ -9,7 +9,7 @@ K1C_CFLAGS = -D__K1C_COS__ -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CF
 K1C_CFLAGS_O1 =-std=c99 -O1 -fschedule-insns2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
 
 K1C_CCOMP = ../../../ccomp
-K1C_CCOMPFLAGS=-dall -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass= revlist
+K1C_CCOMPFLAGS=-O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass= revlist
 
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --
