@@ -5,14 +5,14 @@ CCOMP?=ccomp
 all: compile_times.pdf measure_times.k1c.pdf
 
 verifier_times.txt: Asmblockdeps.patch
-	patch ../../extraction/Asmblockdeps.ml < $<
-	(cd ../../ && make -j20 && make install); patch -R ../../extraction/Asmblockdeps.ml < $<
+	patch $(realpath ../../extraction/Asmblockdeps.ml) < $<
+	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../extraction/Asmblockdeps.ml) < $<
 	bash clean_benches.sh
 	bash build_benches.sh $@
 
 oracle_times.txt: PostpassSchedulingOracle.patch
-	patch ../../mppa_k1c/PostpassSchedulingOracle.ml < $<
-	(cd ../../ && make -j20 && make install); patch -R ../../mppa_k1c/PostpassSchedulingOracle.ml < $<
+	patch $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
+	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
 	bash clean_benches.sh
 	bash build_benches.sh $@
 
@@ -22,10 +22,10 @@ measures.csv:
 	bash run_benches.sh $@
 
 compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
-	python3.6 $^ $@
+	python3.5 $^ $@
 
 measure_times.k1c.pdf: gengraphs.py measures.csv
-	python3.6 $^ $(basename $(basename $@))
+	python3.5 $^ $(basename $(basename $@))
 
 .PHONY:
 clean:

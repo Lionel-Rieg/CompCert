@@ -21,7 +21,8 @@ open Printf
 open Camlcoq
 open Integers
 open Op
-
+open ExtValues
+   
 let comparison_name = function
   | Ceq -> "=="
   | Cne -> "!="
@@ -58,6 +59,19 @@ let print_condition reg pp = function
   | _ ->
       fprintf pp "<bad condition>"
 
+let print_condition0 reg pp cond0 rc =
+  match cond0 with
+  | Ccomp0 c -> fprintf pp "%a %ss 0" reg rc (comparison_name c)
+  | Ccompu0 c -> fprintf pp "%a %su 0" reg rc (comparison_name c)
+  | Ccompl0 c -> fprintf pp "%a %ss 0" reg rc (comparison_name c)
+  | Ccomplu0 c -> fprintf pp "%a %su 0" reg rc (comparison_name c)
+
+let int_of_s14 = function
+  | SHIFT1 -> 1
+  | SHIFT2 -> 2
+  | SHIFT3 -> 3
+  | SHIFT4 -> 4
+            
 let print_operation reg pp = function
   | Omove, [r1] -> reg pp r1
   | Ointconst n, [] -> fprintf pp "%ld" (camlint_of_coqint n)
@@ -154,7 +168,41 @@ let print_operation reg pp = function
   | Osingleoflong, [r1] -> fprintf pp "singleoflong(%a)" reg r1
   | Osingleoflongu, [r1] -> fprintf pp "singleoflongu(%a)" reg r1
   | Ocmp c, args -> print_condition reg pp (c, args)
-  | _ -> fprintf pp "<bad operator>"
+
+  | Oextfz(stop, start), [r1] -> fprintf pp "extfz(%ld, %ld, %a)" (camlint_of_coqint stop)  (camlint_of_coqint start) reg r1
+  | Oextfs(stop, start), [r1] -> fprintf pp "extfs(%ld, %ld, %a)"  (camlint_of_coqint stop) (camlint_of_coqint start) reg r1
+  | Oextfzl(stop, start), [r1] -> fprintf pp "extfzl(%ld, %ld, %a)"  (camlint_of_coqint stop)  (camlint_of_coqint start) reg r1
+  | Oextfsl(stop, start), [r1] -> fprintf pp "extfsl(%ld, %ld, %a)"  (camlint_of_coqint stop)  (camlint_of_coqint start) reg r1
+  | Oinsf(stop, start), [r1; r2] -> fprintf pp "insf(%ld, %ld, %a, %a)"  (camlint_of_coqint stop)  (camlint_of_coqint start) reg r1 reg r2
+  | Oinsfl(stop, start), [r1; r2] -> fprintf pp "insfl(%ld, %ld, %a, %a)"  (camlint_of_coqint stop)  (camlint_of_coqint start) reg r1 reg r2
+  | Osel(cond0, ty), [r1; r2; rc] ->
+     print_condition0 reg pp cond0 rc;
+     fprintf pp " ? %a : %a" reg r1 reg r2                              
+  | Oselimm(cond0, imm), [r1; rc] ->
+     print_condition0 reg pp cond0 rc;
+     fprintf pp " ? %a : %ld" reg r1 (camlint_of_coqint imm)
+  | Osellimm(cond0, imm), [r1; rc] ->
+     print_condition0 reg pp cond0 rc;
+     fprintf pp " ? %a :l %Ld" reg r1 (camlint64_of_coqint imm)
+  | Oaddx(s14), [r1; r2] -> fprintf pp "(%a << %d) + %a" reg r1 (int_of_s14 s14) reg r2
+  | Oaddximm(s14, imm), [r1] -> fprintf pp "(%a << %d) + %ld" reg r1 (int_of_s14 s14) (camlint_of_coqint imm)
+  | Oaddxl(s14), [r1; r2] -> fprintf pp "(%a <<l %d) +l %a" reg r1 (int_of_s14 s14) reg r2
+  | Oaddxlimm(s14, imm), [r1] -> fprintf pp "(%a <<l %d) +l %Ld" reg r1 (int_of_s14 s14) (camlint64_of_coqint imm)
+  | Orevsubimm(imm), [r1] -> fprintf pp "%ld - %a" (camlint_of_coqint imm) reg r1 
+  | Orevsubximm(s14, imm), [r1] -> fprintf pp "%ld - (%a << %d)" (camlint_of_coqint imm) reg r1 (int_of_s14 s14)
+  | Orevsublimm(imm), [r1] -> fprintf pp "%Ld -l %a" (camlint64_of_coqint imm) reg r1 
+  | Orevsubxlimm(s14, imm), [r1] -> fprintf pp "%Ld -l (%a <<l %d)" (camlint64_of_coqint imm) reg r1 (int_of_s14 s14)
+  | Orevsubx(s14), [r1; r2] -> fprintf pp "%a - (%a << %d)" reg r2 reg r1 (int_of_s14 s14)
+  | Orevsubxl(s14), [r1; r2] -> fprintf pp "%a -l (%a <<l %d)" reg r2 reg r1  (int_of_s14 s14)
+  | Omulimm(imm), [r1] -> fprintf pp "%a * %ld" reg r1 (camlint_of_coqint imm)
+  | Omullimm(imm), [r1] -> fprintf pp "%a *l %Ld" reg r1 (camlint64_of_coqint imm)
+  | Omadd, [r1; r2; r3] -> fprintf pp "%a + %a * %a" reg r1 reg r2 reg r3
+  | Omaddl, [r1; r2; r3] -> fprintf pp "%a +l %a *l %a" reg r1 reg r2 reg r3
+  | (Omaddimm imm), [r1; r2] -> fprintf pp "%a + %a * %ld" reg r1 reg r2 (camlint_of_coqint imm)
+  | (Omaddlimm imm), [r1; r2] -> fprintf pp "%a +l %a *l %Ld" reg r1 reg r2 (camlint64_of_coqint imm)
+  | Omsub, [r1; r2; r3] -> fprintf pp "%a - %a * %a" reg r1 reg r2 reg r3
+  | Omsubl, [r1; r2; r3] -> fprintf pp "%a -l %a *l %a" reg r1 reg r2 reg r3
+ | _, _ -> fprintf pp "<bad operator>"
 
 let print_addressing reg pp = function
   | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)

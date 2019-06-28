@@ -390,32 +390,36 @@ let array_reverse a =
   a';;
  *)
 
+(* unneeded
 let array_reverse a =
   let n=Array.length a in
   Array.init n (fun i -> a.(n-1-i));;
+ *)
 
 let reverse_constraint nr_instructions ctr =
-  if ctr.instr_to < nr_instructions
-  then Some
-    { instr_to = nr_instructions -1 -ctr.instr_from;
-      instr_from =  nr_instructions -1 - ctr.instr_to;
-      latency = ctr.latency }
-  else None;;
+  { instr_to = nr_instructions -ctr.instr_from;
+    instr_from =  nr_instructions - ctr.instr_to;
+    latency = ctr.latency };;
 
+(* unneeded
 let rec list_map_filter f = function
   | [] ->  []                                      
   | h::t ->
      (match f h with
       | None ->  list_map_filter f t
       | Some x -> x :: (list_map_filter f t));;
+ *)
 
 let reverse_problem problem =
   let nr_instructions = get_nr_instructions problem in
   {
     max_latency = problem.max_latency;
     resource_bounds = problem.resource_bounds;
-    instruction_usages = array_reverse problem.instruction_usages;
-    latency_constraints = list_map_filter (reverse_constraint nr_instructions)
+    instruction_usages = Array.init (nr_instructions + 1)
+      (fun i ->
+        if i=0
+        then Array.map (fun _ -> 0) problem.resource_bounds                             else problem.instruction_usages.(nr_instructions - i));
+    latency_constraints = List.map (reverse_constraint nr_instructions)
                             problem.latency_constraints
   };;
 
@@ -427,19 +431,28 @@ let max_scheduled_time solution =
   done;
   !time;;
 
-(* DM: I think this is buggy *)
+(*
+let recompute_makespan problem solution =
+  let n = (Array.length solution) - 1 and ms = ref 0 in
+  List.iter (fun cstr ->
+      if cstr.instr_to = n
+      then ms := max !ms (solution.(cstr.instr_from) + cstr.latency) 
+    ) problem.latency_constraints;
+  !ms;;
+ *)
+
 let schedule_reversed (scheduler : problem -> solution option)
     (problem : problem) =
   match scheduler (reverse_problem problem) with
   | None -> None
   | Some solution ->
-     let nr_instructions = get_nr_instructions problem
-     and maxi = max_scheduled_time solution in
-     Some (Array.init (Array.length solution)
-             (fun i ->
-               if i < nr_instructions
-               then maxi-solution.(nr_instructions-1-i)
-               else solution.(i)));;
+     let nr_instructions = get_nr_instructions problem in
+     let makespan = max_scheduled_time solution in
+     let ret = Array.init (nr_instructions + 1)
+                 (fun i -> makespan-solution.(nr_instructions-i)) in
+     ret.(nr_instructions) <- max ((max_scheduled_time ret) + 1)
+                                (ret.(nr_instructions));
+     Some ret;;
 
 (** Schedule the problem using a greedy list scheduling algorithm, from the end. *)
 let reverse_list_scheduler = schedule_reversed list_scheduler;;
@@ -1109,6 +1122,17 @@ let ilp_print_problem channel problem pb_type =
     mapper_final_predecessors = predecessors.(nr_instructions)
   };;
 
+(* Guess what? Cplex sometimes outputs 11.000000004 instead of integer 11 *)
+
+let positive_float_round x = truncate (x +. 0.5)
+                           
+let float_round (x : float) : int =
+  if x > 0.0
+  then positive_float_round x
+  else - (positive_float_round (-. x))
+  
+let rounded_int_of_string x =  float_round (float_of_string x)
+                             
 let ilp_read_solution mapper channel =
   let times = Array.make
                 (match mapper.mapper_pb_type with
@@ -1134,9 +1158,10 @@ let ilp_read_solution mapper channel =
                (if tnumber < 0 || tnumber >= (Array.length times)
                 then failwith (Printf.sprintf "bad ilp output: not a correct variable number: %d (%d)" tnumber (Array.length times)));
                let value =
-                 try int_of_string (String.sub line (space+1) ((String.length line)-space-1))
+                 let s = String.sub line (space+1) ((String.length line)-space-1) in
+                 try rounded_int_of_string s
                  with Failure _ ->
-                   failwith "bad ilp output: not a time number"
+                   failwith (Printf.sprintf "bad ilp output: not a time number (%s)" s)
                in
                (if value < 0
                 then failwith "bad ilp output: negative time");
@@ -1153,11 +1178,14 @@ let ilp_read_solution mapper channel =
     times;;
 
 let ilp_solver = ref "ilp_solver"
-               
+
+let problem_nr = ref 0
+                             
 let ilp_scheduler pb_type problem =
   try
-    let filename_in = "problem.lp"
-    and filename_out = "problem.sol" in
+    let filename_in = Printf.sprintf  "problem%05d.lp" !problem_nr
+    and filename_out = Printf.sprintf "problem%05d.sol" !problem_nr in
+    incr problem_nr;
     let opb_problem = open_out filename_in in
     let mapper = ilp_print_problem opb_problem problem pb_type in
     close_out opb_problem;
