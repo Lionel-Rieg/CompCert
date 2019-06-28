@@ -26,8 +26,7 @@ CFILES = \
        pcre2_valid_utf.c \
        pcre2_xclass.c \
        pcre2posix.c \
-       pcre2test.c \
-       bsp_frequency.c
+       pcre2test.c
 
 HFILES = config.h  pcre2_internal.h    pcre2posix.h \
 pcre2.h   pcre2_intmodedep.h  pcre2_ucp.h
