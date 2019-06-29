@@ -37,7 +37,7 @@ def do_plot(coords: List[Tuple[int, float]], style: str, label: str):
 
 plt.xscale("log")
 plt.yscale("log")
-do_plot(verifier_coords, "b+", "Verifier")
+do_plot(verifier_coords, "b.", "Verifier")
 do_plot(oracle_coords, "g+", "Oracle")
 
 ax.set_ylabel("Time x1000 (s)")
