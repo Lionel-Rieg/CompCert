@@ -64,7 +64,8 @@ def make_obj(name: str, env: Env, compiler_short: str) -> str:
   return name + "." + compiler_short + "." + env.target + ".o"
 
 def make_clock(env: Env, optim: Optim) -> str:
-  return "clock.gcc." + env.target
+  clock_optim = env.optimizations[0]
+  return "clock.gcc" + (("." + clock_optim.short) if clock_optim.short != "" else "") + "." + env.target
 
 def make_sources(env: Env, optim: Optim) -> str:
   if sources:
