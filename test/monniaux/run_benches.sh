@@ -6,7 +6,7 @@ for bench in $benches; do
   echo "(cd $bench && make -j5 run)" >> commands.txt
 done
 
-cat commands.txt | xargs -n1 -I{} -P4 bash -c '{}'
+cat commands.txt | xargs -n1 -I{} -P5 bash -c '{}'
 
 ##
 # Gather all the CSV files
