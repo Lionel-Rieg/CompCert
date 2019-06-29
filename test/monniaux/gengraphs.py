@@ -86,7 +86,6 @@ def generate_file(f: str, cols: List[str]) -> None:
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_ylabel('1/cycles (%)')
   ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
-  ax.set_title('TITLE')
   ax.set_xticks(ind)
   ax.set_xticklabels(benches)
   ax.legend()
