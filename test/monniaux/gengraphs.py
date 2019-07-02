@@ -22,8 +22,6 @@ benches = df["benches"]
 host_measures_cols = [col for col in df if "host" in col]
 k1c_measures_cols = [col for col in df if "k1c" in col]
 
-colors = ["forestgreen", "darkorange", "cornflowerblue", "darkorchid", "darksalmon", "dodgerblue", "navy", "gray", "springgreen", "crimson"]
-
 ##
 # Generating PDF
 ##
@@ -69,11 +67,14 @@ def make_relative_heights(data: Dict[str, List[float]], envs: List[str]) -> Dict
 
 def generate_file(f: str, cols: List[str]) -> None:
   ind = np.arange(len(df[cols[0]]))
-
-  width = 0.25  # the width of the bars
-
   compilers = extract_compilers(cols)
-  start_inds = subdivide_interv(ind, ind+2*width, len(compilers))
+  mingrey = .7
+  greyscale = [i * mingrey / (len(compilers) - 1) for i in range(len(compilers))]
+  colors = [(gi, gi, gi) for gi in greyscale]
+
+  width = (ind[1] - ind[0]) / (len(compilers) + 2)
+
+  start_inds = subdivide_interv(ind, ind+len(compilers)*width, len(compilers))
   inverse_cycles = {key:[1./x if isinstance(x, int) else x for x in list(df[key])] for key in df.columns}
   #heights: Dict[str, List[float]] = make_relative_heights(inverse_cycles, cols)
   heights = make_relative_heights(inverse_cycles, cols)
@@ -88,7 +89,7 @@ def generate_file(f: str, cols: List[str]) -> None:
   ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
   ax.set_xticks(ind)
   ax.set_xticklabels(benches)
-  ax.legend()
+  ax.legend(loc="lower left")
 
   plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
   plt.xticks(size=5)

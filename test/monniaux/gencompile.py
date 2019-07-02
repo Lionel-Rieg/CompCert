@@ -30,15 +30,15 @@ oracle_coords = get_coords(oracle_file)
 
 fig, ax = plt.subplots()
 
-def do_plot(coords: List[Tuple[int, float]], style: str, label: str):
+def do_plot(coords: List[Tuple[int, float]], style: str, label: str, color: str):
   x = [coord[0] for coord in coords]
   y = [coord[1] for coord in coords]
-  plt.plot(x, y, style, label=label)
+  plt.plot(x, y, style, label=label, color=color)
 
 plt.xscale("log")
 plt.yscale("log")
-do_plot(verifier_coords, "b.", "Verifier")
-do_plot(oracle_coords, "g+", "Oracle")
+do_plot(verifier_coords, "+", "Verifier", "gray")
+do_plot(oracle_coords, "+", "Oracle", "black")
 
 ax.set_ylabel("Time x1000 (s)")
 ax.set_xlabel("Size of basic blocks")
