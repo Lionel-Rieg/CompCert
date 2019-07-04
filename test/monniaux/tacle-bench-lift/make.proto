@@ -1,4 +1,4 @@
 intro: "ALL_CFLAGS = -include kill_pragma.h"
-objdeps: [{name: liftlibcontrol, compiler: both}, {name: liftlibio, compiler: both}]
+sources: "lift.c liftlibcontrol.c liftlibio.c"
 target: lift
 measures: [cycles]
