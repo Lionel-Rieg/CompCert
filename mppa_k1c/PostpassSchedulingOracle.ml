@@ -760,58 +760,6 @@ let latency_constraints bb =
     end
   in (List.iter step instr_infos; !constraints)
 
-(*
-let rec list2locmap v = function
-  | [] -> LocMap.empty
-  | loc :: l -> LocMap.add loc v (list2locmap v l)
-
-  let written = ref (LocHash.create 0)
-  and read = ref LocMap.empty
-  and count = ref 0
-  and constraints = ref []
-  and instr_infos = instruction_infos bb
-  in let step (i: inst_info) =
-    let write_accesses = list2locmap !count i.write_locs
-    and read_accesses = list2locmap !count i.read_locs
-    in let raw = get_accesses i.read_locs !written
-    and waw = get_accesses i.write_locs !written
-    and war = get_accesses i.write_locs !read
-    in begin
-      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
-      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
-      LocMap.iter (fun l i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
-      if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
-      written := LocMap.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !written write_accesses;
-      read := LocMap.union (fun _ i1 i2 -> if i1 < i2 then Some i2 else Some i1) !read read_accesses;
-      count := !count + 1
-    end
-  in (List.iter step instr_infos; !constraints)
-  *)
-
-(* let latency_constraints bb = (* failwith "latency_constraints: not implemented" *)
-  let written = ref []
-  and read = ref []
-  and count = ref 0
-  and constraints = ref []
-  and instr_infos = instruction_infos bb
-  in let step (i: inst_info) = 
-    let write_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.write_locs
-    and read_accesses = List.map (fun loc -> { inst= !count; loc=loc }) i.read_locs
-    in let raw = get_accesses i.read_locs !written
-    and waw = get_accesses i.write_locs !written
-    and war = get_accesses i.write_locs !read
-    in begin
-      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = (List.nth instr_infos acc.inst).latency} :: !constraints) (raw @ waw);
-      List.iter (fun (acc: access) -> constraints := {instr_from = acc.inst; instr_to = !count; latency = 0} :: !constraints) war;
-      (* If it's a control instruction, add an extra 0-lat dependency between this instruction and all the previous ones *)
-      if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
-      written := write_accesses @ !written;
-      read := read_accesses @ !read;
-      count := !count + 1
-    end
-  in (List.iter step instr_infos; !constraints)
-*)
-
 (**
  * Using the InstructionScheduler
  *)
@@ -880,15 +828,52 @@ let find_all_indices m l =
                        else find m (off+1) l
   in find m 0 l
 
+module TimeHash = Hashtbl
+
+(* Hash table : time => list of instruction ids *)
+
+let hashtbl2list h maxint = 
+  let rec f i = match TimeHash.find_opt h i with
+  | None -> if (i > maxint) then [] else (f (i+1))
+  | Some bund -> bund :: (f (i+1))
+  in f 0 
+
+let find_max l =
+  let rec f = function
+    | [] -> None
+    | e :: l -> match f l with
+        | None -> Some e
+        | Some m -> if (e > m) then Some e else Some m
+  in match (f l) with
+  | None -> raise Not_found
+  | Some m -> m 
+
 (* [0, 2, 3, 1, 1, 2, 4, 5] -> [[0], [3, 4], [1, 5], [2], [6], [7]] *)
-let minpack_list l =
+let minpack_list (l: int list) =
+  let timehash = TimeHash.create (List.length l)
+  in let rec f i = function
+  | [] -> ()
+  | t::l -> begin
+      (match TimeHash.find_opt timehash t with
+      | None -> TimeHash.add timehash t [i] 
+      | Some bund -> TimeHash.replace timehash t (bund @ [i]));
+      f (i+1) l
+    end 
+  in begin
+    f 0 l;
+    hashtbl2list timehash (find_max l)
+  end;;
+
+(* let minpack_list l =
   let mins = find_mins l
   in List.map (fun m -> find_all_indices m l) mins
+  *)
 
 let bb_to_instrs bb = (List.map apply_pbasic bb.body) @ (match bb.exit with None -> [] | Some e -> [PControl e])
 
 let bundlize_solution bb sol =
-  let packs = minpack_list (Array.to_list @@ Array.sub sol 0 (Array.length sol - 1))
+  let tmp = (Array.to_list @@ Array.sub sol 0 (Array.length sol - 1))
+  in let packs = minpack_list tmp
   and instrs = bb_to_instrs bb
   in let rec bund hd = function
     | [] -> []
