@@ -21,7 +21,7 @@ index 2fc561e..d3748e8 100644
 +  in let sched = real_do_schedule bb
 +  in let refer = ref sched
 +  in begin
-+    for i = 1 to 100-1 do
++    for i = 1 to 1000-1 do
 +      refer := (if i > 0 then real_do_schedule bb else real_do_schedule bb);
 +    done;
 +    Printf.printf "%Ld: %f\n" nb_instructions ((Unix.times ()).Unix.tms_utime -. start_time);
