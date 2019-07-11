@@ -2,7 +2,8 @@
 
 CCOMP?=ccomp
 
-all: compile_times.pdf measure_times.k1c.pdf
+#all: compile_times.pdf measure_times.k1c.pdf
+all: measures.csv
 
 verifier_times.txt: Asmblockdeps.patch
 	patch $(realpath ../../extraction/Asmblockdeps.ml) < $<
@@ -21,11 +22,11 @@ measures.csv:
 	bash build_benches.sh
 	bash run_benches.sh $@
 
-compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
-	python3.5 $^ $@
-
-measure_times.k1c.pdf: gengraphs.py measures.csv
-	python3.5 $^ $(basename $(basename $@))
+#compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
+#	python3.5 $^ $@
+#
+#measure_times.k1c.pdf: gengraphs.py measures.csv
+#	python3.5 $^ $(basename $(basename $@))
 
 .PHONY:
 clean:
