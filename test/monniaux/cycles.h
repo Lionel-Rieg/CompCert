@@ -1,4 +1,10 @@
+#include <inttypes.h>
 typedef unsigned long cycle_t;
+
+#ifdef MAX_MEASURES
+  cycle_t _last_stop = 0;
+  cycle_t _total_cycles[MAX_MEASURES] = {0};
+#endif
 
 #ifdef __K1C__
 #include <../../k1-cos/include/hal/cos_registers.h>
@@ -34,4 +40,9 @@ static inline cycle_t get_cycle(void) {
 #else
 static inline cycle_t get_cycle(void) { return 0; }
 #endif
+#endif
+
+#ifdef MAX_MEASURES
+  #define TIMESTOP(i) {cycle_t cur = get_cycle(); _total_cycles[i] += cur - _last_stop; _last_stop = cur;}
+  #define TIMEPRINT(n) { for (int i = 0; i <= n; i++) printf("(%d) cycles: %" PRIu64 "\n", i, _total_cycles[i]); }
 #endif

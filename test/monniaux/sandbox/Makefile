@@ -1,4 +1,5 @@
 # This Makefile does not depend on ../rules.mk
+SHELL=bash
 
 # You can modify ALL_CFILES to include the files that should be linked
 ALL_CFILES=$(wildcard *.c)
@@ -9,8 +10,11 @@ TARGET=toto
 # Name of the clock object
 CLOCK=../clock.gcc.k1c.o
 
+# Maximum amount of time measures (see cycles.h)
+MAX_MEASURES=10
+
 # Flags common to both compilers, then to gcc, then to ccomp
-ALL_CFLAGS=-g -Wall -D__K1C_COS__
+ALL_CFLAGS=-g -Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
 ALL_GCCFLAGS=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
 ALL_CCOMPFLAGS=$(ALL_CFLAGS)
 
@@ -48,6 +52,9 @@ CCOMP4PREFIX=
 # List of outfiles, updated by gen_rules
 OUTFILES:=
 
+# First line of the CSV file
+FIRSTLINE:=benches
+
 firstrule: all
 
 # $1: compiler
@@ -62,7 +69,7 @@ $(TARGET)$(3).bin: $(ALL_CFILES:.c=$(3).o) $(CLOCK)
 	$(K1C_CC) $$+ -lm -o $$@
 
 OUTFILES:=$(OUTFILES) $(TARGET)$(3).out
-#OUTFILES=$(shell echo $(OUTFILES) $(TARGET)$(3).out)
+FIRSTLINE:=$(FIRSTLINE), $(3)
 
 endef
 
@@ -109,9 +116,20 @@ ifneq ($(CCOMP4FLAGS),)
 $(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP4FLAGS),$(CCOMP4PREFIX)))
 endif
 
+measures.csv: $(OUTFILES)
+	@echo $(FIRSTLINE) > $@
+	@for ((i=0;i<=$(MAX_MEASURES);i++)) do\
+		first=$$(grep "($$i) cycles" $(firstword $(OUTFILES)));\
+		if test ! -z "$$first"; then\
+			line="$(TARGET) $$i";\
+			$(foreach outfile,$(OUTFILES),line="$$line, $$(grep "($$i) cycles" $(outfile) | cut -d':' -f2)"; ):;\
+			echo "$$line" >> $@;\
+		fi;\
+	done;\
+	echo "$@ created!"
+
 .PHONY: all clean
-all: $(OUTFILES)
-	echo $(OUTFILES)
+all: measures.csv
 
 clean:
 	rm -f *.o *.s *.bin *.out
