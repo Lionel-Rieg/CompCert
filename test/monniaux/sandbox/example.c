@@ -23,6 +23,7 @@ int main(void){
 }
 #endif
 
+#if 0
 int main(void){
   cycle_count_config();
 
@@ -38,3 +39,4 @@ int main(void){
   TIMEPRINT(1)
   return e;
 }
+#endif
