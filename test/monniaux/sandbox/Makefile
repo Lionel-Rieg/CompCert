@@ -62,9 +62,11 @@ firstrule: all
 # $3: extension prefix
 define gen_rules
 
+.SECONDARY:
 %$(3).s: %.c
 	$(1) $(2) -S $$< -o $$@
 
+.SECONDARY:
 $(TARGET)$(3).bin: $(ALL_CFILES:.c=$(3).o) $(CLOCK)
 	$(K1C_CC) $$+ -lm -o $$@
 
