@@ -2,6 +2,7 @@
 #include "f.h"
 #include "../cycles.h"
 
+#if 0
 int main(void){
   cycle_count_config();
 
@@ -19,4 +20,21 @@ int main(void){
 
   TIMEPRINT(1)
   return 0;
+}
+#endif
+
+int main(void){
+  cycle_count_config();
+
+  TIMEINIT
+  int a = 42;
+  int b = 21;
+  int c = 42+b;
+  TIMESTOP(0)
+  int d = a + b;
+  int e = a + b + c + d;
+  TIMESTOP(1)
+
+  TIMEPRINT(1)
+  return e;
 }
