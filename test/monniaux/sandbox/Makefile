@@ -63,23 +63,27 @@ firstrule: all
 define gen_rules
 
 .SECONDARY:
-%$(3).s: %.c
+asm/%$(3).s: %.c
+	@mkdir -p $$(@D)
 	$(1) $(2) -S $$< -o $$@
 
 .SECONDARY:
-$(TARGET)$(3).bin: $(ALL_CFILES:.c=$(3).o) $(CLOCK)
+bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK)
+	@mkdir -p $$(@D)
 	$(K1C_CC) $$+ -lm -o $$@
 
-OUTFILES:=$(OUTFILES) $(TARGET)$(3).out
+OUTFILES:=$(OUTFILES) out/$(TARGET)$(3).out
 FIRSTLINE:=$(FIRSTLINE), $(3)
 
 endef
 
 # Generic rules
-%.o: %.s
+obj/%.o: asm/%.s
+	@mkdir -p $(@D)
 	$(K1C_CC) $< -c -o $@
 
-%.out: %.bin
+out/%.out: bin/%.bin
+	@mkdir -p $(@D)
 	$(EXECUTE_CYCLES) $< | tee $@
 
 ##
