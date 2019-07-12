@@ -1,9 +1,10 @@
 #include <inttypes.h>
+#include <stdio.h>
 typedef unsigned long cycle_t;
 
 #ifdef MAX_MEASURES
-  cycle_t _last_stop = 0;
-  cycle_t _total_cycles[MAX_MEASURES] = {0};
+  static cycle_t _last_stop[MAX_MEASURES] = {0};
+  static cycle_t _total_cycles[MAX_MEASURES] = {0};
 #endif
 
 #ifdef __K1C__
@@ -43,7 +44,7 @@ static inline cycle_t get_cycle(void) { return 0; }
 #endif
 
 #ifdef MAX_MEASURES
-  #define TIMEINIT {_last_stop = get_cycle();}
-  #define TIMESTOP(i) {cycle_t cur = get_cycle(); _total_cycles[i] += cur - _last_stop; _last_stop = cur;}
+  #define TIMEINIT(i) {_last_stop[i] = get_cycle();}
+  #define TIMESTOP(i) {cycle_t cur = get_cycle(); _total_cycles[i] += cur - _last_stop[i]; _last_stop[i] = cur;}
   #define TIMEPRINT(n) { for (int i = 0; i <= n; i++) printf("(%d) cycles: %" PRIu64 "\n", i, _total_cycles[i]); }
 #endif

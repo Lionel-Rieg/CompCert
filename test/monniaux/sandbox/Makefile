@@ -14,7 +14,8 @@ CLOCK=../clock.gcc.k1c.o
 MAX_MEASURES=10
 
 # Flags common to both compilers, then to gcc, then to ccomp
-ALL_CFLAGS=-g -Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
+ALL_CFLAGS=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
+#ALL_CFLAGS+=-g
 ALL_GCCFLAGS=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
 ALL_CCOMPFLAGS=$(ALL_CFLAGS)
 
@@ -26,19 +27,19 @@ K1C_CCOMP=ccomp
 EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
-GCC0FLAGS=$(ALL_GCCFLAGS) -O0
+GCC0FLAGS=
 GCC1FLAGS=$(ALL_GCCFLAGS) -O1
 GCC2FLAGS=$(ALL_GCCFLAGS) -O2
 GCC3FLAGS=$(ALL_GCCFLAGS) -O3
 GCC4FLAGS=
-CCOMP0FLAGS=$(ALL_CCOMPFLAGS) -O0
+CCOMP0FLAGS=
 CCOMP1FLAGS=$(ALL_CCOMPFLAGS) -fno-postpass
 CCOMP2FLAGS=$(ALL_CCOMPFLAGS)
 CCOMP3FLAGS=
 CCOMP4FLAGS=
 
 # Prefix names
-GCC0PREFIX=.gcc.o0
+GCC0PREFIX=
 GCC1PREFIX=.gcc.o1
 GCC2PREFIX=.gcc.o2
 GCC3PREFIX=.gcc.o3
@@ -51,6 +52,7 @@ CCOMP4PREFIX=
 
 # List of outfiles, updated by gen_rules
 OUTFILES:=
+BINFILES:=
 
 # First line of the CSV file
 FIRSTLINE:=benches
@@ -72,6 +74,7 @@ bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK)
 	@mkdir -p $$(@D)
 	$(K1C_CC) $$+ -lm -o $$@
 
+BINFILES:=$(BINFILES) bin/$(TARGET)$(3).bin
 OUTFILES:=$(OUTFILES) out/$(TARGET)$(3).out
 FIRSTLINE:=$(FIRSTLINE), $(3)
 
@@ -134,9 +137,12 @@ measures.csv: $(OUTFILES)
 	done;\
 	echo "$@ created!"
 
-.PHONY: all clean
-all: measures.csv
+.PHONY: all clean run
+all: $(BINFILES)
+
+run: measures.csv
 
 clean:
 	rm -f *.o *.s *.bin *.out
+	rm -f asm/*.s bin/*.bin obj/*.o out/*.out
 
