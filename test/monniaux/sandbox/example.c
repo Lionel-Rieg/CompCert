@@ -8,15 +8,15 @@ int main(void){
   int i;
   int S = 0;
 
-  TIMESTOP(0)
+  TIMEINIT
   for (i = 0; i < 1000; i++){
     S += f(i, i*2);
   }
-  TIMESTOP(1)
+  TIMESTOP(0)
 
   printf("Final value: %d\n", S);
-  TIMESTOP(2)
+  TIMESTOP(1)
 
-  TIMEPRINT(2)
+  TIMEPRINT(1)
   return 0;
 }
