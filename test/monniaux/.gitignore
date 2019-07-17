@@ -11,24 +11,4 @@ measure_times.k1c.pdf
 
 /.mypy_cache/
 
-binary_search/Makefile
-bitsliced-aes/Makefile
-bitsliced-tea/Makefile
-complex/Makefile
-float_mat/Makefile
-glibc_qsort/Makefile
-heapsort/Makefile
-heptagon_radio_transmitter/Makefile
-idea/Makefile
-lustrev4_lustrec_heater_control/Makefile
-lustrev4_lv4_heater_control/Makefile
-lustrev4_lv6-en-2cgc_heater_control/Makefile
-lustrev6-convertible-en-2cgc/Makefile
 mbedtls/mbedtls/
-number_theoretic_transform/Makefile
-quicksort/Makefile
-sha-2/Makefile
-tacle-bench-lift/Makefile
-tacle-bench-powerwindow/Makefile
-too_slow/Makefile
-xor_and_mat/Makefile
