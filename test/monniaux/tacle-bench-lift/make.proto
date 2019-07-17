@@ -1,4 +1,0 @@
-intro: "ALL_CFLAGS = -include kill_pragma.h"
-sources: "lift.c liftlibcontrol.c liftlibio.c"
-target: lift
-measures: [cycles]

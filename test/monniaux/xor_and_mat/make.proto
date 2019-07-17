@@ -1,3 +1,0 @@
-sources: int_mat_run.c int_mat.c
-target: xor_and_mat
-measures: [[c2_time, c2], [c7_time, c7]]

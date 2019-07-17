@@ -1,3 +1,0 @@
-sources: "$(wildcard *.c)"
-target: lv6-en-2cgc_heater_control
-measures: [cycles]

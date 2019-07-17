@@ -1,3 +1,0 @@
-objdeps: [{name: quicksort_run, compiler: gcc}]
-target: quicksort
-measures: [quicksort_time]

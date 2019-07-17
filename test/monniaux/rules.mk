@@ -14,10 +14,10 @@ CLOCK=../clock
 MAX_MEASURES=10
 
 # Flags common to both compilers, then to gcc, then to ccomp
-ALL_CFLAGS=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
+ALL_CFLAGS+=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
 #ALL_CFLAGS+=-g
-ALL_GCCFLAGS=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
-ALL_CCOMPFLAGS=$(ALL_CFLAGS)
+ALL_GCCFLAGS+=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
+ALL_CCOMPFLAGS+=$(ALL_CFLAGS)
 
 # The compilers
 K1C_CC=k1-cos-gcc

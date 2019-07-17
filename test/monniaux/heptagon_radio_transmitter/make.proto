@@ -1,3 +1,0 @@
-sources: "$(wildcard *.c)"
-target: radiotrans
-measures: [cycles]
