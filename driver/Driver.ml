@@ -185,7 +185,8 @@ Processing options:
 {|Optimization options: (use -fno-<opt> to turn off -f<opt>)
   -O             Optimize the compiled code [on by default]
   -O0            Do not optimize the compiled code
-  -O1 -O2 -O3    Synonymous for -O
+  -O1            Perform all optimization passes except scheduling
+  -O2 -O3        Synonymous for -O
   -Os            Optimize for code size in preference to code speed
   -ftailcalls    Optimize function calls in tail position [on]
   -fconst-prop   Perform global constant propagation  [on]
@@ -308,6 +309,7 @@ let cmdline_actions =
  [
   Exact "-O0", Unit (unset_all optimization_options);
   Exact "-O", Unit (set_all optimization_options);
+  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
