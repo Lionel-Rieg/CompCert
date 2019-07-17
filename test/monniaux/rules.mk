@@ -72,7 +72,7 @@ asm/%$(3).s: %.c
 .SECONDARY:
 bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK).gcc.k1c.o
 	@mkdir -p $$(@D)
-	$(K1C_CC) $$+ -lm -o $$@
+	$(1) $$+ -lm -o $$@
 
 BINFILES:=$(BINFILES) bin/$(TARGET)$(3).bin
 OUTFILES:=$(OUTFILES) out/$(TARGET)$(3).out

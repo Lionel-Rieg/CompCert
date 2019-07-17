@@ -1,4 +1,4 @@
 ALL_CFILES=$(wildcard *.c) tests/tests.c
-TARGET=test
+TARGET=bitsliced-aes
 
 include ../rules.mk

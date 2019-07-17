@@ -1,3 +1,3 @@
-TARGET=bstea
+TARGET=bitsliced-tea
 
 include ../rules.mk
