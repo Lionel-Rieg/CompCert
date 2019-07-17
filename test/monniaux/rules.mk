@@ -134,7 +134,11 @@ measures.csv: $(OUTFILES)
 	@for i in "$(MEASURES)"; do\
 		first=$$(grep "$$i cycles" $(firstword $(OUTFILES)));\
 		if test ! -z "$$first"; then\
-			line="$(TARGET) $$i";\
+			if [ "$$i" != "time" ]; then\
+				line="$(TARGET) $$i";\
+			else\
+				line="$(TARGET)";\
+			fi;\
 			$(foreach outfile,$(OUTFILES),line="$$line, $$(grep "$$i cycles" $(outfile) | cut -d':' -f2)"; ):;\
 			echo "$$line" >> $@;\
 		fi;\
