@@ -842,7 +842,7 @@ Qed.
 
 
 
-Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
+Theorem bisimu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
@@ -994,7 +994,7 @@ Local Ltac preg_eq_discr r rd :=
 Qed.
 
 
-Theorem forward_simu_par_body:
+Theorem bisimu_par_body:
   forall bdy ge fn rsr mr sr rsw mw sw,
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -1003,13 +1003,13 @@ Theorem forward_simu_par_body:
 Proof.
   induction bdy as [|i bdy]; simpl; eauto. 
   intros.
-  exploit (forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw i); eauto.
+  exploit (bisimu_par_wio_basic ge fn rsr rsw mr mw sr sw i); eauto.
   destruct (parexec_basic_instr _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2). rewrite X1; simpl; eauto.
   - intros X; rewrite X; simpl; auto.
 Qed.
 
-Theorem forward_simu_par_control ex sz aux ge fn rsr rsw mr mw sr sw:
+Theorem bisimu_par_control ex sz aux ge fn rsr rsw mr mw sr sw:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
@@ -1067,37 +1067,37 @@ Proof.
     intros rr; destruct rr; unfold incrPC; Simpl.
 Qed.
 
-Theorem forward_simu_par_exit ex sz ge fn rsr rsw mr mw sr sw:
+Theorem bisimu_par_exit ex sz ge fn rsr rsw mr mw sr sw:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   match_outcome (parexec_exit ge fn ex (Ptrofs.repr sz) rsr rsw mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
 Proof.
   intros; unfold parexec_exit.
-  exploit (forward_simu_par_control ex sz rsw#PC ge fn rsr rsw mr mw sr sw); eauto.
+  exploit (bisimu_par_control ex sz rsw#PC ge fn rsr rsw mr mw sr sw); eauto.
   cutrewrite (rsw # PC <- (rsw PC) = rsw); auto.
   apply extensionality. intros; destruct x; simpl; auto.
 Qed.
 
 Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ (trans_pcincr sz (trans_exit ex) :: nil).
 
-Theorem forward_simu_par_wio ge fn rsr mr sr bdy ex sz:
+Theorem bisimu_par_wio ge fn rsr mr sr bdy ex sz:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_outcome (parexec_wio ge fn bdy ex (Ptrofs.repr sz) rsr mr) (prun_iw Ge (trans_block_aux bdy sz ex) sr sr).
 Proof.
   intros GENV MSR. unfold parexec_wio, trans_block_aux.
-  exploit (forward_simu_par_body bdy ge fn rsr mr sr rsr mr sr); eauto.
+  exploit (bisimu_par_body bdy ge fn rsr mr sr rsr mr sr); eauto.
   destruct (parexec_wio_body _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite prun_iw_app_Some; eauto.
-    exploit (forward_simu_par_exit ex sz ge fn rsr rs mr m sr s'); eauto.
+    exploit (bisimu_par_exit ex sz ge fn rsr rs mr m sr s'); eauto.
     subst Ge; simpl. destruct MSR as (Y1 & Y2). erewrite Y2; simpl.
     destruct (inst_prun _ _ _ _ _); simpl; auto.
   - intros X; erewrite prun_iw_app_None; eauto.
 Qed.
 
-Theorem forward_simu_par_wio_bblock ge fn rsr mr sr bdy1 bdy2 ex sz:
+Theorem bisimu_par_wio_bblock ge fn rsr mr sr bdy1 bdy2 ex sz:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_outcome 
@@ -1108,11 +1108,11 @@ Theorem forward_simu_par_wio_bblock ge fn rsr mr sr bdy1 bdy2 ex sz:
    (prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sr sr).
 Proof.
   intros.
-  exploit (forward_simu_par_wio ge fn rsr mr sr bdy1 ex sz); eauto.
+  exploit (bisimu_par_wio ge fn rsr mr sr bdy1 ex sz); eauto.
   destruct (parexec_wio _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite prun_iw_app_Some; eauto.
-    eapply forward_simu_par_body; eauto.
+    eapply bisimu_par_body; eauto.
   - intros; erewrite prun_iw_app_None; eauto.
 Qed.
 
@@ -1143,7 +1143,7 @@ Proof.
     apply Permutation_app_comm.
 Qed.
 
-Theorem forward_simu_par rs1 m1 s1' b ge fn o2:
+Theorem bisimu_par rs1 m1 s1' b ge fn o2:
     Ge = Genv ge fn ->
     match_states (State rs1 m1) s1' -> 
     parexec_bblock ge fn b rs1 m1 o2 ->
@@ -1155,7 +1155,7 @@ Proof.
   inversion PAREXEC as (bdy1 & bdy2 & PERM & WIO).
   exploit trans_block_perserves_permutation; eauto.
   intros Perm.
-  exploit (forward_simu_par_wio_bblock ge fn rs1 m1 s1' bdy1 bdy2 (exit b) (size b)); eauto.
+  exploit (bisimu_par_wio_bblock ge fn rs1 m1 s1' bdy1 bdy2 (exit b) (size b)); eauto.
   rewrite <- WIO. clear WIO.
   intros H; eexists; split. 2: eapply H.
   unfold prun; eexists; split; eauto. 
@@ -1163,16 +1163,16 @@ Proof.
 Qed.
 
 (* sequential execution *)
-Theorem forward_simu_basic ge fn bi rs m s:
+Theorem bisimu_basic ge fn bi rs m s:
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
   match_outcome (exec_basic_instr ge bi rs m) (inst_run Ge (trans_basic bi) s s).
 Proof.
   intros; unfold exec_basic_instr. rewrite inst_run_prun.
-  eapply forward_simu_par_wio_basic; eauto.
+  eapply bisimu_par_wio_basic; eauto.
 Qed.
 
-Lemma forward_simu_body:
+Lemma bisimu_body:
   forall bdy ge fn rs m s,
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
@@ -1180,33 +1180,33 @@ Lemma forward_simu_body:
 Proof.
   induction bdy as [|i bdy]; simpl; eauto. 
   intros.
-  exploit (forward_simu_basic ge fn i rs m s); eauto.
+  exploit (bisimu_basic ge fn i rs m s); eauto.
   destruct (exec_basic_instr _ _ _ _); simpl.
   - intros (s' & X1 & X2). rewrite X1; simpl; eauto.
   - intros X; rewrite X; simpl; auto.
 Qed.
 
-Theorem forward_simu_exit ge fn b rs m s:
+Theorem bisimu_exit ge fn b rs m s:
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
   match_outcome (exec_control ge fn (exit b) (nextblock b rs) m) (inst_run Ge (trans_pcincr (size b) (trans_exit (exit b))) s s).
 Proof.
   intros; unfold exec_control, nextblock. rewrite inst_run_prun. 
-  apply (forward_simu_par_control (exit b) (size b) (Val.offset_ptr (rs PC) (Ptrofs.repr (size b))) ge fn rs rs m m s s); auto.
+  apply (bisimu_par_control (exit b) (size b) (Val.offset_ptr (rs PC) (Ptrofs.repr (size b))) ge fn rs rs m m s s); auto.
 Qed.
 
-Theorem forward_simu rs m b ge fn s:
+Theorem bisimu rs m b ge fn s:
     Ge = Genv ge fn ->
     match_states (State rs m) s -> 
     match_outcome (exec_bblock ge fn b rs m) (exec Ge (trans_block b) s).
 Proof.
   intros GENV MS. unfold exec_bblock.
-  exploit (forward_simu_body (body b) ge fn rs m s); eauto.
+  exploit (bisimu_body (body b) ge fn rs m s); eauto.
   unfold exec, trans_block; simpl.
   destruct (exec_body _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite run_app_Some; eauto.
-    exploit (forward_simu_exit ge fn b rs0 m0 s'); eauto.
+    exploit (bisimu_exit ge fn b rs0 m0 s'); eauto.
     subst Ge; simpl. destruct X2 as (Y1 & Y2). erewrite Y2; simpl.
     destruct (inst_run _ _ _); simpl; auto.
   - intros X; erewrite run_app_None; eauto.
@@ -1243,10 +1243,10 @@ Lemma bblock_para_check_correct ge fn bb rs m rs' m':
   det_parexec ge fn bb rs m rs' m'.
 Proof.
   intros H H0 H1 o H2. unfold bblock_para_check in H1.
-  exploit (forward_simu rs m bb ge fn); eauto. eapply trans_state_match.
+  exploit (bisimu rs m bb ge fn); eauto. eapply trans_state_match.
   rewrite H0; simpl.
   intros (s2' & EXEC & MS).
-  exploit forward_simu_par. 2: apply (trans_state_match (State rs m)). all: eauto.
+  exploit bisimu_par. 2: apply (trans_state_match (State rs m)). all: eauto.
   intros (o2' & PRUN & MO).
   exploit parallelizable_correct. apply is_para_correct_aux. eassumption.
   intro. eapply H3 in PRUN. clear H3. destruct o2'.
@@ -1280,8 +1280,8 @@ Proof.
   unfold bblock_simu, res_eq; intros p1 p2 ge fn H1 H2 rs m DONTSTUCK.
   generalize (H2 (trans_state (State rs m))); clear H2.
   intro H2. 
-  exploit (forward_simu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
-  exploit (forward_simu Ge rs m p2 ge fn (trans_state (State rs m))); eauto.
+  exploit (bisimu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
+  exploit (bisimu Ge rs m p2 ge fn (trans_state (State rs m))); eauto.
   destruct (exec_bblock ge fn p1 rs m); try congruence.
   intros H3 (s2' & exp2 & MS'). unfold exec in exp2, H3. rewrite exp2 in H2.
   destruct H2 as (m2' & H2 & H4). discriminate. rewrite H2 in H3.
