@@ -1,3 +1,0 @@
-objdeps: [{name: float_mat_run, compiler: gcc}]
-target: float_mat
-measures: [[c2_time, c2], [c8_time, c8]]
