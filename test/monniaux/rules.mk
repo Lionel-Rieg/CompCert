@@ -1,63 +1,152 @@
-ALL_CCOMPFLAGS+=-fno-unprototyped
-CCOMP=ccomp-x86
-CCOMPFLAGS=-g -O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS)
+# This Makefile does not depend on ../rules.mk
+SHELL=bash
 
-CFLAGS=-g -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+# You can modify ALL_CFILES to include the files that should be linked
+ALL_CFILES?=$(wildcard *.c)
 
+# Name of the target
+TARGET?=toto
+
+# Name of the clock object
+CLOCK=../clock
+
+# Maximum amount of time measures (see cycles.h)
+MAX_MEASURES=10
+
+# Flags common to both compilers, then to gcc, then to ccomp
+ALL_CFLAGS=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
+#ALL_CFLAGS+=-g
+ALL_GCCFLAGS=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
+ALL_CCOMPFLAGS=$(ALL_CFLAGS)
+
+# The compilers
 K1C_CC=k1-cos-gcc
-K1C_CFLAGS = -D__K1C_COS__ -std=c99 -O3 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
-K1C_CFLAGS_O1 =-std=c99 -O1 -fschedule-insns2 -Wall -Wextra -Werror=implicit  $(ALL_CFLAGS)
+K1C_CCOMP=ccomp
 
-K1C_CCOMP = ../../../ccomp
-K1C_CCOMPFLAGS=-O3 -Wall $(ALL_CCOMPFLAGS) $(ALL_CFLAGS) # -fpostpass= revlist
-
-EXECUTE=k1-cluster --syscall=libstd_scalls.so --
+# Command to execute
 EXECUTE_CYCLES=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
-%.gcc.host.o : %.gcc.host.s
-	$(CC) $(CFLAGS) -c -o $@ $<
+# You can define up to GCC4FLAGS and CCOMP4FLAGS
+GCC0FLAGS?=
+GCC1FLAGS?=$(ALL_GCCFLAGS) -O1
+GCC2FLAGS?=$(ALL_GCCFLAGS) -O2
+GCC3FLAGS?=$(ALL_GCCFLAGS) -O3
+GCC4FLAGS?=
+CCOMP0FLAGS?=
+CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -fno-postpass
+CCOMP2FLAGS?=$(ALL_CCOMPFLAGS)
+CCOMP3FLAGS?=
+CCOMP4FLAGS?=
 
-%.ccomp.host.o : %.ccomp.host.s
-	$(CCOMP) $(CCOMPFLAGS) -c -o $@ $<
+# Prefix names
+GCC0PREFIX?=
+GCC1PREFIX?=.gcc.o1
+GCC2PREFIX?=.gcc.o2
+GCC3PREFIX?=.gcc.o3
+GCC4PREFIX?=
+CCOMP0PREFIX?=
+CCOMP1PREFIX?=.ccomp.o1
+CCOMP2PREFIX?=.ccomp.o2
+CCOMP3PREFIX?=
+CCOMP4PREFIX?=
 
-%.gcc.host.s : %.c
-	$(CC) $(CFLAGS) -S -o $@ $<
+# List of outfiles, updated by gen_rules
+OUTFILES:=
+BINFILES:=
 
-%.ccomp.host.s : %.c
-	$(CCOMP) $(CCOMPFLAGS) -S -o $@ $<
+# First line of the CSV file, completed later
+FIRSTLINE:=benches
 
-%.gcc.o1.k1c.s: %.c
-	$(K1C_CC) $(K1C_CFLAGS_O1) -S $< -o $@
+firstrule: all
 
-%.gcc.o1.k1c.o: %.gcc.o1.k1c.s
-	$(K1C_CC) $(K1C_CFLAGS_O1) -c $< -o $@
+# $1: compiler
+# $2: compilation flags
+# $3: extension prefix
+define gen_rules
 
-%.gcc.k1c.s: %.c
-	$(K1C_CC) $(K1C_CFLAGS) -S $< -o $@
+.SECONDARY:
+asm/%$(3).s: %.c
+	@mkdir -p $$(@D)
+	$(1) $(2) -S $$< -o $$@
 
-%.gcc.k1c.o: %.gcc.k1c.s
-	$(K1C_CC) $(K1C_CFLAGS) -c $< -o $@
+.SECONDARY:
+bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK).gcc.k1c.o
+	@mkdir -p $$(@D)
+	$(K1C_CC) $$+ -lm -o $$@
 
-%.ccomp.k1c.s: %.c
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -S $< -o $@
+BINFILES:=$(BINFILES) bin/$(TARGET)$(3).bin
+OUTFILES:=$(OUTFILES) out/$(TARGET)$(3).out
+FIRSTLINE:=$(FIRSTLINE), $(3)
 
-%.ccomp.k1c.o: %.ccomp.k1c.s
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -c $< -o $@
+endef
 
-# %.gcc.k1c : %.gcc.k1c.o
-# 	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
+# Clock generation
+$(CLOCK).gcc.k1c.o: $(CLOCK).c
+	$(K1C_CC) $(ALL_GCCFLAGS) -O3 $< -c -o $@
 
-# %.ccomp.k1c : %.ccomp.k1c.o
-# 	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
+# Generic rules
+obj/%.o: asm/%.s
+	@mkdir -p $(@D)
+	$(K1C_CC) $< -c -o $@
 
-# %.gcc.host : %.gcc.host.o
-# 	$(CC) $(CFLAGS) $+ -o $@
+out/%.out: bin/%.bin
+	@mkdir -p $(@D)
+	$(EXECUTE_CYCLES) $< | tee $@
 
-# %.ccomp.host : %.ccomp.host.o
-# 	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
+##
+# Generating the rules for all the compiler/flags..
+##
 
-%.k1c.out : %.k1c
-	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) |tee $@
+ifneq ($(GCC0FLAGS),)
+$(eval $(call gen_rules,$(K1C_CC),$(GCC0FLAGS),$(GCC0PREFIX)))
+endif
+ifneq ($(GCC1FLAGS),)
+$(eval $(call gen_rules,$(K1C_CC),$(GCC1FLAGS),$(GCC1PREFIX)))
+endif
+ifneq ($(GCC2FLAGS),)
+$(eval $(call gen_rules,$(K1C_CC),$(GCC2FLAGS),$(GCC2PREFIX)))
+endif
+ifneq ($(GCC3FLAGS),)
+$(eval $(call gen_rules,$(K1C_CC),$(GCC3FLAGS),$(GCC3PREFIX)))
+endif
+ifneq ($(GCC4FLAGS),)
+$(eval $(call gen_rules,$(K1C_CC),$(GCC4FLAGS),$(GCC4PREFIX)))
+endif
 
-%.host.out : %.host
-	./$< $(EXECUTE_ARGS) |tee $@
+ifneq ($(CCOMP0FLAGS),)
+$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP0FLAGS),$(CCOMP0PREFIX)))
+endif
+ifneq ($(CCOMP1FLAGS),)
+$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP1FLAGS),$(CCOMP1PREFIX)))
+endif
+ifneq ($(CCOMP2FLAGS),)
+$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP2FLAGS),$(CCOMP2PREFIX)))
+endif
+ifneq ($(CCOMP3FLAGS),)
+$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP3FLAGS),$(CCOMP3PREFIX)))
+endif
+ifneq ($(CCOMP4FLAGS),)
+$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP4FLAGS),$(CCOMP4PREFIX)))
+endif
+
+measures.csv: $(OUTFILES)
+	@echo $(FIRSTLINE) > $@
+	@for i in "$(MEASURES)"; do\
+		first=$$(grep "$$i cycles" $(firstword $(OUTFILES)));\
+		if test ! -z "$$first"; then\
+			line="$(TARGET) $$i";\
+			$(foreach outfile,$(OUTFILES),line="$$line, $$(grep "$$i cycles" $(outfile) | cut -d':' -f2)"; ):;\
+			echo "$$line" >> $@;\
+		fi;\
+	done;\
+	echo "$@ created!"
+
+.PHONY: all clean run
+all: $(BINFILES)
+
+run: measures.csv
+
+clean:
+	rm -f *.o *.s *.bin *.out
+	rm -f asm/*.s bin/*.bin obj/*.o out/*.out
+

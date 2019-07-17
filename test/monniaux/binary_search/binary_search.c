@@ -118,7 +118,7 @@ int main () {
 	 "position2: %d\n"
 	 "position3: %d\n"
 	 "position4: %d\n"
-	 "random fill cycles: %" PRIu64 "\n"
+	 "randomfill cycles: %" PRIu64 "\n"
 	 "search1 cycles: %" PRIu64 "\n"
 	 "search2 cycles: %" PRIu64 "\n"
 	 "search3 cycles: %" PRIu64 "\n"
