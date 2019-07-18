@@ -912,10 +912,3 @@ let schedule bb =
   (* print_problem (build_problem bb); *)
   if Compopts.optim_postpass () then smart_schedule bb else dumb_schedule bb
 
-(** FIXME - Fix for PostpassScheduling WIP *)
-
-type bblock' = int
-
-let trans_block bb = 1
-
-let bblock_equivb' bb1 bb2 = true
