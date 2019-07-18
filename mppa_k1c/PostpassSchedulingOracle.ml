@@ -15,208 +15,242 @@ type immediate = I32 of Integers.Int.int | I64 of Integers.Int64.int | Off of of
 
 type location = Reg of preg | Mem
 
+type real_instruction =
+  (* ALU *)
+  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sbfxw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
+  | Addd | Andd | Compd | Muld | Ord | Sbfd | Sbfxd | Srad | Srld | Slld | Srsd | Xord
+  | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
+  | Maddw | Maddd | Msbfw | Msbfd | Cmoved
+  | Make | Nop | Extfz | Extfs | Insf
+  | Addxw | Addxd
+  (* LSU *)
+  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
+  | Sb | Sh | Sw | Sd | Sq | So
+  (* BCU *)
+  | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
+  (* FPU *)
+  | Fabsd | Fabsw | Fnegw | Fnegd
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
+  | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
+  | Fcompw | Fcompd
+
 type ab_inst_rec = {
-  inst: string; (* name of the pseudo instruction *)
+  inst: real_instruction;
   write_locs : location list;
   read_locs : location list;
   imm : immediate option;
   is_control : bool;
 }
 
-(** Asmvliw constructor to string functions *)
+(** Asmvliw constructor to real instructions *)
 
 exception OpaqueInstruction
 
-let arith_rr_str = function
-  | Pcvtl2w -> "Pcvtl2w"
-  | Pmv -> "Pmv"
-  | Pnegw -> "Pnegw"
-  | Pnegl -> "Pnegl"
-  | Psxwd -> "Psxwd"
-  | Pzxwd -> "Pzxwd"
-  | Pextfz(_,_) -> "Pextfz"
-  | Pextfs(_,_) -> "Pextfs"
-  | Pextfzl(_,_) -> "Pextfzl"
-  | Pextfsl(_,_) -> "Pextfsl"
-  | Pfabsw -> "Pfabsw"
-  | Pfabsd -> "Pfabsd"
-  | Pfnegw -> "Pfnegw"
-  | Pfnegd -> "Pfnegd"
-  | Pfnarrowdw -> "Pfnarrowdw"
-  | Pfwidenlwd -> "Pfwidenlwd"
-  | Pfloatwrnsz -> "Pfloatwrnsz"
-  | Pfloatuwrnsz -> "Pfloatuwrnsz"
-  | Pfloatudrnsz -> "Pfloatudrnsz"
-  | Pfloatdrnsz -> "Pfloatdrnsz"
-  | Pfixedwrzz -> "Pfixedwrzz"
-  | Pfixeduwrzz -> "Pfixeduwrzz"
-  | Pfixeddrzz -> "Pfixeddrzz"
-  | Pfixedudrzz -> "Pfixedudrzz"
-  | Pfixeddrzz_i32 -> "Pfixeddrzz_i32"
-  | Pfixedudrzz_i32 -> "Pfixedudrzz_i32"
+let arith_rr_real = function
+  | Pcvtl2w ->          Addw
+  | Pmv ->              Addd
+  | Pnegw ->            Sbfw
+  | Pnegl ->            Sbfd
+  | Psxwd ->            Extfs
+  | Pzxwd ->            Extfz
+  | Pextfz(_,_) ->      Extfz
+  | Pextfs(_,_) ->      Extfs
+  | Pextfzl(_,_) ->     Extfz
+  | Pextfsl(_,_) ->     Extfs
+  | Pfabsw ->           Fabsw
+  | Pfabsd ->           Fabsd
+  | Pfnegw ->           Fnegw
+  | Pfnegd ->           Fnegd
+  | Pfnarrowdw ->       Fnarrowdw
+  | Pfwidenlwd ->       Fwidenlwd
+  | Pfloatwrnsz ->      Floatwz
+  | Pfloatuwrnsz ->     Floatuwz
+  | Pfloatudrnsz ->     Floatudz
+  | Pfloatdrnsz ->      Floatdz
+  | Pfixedwrzz ->       Fixedwz
+  | Pfixeduwrzz ->      Fixeduwz
+  | Pfixeddrzz ->       Fixeddz
+  | Pfixedudrzz ->      Fixedudz
+  | Pfixeddrzz_i32 ->   Fixeddz
+  | Pfixedudrzz_i32 ->  Fixedudz
 
-let arith_rrr_str = function
-  | Pcompw it -> "Pcompw"
-  | Pcompl it -> "Pcompl"
-  | Pfcompw ft -> "Pfcompw"
-  | Pfcompl ft -> "Pfcompl"
-  | Paddw -> "Paddw"
-  | Paddxw _ -> "Paddxw"
-  | Psubw -> "Psubw"
-  | Prevsubxw _ -> "Psubxw"
-  | Pmulw -> "Pmulw"
-  | Pandw -> "Pandw"
-  | Pnandw -> "Pnandw"
-  | Porw -> "Porw"
-  | Pnorw -> "Pnorw"
-  | Pxorw -> "Pxorw"
-  | Pnxorw -> "Pnxorw"
-  | Pandnw -> "Pandnw"
-  | Pornw -> "Pornw"
-  | Psraw -> "Psraw"
-  | Psrlw -> "Psrlw"
-  | Psrxw -> "Psrxw"
-  | Psllw -> "Psllw"
-  | Paddl -> "Paddl"
-  | Paddxl _ -> "Paddxl"
-  | Psubl -> "Psubl"
-  | Prevsubxl _ -> "Psubxl"
-  | Pandl -> "Pandl"
-  | Pnandl -> "Pnandl"
-  | Porl -> "Porl"
-  | Pnorl -> "Pnorl"
-  | Pxorl -> "Pxorl"
-  | Pnxorl -> "Pnxorl"
-  | Pandnl -> "Pandnl"
-  | Pornl -> "Pornl"
-  | Pmull -> "Pmull"
-  | Pslll -> "Pslll"
-  | Psrll -> "Psrll"
-  | Psrxl -> "Psrxl"
-  | Psral -> "Psral"
-  | Pfaddd -> "Pfaddd"
-  | Pfaddw -> "Pfaddw"
-  | Pfsbfd -> "Pfsbfd"
-  | Pfsbfw -> "Pfsbfw"
-  | Pfmuld -> "Pfmuld"
-  | Pfmulw -> "Pfmulw"
+let arith_rrr_real = function
+  | Pcompw it ->      Compw
+  | Pcompl it ->      Compd
+  | Pfcompw ft ->     Fcompw
+  | Pfcompl ft ->     Fcompd
+  | Paddw ->          Addw
+  | Paddxw _ ->       Addxw
+  | Psubw ->          Sbfw
+  | Prevsubxw _ ->    Sbfxw
+  | Pmulw ->          Mulw
+  | Pandw ->          Andw
+  | Pnandw ->         Nandw
+  | Porw ->           Orw
+  | Pnorw ->          Norw
+  | Pxorw ->          Xorw
+  | Pnxorw ->         Nxorw
+  | Pandnw ->         Andnw
+  | Pornw ->          Ornw
+  | Psraw ->          Sraw
+  | Psrlw ->          Srlw
+  | Psrxw ->          Srsw
+  | Psllw ->          Sllw
+  | Paddl ->          Addd
+  | Paddxl _ ->       Addxd
+  | Psubl ->          Sbfd
+  | Prevsubxl _ ->    Sbfxd
+  | Pandl ->          Andd
+  | Pnandl ->         Nandd
+  | Porl ->           Ord
+  | Pnorl ->          Nord
+  | Pxorl ->          Xord
+  | Pnxorl ->         Nxord
+  | Pandnl ->         Andnd
+  | Pornl ->          Ornd
+  | Pmull ->          Muld
+  | Pslll ->          Slld
+  | Psrll ->          Srld
+  | Psrxl ->          Srsd
+  | Psral ->          Srad
+  | Pfaddd ->         Faddd
+  | Pfaddw ->         Faddw
+  | Pfsbfd ->         Fsbfd
+  | Pfsbfw ->         Fsbfw
+  | Pfmuld ->         Fmuld
+  | Pfmulw ->         Fmulw
 
-let arith_rri32_str = function
-  | Pcompiw it -> "Pcompiw"
-  | Paddiw -> "Paddiw"
-  | Paddxiw _ -> "Paddxiw"
-  | Prevsubiw -> "Psubiw"
-  | Prevsubxiw _ -> "Psubxiw"
-  | Pmuliw -> "Pmuliw"
-  | Pandiw -> "Pandiw"
-  | Pnandiw -> "Pnandiw"
-  | Poriw -> "Poriw"
-  | Pnoriw -> "Pnoriw"
-  | Pxoriw -> "Pxoriw"
-  | Pnxoriw -> "Pnxoriw"
-  | Pandniw -> "Pandniw"
-  | Porniw -> "Porniw"
-  | Psraiw -> "Psraiw"
-  | Psrxiw -> "Psrxiw"
-  | Psrliw -> "Psrliw"
-  | Pslliw -> "Pslliw"
-  | Proriw -> "Proriw"
-  | Psllil -> "Psllil"
-  | Psrlil -> "Psrlil"
-  | Psrail -> "Psrail"
-  | Psrxil -> "Psrxil"
+let arith_rri32_real = function
+  | Pcompiw it ->   Compw
+  | Paddiw ->       Addw
+  | Paddxiw _ ->    Addxw
+  | Prevsubiw ->    Sbfw
+  | Prevsubxiw _ -> Sbfxw
+  | Pmuliw ->       Mulw
+  | Pandiw ->       Andw
+  | Pnandiw ->      Nandw
+  | Poriw ->        Orw
+  | Pnoriw ->       Norw
+  | Pxoriw ->       Xorw
+  | Pnxoriw ->      Nxorw
+  | Pandniw ->      Andnw
+  | Porniw ->       Ornw
+  | Psraiw ->       Sraw
+  | Psrxiw ->       Srsw
+  | Psrliw ->       Srlw
+  | Pslliw ->       Sllw
+  | Proriw ->       Rorw
+  | Psllil ->       Slld
+  | Psrlil ->       Srld
+  | Psrail ->       Srad
+  | Psrxil ->       Srsd
 
-let arith_rri64_str = function
-  | Pcompil it -> "Pcompil"
-  | Paddil -> "Paddil"
-  | Prevsubil -> "Psubil"
-  | Paddxil _ -> "Paddxil"
-  | Prevsubxil _ -> "Psubxil"
-  | Pmulil -> "Pmulil"
-  | Pandil -> "Pandil"
-  | Pnandil -> "Pnandil"
-  | Poril -> "Poril"
-  | Pnoril -> "Pnoril"
-  | Pxoril -> "Pxoril"
-  | Pnxoril -> "Pnxoril"
-  | Pandnil -> "Pandnil"
-  | Pornil -> "Pornil"
+let arith_rri64_real = function
+  | Pcompil it ->   Compd
+  | Paddil ->       Addd
+  | Prevsubil ->    Sbfd
+  | Paddxil _ ->    Addxd
+  | Prevsubxil _ -> Sbfxd
+  | Pmulil ->       Muld
+  | Pandil ->       Andd
+  | Pnandil ->      Nandd
+  | Poril ->        Ord
+  | Pnoril ->       Nord
+  | Pxoril ->       Xord
+  | Pnxoril ->      Nxord
+  | Pandnil ->      Andnd
+  | Pornil ->       Ornd
 
 
-let arith_arr_str = function
-  | Pinsf (_, _) -> "Pinsf"
-  | Pinsfl (_, _) -> "Pinsfl"
+let arith_arr_real = function
+  | Pinsf (_, _) ->   Insf
+  | Pinsfl (_, _) ->  Insf
 
-let arith_arrr_str = function
-  | Pmaddw -> "Pmaddw"
-  | Pmaddl -> "Pmaddl"
-  | Pmsubw -> "Pmsubw"
-  | Pmsubl -> "Pmsubl"
-  | Pcmove _ -> "Pcmove"
-  | Pcmoveu _ -> "Pcmoveu"
+let arith_arrr_real = function
+  | Pmaddw ->     Maddw
+  | Pmaddl ->     Maddd
+  | Pmsubw ->     Msbfw
+  | Pmsubl ->     Msbfd
+  | Pcmove _ ->   Cmoved
+  | Pcmoveu _ ->  Cmoved
 
-let arith_arri32_str = function
-  | Pmaddiw -> "Pmaddiw"
-  | Pcmoveiw _ -> "Pcmoveiw"
-  | Pcmoveuiw _ -> "Pcmoveuiw"
+let arith_arri32_real = function
+  | Pmaddiw ->      Maddw
+  | Pcmoveiw _ ->   Cmoved
+  | Pcmoveuiw _ ->  Cmoved
 
-let arith_arri64_str = function
-  | Pmaddil -> "Pmaddil"
-  | Pcmoveil _ -> "Pcmoveil"
-  | Pcmoveuil _ -> "Pcmoveuil"
+let arith_arri64_real = function
+  | Pmaddil ->      Maddd
+  | Pcmoveil _ ->   Cmoved
+  | Pcmoveuil _ ->  Cmoved
 
-let arith_ri32_str = "Pmake"
+let arith_ri32_real = Make
 
-let arith_ri64_str = "Pmakel"
+let arith_ri64_real = Make
 
-let arith_rf32_str = "Pmakefs"
+let arith_rf32_real = Make
 
-let arith_rf64_str = "Pmakef"
+let arith_rf64_real = Make
 
-let store_str = function
-  | Psb -> "Psb"
-  | Psh -> "Psh"
-  | Psw -> "Psw"
-  | Psw_a -> "Psw_a"
-  | Psd -> "Psd"
-  | Psd_a -> "Psd_a"
-  | Pfss -> "Pfss"
-  | Pfsd -> "Pfsd"
+let store_real = function
+  | Psb ->    Sb
+  | Psh ->    Sh
+  | Psw ->    Sw
+  | Psw_a ->  Sw
+  | Psd ->    Sd
+  | Psd_a ->  Sd
+  | Pfss ->   Sw
+  | Pfsd ->   Sd
 
-let load_str = function
-  | Plb -> "Plb"
-  | Plbu -> "Plbu"
-  | Plh -> "Plh"
-  | Plhu -> "Plhu"
-  | Plw -> "Plw"
-  | Plw_a -> "Plw_a"
-  | Pld -> "Pld"
-  | Pld_a -> "Pld_a"
-  | Pfls -> "Pfls"
-  | Pfld -> "Pfld"
+let load_real = function
+  | Plb ->    Lbs
+  | Plbu ->   Lbz
+  | Plh ->    Lhs
+  | Plhu ->   Lhz
+  | Plw ->    Lws
+  | Plw_a ->  Lws
+  | Pld ->    Ld
+  | Pld_a ->  Ld
+  | Pfls ->   Lws
+  | Pfld ->   Ld
 
-let set_str = "Pset"
-let get_str = "Pget"
+let set_real = Set
+let get_real = Get
+let nop_real = Nop
+let loadsymbol_real = Make
+let loadqrro_real = Lq
+let loadorro_real = Lo
+let storeqrro_real = Sq
+let storeorro_real = So
 
-let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
+let ret_real = Ret
+let call_real = Call
+let icall_real = Icall
+let goto_real = Goto
+let igoto_real = Igoto
+let jl_real = Goto
+let cb_real = Cb
+let cbu_real = Cb
 
-let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
 
-let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_str i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
 
-let arith_arri32_rec i rd rs imm32 = { inst = arith_arri32_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_real i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
 
-let arith_arri64_rec i rd rs imm64 = { inst = arith_arri64_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+let arith_arri32_rec i rd rs imm32 = { inst = arith_arri32_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
 
-let arith_arr_rec i rd rs = { inst = arith_arr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
+let arith_arri64_rec i rd rs imm64 = { inst = arith_arri64_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
 
-let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_str i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
+let arith_arr_rec i rd rs = { inst = arith_arr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
 
-let arith_rr_rec i rd rs = { inst = arith_rr_str i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
+let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
+
+let arith_rr_rec i rd rs = { inst = arith_rr_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
 
 let arith_r_rec i rd = match i with
     (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
-  | Ploadsymbol (id, ofs) -> { inst = "Ploadsymbol"; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
+  | Ploadsymbol (id, ofs) -> { inst = loadsymbol_real; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
 
 let arith_rec i =
   match i with
@@ -228,45 +262,45 @@ let arith_rec i =
   | PArithARRI32 (i, rd, rs, imm32) -> arith_arri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithARRI64 (i, rd, rs, imm64) -> arith_arri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
-  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
-  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_str; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
-  | PArithRF32 (rd, f) -> { inst = arith_rf32_str; write_locs = [Reg (IR rd)]; read_locs = [];
+  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
+  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
+  | PArithRF32 (rd, f) -> { inst = arith_rf32_real; write_locs = [Reg (IR rd)]; read_locs = [];
                             imm = (Some (I32 (Floats.Float32.to_bits f))); is_control = false}
-  | PArithRF64 (rd, f) -> { inst = arith_rf64_str; write_locs = [Reg (IR rd)]; read_locs = [];
+  | PArithRF64 (rd, f) -> { inst = arith_rf64_real; write_locs = [Reg (IR rd)]; read_locs = [];
                             imm = (Some (I64 (Floats.Float.to_bits f))); is_control = false}
   | PArithRR (i, rd, rs) -> arith_rr_rec i (IR rd) (IR rs)
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
   | PLoadRRO (i, rs1, rs2, imm) ->
-     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+     { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadQRRO(rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
-     { inst = "Plq"; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
+     { inst = loadqrro_real; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadORRO(rs, ra, imm) ->
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
-     { inst = "Plo"; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
+     { inst = loadorro_real; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
   | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
-     { inst = load_str i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
+     { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
 
 let store_rec i = match i with
   | PStoreRRO (i, rs1, rs2, imm) ->
-     { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
+     { inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
                                       ; is_control = false}
   | PStoreQRRO (rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
-     { inst = "Psq"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
+     { inst = storeqrro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
                                       ; is_control = false}
   | PStoreORRO (rs, ra, imm) ->
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
-     { inst = "Pso"; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3); Reg (IR ra)]; imm = (Some (Off imm))
+     { inst = storeorro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3); Reg (IR ra)]; imm = (Some (Off imm))
                                       ; is_control = false}
-  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_str i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
+  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
                                       ; is_control = false}
 
-let get_rec (rd:gpreg) rs = { inst = get_str; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
+let get_rec (rd:gpreg) rs = { inst = get_real; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
 
-let set_rec rd (rs:gpreg) = { inst = set_str; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None; is_control = false }
+let set_rec rd (rs:gpreg) = { inst = set_real; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None; is_control = false }
 
 let basic_rec i =
   match i with
@@ -277,20 +311,20 @@ let basic_rec i =
   | Pfreeframe (_, _) -> raise OpaqueInstruction
   | Pget (rd, rs) -> get_rec rd rs
   | Pset (rd, rs) -> set_rec rd rs
-  | Pnop -> { inst = "nop"; write_locs = []; read_locs = []; imm = None ; is_control = false}
+  | Pnop -> { inst = nop_real; write_locs = []; read_locs = []; imm = None ; is_control = false}
 
 let expand_rec = function
   | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
-  | Pret -> { inst = "Pret"; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true}
-  | Pcall lbl -> { inst = "Pcall"; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true}
-  | Picall r -> { inst = "Picall"; write_locs = [Reg RA]; read_locs = [Reg (IR r)]; imm = None; is_control = true}
-  | Pgoto lbl -> { inst = "Pcall"; write_locs = []; read_locs = []; imm = None ; is_control = true}
-  | Pigoto r -> { inst = "Pigoto"; write_locs = []; read_locs = [Reg (IR r)]; imm = None ; is_control = true}
-  | Pj_l lbl -> { inst = "Pj_l"; write_locs = []; read_locs = []; imm = None ; is_control = true}
-  | Pcb (bt, rs, lbl) -> { inst = "Pcb"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
-  | Pcbu (bt, rs, lbl) -> { inst = "Pcbu"; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
+  | Pret -> { inst = ret_real; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true}
+  | Pcall lbl -> { inst = call_real; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true}
+  | Picall r -> { inst = icall_real; write_locs = [Reg RA]; read_locs = [Reg (IR r)]; imm = None; is_control = true}
+  | Pgoto lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true}
+  | Pigoto r -> { inst = igoto_real; write_locs = []; read_locs = [Reg (IR r)]; imm = None ; is_control = true}
+  | Pj_l lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true}
+  | Pcb (bt, rs, lbl) -> { inst = cb_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
+  | Pcbu (bt, rs, lbl) -> { inst = cbu_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
   | Pjumptable (r, _) -> raise OpaqueInstruction (* { inst = "Pjumptable"; write_locs = [Reg (IR GPR62); Reg (IR GPR63)]; read_locs = [Reg (IR r)]; imm = None ; is_control = true} *)
 
 let control_rec i =
@@ -473,138 +507,21 @@ let lsu_data_y : int array = let resmap = fun r -> match r with
 
 (** Real instructions *)
 
-type real_instruction = 
-  (* ALU *) 
-  | Addw | Andw | Compw | Mulw | Orw | Sbfw | Sraw | Srlw | Sllw | Srsw | Rorw | Xorw
-  | Addd | Andd | Compd | Muld | Ord | Sbfd | Srad | Srld | Slld | Srsd | Xord
-  | Nandw | Norw | Nxorw | Nandd | Nord | Nxord | Andnw | Ornw | Andnd | Ornd
-  | Maddw | Maddd | Msbfw | Msbfd | Cmoved
-  | Make | Nop | Extfz | Extfs | Insf
-  | Addxw | Addxd
-  (* LSU *)
-  | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo
-  | Sb | Sh | Sw | Sd | Sq | So
-  (* BCU *)
-  | Icall | Call | Cb | Igoto | Goto | Ret | Get | Set
-  (* FPU *)
-  | Fabsd | Fabsw | Fnegw | Fnegd
-  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
-  | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
-  | Fcompw | Fcompd
-
-let ab_inst_to_real = function
-  | "Paddw" | "Paddiw" | "Pcvtl2w" -> Addw
-  | "Paddxw" | "Paddxiw" -> Addxw
-  | "Paddxl" | "Paddxil" -> Addxd
-  | "Paddl" | "Paddil" | "Pmv" | "Pmvw2l" -> Addd
-  | "Pandw" | "Pandiw" -> Andw
-  | "Pnandw" | "Pnandiw" -> Nandw
-  | "Pandl" | "Pandil" -> Andd
-  | "Pnandl" | "Pnandil" -> Nandd
-  | "Pcompw" | "Pcompiw" -> Compw
-  | "Pcompl" | "Pcompil" -> Compd
-  | "Pfcompw" -> Fcompw
-  | "Pfcompl" -> Fcompd
-  | "Pmulw" | "Pmuliw" -> Mulw
-  | "Pmull" | "Pmulil" -> Muld
-  | "Porw" | "Poriw" -> Orw
-  | "Pnorw" | "Pnoriw" -> Norw
-  | "Porl" | "Poril" -> Ord
-  | "Pnorl" | "Pnoril" -> Nord
-  | "Psubw" | "Pnegw" -> Sbfw
-  | "Psubl" | "Pnegl" -> Sbfd
-  | "Psraw" | "Psraiw" -> Sraw
-  | "Psral" | "Psrail" -> Srad
-  | "Psrxw" | "Psrxiw" -> Srsw
-  | "Psrxl" | "Psrxil" -> Srsd
-  | "Psrlw" | "Psrliw" -> Srlw
-  | "Psrll" | "Psrlil" -> Srld
-  | "Psllw" | "Pslliw" -> Sllw
-  | "Proriw" -> Rorw
-  | "Pmaddw" | "Pmaddiw" -> Maddw
-  | "Pmsubw" | "Pmsubiw" -> Msbfw
-  | "Pslll" | "Psllil" -> Slld
-  | "Pxorw" | "Pxoriw" -> Xorw
-  | "Pnxorw" | "Pnxoriw" -> Nxorw
-  | "Pandnw" | "Pandniw" -> Andnw
-  | "Pornw" | "Porniw" -> Ornw
-  | "Pxorl" | "Pxoril" -> Xord
-  | "Pnxorl" | "Pnxoril" -> Nxord
-  | "Pandnl" | "Pandnil" -> Andnd
-  | "Pornl" | "Pornil" -> Ornd
-  | "Pmaddl" | "Pmaddil" -> Maddd
-  | "Pmsubl" | "Pmsubil" -> Msbfd
-  | "Pmake" | "Pmakel" | "Pmakefs" | "Pmakef" | "Ploadsymbol" -> Make
-  | "Pnop" | "Pcvtw2l" -> Nop
-  | "Pextfz" | "Pextfzl" | "Pzxwd" -> Extfz
-  | "Pextfs" | "Pextfsl" | "Psxwd" -> Extfs
-  | "Pinsf" | "Pinsfl" -> Insf
-  | "Pfnarrowdw" -> Fnarrowdw
-  | "Pfwidenlwd" -> Fwidenlwd
-  | "Pfloatwrnsz" -> Floatwz
-  | "Pfloatuwrnsz" -> Floatuwz
-  | "Pfloatdrnsz" -> Floatdz
-  | "Pfloatudrnsz" -> Floatudz
-  | "Pfixedwrzz" -> Fixedwz
-  | "Pfixeduwrzz" -> Fixeduwz
-  | "Pfixeddrzz" -> Fixeddz
-  | "Pfixedudrzz" -> Fixedudz
-  | "Pfixeddrzz_i32" -> Fixeddz
-  | "Pfixedudrzz_i32" -> Fixedudz
-  | "Pcmove" | "Pcmoveu"   | "Pcmoveiw" | "Pcmoveuiw" | "Pcmoveil" | "Pcmoveuil" -> Cmoved
-  
-  | "Plb" -> Lbs
-  | "Plbu" -> Lbz
-  | "Plh" -> Lhs
-  | "Plhu" -> Lhz 
-  | "Plw" | "Plw_a" | "Pfls" -> Lws 
-  | "Pld" | "Pfld" | "Pld_a" -> Ld
-  | "Plq" -> Lq
-  | "Plo" -> Lo
-
-  | "Psb" -> Sb
-  | "Psh" -> Sh 
-  | "Psw" | "Psw_a" | "Pfss" -> Sw
-  | "Psd" | "Psd_a" | "Pfsd" -> Sd
-  | "Psq" -> Sq
-  | "Pso" -> So
-
-  | "Pcb" | "Pcbu" -> Cb
-  | "Pcall" | "Pdiv" | "Pdivu" -> Call
-  | "Picall" -> Icall
-  | "Pgoto" | "Pj_l" -> Goto
-  | "Pigoto" -> Igoto
-  | "Pget" -> Get
-  | "Pret" -> Ret
-  | "Pset" -> Set
-
-  | "Pfabsd" -> Fabsd
-  | "Pfabsw" -> Fabsw
-  | "Pfnegw" -> Fnegw
-  | "Pfnegd" -> Fnegd
-  | "Pfaddd" -> Faddd
-  | "Pfaddw" -> Faddw
-  | "Pfsbfd" -> Fsbfd
-  | "Pfsbfw" -> Fsbfw
-  | "Pfmuld" -> Fmuld
-  | "Pfmulw" -> Fmulw
-
-  | "nop" -> Nop
-           
-  | s -> failwith @@ sprintf "ab_inst_to_real: unrecognized instruction: %s" s
-              
 exception InvalidEncoding
 
 let rec_to_usage r =
   let encoding = match r.imm with None -> None | Some (I32 i) | Some (I64 i) -> Some (encode_imm @@ Z.to_int64 i)
                                   | Some (Off ptr) -> Some (encode_imm @@ camlint64_of_ptrofs ptr)
 
-  and real_inst = ab_inst_to_real r.inst
-  in match real_inst with
+  in match r.inst with
   | Addw | Andw | Nandw | Orw | Norw | Sbfw | Xorw
   | Nxorw | Andnw | Ornw -> 
       (match encoding with None | Some U6 | Some S10 -> alu_tiny 
                           | Some U27L5 | Some U27L10 -> alu_tiny_x
+                          | _ -> raise InvalidEncoding)
+  | Sbfxw | Sbfxd ->
+      (match encoding with None -> alu_lite
+                          | Some U6 | Some S10 | Some U27L5 -> alu_lite_x
                           | _ -> raise InvalidEncoding)
   | Addd | Andd | Nandd | Ord | Nord | Sbfd | Xord
   | Nxord | Andnd | Ornd ->
@@ -667,11 +584,11 @@ let rec_to_usage r =
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
-  | Addw | Andw | Compw | Orw | Sbfw | Sraw | Srsw | Srlw | Sllw | Xorw
+  | Addw | Andw | Compw | Orw | Sbfw | Sbfxw | Sraw | Srsw | Srlw | Sllw | Xorw
     (* TODO check rorw *)
   | Rorw | Nandw | Norw | Nxorw | Ornw | Andnw
   | Nandd | Nord | Nxord | Ornd | Andnd
-  | Addd | Andd | Compd | Ord | Sbfd | Srad | Srsd | Srld | Slld | Xord | Make
+  | Addd | Andd | Compd | Ord | Sbfd | Sbfxd | Srad | Srsd | Srld | Slld | Xord | Make
   | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved | Addxw | Addxd
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
@@ -686,7 +603,7 @@ let real_inst_to_latency = function
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
-  and latency = real_inst_to_latency @@ ab_inst_to_real r.inst
+  and latency = real_inst_to_latency r.inst
   in { write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency; is_control=r.is_control }
 
 let instruction_infos bb = List.map rec_to_info (instruction_recs bb)
