@@ -2,20 +2,20 @@
 
 CCOMP?=ccomp
 
-#all: compile_times.pdf measure_times.k1c.pdf
+#all: verifier_times.txt oracle_times.txt measures.csv
 all: measures.csv
 
 verifier_times.txt: Asmblockdeps.patch
-	(cd ../../ && make -j20)
+	(cd ../../ && make -j20 && make install)
 	patch $(realpath ../../extraction/Asmblockdeps.ml) < $<
-	(cd ../../ && make -j20); patch -R $(realpath ../../extraction/Asmblockdeps.ml) < $<
+	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../extraction/Asmblockdeps.ml) < $<
 	bash clean_benches.sh
 	bash build_benches.sh $@
 
 oracle_times.txt: PostpassSchedulingOracle.patch
-	(cd ../../ && make -j20)
+	(cd ../../ && make -j20 && make install)
 	patch $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
-	(cd ../../ && make -j20); patch -R $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
+	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
 	bash clean_benches.sh
 	bash build_benches.sh $@
 

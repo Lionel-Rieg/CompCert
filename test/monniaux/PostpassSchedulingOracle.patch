@@ -2,7 +2,7 @@ diff --git a/mppa_k1c/PostpassSchedulingOracle.ml b/mppa_k1c/PostpassSchedulingO
 index 2fc561e..d3748e8 100644
 --- a/mppa_k1c/PostpassSchedulingOracle.ml
 +++ b/mppa_k1c/PostpassSchedulingOracle.ml
-@@ -829,7 +829,7 @@ let print_bb oc bb =
+@@ -808,7 +808,7 @@ let print_bb oc bb =
    let asm_instructions = Asm.unfold_bblock bb
    in List.iter (print_inst oc) asm_instructions
  
@@ -11,7 +11,7 @@ index 2fc561e..d3748e8 100644
    let problem = build_problem bb
    in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
                        validated_scheduler cascaded_scheduler
-@@ -850,6 +850,19 @@ let do_schedule bb =
+@@ -831,6 +831,19 @@ let do_schedule bb =
        end;
        bundles)
  
