@@ -540,7 +540,7 @@ module Target (*: TARGET*) =
       | Psubw (rd, rs1, rs2) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
       | Prevsubxw (s14, rd, rs1, rs2) ->
-         fprintf oc "	subx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
+         fprintf oc "	sbfx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
            ireg rd ireg rs1 ireg rs2
       | Pmulw (rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
