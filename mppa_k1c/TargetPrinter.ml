@@ -140,6 +140,8 @@ module Target (*: TARGET*) =
       | RA   -> output_string oc "$ra"
       | _ -> assert false
 
+    let preg_asm oc ty = preg oc
+              
     let preg_annot = let open Asmvliw in function
       | IR r -> int_reg_name r
       | RA   -> "$ra"
@@ -324,7 +326,7 @@ module Target (*: TARGET*) =
                                (P.to_int kind) (extern_atom txt) args
           | EF_inline_asm(txt, sg, clob) ->
               fprintf oc "%s begin inline assembly\n\t" comment;
-              print_inline_asm preg oc (camlstring_of_coqstring txt) sg args res;
+              print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
           | _ ->
               assert false

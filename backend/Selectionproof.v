@@ -1189,12 +1189,12 @@ Proof.
 (* store *)
 - unfold store. destruct (addressing m (sel_expr e)); simpl; auto.
 (* call *)
-  destruct (classify_call (prog_defmap cunit) e); simpl; auto.
+- destruct (classify_call (prog_defmap cunit) e); simpl; auto.
   rewrite sel_builtin_nolabel; auto.
 (* tailcall *)
-  destruct (classify_call (prog_defmap cunit) e); simpl; auto.
+- destruct (classify_call (prog_defmap cunit) e); simpl; auto.
 (* builtin *)
-  rewrite sel_builtin_nolabel; auto.
+- rewrite sel_builtin_nolabel; auto.
 (* seq *)
 - exploit (IHs1 (Cminor.Kseq s2 k)). constructor; eauto. eauto.
   destruct (Cminor.find_label lbl s1 (Cminor.Kseq s2 k)) as [[sx kx] | ];

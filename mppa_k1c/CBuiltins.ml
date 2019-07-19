@@ -18,11 +18,11 @@
 open C
 
 let builtins = {
-  Builtins.typedefs = [
+  builtin_typedefs = [
     "__builtin_va_list", TPtr(TVoid [], [])
   ];
   (* The builtin list is inspired from the GCC file builtin_k1.h *)
-  Builtins.functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
+  builtin_functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
       (* BCU Instructions *)
       "__builtin_k1_await", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_barrier", (TVoid [], [], false); (* DONE *)

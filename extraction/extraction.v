@@ -34,6 +34,7 @@ Require Clight.
 Require Compiler.
 Require Parser.
 Require Initializers.
+Require Asmaux.
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
