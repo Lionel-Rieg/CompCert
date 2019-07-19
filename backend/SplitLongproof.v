@@ -23,8 +23,6 @@ Require Import SelectOp SelectOpproof SplitLong.
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
 
-<<<<<<< HEAD
-=======
 (** * Properties of the helper functions *)
 
 Definition helper_declared {F V: Type} (p: AST.program (AST.fundef F) V) (id: ident) (name: string) (sg: signature) : Prop :=
@@ -47,7 +45,6 @@ Definition helper_functions_declared {F V: Type} (p: AST.program (AST.fundef F) 
   /\ helper_declared p i64_umulh "__compcert_i64_umulh" sig_ll_l
   /\ helper_declared p i64_smulh "__compcert_i64_smulh" sig_ll_l.
 
->>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 (** * Correctness of the instruction selection functions for 64-bit operators *)
 
 Section CMCONSTR.
@@ -60,10 +57,7 @@ Variable sp: val.
 Variable e: env.
 Variable m: mem.
 
-<<<<<<< HEAD
 Ltac UseHelper := decompose [Logic.and] arith_helpers_correct; eauto.
-=======
->>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 Ltac DeclHelper := red in HELPERS; decompose [Logic.and] HELPERS; eauto.
 
 Lemma eval_helper:

@@ -54,6 +54,7 @@ Require Import OpHelpers.
 Require Import ExtValues.
 Require Import DecBoolOps.
 Require Import Chunks.
+Require Import Builtins.
 Require Compopts.
 
 Local Open Scope cminorsel_scope.
@@ -673,6 +674,8 @@ Definition divfs_base (e1: expr) (e2: expr) :=
   Eexternal f32_div sig_ss_s (e1 ::: e2 ::: Enil).
 End SELECT.
 
+Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
+  None.
 (* Local Variables: *)
 (* mode: coq *)
 (* End: *)

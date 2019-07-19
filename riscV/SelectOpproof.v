@@ -933,8 +933,6 @@ Proof.
 - constructor; auto.
 Qed.
 
-<<<<<<< HEAD
-
 (* floating-point division without HELPERS *)
 Theorem eval_divf_base:
   forall le a b x y,
@@ -955,7 +953,7 @@ Proof.
   intros; unfold divfs_base.
   TrivialExists.
 Qed.
-=======
+
 (** Platform-specific known builtins *)
 
 Theorem eval_platform_builtin:
@@ -968,5 +966,4 @@ Proof.
   intros. discriminate.
 Qed.
 
->>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 End CMCONSTR.

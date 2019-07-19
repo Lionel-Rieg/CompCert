@@ -34,11 +34,6 @@ Require Clight.
 Require Compiler.
 Require Parser.
 Require Initializers.
-<<<<<<< HEAD
-Require Int31.
-Require Asmaux.
-=======
->>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.

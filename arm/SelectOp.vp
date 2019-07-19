@@ -516,16 +516,14 @@ Nondetfunction builtin_arg (e: expr) :=
   | _ => BA e
   end.
 
-<<<<<<< HEAD
 (* floats *)
 Definition divf_base (e1: expr) (e2: expr) :=
   Eop Odivf (e1 ::: e2 ::: Enil).
 
 Definition divfs_base (e1: expr) (e2: expr) :=
   Eop Odivfs (e1 ::: e2 ::: Enil).
-=======
+
 (** Platform-specific known builtins *)
 
 Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
   None.
->>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
