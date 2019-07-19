@@ -25,9 +25,10 @@ BACKENDLIB?=Asmgenproof0.v Asmgenproof1.v
 
 DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
   flocq/Core flocq/Prop flocq/Calc flocq/IEEE754 \
-  exportclight cparser cparser/MenhirLib
+  exportclight MenhirLib cparser
 
-RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
+RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight \
+  MenhirLib cparser
 
 COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) $(subst /,.,compcert.$(d)))
 
@@ -64,7 +65,7 @@ VLIB=Axioms.v Coqlib.v Intv.v Maps.v Heaps.v Lattice.v Ordered.v \
 COMMON=Errors.v AST.v Linking.v \
   Events.v Globalenvs.v Memdata.v Memtype.v Memory.v \
   Values.v Smallstep.v Behaviors.v Switch.v Determinism.v Unityping.v \
-  Separation.v
+  Separation.v Builtins0.v Builtins1.v Builtins.v
 
 # Back-end modules (in backend/, $(ARCH)/)
 
@@ -106,15 +107,15 @@ CFRONTEND=Ctypes.v Cop.v Csyntax.v Csem.v Ctyping.v Cstrategy.v Cexec.v \
   Cshmgen.v Cshmgenproof.v \
   Csharpminor.v Cminorgen.v Cminorgenproof.v
 
-# LR(1) parser validator
-
-PARSERVALIDATOR=Alphabet.v Interpreter_complete.v Interpreter.v \
-  Validator_complete.v Automaton.v Interpreter_correct.v Main.v \
-  Validator_safe.v Grammar.v Interpreter_safe.v Tuples.v
-
 # Parser
 
 PARSER=Cabs.v Parser.v
+
+# MenhirLib
+
+MENHIRLIB=Alphabet.v Automaton.v Grammar.v Interpreter_complete.v \
+  Interpreter_correct.v Interpreter.v Main.v Validator_complete.v \
+  Validator_safe.v Validator_classes.v
 
 # Putting everything together (in driver/)
 
@@ -123,7 +124,7 @@ DRIVER=Compopts.v Compiler.v Complements.v
 # All source files
 
 FILES=$(VLIB) $(COMMON) $(BACKEND) $(CFRONTEND) $(DRIVER) $(FLOCQ) \
-  $(PARSERVALIDATOR) $(PARSER)
+  $(MENHIRLIB) $(PARSER)
 
 # Generated source files
 
@@ -144,7 +145,6 @@ endif
 ifeq ($(CLIGHTGEN),true)
 	$(MAKE) clightgen
 endif
-
 
 proof: $(FILES:.v=.vo)
 
@@ -229,7 +229,7 @@ driver/Version.ml: VERSION
 
 cparser/Parser.v: cparser/Parser.vy
 	@rm -f $@
-	$(MENHIR) $(MENHIR_FLAGS) --coq cparser/Parser.vy
+	$(MENHIR) --coq --coq-lib-path compcert.MenhirLib --coq-no-version-check cparser/Parser.vy
 	@chmod a-w $@
 
 depend: $(GENERATED) depend1

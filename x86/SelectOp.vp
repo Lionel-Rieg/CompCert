@@ -38,9 +38,13 @@
 
 Require Import Coqlib.
 Require Import Compopts.
-Require Import AST Integers Floats.
+Require Import AST Integers Floats Builtins.
 Require Import Op CminorSel.
+<<<<<<< HEAD
 Require Import OpHelpers.
+=======
+Require Archi.
+>>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 
 Local Open Scope cminorsel_scope.
 
@@ -499,21 +503,27 @@ Nondetfunction floatofint (e: expr) :=
   end.
 
 Definition intuoffloat (e: expr) :=
-  Elet e
-    (Elet (Eop (Ofloatconst (Float.of_intu Float.ox8000_0000)) Enil)
-      (Econdition (CEcond (Ccompf Clt) (Eletvar 1 ::: Eletvar 0 ::: Enil))
-        (intoffloat (Eletvar 1))
-        (addimm Float.ox8000_0000 (intoffloat (subf (Eletvar 1) (Eletvar 0))))))%nat.
+  if Archi.splitlong then
+    Elet e
+      (Elet (Eop (Ofloatconst (Float.of_intu Float.ox8000_0000)) Enil)
+        (Econdition (CEcond (Ccompf Clt) (Eletvar 1 ::: Eletvar 0 ::: Enil))
+          (intoffloat (Eletvar 1))
+          (addimm Float.ox8000_0000 (intoffloat (subf (Eletvar 1) (Eletvar 0))))))%nat
+  else
+    Eop Olowlong (Eop Olongoffloat (e ::: Enil) ::: Enil).
 
 Nondetfunction floatofintu (e: expr) :=
   match e with
   | Eop (Ointconst n) Enil => Eop (Ofloatconst (Float.of_intu n)) Enil
   | _ =>
-    let f := Eop (Ofloatconst (Float.of_intu Float.ox8000_0000)) Enil in
-    Elet e
-      (Econdition (CEcond (Ccompuimm Clt Float.ox8000_0000) (Eletvar O ::: Enil))
-        (floatofint (Eletvar O))
-        (addf (floatofint (addimm (Int.neg Float.ox8000_0000) (Eletvar O))) f))
+    if Archi.splitlong then
+      let f := Eop (Ofloatconst (Float.of_intu Float.ox8000_0000)) Enil in
+      Elet e
+        (Econdition (CEcond (Ccompuimm Clt Float.ox8000_0000) (Eletvar O ::: Enil))
+          (floatofint (Eletvar O))
+          (addf (floatofint (addimm (Int.neg Float.ox8000_0000) (Eletvar O))) f))
+    else
+      Eop Ofloatoflong (Eop Ocast32unsigned (e ::: Enil) ::: Enil)
   end.
 
 Definition intofsingle (e: expr) := Eop Ointofsingle (e ::: Enil).
@@ -570,9 +580,16 @@ Nondetfunction builtin_arg (e: expr) :=
   | _ => BA e
   end.
 
+<<<<<<< HEAD
 (* floats *)
 Definition divf_base (e1: expr) (e2: expr) :=
   Eop Odivf (e1 ::: e2 ::: Enil).
 
 Definition divfs_base (e1: expr) (e2: expr) :=
   Eop Odivfs (e1 ::: e2 ::: Enil).
+=======
+(** Platform-specific known builtins *)
+
+Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
+  None.
+>>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf

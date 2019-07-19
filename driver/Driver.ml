@@ -188,6 +188,8 @@ Processing options:
   -O1            Perform all optimization passes except scheduling
   -O2 -O3        Synonymous for -O
   -Os            Optimize for code size in preference to code speed
+  -Obranchless   Optimize to generate fewer conditional branches; try to produce
+                 branch-free instruction sequences as much as possible
   -ftailcalls    Optimize function calls in tail position [on]
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
@@ -201,8 +203,6 @@ Processing options:
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
   -fif-conversion Perform if-conversion (generation of conditional moves) [on]
-  -ffavor-branchless Favor the generation of branch-free instruction sequences,
-                     even when possibly more costly than the default   [off]
 Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -ffpu          Use FP registers for some integer operations [on]
   -fsmall-data <n>  Set maximal size <n> for allocation in small data area
@@ -258,7 +258,11 @@ let dump_mnemonics destfile =
 
 let optimization_options = [
   option_ftailcalls; option_fifconversion; option_fconstprop; option_fcse;
+<<<<<<< HEAD
   option_fpostpass; option_fredundancy; option_finline_functions_called_once;
+=======
+  option_fredundancy; option_finline; option_finline_functions_called_once;
+>>>>>>> 91381b65f5aa76e5195caae9ef331b3f5f95afaf
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -312,10 +316,10 @@ let cmdline_actions =
   _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
+  Exact "-Obranchless", Set option_Obranchless;
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
-  Exact "-ffavor-branchless", Set option_ffavor_branchless;
   Exact "-falign-functions", Integer(fun n -> check_align n; option_falignfunctions := Some n);
   Exact "-falign-branch-targets", Integer(fun n -> check_align n; option_falignbranchtargets := n);
   Exact "-falign-cond-branches", Integer(fun n -> check_align n; option_faligncondbranchs := n);] @
