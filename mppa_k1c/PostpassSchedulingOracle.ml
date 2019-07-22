@@ -38,6 +38,8 @@ type ab_inst_rec = {
   inst: real_instruction;
   write_locs : location list;
   read_locs : location list;
+  read_at_id : location list; (* Must be contained in read_locs *)
+  read_at_e1 : location list; (* idem *)
   imm : immediate option;
   is_control : bool;
 }
@@ -232,25 +234,40 @@ let jl_real = Goto
 let cb_real = Cb
 let cbu_real = Cb
 
-let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false }
+let arith_rri32_rec i rd rs imm32 = { inst = arith_rri32_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm32; is_control = false;
+                                      read_at_id = []; read_at_e1 = [] }
 
-let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false }
+let arith_rri64_rec i rd rs imm64 = { inst = arith_rri64_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = imm64; is_control = false;
+                                      read_at_id = []; read_at_e1 = [] }
 
-let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_real i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false}
+let arith_rrr_rec i rd rs1 rs2 = { inst = arith_rrr_real i; write_locs = [Reg rd]; read_locs = [Reg rs1; Reg rs2]; imm = None; is_control = false;
+                                      read_at_id = []; read_at_e1 = [] }
 
-let arith_arri32_rec i rd rs imm32 = { inst = arith_arri32_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false }
+let arith_arri32_rec i rd rs imm32 = 
+  let rae1 = match i with Pmaddiw -> [Reg rd] | _ -> []
+  in {  inst = arith_arri32_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm32; is_control = false;
+        read_at_id = [] ; read_at_e1 = rae1 }
 
-let arith_arri64_rec i rd rs imm64 = { inst = arith_arri64_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false }
+let arith_arri64_rec i rd rs imm64 = 
+  let rae1 = match i with Pmaddil -> [Reg rd] | _ -> []
+  in {  inst = arith_arri64_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = imm64; is_control = false;
+        read_at_id = []; read_at_e1 = rae1 }
 
-let arith_arr_rec i rd rs = { inst = arith_arr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false}
+let arith_arr_rec i rd rs = { inst = arith_arr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs]; imm = None; is_control = false;
+                              read_at_id = []; read_at_e1 = [] }
 
-let arith_arrr_rec i rd rs1 rs2 = { inst = arith_arrr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false}
+let arith_arrr_rec i rd rs1 rs2 = 
+  let rae1 = match i with Pmaddl | Pmaddw | Pmsubl | Pmsubw -> [Reg rd] | _ -> []
+  in {  inst = arith_arrr_real i; write_locs = [Reg rd]; read_locs = [Reg rd; Reg rs1; Reg rs2]; imm = None; is_control = false;
+        read_at_id = []; read_at_e1 = rae1 }
 
-let arith_rr_rec i rd rs = { inst = arith_rr_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false}
+let arith_rr_rec i rd rs = {  inst = arith_rr_real i; write_locs = [Reg rd]; read_locs = [Reg rs]; imm = None; is_control = false;
+                              read_at_id = []; read_at_e1 = [] }
 
 let arith_r_rec i rd = match i with
     (* For Ploadsymbol, writing the highest integer since we do not know how many bits does a symbol have *)
-  | Ploadsymbol (id, ofs) -> { inst = loadsymbol_real; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed); is_control = false}
+  | Ploadsymbol (id, ofs) -> {  inst = loadsymbol_real; write_locs = [Reg rd]; read_locs = []; imm = Some (I64 Integers.Int64.max_signed);
+                                is_control = false; read_at_id = []; read_at_e1 = [] }
 
 let arith_rec i =
   match i with
@@ -262,45 +279,54 @@ let arith_rec i =
   | PArithARRI32 (i, rd, rs, imm32) -> arith_arri32_rec i (IR rd) (IR rs) (Some (I32 imm32))
   | PArithARRI64 (i, rd, rs, imm64) -> arith_arri64_rec i (IR rd) (IR rs) (Some (I64 imm64))
   | PArithARRR (i, rd, rs1, rs2) -> arith_arrr_rec i (IR rd) (IR rs1) (IR rs2)
-  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false}
-  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false}
+  | PArithRI32 (rd, imm32) -> { inst = arith_ri32_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I32 imm32)) ; is_control = false;
+                                read_at_id = []; read_at_e1 = [] }
+  | PArithRI64 (rd, imm64) -> { inst = arith_ri64_real; write_locs = [Reg (IR rd)]; read_locs = []; imm = (Some (I64 imm64)) ; is_control = false;
+                                read_at_id = []; read_at_e1 = [] }
   | PArithRF32 (rd, f) -> { inst = arith_rf32_real; write_locs = [Reg (IR rd)]; read_locs = [];
-                            imm = (Some (I32 (Floats.Float32.to_bits f))); is_control = false}
+                            imm = (Some (I32 (Floats.Float32.to_bits f))); is_control = false; read_at_id = []; read_at_e1 = []}
   | PArithRF64 (rd, f) -> { inst = arith_rf64_real; write_locs = [Reg (IR rd)]; read_locs = [];
-                            imm = (Some (I64 (Floats.Float.to_bits f))); is_control = false}
+                            imm = (Some (I64 (Floats.Float.to_bits f))); is_control = false; read_at_id = []; read_at_e1 = []}
   | PArithRR (i, rd, rs) -> arith_rr_rec i (IR rd) (IR rs)
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
   | PLoadRRO (i, rs1, rs2, imm) ->
-     { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false}
+      { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false;
+        read_at_id = []; read_at_e1 = [] }
   | PLoadQRRO(rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
-     { inst = loadqrro_real; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
+     { inst = loadqrro_real; write_locs = [Reg (IR rs0); Reg (IR rs1)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false;
+       read_at_id = []; read_at_e1 = [] }
   | PLoadORRO(rs, ra, imm) ->
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
-     { inst = loadorro_real; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)]; imm = (Some (Off imm)) ; is_control = false}
+     {  inst = loadorro_real; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)];
+        imm = (Some (Off imm)) ; is_control = false; read_at_id = []; read_at_e1 = []}
   | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
-     { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false}
+      { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false;
+        read_at_id = []; read_at_e1 = [] }
 
 let store_rec i = match i with
-  | PStoreRRO (i, rs1, rs2, imm) ->
-     { inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2)]; imm = (Some (Off imm))
-                                      ; is_control = false}
+  | PStoreRRO (i, rs, ra, imm) ->
+      {  inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs); Reg (IR ra)]; imm = (Some (Off imm));
+        read_at_id = []; read_at_e1 = [Reg (IR rs)] ; is_control = false}
   | PStoreQRRO (rs, ra, imm) ->
      let (rs0, rs1) = gpreg_q_expand rs in
-     { inst = storeqrro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm))
-                                      ; is_control = false}
+     {  inst = storeqrro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR ra)]; imm = (Some (Off imm));
+        read_at_id = []; read_at_e1 = [Reg (IR rs0); Reg (IR rs1)] ; is_control = false}
   | PStoreORRO (rs, ra, imm) ->
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
-     { inst = storeorro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3); Reg (IR ra)]; imm = (Some (Off imm))
-                                      ; is_control = false}
-  | PStoreRRR (i, rs1, rs2, rs3)  | PStoreRRRXS (i, rs1, rs2, rs3) -> { inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; imm = None
-                                      ; is_control = false}
+     {  inst = storeorro_real; write_locs = [Mem]; read_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3); Reg (IR ra)];
+        imm = (Some (Off imm)); read_at_id = []; read_at_e1 = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; is_control = false}
+  | PStoreRRR (i, rs, ra1, ra2)  | PStoreRRRXS (i, rs, ra1, ra2) ->
+     {  inst = store_real i; write_locs = [Mem]; read_locs = [Reg (IR rs); Reg (IR ra1); Reg (IR ra2)]; imm = None;
+        read_at_id = []; read_at_e1 = [Reg (IR rs)]; is_control = false}
 
-let get_rec (rd:gpreg) rs = { inst = get_real; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false }
+let get_rec (rd:gpreg) rs = { inst = get_real; write_locs = [Reg (IR rd)]; read_locs = [Reg rs]; imm = None; is_control = false;
+                              read_at_id = []; read_at_e1 = [] }
 
-let set_rec rd (rs:gpreg) = { inst = set_real; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None; is_control = false }
+let set_rec rd (rs:gpreg) = { inst = set_real; write_locs = [Reg rd]; read_locs = [Reg (IR rs)]; imm = None; is_control = false;
+                              read_at_id = [Reg (IR rs)]; read_at_e1 = [] }
 
 let basic_rec i =
   match i with
@@ -311,20 +337,24 @@ let basic_rec i =
   | Pfreeframe (_, _) -> raise OpaqueInstruction
   | Pget (rd, rs) -> get_rec rd rs
   | Pset (rd, rs) -> set_rec rd rs
-  | Pnop -> { inst = nop_real; write_locs = []; read_locs = []; imm = None ; is_control = false}
+  | Pnop -> { inst = nop_real; write_locs = []; read_locs = []; imm = None ; is_control = false; read_at_id = []; read_at_e1 = []}
 
 let expand_rec = function
   | Pbuiltin _ -> raise OpaqueInstruction
 
 let ctl_flow_rec = function
-  | Pret -> { inst = ret_real; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true}
-  | Pcall lbl -> { inst = call_real; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true}
-  | Picall r -> { inst = icall_real; write_locs = [Reg RA]; read_locs = [Reg (IR r)]; imm = None; is_control = true}
-  | Pgoto lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true}
-  | Pigoto r -> { inst = igoto_real; write_locs = []; read_locs = [Reg (IR r)]; imm = None ; is_control = true}
-  | Pj_l lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true}
-  | Pcb (bt, rs, lbl) -> { inst = cb_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
-  | Pcbu (bt, rs, lbl) -> { inst = cbu_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true}
+  | Pret -> { inst = ret_real; write_locs = []; read_locs = [Reg RA]; imm = None ; is_control = true; read_at_id = [Reg RA]; read_at_e1 = []}
+  | Pcall lbl -> { inst = call_real; write_locs = [Reg RA]; read_locs = []; imm = None ; is_control = true; read_at_id = []; read_at_e1 = []}
+  | Picall r -> { inst = icall_real; write_locs = [Reg RA]; read_locs = [Reg (IR r)]; imm = None; is_control = true;
+                  read_at_id = [Reg (IR r)]; read_at_e1 = [] }
+  | Pgoto lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true; read_at_id = []; read_at_e1 = []}
+  | Pigoto r -> { inst = igoto_real; write_locs = []; read_locs = [Reg (IR r)]; imm = None ; is_control = true;
+                  read_at_id = [Reg (IR r)]; read_at_e1 = [] }
+  | Pj_l lbl -> { inst = goto_real; write_locs = []; read_locs = []; imm = None ; is_control = true; read_at_id = []; read_at_e1 = []}
+  | Pcb (bt, rs, lbl) -> { inst = cb_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true;
+                           read_at_id = [Reg (IR rs)]; read_at_e1 = [] }
+  | Pcbu (bt, rs, lbl) -> { inst = cbu_real; write_locs = []; read_locs = [Reg (IR rs)]; imm = None ; is_control = true;
+                           read_at_id = [Reg (IR rs)]; read_at_e1 = [] }
   | Pjumptable (r, _) -> raise OpaqueInstruction (* { inst = "Pjumptable"; write_locs = [Reg (IR GPR62); Reg (IR GPR63)]; read_locs = [Reg (IR r)]; imm = None ; is_control = true} *)
 
 let control_rec i =
@@ -350,6 +380,8 @@ let instruction_recs bb = (basic_recs bb.body) @ (exit_rec bb.exit)
 type inst_info = {
   write_locs : location list;
   read_locs : location list;
+  reads_at_id : bool;
+  reads_at_e1 : bool;
   is_control : bool;
   usage: int array; (* resources consumed by the instruction *)
   latency: int;
@@ -582,6 +614,16 @@ let rec_to_usage r =
   | Fnarrowdw -> alu_full
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> mau
 
+let inst_info_to_dlatency i = 
+  begin
+  assert (not (i.reads_at_id && i.reads_at_e1));
+  match i.reads_at_id with
+  | true -> +1
+  | false -> (match i.reads_at_e1 with
+              | true -> -1
+              | false -> 0)
+  end
+
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
   | Addw | Andw | Compw | Orw | Sbfw | Sbfxw | Sraw | Srsw | Srlw | Sllw | Xorw
@@ -601,10 +643,17 @@ let real_inst_to_latency = function
   | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd | Fnarrowdw -> 1
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> 4
 
+let rec empty_inter la = function
+  | [] -> true
+  | b::lb -> if (List.mem b la) then false else empty_inter la lb
+
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
   and latency = real_inst_to_latency r.inst
-  in { write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency; is_control=r.is_control }
+  and reads_at_id = not (empty_inter r.read_locs r.read_at_id)
+  and reads_at_e1 = not (empty_inter r.read_locs r.read_at_e1)
+  in {  write_locs = r.write_locs; read_locs = r.read_locs; usage=usage; latency=latency; is_control=r.is_control;
+        reads_at_id = reads_at_id; reads_at_e1 = reads_at_e1 }
 
 let instruction_infos bb = List.map rec_to_info (instruction_recs bb)
 
@@ -651,6 +700,8 @@ let rec get_accesses hashloc (ll: location list) = match ll with
   | [] -> []
   | loc :: llocs -> (find_in_hash hashloc loc) @ (get_accesses hashloc llocs)
 
+let compute_latency (ifrom: inst_info) (ito: inst_info) = ifrom.latency + (inst_info_to_dlatency ito)
+
 let latency_constraints bb =
   let written = LocHash.create 70
   and read = LocHash.create 70
@@ -662,8 +713,10 @@ let latency_constraints bb =
     and waw = get_accesses written i.write_locs
     and war = get_accesses read i.write_locs
     in begin
-      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) raw;
-      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = (List.nth instr_infos i).latency} :: !constraints) waw;
+      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count;
+                                          latency = compute_latency (List.nth instr_infos i) (List.nth instr_infos !count)} :: !constraints) raw;
+      List.iter (fun i -> constraints := {instr_from = i; instr_to = !count;
+                                          latency = compute_latency (List.nth instr_infos i) (List.nth instr_infos !count)} :: !constraints) waw;
       List.iter (fun i -> constraints := {instr_from = i; instr_to = !count; latency = 0} :: !constraints) war;
       if i.is_control then List.iter (fun n -> constraints := {instr_from = n; instr_to = !count; latency = 0} :: !constraints) (intlist !count);
       (* Updating "read" and "written" hashmaps *)
