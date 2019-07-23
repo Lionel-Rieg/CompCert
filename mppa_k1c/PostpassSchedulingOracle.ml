@@ -700,7 +700,10 @@ let rec get_accesses hashloc (ll: location list) = match ll with
   | [] -> []
   | loc :: llocs -> (find_in_hash hashloc loc) @ (get_accesses hashloc llocs)
 
-let compute_latency (ifrom: inst_info) (ito: inst_info) = ifrom.latency + (inst_info_to_dlatency ito)
+let compute_latency (ifrom: inst_info) (ito: inst_info) =
+  let dlat = inst_info_to_dlatency ito
+  in let lat = ifrom.latency + dlat
+  in assert (lat >= 0); if (lat == 0) then 1 else lat
 
 let latency_constraints bb =
   let written = LocHash.create 70
