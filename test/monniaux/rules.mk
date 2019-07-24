@@ -12,6 +12,7 @@ CLOCK=../clock
 
 # Maximum amount of time measures (see cycles.h)
 MAX_MEASURES=10
+MEASURES?=time
 
 # Flags common to both compilers, then to gcc, then to ccomp
 ALL_CFLAGS+=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
@@ -28,12 +29,12 @@ EXECUTE_CYCLES?=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
 GCC0FLAGS?=
-GCC1FLAGS?=$(ALL_GCCFLAGS) -O1
+GCC1FLAGS?=$(ALL_GCCFLAGS) -O1 -g
 GCC2FLAGS?=$(ALL_GCCFLAGS) -O2
 GCC3FLAGS?=$(ALL_GCCFLAGS) -O3
 GCC4FLAGS?=
 CCOMP0FLAGS?=
-CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -O1
+CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -O1 -g
 CCOMP2FLAGS?=$(ALL_CCOMPFLAGS)
 CCOMP3FLAGS?=
 CCOMP4FLAGS?=
@@ -131,7 +132,7 @@ endif
 
 measures.csv: $(OUTFILES)
 	@echo $(FIRSTLINE) > $@
-	@for i in "$(MEASURES)"; do\
+	@for i in $(MEASURES); do\
 		first=$$(grep "$$i cycles" $(firstword $(OUTFILES)));\
 		if test ! -z "$$first"; then\
 			if [ "$$i" != "time" ]; then\
