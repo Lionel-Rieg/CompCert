@@ -222,8 +222,9 @@ let print_operation reg pp op = match op with
  | _, _ -> fprintf pp "<bad operator>"
 
 let print_addressing reg pp = function
-  | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)
+  | Aindexed2XS scale, [r1;r2] -> fprintf pp "%a + (%a << %ld)" reg r1 reg r2 (camlint_of_coqint scale)
   | Aindexed2, [r1;r2] -> fprintf pp "%a + %a" reg r1 reg r2
+  | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)
   | Aglobal(id, ofs), [] ->
       fprintf pp "\"%s\" + %Ld" (extern_atom id) (camlint64_of_ptrofs ofs)
   | Ainstack ofs, [] -> fprintf pp "stack(%Ld)" (camlint64_of_ptrofs ofs)
