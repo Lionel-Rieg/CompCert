@@ -798,7 +798,7 @@ Lemma verified_schedule_nob_checks_alls_bundles bb lb bundle:
   List.In bundle lb -> verify_par_bblock bundle = OK tt.
 Proof.
   unfold verified_schedule_nob. intros H;
-  monadInv H. destruct x3. 
+  monadInv H. destruct x4.
   intros; eapply verified_par_checks_alls_bundles; eauto.
 Qed.
 

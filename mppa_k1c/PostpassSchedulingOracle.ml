@@ -961,10 +961,18 @@ let smart_schedule bb =
       in bundles @ (f lbb)
   in f lbb
 
-(** Called schedule function from Coq *)
-
-let schedule bb = 
+let bblock_to_bundles bb =
   if debug then (eprintf "###############################\n"; Printf.eprintf "SCHEDULING\n"; print_bb stderr bb);
   (* print_problem (build_problem bb); *)
   if Compopts.optim_postpass () then smart_schedule bb else dumb_schedule bb
 
+(** To deal with the Coq Axiom schedule : bblock -> (list (list basic)) * option control *)
+
+let rec bundles_to_coq_schedule = function
+  | [] -> ([], None)
+  | bb :: [] -> ([bb.body], bb.exit)
+  | bb :: lbb -> let (llb, oc) = bundles_to_coq_schedule lbb in (bb.body :: llb, oc)
+
+(** Called schedule function from Coq *)
+
+let schedule bb = let toto = bundles_to_coq_schedule @@ bblock_to_bundles bb in toto
