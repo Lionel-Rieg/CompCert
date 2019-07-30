@@ -208,7 +208,8 @@ Proof.
     + apply IHlbb in EQ. assumption.
 Qed.
 
-
+Inductive is_concat : bblock -> list bblock -> Prop :=
+  | mk_is_concat: forall tbb lbb, concat_all lbb = OK tbb -> is_concat tbb lbb.
 
 Definition verify_schedule (bb bb' : bblock) : res unit :=
   match bblock_simub bb bb' with
@@ -466,14 +467,14 @@ Qed.
 Lemma verified_schedule_nob_correct:
   forall ge f bb lbb,
   verified_schedule_nob bb = OK lbb ->
-  exists tbb, 
-     concat_all lbb = OK tbb
+  exists tbb,
+     is_concat tbb lbb
   /\ bblock_simu ge f bb tbb.
 Proof.
   intros. monadInv H.
   exploit stick_header_code_concat_all; eauto.
   intros (tbb & CONC & STH).
-  exists tbb. split; auto.
+  exists tbb. split; auto. constructor; auto.
   rewrite verify_schedule_no_header in EQ2. erewrite stick_header_verify_schedule in EQ2; eauto.
   eapply bblock_simub_correct; eauto. unfold verify_schedule in EQ2.
   destruct (bblock_simub _ _); auto; try discriminate.
@@ -482,13 +483,13 @@ Qed.
 Theorem verified_schedule_correct:
   forall ge f bb lbb,
   verified_schedule bb = OK lbb ->
-  exists tbb, 
-     concat_all lbb = OK tbb
+  exists tbb,
+     is_concat tbb lbb
   /\ bblock_simu ge f bb tbb.
 Proof.
   intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_correct; eauto; fail).
-  inv H. eexists. split; simpl; auto. constructor; auto.
+  inv H. eexists. split; simpl; auto. constructor; auto. simpl; auto. constructor; auto.
 Qed.
 
 Lemma verified_schedule_builtin_idem:

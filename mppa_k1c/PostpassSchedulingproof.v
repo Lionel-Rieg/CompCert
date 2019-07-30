@@ -736,7 +736,7 @@ Proof.
   induction 1; intros; inv MS.
   - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
     exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
-    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
+    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ). inv CONC. rename H3 into CONC.
     assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto. 
 
