@@ -15,7 +15,13 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for K1c assembly language. *)
+(** * Abstract syntax for K1c textual assembly language.
+
+    Each emittable instruction is defined here. ';;' is also defined as an instruction.
+    The goal of this representation is to stay compatible with the rest of the generic backend of CompCert
+    We define [unfold : list bblock -> list instruction]
+    An Asm function is then defined as : [fn_sig], [fn_blocks], [fn_code], and a proof of [unfold fn_blocks = fn_code]
+    [fn_code] has no semantic. Instead, the semantic of Asm is given by using the AsmVLIW semantic on [fn_blocks] *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -57,10 +63,6 @@ Inductive instruction : Type :=
   | Psemi                                           (**r semi colon separating bundles *)
   | Pnop                                            (**r instruction that does nothing *)
 
-  (** builtins *)
-  | Pclzll (rd rs: ireg)
-  | Pstsud (rd rs1 rs2: ireg)
-
   (** Control flow instructions *)
   | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
@@ -101,6 +103,8 @@ Inductive instruction : Type :=
   | Pafaddw (addr: ireg) (incr_res: ireg)
   | Palclrd (dst: ireg) (addr: ireg)
   | Palclrw (dst: ireg) (addr: ireg)
+  | Pclzll (rd rs: ireg)
+  | Pstsud (rd rs1 rs2: ireg)
             
   (** Loads **)
   | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)
@@ -571,12 +575,6 @@ Definition genv := Genv.t fundef unit.
 
 Definition function_proj (f: function) := Asmvliw.mkfunction (fn_sig f) (fn_blocks f).
 
-(* 
-Definition fundef_proj (fu: fundef) : Asmblock.fundef := transf_fundef function_proj fu.
-
-Definition program_proj (p: program) : Asmblock.program := transform_program fundef_proj p.
- *)
-
 Definition fundef_proj (fu: fundef) : Asmvliw.fundef := 
   match fu with
   | Internal f => Internal (function_proj f)
@@ -650,35 +648,6 @@ Proof.
   rewrite transf_function_proj. auto.
 Qed.
 
-(* Definition transf_globdef (gd: globdef Asmblock.fundef unit) : globdef fundef unit :=
-  match gd with
-  | Gfun f => Gfun (transf_fundef f)
-  | Gvar gu => Gvar gu
-  end.
-
-Lemma transf_globdef_proj: forall gd, globdef_proj (transf_globdef gd) = gd.
-Proof.
-  intros gd. destruct gd as [f|v]; simpl; auto.
-  rewrite transf_fundef_proj; auto.
-Qed.
-
-Fixpoint transf_prog_defs (l: list (ident * globdef Asmblock.fundef unit))
-                            : list (ident * globdef fundef unit) :=
-  match l with
-  | nil => nil
-  | (i, gd) :: l => (i, transf_globdef gd) :: transf_prog_defs l
-  end.
-
-Lemma transf_prog_proj: forall p, prog_defs p = prog_defs_proj (transf_prog_defs (prog_defs p)).
-Proof.
-  intros p. destruct p as [defs pub main]. simpl.
-  induction defs; simpl; auto.
-  destruct a as [i gd]. simpl.
-  rewrite transf_globdef_proj.
-  congruence.
-Qed.
- *)
-
 Definition transf_program : Asmvliw.program -> program := transform_program transf_fundef.
 
 Lemma program_equals {A B: Type} : forall (p1 p2: AST.program A B),
@@ -716,7 +685,6 @@ Proof.
   intros. congruence.
 Qed.
 
-(* I think it is a special case of Asmblock -> Asm. Very handy to have *)
 Lemma match_program_transf:
   forall p tp, match_prog p tp -> transf_program p = tp.
 Proof.

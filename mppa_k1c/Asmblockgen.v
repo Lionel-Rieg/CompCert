@@ -15,7 +15,8 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Translation from Machblock to K1c assembly language (Asmblock) *)
+(** * Translation from Machblock to K1c assembly language (Asmblock) 
+    Inspired from the Mach->Asm pass of other backends, but adapted to the block structure *)
 
 Require Archi.
 Require Import Coqlib Errors.
@@ -41,23 +42,15 @@ Definition ireg_of (r: mreg) : res ireg :=
 Definition freg_of (r: mreg) : res freg :=
   match preg_of r with IR mr => OK mr | _ => Error(msg "Asmgenblock.freg_of") end.
 
-(*
-(** Decomposition of 32-bit integer constants.  They are split into either
-  small signed immediates that fit in 12-bits, or, if they do not fit,
-  into a (20-bit hi, 12-bit lo) pair where lo is sign-extended. *)
-
-*)
 Inductive immed32 : Type :=
   | Imm32_single (imm: int).
 
 Definition make_immed32 (val: int) := Imm32_single val.
 
-(** Likewise, for 64-bit integer constants. *)
 Inductive immed64 : Type :=
   | Imm64_single (imm: int64)
 .
 
-(* For now, let's suppose all instructions of K1c can handle 64-bits immediate *)
 Definition make_immed64 (val: int64) := Imm64_single val.
 
 Notation "a ::g b" := (cons (A:=instruction) a b) (at level 49, right associativity).
@@ -65,12 +58,6 @@ Notation "a ::i b" := (cons (A:=basic) a b) (at level 49, right associativity).
 Notation "a ::b lb" := ((bblock_single_inst a) :: lb) (at level 49, right associativity).
 Notation "a ++g b" := (app (A:=instruction) a b) (at level 49, right associativity).
 Notation "a @@ b" := (app a b) (at level 49, right associativity).
-
-(** Smart constructors for arithmetic operations involving
-  a 32-bit or 64-bit integer constant.  Depending on whether the
-  constant fits in 12 bits or not, one or several instructions
-  are generated as required to perform the operation
-  and prepended to the given instruction sequence [k]. *)
 
 Definition loadimm32 (r: ireg) (n: int) :=
   match make_immed32 n with
@@ -92,10 +79,6 @@ Definition orimm32  := opimm32 Porw Poriw.
 Definition norimm32 := opimm32 Pnorw Pnoriw.
 Definition xorimm32 := opimm32 Pxorw Pxoriw.
 Definition nxorimm32 := opimm32 Pnxorw Pnxoriw.
-(*
-Definition sltimm32 := opimm32 Psltw Psltiw.
-Definition sltuimm32 := opimm32 Psltuw Psltiuw.
-*)
 
 Definition loadimm64 (r: ireg) (n: int64) :=
   match make_immed64 n with
@@ -117,11 +100,6 @@ Definition xorimm64 := opimm64 Pxorl  Pxoril.
 Definition norimm64  := opimm64 Pnorl  Pnoril.
 Definition nandimm64 := opimm64 Pnandl Pnandil.
 Definition nxorimm64 := opimm64 Pnxorl  Pnxoril.
-
-(*
-Definition sltimm64 := opimm64 Psltl Psltil.
-Definition sltuimm64 := opimm64 Psltul Psltiul.
-*)
 
 Definition addptrofs (rd rs: ireg) (n: ptrofs) :=
   if Ptrofs.eq_dec n Ptrofs.zero then
@@ -169,19 +147,6 @@ Definition transl_opt_compuimm
   else
     transl_compi c Unsigned r1 n lbl k
   .
-
-(* Definition transl_opt_compuimm
-    (n: int) (c: comparison) (r1: ireg) (lbl: label) (k: code) : list instruction :=
-  loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k). *)
-
-(*   match select_comp n c with
-  | Some Ceq => Pcbu BTweqz r1 lbl ::g k
-  | Some Cne => Pcbu BTwnez r1 lbl ::g k
-  | Some _   => nil (* Never happens *)
-  | None     => loadimm32 RTMP n ::g (transl_comp c Unsigned r1 RTMP lbl k)
-  end
-  .
- *)
 
 Definition select_compl (n: int64) (c: comparison) : option comparison :=
   if Int64.eq n Int64.zero then
@@ -1052,7 +1017,7 @@ Definition make_epilogue (f: Machblock.function) (k: code) :=
   (loadind_ptr SP f.(fn_retaddr_ofs) GPRA) 
   ::g Pset RA GPRA ::g Pfreeframe f.(fn_stacksize) f.(fn_link_ofs) ::g k.
 
-(** Translation of a Mach instruction. *)
+(** Translation of a Machblock instruction. *)
 
 Definition transl_instr_basic (f: Machblock.function) (i: Machblock.basic_inst)
                               (ep: bool) (k: bcode) :=
@@ -1096,19 +1061,11 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
         transl_cbranch cond args lbl nil
     | MBreturn =>
         OK (make_epilogue f (Pret ::g nil))
-      (*OK (make_epilogue f (Pj_r RA f.(Mach.fn_sig) :: k))*) 
     | MBjumptable arg tbl =>
       do r <- ireg_of arg;
       OK (Pjumptable r tbl ::g nil)
     end
   end.
-
-(* TODO - dans l'idée, transl_instr_control renvoie une liste d'instructions sous la forme :
-  * transl_instr_control _ _ _ = lb ++ (ctl :: nil), où lb est une liste de basics, ctl est un control_inst
-
-  Il faut arriver à exprimer cet aspect là ; extraire le lb, le rajouter dans le body ; et extraire le ctl
-  qu'on met dans le exit
-*)
 
 (** Translation of a code sequence *)
 
@@ -1120,8 +1077,7 @@ Definition fp_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
   | _ => false
   end.
 
-(** This is the naive definition that we no longer use because it
-  is not tail-recursive.  It is kept as specification. *)
+(** This is the naive definition, which is not tail-recursive unlike the other backends *)
 
 Fixpoint transl_basic_code (f: Machblock.function) (il: list Machblock.basic_inst) (it1p: bool) :=
   match il with
@@ -1147,20 +1103,11 @@ Definition transl_basic_code' (f: Machblock.function) (il: list Machblock.basic_
   transl_basic_rec f il it1p (fun c => OK c). *)
 
 (** Translation of a whole function.  Note that we must check
-  that the generated code contains less than [2^32] instructions,
+  that the generated code contains less than [2^64] instructions,
   otherwise the offset part of the [PC] code pointer could wrap
   around, leading to incorrect executions. *)
 
-(* Local Obligation Tactic := bblock_auto_correct. *)
-
-(* Program Definition gen_bblock_noctl (hd: list label) (c: list basic) :=
-  match c with
-  | nil => {| header := hd; body := Pnop::nil; exit := None |}
-  | i::c => {| header := hd; body := i::c; exit := None |}
-  end.
- *)
-
-(** Can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
+(* gen_bblocks can generate two bblocks if the ctl is a PExpand (since the PExpand must be alone in its block) *)
 Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instruction) :=
   match (extract_ctl ctl) with
   | None => 
@@ -1168,7 +1115,6 @@ Program Definition gen_bblocks (hd: list label) (c: list basic) (ctl: list instr
       | nil => {| header := hd; body := Pnop::nil; exit := None |} :: nil
       | i::c => {| header := hd; body := ((i::c) ++ extract_basic ctl); exit := None |} :: nil
       end
-(* gen_bblock_noctl hd (c ++ (extract_basic ctl)) :: nil *)
   | Some (PExpand (Pbuiltin ef args res)) =>
       match c with
       | nil => {| header := hd; body := nil; exit := Some (PExpand (Pbuiltin ef args res)) |} :: nil

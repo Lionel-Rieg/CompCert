@@ -17,8 +17,6 @@
 
 (** Abstract syntax and semantics for VLIW semantics of K1c assembly language. *)
 
-(* FIXME: develop/fix the comments in this file *)
-
 Require Import Coqlib.
 Require Import Maps.
 Require Import AST.
@@ -45,8 +43,7 @@ Require Import Chunks.
     this view induces our sequential semantics of bundles defined in [Asmblock].
 *)
 
-(** General Purpose registers.
-*)
+(** General Purpose registers. *)
 
 Inductive gpreg: Type :=
   | GPR0:  gpreg | GPR1:  gpreg | GPR2:  gpreg | GPR3:  gpreg | GPR4:  gpreg
@@ -152,9 +149,6 @@ Definition gpreg_o_expand (x : gpreg_o) : gpreg * gpreg * gpreg * gpreg :=
 Lemma gpreg_o_eq : forall (x y : gpreg_o), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
-(** We model the following registers of the RISC-V architecture. *)
-
-(** basic register *)
 Inductive preg: Type :=
   | IR: gpreg -> preg                   (**r integer general purpose registers *)
   | RA: preg
@@ -173,7 +167,7 @@ End PregEq.
 
 Module Pregmap := EMap(PregEq).
 
-(** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
+(** Conventional names for stack pointer ([SP]), return address ([RA]), frame pointer ([FP]) and other temporaries used *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
 Notation "'FP'" := GPR17 (only parsing) : asm.
@@ -188,9 +182,7 @@ Inductive btest: Type :=
   | BTdgez                              (**r Double Greater Than or Equal to Zero *)
   | BTdlez                              (**r Double Less Than or Equal to Zero *)
   | BTdgtz                              (**r Double Greater Than Zero *)
-(*| BTodd                               (**r Odd (LSB Set) *)
-  | BTeven                              (**r Even (LSB Clear) *)
-*)| BTwnez                              (**r Word Not Equal to Zero *)
+  | BTwnez                              (**r Word Not Equal to Zero *)
   | BTweqz                              (**r Word Equal to Zero *)
   | BTwltz                              (**r Word Less Than Zero *)
   | BTwgez                              (**r Word Greater Than or Equal to Zero *)
@@ -251,16 +243,7 @@ Definition offset : Type := ptrofs.
 
 Definition label := positive.
 
-(* FIXME - rewrite the comment *)
-(** A note on immediates: there are various constraints on immediate
-  operands to K1c instructions.  We do not attempt to capture these
-  restrictions in the abstract syntax nor in the semantics.  The
-  assembler will emit an error if immediate operands exceed the
-  representable range.  Of course, our K1c generator (file
-  [Asmgen]) is careful to respect this range. *)
-
-(** Instructions to be expanded in control-flow 
-*)
+(** Instructions to be expanded in control-flow *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
   | Pbuiltin: external_function -> list (builtin_arg preg)

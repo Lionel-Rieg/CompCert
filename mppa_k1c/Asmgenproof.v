@@ -10,7 +10,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Correctness proof for RISC-V generation: main proof. *)
+(** Correctness proof for Asmgen *)
 
 Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.

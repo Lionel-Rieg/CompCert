@@ -1,3 +1,10 @@
+(** * Translation from Asmblock to AbstractBB 
+
+    We define a specific instance of AbstractBB, named L, translate bblocks from Asmblock into this instance
+    AbstractBB will then define two semantics for L : a sequential, and a semantic one
+    We prove a bisimulation between the parallel semantics of L and AsmVLIW
+    From this, we also deduce a bisimulation between the sequential semantics of L and Asmblock *)
+
 Require Import AST.
 Require Import Asmblock.
 Require Import Asmblockgenproof0.
@@ -16,6 +23,8 @@ Require Import Asmvliw Permutation.
 Require Import Chunks.
 
 Open Scope impure.
+
+(** Definition of L *)
 
 Module P<: ImpParam.
 Module R := Pos.
@@ -459,18 +468,6 @@ Qed.
 Hint Resolve op_eq_correct: wlp.
 Global Opaque op_eq_correct.
 
-
-(* QUICK FIX WITH struct_eq *)
-
-(* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
-
-Theorem op_eq_correct o1 o2: 
- WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
-Proof.
-  wlp_simplify.
-Qed.
-*)
-
 End IMPPARAM.
 
 End P.
@@ -550,7 +547,7 @@ Proof.
   - unfold ppos. unfold pmem. discriminate.
 Qed.
 
-(** Inversion functions, used for debugging *)
+(** Inversion functions, used for debug traces *)
 
 Definition pos_to_ireg (p: R.t) : option gpreg :=
   match p with
@@ -573,9 +570,6 @@ Definition inv_ppos (p: R.t) : option preg :=
        | Some gpr => Some (IR gpr)
        end
   end.
-
-
-(** Traduction Asmblock -> Asmblockdeps *)
 
 Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
@@ -720,7 +714,7 @@ Proof.
   intros. congruence.
 Qed.
 
-(** Parallelizability of a bblock (bundle) *)
+(** Parallelizability test of a bblock (bundle), and bisimulation of the Asmblock and L parallel semantics *)
 
 Module PChk := ParallelChecks L PosPseudoRegSet.
 
@@ -1162,7 +1156,7 @@ Proof.
   destruct (prun_iw _ _ _ _); simpl; eauto.
 Qed.
 
-(* sequential execution *)
+(** sequential execution *)
 Theorem bisimu_basic ge fn bi rs m s:
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
@@ -1264,7 +1258,6 @@ Qed.
 
 End SECT_PAR.
 
-
 Section SECT_BBLOCK_EQUIV.
 
 Variable Ge: genv.
@@ -1293,6 +1286,8 @@ Proof.
       generalize (H0 r). intros Hr. congruence.
   * discriminate.
 Qed.
+
+(** Used for debug traces *)
 
 Definition gpreg_name (gpr: gpreg) :=
   match gpr with
