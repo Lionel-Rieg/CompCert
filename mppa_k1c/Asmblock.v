@@ -286,7 +286,7 @@ Definition exec_store_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro:
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := parexec_basic_instr ge bi rs rs m m.
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := bstep ge bi rs rs m m.
 
 Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
   match body with

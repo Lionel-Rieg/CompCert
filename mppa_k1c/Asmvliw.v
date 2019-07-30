@@ -1355,7 +1355,7 @@ Definition store_chunk n :=
 
 (** * basic instructions *)
 
-Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
+Definition bstep (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   match bi with
   | PArith ai => Next (parexec_arith_instr ai rsr rsw) mw
 
@@ -1414,7 +1414,7 @@ Fixpoint parexec_wio_body (body: list basic) (rsr rsw: regset) (mr mw: mem) :=
   match body with
   | nil => Next rsw mw
   | bi::body' => 
-     match parexec_basic_instr bi rsr rsw mr mw with
+     match bstep bi rsr rsw mr mw with
      | Next rsw mw => parexec_wio_body body' rsr rsw mr mw
      | Stuck => Stuck
      end
@@ -1550,12 +1550,12 @@ Definition incrPC size_b (rs: regset) :=
   rs#PC <- (Val.offset_ptr rs#PC size_b).
 
 (** parallel execution of the exit instruction of a bundle *)
-Definition parexec_exit (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
+Definition estep (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
   := parexec_control f ext (incrPC size_b rsr) rsw mw.
 
 Definition parexec_wio f bdy ext size_b (rs: regset) (m: mem): outcome :=
   match parexec_wio_body bdy rs rs m m with
-  | Next rsw mw => parexec_exit f ext size_b rs rsw mw
+  | Next rsw mw => estep f ext size_b rs rsw mw
   | Stuck => Stuck
   end.
 
