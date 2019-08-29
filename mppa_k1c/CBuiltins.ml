@@ -115,6 +115,9 @@ let builtins = {
     "__builtin_fnmsub",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false); *)
+    "__builtin_fabsf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, [])], false);
     "__builtin_fmax",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, [])], false);

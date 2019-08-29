@@ -680,6 +680,7 @@ Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr
   | BI_fmax => Some (Eop Omaxf args)
   | BI_fminf => Some (Eop Ominfs args)
   | BI_fmaxf => Some (Eop Omaxfs args)
+  | BI_fabsf => Some (Eop Oabsfs args)
   end.
 
 (* Local Variables: *)
