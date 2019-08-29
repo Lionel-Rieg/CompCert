@@ -1,6 +1,7 @@
 Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
+Require Import ExtFloats.
 
 Inductive shift1_4 : Type :=
 | SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
@@ -671,3 +672,27 @@ Definition revsubx sh v1 v2 :=
 
 Definition revsubxl sh v1 v2 :=
   Val.subl v2 (Val.shll v1 (Vint sh)).
+
+Definition minf v1 v2 :=
+  match v1, v2 with
+  | (Vfloat f1), (Vfloat f2) => Vfloat (ExtFloat.min f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition maxf v1 v2 :=
+  match v1, v2 with
+  | (Vfloat f1), (Vfloat f2) => Vfloat (ExtFloat.max f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition minfs v1 v2 :=
+  match v1, v2 with
+  | (Vsingle f1), (Vsingle f2) => Vsingle (ExtFloat32.min f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition maxfs v1 v2 :=
+  match v1, v2 with
+  | (Vsingle f1), (Vsingle f2) => Vsingle (ExtFloat32.max f1 f2)
+  | _, _ => Vundef
+  end.
