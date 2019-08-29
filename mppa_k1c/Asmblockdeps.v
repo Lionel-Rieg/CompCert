@@ -1423,6 +1423,10 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Pfsbfw => "Pfsbfw"
   | Pfmuld => "Pfmuld"
   | Pfmulw => "Pfmulw"
+  | Pfmind => "Pfmind"
+  | Pfminw => "Pfminw"
+  | Pfmaxd => "Pfmaxd"
+  | Pfmaxw => "Pfmaxw"
   end.
 
 Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=

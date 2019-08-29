@@ -675,7 +675,13 @@ Definition divfs_base (e1: expr) (e2: expr) :=
 End SELECT.
 
 Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
-  None.
+  match b with
+  | BI_fmin => Some (Eop Ominf args)
+  | BI_fmax => Some (Eop Omaxf args)
+  | BI_fminf => Some (Eop Ominfs args)
+  | BI_fmaxf => Some (Eop Omaxfs args)
+  end.
+
 (* Local Variables: *)
 (* mode: coq *)
 (* End: *)

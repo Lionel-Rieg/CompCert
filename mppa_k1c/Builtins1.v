@@ -16,18 +16,36 @@
 (** Platform-specific built-in functions *)
 
 Require Import String Coqlib.
-Require Import AST Integers Floats Values.
+Require Import AST Integers Floats Values ExtFloats.
 Require Import Builtins0.
 
-Inductive platform_builtin : Type := .
+Inductive platform_builtin : Type :=
+| BI_fmin
+| BI_fmax
+| BI_fminf
+| BI_fmaxf.
 
 Local Open Scope string_scope.
 
 Definition platform_builtin_table : list (string * platform_builtin) :=
-  nil.
+     ("__builtin_fmin", BI_fmin)
+  :: ("__builtin_fmax", BI_fmax)
+  :: ("__builtin_fminf", BI_fminf)
+  :: ("__builtin_fmaxf", BI_fmaxf)
+  :: nil.
 
 Definition platform_builtin_sig (b: platform_builtin) : signature :=
-  match b with end.
+  match b with
+  | BI_fmin | BI_fmax =>
+      mksignature (Tfloat :: Tfloat :: nil) (Some Tfloat) cc_default
+  | BI_fminf | BI_fmaxf =>
+      mksignature (Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default
+  end.
 
 Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (proj_sig_res (platform_builtin_sig b)) :=
-  match b with end.
+  match b with
+  | BI_fmin => mkbuiltin_n2t Tfloat Tfloat Tfloat ExtFloat.min
+  | BI_fmax => mkbuiltin_n2t Tfloat Tfloat Tfloat ExtFloat.max
+  | BI_fminf => mkbuiltin_n2t Tsingle Tsingle Tsingle ExtFloat32.min
+  | BI_fmaxf => mkbuiltin_n2t Tsingle Tsingle Tsingle ExtFloat32.max
+  end.

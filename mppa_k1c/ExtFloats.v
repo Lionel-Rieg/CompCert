@@ -1,7 +1,8 @@
 Require Import Floats.
 
 Module ExtFloat.
-(** TODO check with the actual K1c *)
+(** TODO check with the actual K1c;
+    this is what happens on x86 and may be inappropriate. *)
 
 Definition min (x : float) (y : float) : float :=
   match Float.compare x y with

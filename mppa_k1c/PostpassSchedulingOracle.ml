@@ -31,6 +31,7 @@ type real_instruction =
   (* FPU *)
   | Fabsd | Fabsw | Fnegw | Fnegd
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
+  | Fmind | Fminw | Fmaxd | Fmaxw
   | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
   | Fcompw | Fcompd
 
@@ -119,6 +120,10 @@ let arith_rrr_real = function
   | Pfsbfw ->         Fsbfw
   | Pfmuld ->         Fmuld
   | Pfmulw ->         Fmulw
+  | Pfmind ->         Fmind
+  | Pfminw ->         Fminw
+  | Pfmaxd ->         Fmaxd
+  | Pfmaxw ->         Fmaxw
 
 let arith_rri32_real = function
   | Pcompiw it ->   Compw
@@ -578,9 +583,11 @@ let rec_to_usage r =
                           | Some E27U27L10 -> lsu_acc_y)
   | Icall | Call | Cb | Igoto | Goto | Ret | Set -> bcu
   | Get -> bcu_tiny_tiny_mau_xnop
-  | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd -> alu_lite
+  | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd
+  | Fmind | Fmaxd | Fminw | Fmaxw -> alu_lite
   | Fnarrowdw -> alu_full
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw -> mau
+
 
 let real_inst_to_latency = function
   | Nop -> 0 (* Only goes through ID *)
@@ -590,6 +597,7 @@ let real_inst_to_latency = function
   | Nandd | Nord | Nxord | Ornd | Andnd
   | Addd | Andd | Compd | Ord | Sbfd | Sbfxd | Srad | Srsd | Srld | Slld | Xord | Make
   | Extfs | Extfz | Insf | Fcompw | Fcompd | Cmoved | Addxw | Addxd
+  | Fmind | Fmaxd | Fminw | Fmaxw
         -> 1
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd | Msbfw | Msbfd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)

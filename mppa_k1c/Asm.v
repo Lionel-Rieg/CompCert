@@ -227,6 +227,10 @@ Inductive instruction : Type :=
   | Pfsbfw              (rd rs1 rs2: ireg)          (**r Float sub word *)
   | Pfmuld              (rd rs1 rs2: ireg)          (**r Float mul double *)
   | Pfmulw              (rd rs1 rs2: ireg)          (**r Float mul word *)
+  | Pfmind              (rd rs1 rs2: ireg)          (**r Float min double *)
+  | Pfminw              (rd rs1 rs2: ireg)          (**r Float min word *)
+  | Pfmaxd              (rd rs1 rs2: ireg)          (**r Float max double *)
+  | Pfmaxw              (rd rs1 rs2: ireg)          (**r Float max word *)
 
   (** Arith RRI32 *)
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
@@ -395,6 +399,10 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pfsbfw rd rs1 rs2      => Pfsbfw rd rs1 rs2
   | PArithRRR Asmvliw.Pfmuld rd rs1 rs2      => Pfmuld rd rs1 rs2
   | PArithRRR Asmvliw.Pfmulw rd rs1 rs2      => Pfmulw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmind rd rs1 rs2      => Pfmind rd rs1 rs2
+  | PArithRRR Asmvliw.Pfminw rd rs1 rs2      => Pfminw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmaxd rd rs1 rs2      => Pfmaxd rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmaxw rd rs1 rs2      => Pfmaxw rd rs1 rs2
 
   (* RRI32 *)
   | PArithRRI32 (Asmvliw.Pcompiw it) rd rs imm => Pcompiw it rd rs imm

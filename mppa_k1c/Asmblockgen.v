@@ -775,6 +775,18 @@ Definition transl_op
   | Omulfs, a1 :: a2 :: nil =>
       do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
       OK (Pfmulw rd rs1 rs2 ::i k)
+  | Ominf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmind rd rs1 rs2 ::i k)
+  | Ominfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfminw rd rs1 rs2 ::i k)
+  | Omaxf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmaxd rd rs1 rs2 ::i k)
+  | Omaxfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmaxw rd rs1 rs2 ::i k)
   | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs ::i k)

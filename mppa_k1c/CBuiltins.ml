@@ -114,14 +114,20 @@ let builtins = {
        [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fnmsub",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false); *)
     "__builtin_fmax",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fmin",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, [])], false);
-*)]
+    "__builtin_fmaxf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, [])], false);
+    "__builtin_fminf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, [])], false);
+]
 }
 
 let va_list_type = TPtr(TVoid [], [])  (* to check! *)

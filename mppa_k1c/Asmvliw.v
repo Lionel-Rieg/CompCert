@@ -470,6 +470,10 @@ Inductive arith_name_rrr : Type :=
   | Pfsbfw                                          (**r float sub word *)
   | Pfmuld                                          (**r float multiply double *)
   | Pfmulw                                          (**r float multiply word *)
+  | Pfmind                                          (**r float min double *)
+  | Pfminw                                          (**r float min word *)
+  | Pfmaxd                                          (**r float max double *)
+  | Pfmaxw                                          (**r float max word *)
 .
 
 Inductive arith_name_rri32 : Type :=
@@ -1071,6 +1075,11 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfsbfw => Val.subfs v1 v2
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
+
+  | Pfmind => ExtValues.minf v1 v2
+  | Pfminw => ExtValues.minfs v1 v2
+  | Pfmaxd => ExtValues.maxf v1 v2
+  | Pfmaxw => ExtValues.maxfs v1 v2
 
   | Paddxw shift => ExtValues.addx (int_of_shift1_4 shift) v1 v2
   | Paddxl shift => ExtValues.addxl (int_of_shift1_4 shift) v1 v2
