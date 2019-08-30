@@ -5,6 +5,7 @@ CC ?= gcc
 CCOMP ?= ccomp
 OPTIM ?= -O2
 CFLAGS ?= $(OPTIM)
+CCOMPFLAGS ?= $(CFLAGS) -faddx
 SIMU ?= k1-mppa
 TIMEOUT ?= --signal=SIGTERM 120s
 DIFF ?= python2.7 floatcmp.py -reltol .00001
@@ -111,7 +112,7 @@ $(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1LIB) $(K1CCPATH)
 
 $(BINDIR)/%.ccomp.bin: $(ASMDIR)/%.ccomp.s $(K1LIB) $(CCOMPPATH)
 	@mkdir -p $(@D)
-	$(CCOMP) $(CFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
+	$(CCOMP) $(CCOMPFLAGS) $(filter-out $(CCOMPPATH),$^) -o $@
 
 # Source to assembly
 
@@ -125,4 +126,4 @@ $(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(K1CCPATH)
 
 $(ASMDIR)/%.ccomp.s: $(SRCDIR)/%.c $(CCOMPPATH)
 	@mkdir -p $(@D)
-	$(CCOMP) $(CFLAGS) -S $< -o $@
+	$(CCOMP) $(CCOMPFLAGS) -S $< -o $@

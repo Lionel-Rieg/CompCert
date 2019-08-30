@@ -65,6 +65,10 @@ BEGIN_TEST(int)
     c += (a < b);
     c += (a + b) / 2;
     c += (int) int2float(a) + (int) int2float(b) + (int) int2float(42.3);
+    c += (a << 4); // addx16w
+    c += (a << 3); // addx8w
+    c += (a << 2); // addx4w
+    c += (a << 1); // addx2w
 
     int j;
     for (j = 0 ; j < 10 ; j++)

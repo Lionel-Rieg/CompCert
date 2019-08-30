@@ -43,6 +43,10 @@ BEGIN_TEST(long long)
     c += a >> (b & 0x8LL);
     c += a >> (b & 0x8ULL);
     c += a % b;
+    c += (a << 4); // addx16d
+    c += (a << 3); // addx8d
+    c += (a << 2); // addx4d
+    c += (a << 1); // addx2d
 
   long long d = 3;
   long long (*op)(long long, long long);
