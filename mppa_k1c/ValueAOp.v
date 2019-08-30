@@ -19,14 +19,30 @@ Definition maxf := binop_float ExtFloat.max.
 Definition minfs := binop_single ExtFloat32.min.
 Definition maxfs := binop_single ExtFloat32.max.
 
+Definition ntop3 (x y z: aval) : aval := Ifptr (plub (provenance x) (plub (provenance y) (provenance z))).
+               
+Definition triple_op_float (sem: float -> float -> float -> float) (x y z: aval) :=
+  match x, y, z with
+  | F a, F b, F c => F (sem a b c)
+  | _, _, _ => ntop3 x y z
+  end.
+               
+Definition triple_op_single (sem: float32 -> float32 -> float32 -> float32) (x y z: aval) :=
+  match x, y, z with
+  | FS a, FS b, FS c => FS (sem a b c)
+  | _, _, _ => ntop3 x y z
+  end.
+
+Definition fmaddf := triple_op_float Float.fma.
+Definition fmsubf := triple_op_float (fun x y z => Float.fma x (Float.neg y) z).
+Definition fmaddfs := triple_op_single Float32.fma.
+Definition fmsubfs := triple_op_single (fun x y z => Float32.fma x (Float32.neg y) z).
+
 Definition invfs (y : aval) :=
   match y with
   | FS f => FS (ExtFloat32.inv f)
   | _ => ntop1 y
   end.
-               
-Definition binop_float (sem: float -> float -> float) (x y: aval) :=
-  match x, y with F n, F m => F (sem n m) | _, _ => ntop2 x y end.
 
 (** Value analysis for RISC V operators *)
 
@@ -251,6 +267,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Odivf, v1::v2::nil => divf v1 v2
   | Ominf, v1::v2::nil => minf v1 v2
   | Omaxf, v1::v2::nil => maxf v1 v2
+  | Ofmaddf, v1::v2::v3::nil => fmaddf v1 v2 v3
+  | Ofmsubf, v1::v2::v3::nil => fmsubf v1 v2 v3
   | Onegfs, v1::nil => negfs v1
   | Oabsfs, v1::nil => absfs v1
   | Oaddfs, v1::v2::nil => addfs v1 v2
@@ -260,6 +278,8 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ominfs, v1::v2::nil => minfs v1 v2
   | Omaxfs, v1::v2::nil => maxfs v1 v2
   | Oinvfs, v1::nil => invfs v1
+  | Ofmaddfs, v1::v2::v3::nil => fmaddfs v1 v2 v3
+  | Ofmsubfs, v1::v2::v3::nil => fmsubfs v1 v2 v3
   | Osingleoffloat, v1::nil => singleoffloat v1
   | Ofloatofsingle, v1::nil => floatofsingle v1
   | Ointoffloat, v1::nil => intoffloat v1
@@ -331,7 +351,64 @@ Proof.
   constructor.
 Qed.
 
-Hint Resolve minf_sound maxf_sound minfs_sound maxfs_sound invfs_sound : va.
+Lemma triple_op_float_sound:
+  forall f a x b y c z,
+    vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+    vmatch bc (ExtValues.triple_op_float f a b c)
+           (triple_op_float f x y z).
+Proof.
+  intros until z.
+  intros Hax Hby Hcz.
+  inv Hax; simpl; try constructor;
+  inv Hby; simpl; try constructor;
+  inv Hcz; simpl; try constructor.
+Qed.
+
+Lemma triple_op_single_sound:
+  forall f a x b y c z,
+    vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+    vmatch bc (ExtValues.triple_op_single f a b c)
+           (triple_op_single f x y z).
+Proof.
+  intros until z.
+  intros Hax Hby Hcz.
+  inv Hax; simpl; try constructor;
+  inv Hby; simpl; try constructor;
+  inv Hcz; simpl; try constructor.
+Qed.
+
+Lemma fmaddf_sound :
+  forall a x b y c z, vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+                      vmatch bc (ExtValues.fmaddf a b c) (fmaddf x y z).
+Proof.
+  intros. unfold ExtValues.fmaddf, fmaddf.
+  apply triple_op_float_sound; assumption.
+Qed.
+
+Lemma fmaddfs_sound :
+  forall a x b y c z, vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+                      vmatch bc (ExtValues.fmaddfs a b c) (fmaddfs x y z).
+Proof.
+  intros. unfold ExtValues.fmaddfs, fmaddfs.
+  apply triple_op_single_sound; assumption.
+Qed.
+
+Lemma fmsubf_sound :
+  forall a x b y c z, vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+                      vmatch bc (ExtValues.fmsubf a b c) (fmsubf x y z).
+Proof.
+  intros. unfold ExtValues.fmsubf, fmsubf.
+  apply triple_op_float_sound; assumption.
+Qed.
+
+Lemma fmsubfs_sound :
+  forall a x b y c z, vmatch bc a x -> vmatch bc b y -> vmatch bc c z ->
+                      vmatch bc (ExtValues.fmsubfs a b c) (fmsubfs x y z).
+Proof.
+  intros. unfold ExtValues.fmsubfs, fmsubfs.
+  apply triple_op_single_sound; assumption.
+Qed.
+Hint Resolve minf_sound maxf_sound minfs_sound maxfs_sound invfs_sound fmaddf_sound fmaddfs_sound fmsubf_sound fmsubfs_sound : va.
 
 Theorem eval_static_condition_sound:
   forall cond vargs m aargs,

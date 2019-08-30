@@ -1,7 +1,7 @@
 Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
-Require Import ExtFloats.
+Require Import Floats ExtFloats.
 
 Inductive shift1_4 : Type :=
 | SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
@@ -702,3 +702,21 @@ Definition invfs v1 :=
   | (Vsingle f1) => Vsingle (ExtFloat32.inv f1)
   | _ => Vundef
   end.
+
+Definition triple_op_float f v1 v2 v3 :=
+  match v1, v2, v3 with
+  | (Vfloat f1), (Vfloat f2), (Vfloat f3) => Vfloat (f f1 f2 f3)
+  | _, _, _ => Vundef
+  end.
+
+Definition triple_op_single f v1 v2 v3 :=
+  match v1, v2, v3 with
+  | (Vsingle f1), (Vsingle f2), (Vsingle f3) => Vsingle (f f1 f2 f3)
+  | _, _, _ => Vundef
+  end.
+
+Definition fmaddf := triple_op_float Float.fma.
+Definition fmaddfs := triple_op_single Float32.fma.
+
+Definition fmsubf := triple_op_float (fun f1 f2 f3 => Float.fma f1 (Float.neg f2) f3).
+Definition fmsubfs := triple_op_single (fun f1 f2 f3 => Float32.fma f1 (Float32.neg f2) f3).

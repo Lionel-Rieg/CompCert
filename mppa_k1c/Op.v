@@ -181,6 +181,8 @@ Inductive operation : Type :=
   | Odivf                    (**r [rd = r1 / r2] *)
   | Ominf
   | Omaxf
+  | Ofmaddf
+  | Ofmsubf
   | Onegfs                   (**r [rd = - r1] *)
   | Oabsfs                   (**r [rd = abs(r1)] *)
   | Oaddfs                   (**r [rd = r1 + r2] *)
@@ -190,6 +192,8 @@ Inductive operation : Type :=
   | Ominfs
   | Omaxfs
   | Oinvfs
+  | Ofmaddfs
+  | Ofmsubfs
   | Osingleoffloat           (**r [rd] is [r1] truncated to single-precision float *)
   | Ofloatofsingle           (**r [rd] is [r1] extended to double-precision float *)
 (*c Conversions between int and float: *)
@@ -433,6 +437,9 @@ Definition eval_operation
   | Odivf, v1::v2::nil => Some (Val.divf v1 v2)
   | Ominf, v1::v2::nil => Some (ExtValues.minf v1 v2)
   | Omaxf, v1::v2::nil => Some (ExtValues.maxf v1 v2)
+  | Ofmaddf, v1::v2::v3::nil => Some (ExtValues.fmaddf v1 v2 v3)
+  | Ofmsubf, v1::v2::v3::nil => Some (ExtValues.fmsubf v1 v2 v3)
+                                     
   | Onegfs, v1::nil => Some (Val.negfs v1)
   | Oabsfs, v1::nil => Some (Val.absfs v1)
   | Oaddfs, v1::v2::nil => Some (Val.addfs v1 v2)
@@ -442,6 +449,9 @@ Definition eval_operation
   | Ominfs, v1::v2::nil => Some (ExtValues.minfs v1 v2)
   | Omaxfs, v1::v2::nil => Some (ExtValues.maxfs v1 v2)
   | Oinvfs, v1::nil => Some (ExtValues.invfs v1)
+  | Ofmaddfs, v1::v2::v3::nil => Some (ExtValues.fmaddfs v1 v2 v3)
+  | Ofmsubfs, v1::v2::v3::nil => Some (ExtValues.fmsubfs v1 v2 v3)
+                                      
   | Osingleoffloat, v1::nil => Some (Val.singleoffloat v1)
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
   | Ointoffloat, v1::nil => Val.intoffloat v1
@@ -646,6 +656,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Odivf
   | Ominf
   | Omaxf => (Tfloat :: Tfloat :: nil, Tfloat)
+  | Ofmaddf | Ofmsubf => (Tfloat :: Tfloat :: Tfloat :: nil, Tfloat)
+
   | Onegfs => (Tsingle :: nil, Tsingle)
   | Oabsfs => (Tsingle :: nil, Tsingle)
   | Oaddfs
@@ -655,6 +667,8 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ominfs
   | Omaxfs => (Tsingle :: Tsingle :: nil, Tsingle)
   | Oinvfs => (Tsingle :: nil, Tsingle)
+  | Ofmaddfs | Ofmsubfs => (Tsingle :: Tsingle :: Tsingle :: nil, Tsingle)
+
   | Osingleoffloat => (Tfloat :: nil, Tsingle)
   | Ofloatofsingle => (Tsingle :: nil, Tfloat)
   | Ointoffloat => (Tfloat :: nil, Tint)
@@ -924,6 +938,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* minf, maxf *)
   - destruct v0; destruct v1...
   - destruct v0; destruct v1...
+  (* fmaddf, fmsubf *)
+  - destruct v0; destruct v1; destruct v2...
+  - destruct v0; destruct v1; destruct v2...
   (* negfs, absfs *)
   - destruct v0...
   - destruct v0...
@@ -938,6 +955,9 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1...
   (* invfs *)
   - destruct v0...
+  (* fmaddfs, fmsubfs *)
+  - destruct v0; destruct v1; destruct v2...
+  - destruct v0; destruct v1; destruct v2...
   (* singleoffloat, floatofsingle *)
   - destruct v0...
   - destruct v0...
@@ -1543,6 +1563,9 @@ Proof.
   (* minf, maxf *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; inv H2; simpl; auto.
+  (* fmaddf, fmsubf *)
+  - inv H4; inv H3; inv H2; simpl; auto.
+  - inv H4; inv H3; inv H2; simpl; auto.
   (* negfs, absfs *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
@@ -1557,6 +1580,9 @@ Proof.
   - inv H4; inv H2; simpl; auto.
   (* invfs *)
   - inv H4; simpl; auto.    
+  (* fmaddfs, fmsubfs *)
+  - inv H4; inv H3; inv H2; simpl; auto.
+  - inv H4; inv H3; inv H2; simpl; auto.
   (* singleoffloat, floatofsingle *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
