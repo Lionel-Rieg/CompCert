@@ -1622,6 +1622,29 @@ Proof.
   econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
 Qed.
 
+
+Lemma eval_divfs_base1:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_base1 b) v /\ Val.lessdef (ExtValues.invfs y) v.
+Proof.
+  intros; unfold divfs_base1.
+  econstructor; split.
+  repeat (try econstructor; try eassumption).
+  trivial.
+Qed.
+
+Lemma eval_divfs_baseX:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_baseX a b) v /\ Val.lessdef (Val.divfs x y) v.
+Proof.
+  intros; unfold divfs_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
 Theorem eval_divfs_base:
   forall le a b x y,
   eval_expr ge sp e m le a x ->
@@ -1629,7 +1652,13 @@ Theorem eval_divfs_base:
   exists v, eval_expr ge sp e m le (divfs_base a b) v /\ Val.lessdef (Val.divfs x y) v.
 Proof.
   intros; unfold divfs_base.
-  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+  destruct (divfs_base_match _).
+  - destruct (Float32.eq_dec _ _).
+    + exists (Val.divfs x y).
+      split; trivial. repeat (try econstructor; try eassumption).
+      simpl. InvEval. reflexivity.
+    + apply eval_divfs_baseX; assumption.
+  - apply eval_divfs_baseX; assumption.
 Qed.
 
 (** Platform-specific known builtins *)

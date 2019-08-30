@@ -32,7 +32,8 @@ Definition max (x : float32) (y : float32) : float32 :=
   | Some Lt | None => y
   end.
 
+Definition one := Float32.of_int (Int.repr (1%Z)).
 Definition inv (x : float32) : float32 :=
-  Float32.div (Float32.of_int (Int.repr (1%Z))) x.
+  Float32.div one x.
 
 End ExtFloat32.

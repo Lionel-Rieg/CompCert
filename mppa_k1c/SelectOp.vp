@@ -51,7 +51,7 @@ Require Import Floats.
 Require Import Op.
 Require Import CminorSel.
 Require Import OpHelpers.
-Require Import ExtValues.
+Require Import ExtValues ExtFloats.
 Require Import DecBoolOps.
 Require Import Chunks.
 Require Import Builtins.
@@ -669,9 +669,20 @@ Definition divf_base (e1: expr) (e2: expr) :=
   (* Eop Odivf (e1 ::: e2 ::: Enil). *)
   Eexternal f64_div sig_ff_f (e1 ::: e2 ::: Enil).
 
-Definition divfs_base (e1: expr) (e2: expr) :=
+Definition divfs_base1 (e2 : expr) :=
+  Eop Oinvfs (e2 ::: Enil).
+Definition divfs_baseX (e1 : expr) (e2 : expr) :=
   (* Eop Odivf (e1 ::: e2 ::: Enil). *)
   Eexternal f32_div sig_ss_s (e1 ::: e2 ::: Enil).
+
+Nondetfunction divfs_base (e1: expr) :=
+  match e1 with
+  | Eop (Osingleconst f) Enil =>
+    (if Float32.eq_dec f ExtFloat32.one
+     then divfs_base1
+     else divfs_baseX e1)
+  | _ => divfs_baseX e1
+  end.
 End SELECT.
 
 Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
