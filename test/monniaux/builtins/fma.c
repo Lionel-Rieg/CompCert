@@ -1,3 +1,4 @@
+#define COMPCERT_NO_FP_MACROS
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
