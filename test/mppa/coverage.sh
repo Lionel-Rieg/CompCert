@@ -12,7 +12,7 @@ set -e
 # Pipes do not mask errors
 set -o pipefail
 
-sed -n "s/^.*fprintf\s*oc\s*\"\s*\([a-z][^[:space:]]*\)\s.*/\1/p" $printer > $to_cover_raw
+sed -n "s/^.*fprintf\s\+oc\s*\"\s*\([a-z][^[:space:]]*\)\s.*/\1/p" $printer > $to_cover_raw
 python2.7 coverage_helper.py $to_cover_raw | sort -u > $to_cover
 
 rm -f $covered_raw

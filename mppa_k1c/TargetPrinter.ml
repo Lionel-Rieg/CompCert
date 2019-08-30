@@ -400,9 +400,9 @@ module Target (*: TARGET*) =
       | Pdzerol addr ->
          fprintf oc "	dzerol	0[%a]\n" ireg addr
 (*    | Pafaddd(addr, incr_res) ->
-         fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
+         fprintfoc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
       | Pafaddw(addr, incr_res) ->
-         fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res *) (* see #157 *)
+         fprintfoc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res *) (* see #157 *)
       | Palclrd(res, addr) ->
          fprintf oc "	alclrd	%a = 0[%a]\n" ireg res ireg addr
       | Palclrw(res, addr) ->

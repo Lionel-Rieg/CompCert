@@ -12,6 +12,14 @@ int tailsum(int a, int b){
     return make(a+b);
 }
 
+int fact(int a){
+  int r = 1;
+  int i;
+  for (i = 1; i < a; i++)
+    r *= i;
+  return r;
+}
+
 float int2float(int v){
   return v;
 }
@@ -21,43 +29,43 @@ BEGIN_TEST(int)
     c += a&b;
 
     if ((a & 0x1) == 1)
-        c += 1;
+        c += fact(1);
     else
-        c += 2;
+        c += fact(2);
 
     if (a & 0x1 == 0)
-        c += 4;
+        c += fact(4);
     else
-        c += 8;
+        c += fact(8);
 
     b = !(a & 0x01);
     if (!b)
-        c += 16;
+        c += fact(16);
     else
-        c += 32;
+        c += fact(32);
 
     c += sum(make(a), make(b));
     c += (long long) a;
 
     if (0 > (a & 0x1) - 1)
-        c += 64;
+        c += fact(64);
     else
-        c += 128;
+        c += fact(128);
 
     if (0 >= (a & 0x1))
-        c += 256;
+        c += fact(256);
     else
-        c += 512;
+        c += fact(512);
 
     if ((a & 0x1) > 0)
-        c += 1024;
+        c += fact(1024);
     else
-        c += 2048;
+        c += fact(2048);
 
     if ((a & 0x1) - 1 >= 0)
-        c += 4096;
+        c += fact(4096);
     else
-        c += 8192;
+        c += fact(8192);
 
     c += ((a & 0x1) == (b & 0x1));
     c += (a > b);
@@ -69,6 +77,8 @@ BEGIN_TEST(int)
     c += (a << 3); // addx8w
     c += (a << 2); // addx4w
     c += (a << 1); // addx2w
+
+    c += ~a & b; // andnw
 
     int j;
     for (j = 0 ; j < 10 ; j++)

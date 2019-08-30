@@ -30,6 +30,14 @@ long long random_op(long long a, long long b){
   return op(a, b);
 }
 
+long fact(long a){
+  long r = 1;
+  long i;
+  for (i = 1; i < a; i++)
+    r *= i;
+  return r;
+}
+
 double long2double(long v){
   return v;
 }
@@ -48,6 +56,8 @@ BEGIN_TEST(long long)
     c += (a << 2); // addx4d
     c += (a << 1); // addx2d
 
+    c += ~a & b; // andnd
+
   long long d = 3;
   long long (*op)(long long, long long);
 
@@ -65,34 +75,39 @@ BEGIN_TEST(long long)
     c += (unsigned int) a;
 
     if (0 != (a & 0x1LL))
-        c += 1;
+        c += fact(1);
     else
-        c += 2;
+        c += fact(2);
 
     if (0 > (a & 0x1LL))
-        c += 4;
+        c += fact(4);
     else
-        c += 8;
+        c += fact(8);
 
     if (0 >= (a & 0x1LL) - 1)
-        c += 16;
+        c += fact(16);
     else
-        c += 32;
+        c += fact(32);
+
+    if (a-41414141 > 0)
+        c += fact(13);
+    else
+        c += fact(31);
 
     if (a & 0x1LL > 0)
-        c += 64;
+        c += fact(64);
     else
-        c += 128;
+        c += fact(128);
 
     if ((a & 0x1LL) - 1 >= 0)
-        c += 256;
+        c += fact(256);
     else
-        c += 512;
+        c += fact(512);
 
     if (0 == (a & 0x1LL))
-        c += 1024;
+        c += fact(1024);
     else
-        c += 2048;
+        c += fact(2048);
 
     c += ((a & 0x1LL) == (b & 0x1LL));
     c += (a >= b);
