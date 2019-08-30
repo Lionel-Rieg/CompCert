@@ -189,6 +189,7 @@ Inductive operation : Type :=
   | Odivfs                   (**r [rd = r1 / r2] *)
   | Ominfs
   | Omaxfs
+  | Oinvfs
   | Osingleoffloat           (**r [rd] is [r1] truncated to single-precision float *)
   | Ofloatofsingle           (**r [rd] is [r1] extended to double-precision float *)
 (*c Conversions between int and float: *)
@@ -440,6 +441,7 @@ Definition eval_operation
   | Odivfs, v1::v2::nil => Some (Val.divfs v1 v2)
   | Ominfs, v1::v2::nil => Some (ExtValues.minfs v1 v2)
   | Omaxfs, v1::v2::nil => Some (ExtValues.maxfs v1 v2)
+  | Oinvfs, v1::nil => Some (ExtValues.invfs v1)
   | Osingleoffloat, v1::nil => Some (Val.singleoffloat v1)
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
   | Ointoffloat, v1::nil => Val.intoffloat v1
@@ -652,6 +654,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Odivfs
   | Ominfs
   | Omaxfs => (Tsingle :: Tsingle :: nil, Tsingle)
+  | Oinvfs => (Tsingle :: nil, Tsingle)
   | Osingleoffloat => (Tfloat :: nil, Tsingle)
   | Ofloatofsingle => (Tsingle :: nil, Tfloat)
   | Ointoffloat => (Tfloat :: nil, Tint)
@@ -933,6 +936,8 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* minfs, maxfs *)
   - destruct v0; destruct v1...
   - destruct v0; destruct v1...
+  (* invfs *)
+  - destruct v0...
   (* singleoffloat, floatofsingle *)
   - destruct v0...
   - destruct v0...
@@ -1550,6 +1555,8 @@ Proof.
   (* minfs, maxfs *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; inv H2; simpl; auto.
+  (* invfs *)
+  - inv H4; simpl; auto.    
   (* singleoffloat, floatofsingle *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.

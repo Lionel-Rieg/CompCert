@@ -793,6 +793,9 @@ Definition transl_op
   | Onegfs, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegw rd rs ::i k)
+  | Oinvfs, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfinvw rd rs ::i k)
 
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;

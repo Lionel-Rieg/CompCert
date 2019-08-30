@@ -636,6 +636,8 @@ module Target (*: TARGET*) =
          fprintf oc "	fmaxd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfmaxw (rd, rs1, rs2) ->
          fprintf oc "	fmaxw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfinvw (rd, rs1) ->
+         fprintf oc "	finvw	%a = %a\n" ireg rd ireg rs1
 
       (* Arith RRI32 instructions *)
       | Pcompiw (it, rd, rs, imm) ->

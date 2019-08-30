@@ -696,3 +696,9 @@ Definition maxfs v1 v2 :=
   | (Vsingle f1), (Vsingle f2) => Vsingle (ExtFloat32.max f1 f2)
   | _, _ => Vundef
   end.
+
+Definition invfs v1 :=
+  match v1 with
+  | (Vsingle f1) => Vsingle (ExtFloat32.inv f1)
+  | _ => Vundef
+  end.

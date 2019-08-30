@@ -124,6 +124,7 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Oaddf | Osubf | Omulf | Odivf | Ominf | Omaxf => op2 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
   | Oaddfs | Osubfs | Omulfs | Odivfs | Ominfs | Omaxfs => op2 (default nv)
+  | Oinvfs => op1 (default nv)
   | Ofloatofsingle | Osingleoffloat => op1 (default nv)
   | Ointoffloat | Ointuoffloat => op1 (default nv)
   | Olongoffloat | Olonguoffloat | Ofloatoflong | Ofloatoflongu => op1 (default nv)

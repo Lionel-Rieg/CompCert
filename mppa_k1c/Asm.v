@@ -231,7 +231,8 @@ Inductive instruction : Type :=
   | Pfminw              (rd rs1 rs2: ireg)          (**r Float min word *)
   | Pfmaxd              (rd rs1 rs2: ireg)          (**r Float max double *)
   | Pfmaxw              (rd rs1 rs2: ireg)          (**r Float max word *)
-
+  | Pfinvw              (rd rs1: ireg)              (**r Float invert word *)
+                        
   (** Arith RRI32 *)
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
 
@@ -327,6 +328,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs
   | PArithRR Asmvliw.Pfnegw rd rs => Pfnegw rd rs
+  | PArithRR Asmvliw.Pfinvw rd rs => Pfinvw rd rs
   | PArithRR Asmvliw.Pfnarrowdw rd rs => Pfnarrowdw rd rs
   | PArithRR Asmvliw.Pfwidenlwd rd rs => Pfwidenlwd rd rs
   | PArithRR Asmvliw.Pfloatuwrnsz rd rs => Pfloatuwrnsz rd rs

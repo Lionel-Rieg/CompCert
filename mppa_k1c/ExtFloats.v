@@ -1,4 +1,4 @@
-Require Import Floats.
+Require Import Floats Integers ZArith.
 
 Module ExtFloat.
 (** TODO check with the actual K1c;
@@ -31,4 +31,8 @@ Definition max (x : float32) (y : float32) : float32 :=
   | Some Eq | Some Gt => x
   | Some Lt | None => y
   end.
+
+Definition inv (x : float32) : float32 :=
+  Float32.div (Float32.of_int (Int.repr (1%Z))) x.
+
 End ExtFloat32.

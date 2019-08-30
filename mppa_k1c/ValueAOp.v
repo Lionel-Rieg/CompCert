@@ -19,6 +19,15 @@ Definition maxf := binop_float ExtFloat.max.
 Definition minfs := binop_single ExtFloat32.min.
 Definition maxfs := binop_single ExtFloat32.max.
 
+Definition invfs (y : aval) :=
+  match y with
+  | FS f => FS (ExtFloat32.inv f)
+  | _ => ntop1 y
+  end.
+               
+Definition binop_float (sem: float -> float -> float) (x y: aval) :=
+  match x, y with F n, F m => F (sem n m) | _, _ => ntop2 x y end.
+
 (** Value analysis for RISC V operators *)
 
 Definition eval_static_condition (cond: condition) (vl: list aval): abool :=
@@ -250,6 +259,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Odivfs, v1::v2::nil => divfs v1 v2
   | Ominfs, v1::v2::nil => minfs v1 v2
   | Omaxfs, v1::v2::nil => maxfs v1 v2
+  | Oinvfs, v1::nil => invfs v1
   | Osingleoffloat, v1::nil => singleoffloat v1
   | Ofloatofsingle, v1::nil => floatofsingle v1
   | Ointoffloat, v1::nil => intoffloat v1
@@ -311,7 +321,17 @@ Proof.
   apply (binop_single_sound bc ExtFloat32.max); assumption.
 Qed.
 
-Hint Resolve minf_sound maxf_sound minfs_sound maxfs_sound : va.
+Lemma invfs_sound:
+  forall v x, vmatch bc v x -> vmatch bc (ExtValues.invfs v) (invfs x).
+Proof.
+  intros v x;
+  intro MATCH;
+  inversion MATCH;
+  simpl;
+  constructor.
+Qed.
+
+Hint Resolve minf_sound maxf_sound minfs_sound maxfs_sound invfs_sound : va.
 
 Theorem eval_static_condition_sound:
   forall cond vargs m aargs,

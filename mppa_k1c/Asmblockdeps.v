@@ -1343,6 +1343,7 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Pfabsw => "Pfabsw"
   | Pfnegd => "Pfnegd"
   | Pfnegw => "Pfnegw"
+  | Pfinvw => "Pfinvw"
   | Pfnarrowdw => "Pfnarrowdw"
   | Pfwidenlwd => "Pfwidenlwd"
   | Pfloatwrnsz => "Pfloatwrnsz"

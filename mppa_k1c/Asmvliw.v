@@ -392,6 +392,7 @@ Inductive arith_name_rr : Type :=
   | Pfabsw                                          (**r float absolute word *)
   | Pfnegd                                          (**r float negate double *)
   | Pfnegw                                          (**r float negate word *)
+  | Pfinvw                                          (**r float invert word *)
   | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
   | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
@@ -996,6 +997,7 @@ Definition arith_eval_rr n v :=
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v
   | Pfabsw => Val.absfs v
+  | Pfinvw => ExtValues.invfs v
   | Pfnarrowdw => Val.singleoffloat v
   | Pfwidenlwd => Val.floatofsingle v
   | Pfloatwrnsz => match Val.singleofint v with Some f => f | _ => Vundef end
