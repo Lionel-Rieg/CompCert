@@ -715,8 +715,8 @@ Definition triple_op_single f v1 v2 v3 :=
   | _, _, _ => Vundef
   end.
 
-Definition fmaddf := triple_op_float Float.fma.
-Definition fmaddfs := triple_op_single Float32.fma.
+Definition fmaddf := triple_op_float (fun f1 f2 f3 => Float.fma f2 f3 f1).
+Definition fmaddfs := triple_op_single (fun f1 f2 f3 => Float32.fma f2 f3 f1).
 
-Definition fmsubf := triple_op_float (fun f1 f2 f3 => Float.fma f1 (Float.neg f2) f3).
-Definition fmsubfs := triple_op_single (fun f1 f2 f3 => Float32.fma f1 (Float32.neg f2) f3).
+Definition fmsubf := triple_op_float (fun f1 f2 f3 => Float.fma (Float.neg f2) f3 f1).
+Definition fmsubfs := triple_op_single (fun f1 f2 f3 => Float32.fma (Float32.neg f2) f3 f1).

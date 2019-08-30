@@ -683,7 +683,18 @@ Nondetfunction divfs_base (e1: expr) :=
      else divfs_baseX e1)
   | _ => divfs_baseX e1
   end.
-End SELECT.
+
+Nondetfunction gen_fma args :=
+  match args with
+  | e1:::e2:::e3:::Enil => Some (Eop Ofmaddf (e3:::e1:::e2:::Enil))
+  | _ => None
+  end.
+
+Nondetfunction gen_fmaf args :=
+  match args with
+  | e1:::e2:::e3:::Enil => Some (Eop Ofmaddfs (e3:::e1:::e2:::Enil))
+  | _ => None
+  end.
 
 Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
   match b with
@@ -692,7 +703,10 @@ Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr
   | BI_fminf => Some (Eop Ominfs args)
   | BI_fmaxf => Some (Eop Omaxfs args)
   | BI_fabsf => Some (Eop Oabsfs args)
+  | BI_fma => gen_fma args
+  | BI_fmaf => gen_fmaf args
   end.
+End SELECT.
 
 (* Local Variables: *)
 (* mode: coq *)

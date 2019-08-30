@@ -797,6 +797,31 @@ Definition transl_op
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfinvw rd rs ::i k)
 
+  | Ofmaddf, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmaddfl rs1 rs2 rs3 ::i k)
+  | Ofmaddfs, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmaddfw rs1 rs2 rs3 ::i k)
+  | Ofmsubf, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmsubfl rs1 rs2 rs3 ::i k)
+  | Ofmsubfs, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmsubfw rs1 rs2 rs3 ::i k)
+
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
       OK (Pfloatwrnsz rd rs ::i k)

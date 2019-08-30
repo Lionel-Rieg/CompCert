@@ -574,6 +574,10 @@ module Target (*: TARGET*) =
          fprintf oc "	maddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmsubw (rd, rs1, rs2) ->
          fprintf oc "	msbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaddfw (rd, rs1, rs2) ->
+         fprintf oc "	ffmaw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmsubfw (rd, rs1, rs2) ->
+         fprintf oc "	ffmsw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Paddl (rd, rs1, rs2) ->
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -615,6 +619,10 @@ module Target (*: TARGET*) =
          fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmsubl (rd, rs1, rs2) ->
          fprintf oc "	msbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaddfl (rd, rs1, rs2) ->
+         fprintf oc "	ffmad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmsubfl (rd, rs1, rs2) ->
+         fprintf oc "	ffmsd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pfaddd (rd, rs1, rs2) ->
          fprintf oc "	faddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2

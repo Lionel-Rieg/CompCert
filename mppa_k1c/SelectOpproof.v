@@ -1663,6 +1663,50 @@ Qed.
 
 (** Platform-specific known builtins *)
 
+Lemma eval_fma:
+  forall al a vl v le,
+  gen_fma al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem BI_fma vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  unfold gen_fma.
+  intros until le.
+  intro Heval.
+  destruct (gen_fma_match _) in *; try discriminate.
+  inversion Heval; subst a; clear Heval.
+  intro; InvEval.
+  intro Heval.
+  simpl in Heval.
+  inv Heval.
+  TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v1; simpl; trivial;
+      destruct v2; simpl; trivial.
+Qed.
+
+Lemma eval_fmaf:
+  forall al a vl v le,
+  gen_fmaf al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem BI_fmaf vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  unfold gen_fmaf.
+  intros until le.
+  intro Heval.
+  destruct (gen_fmaf_match _) in *; try discriminate.
+  inversion Heval; subst a; clear Heval.
+  intro; InvEval.
+  intro Heval.
+  simpl in Heval.
+  inv Heval.
+  TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v1; simpl; trivial;
+      destruct v2; simpl; trivial.
+Qed.
+
 Theorem eval_platform_builtin:
   forall bf al a vl v le,
   platform_builtin bf al = Some a ->
@@ -1670,9 +1714,12 @@ Theorem eval_platform_builtin:
   platform_builtin_sem bf vl = Some v ->
   exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
 Proof.
-  destruct bf; intros until le; intro Heval; inversion Heval; subst a; clear Heval.
-  all: exists v; split; trivial;
-  try repeat (try econstructor; try eassumption).
+  destruct bf; intros until le; intro Heval.
+  all: try (inversion Heval; subst a; clear Heval;
+       exists v; split; trivial;
+       repeat (try econstructor; try eassumption)).
+  - apply eval_fma; assumption.
+  - apply eval_fmaf; assumption.
 Qed.
 
 End CMCONSTR.

@@ -528,6 +528,10 @@ Inductive arith_name_arrr : Type :=
   | Pmsubl                                           (**r multiply subtract long *)
   | Pcmove (bt: btest)                               (**r conditional move *)
   | Pcmoveu (bt: btest)                              (**r conditional move, test on unsigned semantics *)
+  | Pfmaddfw                                         (**r float fused multiply add word *)
+  | Pfmaddfl                                         (**r float fused multiply add long *)
+  | Pfmsubfw                                         (**r float fused multiply subtract word *)
+  | Pfmsubfl                                         (**r float fused multiply subtract long *)
 .
 
 Inductive arith_name_arri32 : Type :=
@@ -1177,6 +1181,10 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   | Pmsubl => Val.subl v1 (Val.mull v2 v3)
   | Pcmove bt => cmove bt v1 v2 v3
   | Pcmoveu bt => cmoveu bt v1 v2 v3
+  | Pfmaddfw => ExtValues.fmaddfs v1 v2 v3
+  | Pfmaddfl => ExtValues.fmaddf v1 v2 v3
+  | Pfmsubfw => ExtValues.fmsubfs v1 v2 v3
+  | Pfmsubfl => ExtValues.fmsubf v1 v2 v3
   end.
 
 Definition arith_eval_arr n v1 v2 :=

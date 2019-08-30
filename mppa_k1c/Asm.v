@@ -200,6 +200,10 @@ Inductive instruction : Type :=
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
   | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
   | Pmsubw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
+  | Pfmaddfw            (rd rs1 rs2: ireg)          (**r float fused multiply-add words *)
+  | Pfmsubfw            (rd rs1 rs2: ireg)          (**r float fused multiply-subtract words *)
+  | Pfmaddfl            (rd rs1 rs2: ireg)          (**r float fused multiply-add longs *)
+  | Pfmsubfl            (rd rs1 rs2: ireg)          (**r float fused multiply-subtract longs *)
 
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
   | Paddxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add long shift *)
@@ -452,6 +456,10 @@ Definition basic_to_instruction (b: basic) :=
   | PArithARRR Asmvliw.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
   | PArithARRR Asmvliw.Pmsubw rd rs1 rs2       => Pmsubw rd rs1 rs2
   | PArithARRR Asmvliw.Pmsubl rd rs1 rs2       => Pmsubl rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmaddfw rd rs1 rs2     => Pfmaddfw rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmaddfl rd rs1 rs2     => Pfmaddfl rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmsubfw rd rs1 rs2     => Pfmsubfw rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmsubfl rd rs1 rs2     => Pfmsubfl rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmove cond) rd rs1 rs2=> Pcmove cond rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmoveu cond) rd rs1 rs2=> Pcmoveu cond rd rs1 rs2
 

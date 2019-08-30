@@ -33,10 +33,10 @@ Definition triple_op_single (sem: float32 -> float32 -> float32 -> float32) (x y
   | _, _, _ => ntop3 x y z
   end.
 
-Definition fmaddf := triple_op_float Float.fma.
-Definition fmsubf := triple_op_float (fun x y z => Float.fma x (Float.neg y) z).
-Definition fmaddfs := triple_op_single Float32.fma.
-Definition fmsubfs := triple_op_single (fun x y z => Float32.fma x (Float32.neg y) z).
+Definition fmaddf := triple_op_float (fun x y z => Float.fma y z x).
+Definition fmsubf := triple_op_float (fun x y z => Float.fma (Float.neg y) z x).
+Definition fmaddfs := triple_op_single (fun x y z => Float32.fma y z x).
+Definition fmsubfs := triple_op_single (fun x y z => Float32.fma (Float32.neg y) z x).
 
 Definition invfs (y : aval) :=
   match y with

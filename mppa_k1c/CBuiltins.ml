@@ -130,6 +130,12 @@ let builtins = {
     "__builtin_fminf",
       (TFloat(FFloat, []),
        [TFloat(FFloat, []); TFloat(FFloat, [])], false);
+    "__builtin_fma",
+      (TFloat(FDouble, []),
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
+    "__builtin_fmaf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, []); TFloat(FFloat, [])], false);
 ]
 }
 

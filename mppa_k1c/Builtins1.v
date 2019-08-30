@@ -24,7 +24,9 @@ Inductive platform_builtin : Type :=
 | BI_fmax
 | BI_fminf
 | BI_fmaxf
-| BI_fabsf.
+| BI_fabsf
+| BI_fma
+| BI_fmaf.
 
 Local Open Scope string_scope.
 
@@ -34,6 +36,8 @@ Definition platform_builtin_table : list (string * platform_builtin) :=
   :: ("__builtin_fminf", BI_fminf)
   :: ("__builtin_fmaxf", BI_fmaxf)
   :: ("__builtin_fabsf", BI_fabsf)
+  :: ("__builtin_fma", BI_fma)
+  :: ("__builtin_fmaf", BI_fmaf)
   :: nil.
 
 Definition platform_builtin_sig (b: platform_builtin) : signature :=
@@ -44,6 +48,10 @@ Definition platform_builtin_sig (b: platform_builtin) : signature :=
       mksignature (Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default
   | BI_fabsf =>
       mksignature (Tsingle :: nil) (Some Tsingle) cc_default
+  | BI_fma =>
+      mksignature (Tfloat :: Tfloat :: Tfloat :: nil) (Some Tfloat) cc_default
+  | BI_fmaf =>
+      mksignature (Tsingle :: Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default
   end.
 
 Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (proj_sig_res (platform_builtin_sig b)) :=
@@ -53,4 +61,6 @@ Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (proj_sig_re
   | BI_fminf => mkbuiltin_n2t Tsingle Tsingle Tsingle ExtFloat32.min
   | BI_fmaxf => mkbuiltin_n2t Tsingle Tsingle Tsingle ExtFloat32.max
   | BI_fabsf => mkbuiltin_n1t Tsingle Tsingle Float32.abs
+  | BI_fma => mkbuiltin_n3t Tfloat Tfloat Tfloat Tfloat Float.fma
+  | BI_fmaf => mkbuiltin_n3t Tsingle Tsingle Tsingle Tsingle Float32.fma
   end.

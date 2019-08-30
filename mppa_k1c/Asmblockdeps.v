@@ -1483,6 +1483,10 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   | Pmsubl  => "Pmsubl"
   | Pcmove _ => "Pcmove"
   | Pcmoveu _ => "Pcmoveu"
+  | Pfmaddfw  => "Pfmaddfw"
+  | Pfmaddfl  => "Pfmaddfl"
+  | Pfmsubfw  => "Pfmsubfw"
+  | Pfmsubfl  => "Pfmsubfl"
   end.
 
 Definition string_of_name_arr (n: arith_name_arr): pstring :=

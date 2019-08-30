@@ -32,6 +32,7 @@ type real_instruction =
   | Fabsd | Fabsw | Fnegw | Fnegd
   | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw
   | Fmind | Fminw | Fmaxd | Fmaxw | Finvw
+  | Ffmaw | Ffmad | Ffmsw | Ffmsd
   | Fnarrowdw | Fwidenlwd | Floatwz | Floatuwz | Floatdz | Floatudz | Fixedwz | Fixeduwz | Fixeddz | Fixedudz
   | Fcompw | Fcompd
 
@@ -173,6 +174,10 @@ let arith_arr_real = function
   | Pinsfl (_, _) ->  Insf
 
 let arith_arrr_real = function
+  | Pfmaddfw -> Ffmaw
+  | Pfmaddfl -> Ffmad
+  | Pfmsubfw -> Ffmsw
+  | Pfmsubfl -> Ffmsd
   | Pmaddw ->     Maddw
   | Pmaddl ->     Maddd
   | Pmsubw ->     Msbfw
@@ -587,7 +592,8 @@ let rec_to_usage r =
   | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd
   | Fmind | Fmaxd | Fminw | Fmaxw -> alu_lite
   | Fnarrowdw -> alu_full
-  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw | Finvw -> mau
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw | Finvw
+  | Ffmad | Ffmaw | Ffmsd | Ffmsw -> mau
 
 
 let real_inst_to_latency = function
@@ -608,7 +614,8 @@ let real_inst_to_latency = function
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)
   | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd | Fnarrowdw -> 1
-  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw | Finvw -> 4
+  | Faddd | Faddw | Fsbfd | Fsbfw | Fmuld | Fmulw | Finvw
+  | Ffmaw | Ffmad | Ffmsw | Ffmsd -> 4
 
 let rec_to_info r : inst_info =
   let usage = rec_to_usage r
