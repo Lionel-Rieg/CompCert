@@ -1,5 +1,6 @@
 #!/bin/bash
 
+printer=../../mppa_k1c/TargetPrinter.ml
 asmdir=instr/asm/
 to_cover_raw=/tmp/to_cover_raw
 to_cover=/tmp/to_cover
@@ -11,8 +12,7 @@ set -e
 # Pipes do not mask errors
 set -o pipefail
 
-sed -n "s/^.*fprintf oc \"	\([^.].*\)	.*/\1/p" ../../mppa_k1c/TargetPrinter.ml | sort -u > $to_cover_raw
-sed -n "s/^.*fprintf oc \"	\([^.].*\)\\n.*/\1/p" ../../mppa_k1c/TargetPrinter.ml | sort -u >> $to_cover_raw
+sed -n "s/^.*fprintf\s*oc\s*\"\s*\([a-z][^[:space:]]*\)\s.*/\1/p" $printer > $to_cover_raw
 python2.7 coverage_helper.py $to_cover_raw | sort -u > $to_cover
 
 rm -f $covered_raw
@@ -22,4 +22,3 @@ done
 python2.7 coverage_helper.py $covered_raw | sort -u > $covered
 
 vimdiff $to_cover $covered
-

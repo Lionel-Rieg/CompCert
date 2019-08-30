@@ -9,10 +9,10 @@ all_iconds = "ne eq lt ge le gt ltu geu leu gtu all nall any none".split(" ")
 
 all_fconds = "one ueq oeq une olt uge oge ult".split(" ")
 
-replaces_a = [(["cb."], all_bconds),
+replaces_a = [(["cb.", "cmoved."], all_bconds),
               (["compd.", "compw."], all_iconds),
               (["fcompd.", "fcompw."], all_fconds),
-              (all_loads_stores, [".xs"])]
+              (all_loads_stores, [".xs", ""])]
 
 replaces_dd = [(["addx", "sbfx"], ["2d", "4d", "8d", "16d"])]
 replaces_dw = [(["addx", "sbfx"], ["2w", "4w", "8w", "16w"])]
