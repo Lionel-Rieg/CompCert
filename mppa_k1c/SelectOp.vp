@@ -686,12 +686,14 @@ Nondetfunction divfs_base (e1: expr) :=
 
 Nondetfunction gen_fma args :=
   match args with
+  | (Eop Onegf (e1:::Enil)):::e2:::e3:::Enil => Some (Eop Ofmsubf (e3:::e1:::e2:::Enil))
   | e1:::e2:::e3:::Enil => Some (Eop Ofmaddf (e3:::e1:::e2:::Enil))
   | _ => None
   end.
 
 Nondetfunction gen_fmaf args :=
   match args with
+  | (Eop Onegfs (e1:::Enil)):::e2:::e3:::Enil => Some (Eop Ofmsubfs (e3:::e1:::e2:::Enil))
   | e1:::e2:::e3:::Enil => Some (Eop Ofmaddfs (e3:::e1:::e2:::Enil))
   | _ => None
   end.

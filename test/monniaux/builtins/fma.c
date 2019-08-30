@@ -8,5 +8,6 @@ int main(int argc, char **argv) {
   double y = strtod(argv[2], NULL);
   double z = strtod(argv[3], NULL);
   printf("%g %g %g\n", __builtin_fma(x, y, z), fma(x, y, z), x*y + z);
+  printf("%g %g %g\n", __builtin_fma(-x, y, z), fma(-x, y, z), (-x)*y + z);
   return 0;
 }

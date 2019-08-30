@@ -1674,9 +1674,13 @@ Proof.
   intros until le.
   intro Heval.
   destruct (gen_fma_match _) in *; try discriminate.
-  inversion Heval; subst a; clear Heval.
-  intro; InvEval.
-  intro Heval.
+  all: inversion Heval; subst a; clear Heval; intro; InvEval.
+  - subst v1.
+    TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v2; simpl; trivial;
+      destruct v3; simpl; trivial.
+  - intro Heval.
   simpl in Heval.
   inv Heval.
   TrivialExists.
@@ -1696,9 +1700,13 @@ Proof.
   intros until le.
   intro Heval.
   destruct (gen_fmaf_match _) in *; try discriminate.
-  inversion Heval; subst a; clear Heval.
-  intro; InvEval.
-  intro Heval.
+  all: inversion Heval; subst a; clear Heval; intro; InvEval.
+  - subst v1.
+    TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v2; simpl; trivial;
+      destruct v3; simpl; trivial.
+  - intro Heval.
   simpl in Heval.
   inv Heval.
   TrivialExists.
