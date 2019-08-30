@@ -6,6 +6,9 @@ BEGIN_TEST(long long)
   long long d = c;
   a = __builtin_k1_alclrd(ptr);
   c = d;
+  c += a;
+
+  c += __builtin_clzll(a);
 
   /* Removed the AFADDD builtin who was incorrect in CompCert, see #157 */
   // a = __builtin_k1_afaddd(ptr, a);

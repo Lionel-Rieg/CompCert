@@ -63,7 +63,6 @@ let builtins = {
       "__builtin_k1_lwzu", (TInt(IUInt, []), [TPtr(TVoid [], [])], false);
 
       (* ALU Instructions *)
-      "__builtin_clzll", (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
       (* "__builtin_k1_addhp", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
       (* "__builtin_k1_adds", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, [])], false); *)
       (* "__builtin_k1_bwlu", (TInt(IUInt, []), 
@@ -74,8 +73,8 @@ let builtins = {
       (* "__builtin_k1_cbs", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
       (* "__builtin_k1_cbsdl", (TInt(ILongLong, []), [TInt(IULongLong, [])], false); *)
       (* "__builtin_k1_clz", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
-      "__builtin_k1_clzw", (TInt(IInt, []), [TInt(IUInt, [])], false);
-      "__builtin_k1_clzd", (TInt(ILongLong, []), [TInt(IULongLong, [])], false);
+      "__builtin_clzw", (TInt(IInt, []), [TInt(IUInt, [])], false);
+      "__builtin_clzll", (TInt(ILongLong, []), [TInt(IULongLong, [])], false);
       (* "__builtin_k1_clzdl", (TInt(ILongLong, []), [TInt(IULongLong, [])], false); *)
       (* "__builtin_k1_cmove", (TInt(IInt, []), [TInt(IInt, []); TInt(IInt, []); TInt(IInt, [])], false); *)
       (* "__builtin_k1_ctz", (TInt(IInt, []), [TInt(IUInt, [])], false); *)
