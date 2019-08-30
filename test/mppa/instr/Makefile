@@ -46,6 +46,7 @@ all: $(BIN)
 
 GREEN=\033[0;32m
 RED=\033[0;31m
+YELLOW=\033[0;33m
 NC=\033[0m
 
 .PHONY: 
@@ -54,7 +55,9 @@ test: $(X86_GCC_OUT) $(GCC_OUT)
 	for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.out;\
-		if $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
+		if grep "__K1C__" -q $$test.c; then\
+			printf "$(YELLOW)UNTESTED: $$test.c contains an \`#ifdef __K1C__\`\n";\
+		elif $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
 			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
 			printf "$(GREEN)GOOD: $$x86out and $$gccout concur$(NC)\n";\

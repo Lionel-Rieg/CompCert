@@ -465,14 +465,14 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pitouchl addr)
   | "__builtin_k1_dzerol", [BA(IR addr)], _ ->
      emit (Pdzerol addr)
-  | "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
+(*| "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
       then (emit (Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddd(addr, res))
   | "__builtin_k1_afaddw", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
       then (emit (Pmv(res, incr_res)); emit Psemi));
-     emit (Pafaddw(addr, res))
+     emit (Pafaddw(addr, res)) *) (* see #157 *)
   | "__builtin_alclrd", [BA(IR addr)], BR(IR res) ->
      emit (Palclrd(res, addr))
   | "__builtin_alclrw", [BA(IR addr)], BR(IR res) ->
