@@ -2,6 +2,24 @@ Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
 
+Open Scope Z_scope.
+
+Definition abs_diff (x y : Z) := Z.abs (x - y).
+Definition abs_diff2 (x y : Z) :=
+  if x <=? y then y - x else x - y.
+Lemma abs_diff2_correct :
+  forall x y : Z, (abs_diff x y) = (abs_diff2 x y).
+Proof.
+  intros.
+  unfold abs_diff, abs_diff2.
+  unfold Z.leb.
+  pose proof (Z.compare_spec x y) as Hspec.
+  inv Hspec.
+  - rewrite Z.abs_eq; omega.
+  - rewrite Z.abs_neq; omega.
+  - rewrite Z.abs_eq; omega.
+Qed.
+
 Inductive shift1_4 : Type :=
 | SHIFT1 | SHIFT2 | SHIFT3 | SHIFT4.
 
