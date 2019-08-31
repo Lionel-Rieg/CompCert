@@ -72,7 +72,7 @@ let int_of_s14 = function
   | SHIFT3 -> 3
   | SHIFT4 -> 4
             
-let print_operation reg pp = function
+let print_operation reg pp op = match op with
   | Omove, [r1] -> reg pp r1
   | Ointconst n, [] -> fprintf pp "%ld" (camlint_of_coqint n)
   | Olongconst n, [] -> fprintf pp "%LdL" (camlint64_of_coqint n)
@@ -86,9 +86,15 @@ let print_operation reg pp = function
   | Ocast16signed, [r1] -> fprintf pp "int16signed(%a)" reg r1
   | Oadd, [r1;r2] -> fprintf pp "%a + %a" reg r1 reg r2
   | Oaddimm n, [r1] -> fprintf pp "%a + %ld" reg r1 (camlint_of_coqint n)
+  | Oaddx(s14), [r1; r2] -> fprintf pp "(%a << %d) + %a" reg r1 (int_of_s14 s14) reg r2
+  | Oaddximm(s14, imm), [r1] -> fprintf pp "(%a << %d) + %ld" reg r1 (int_of_s14 s14) (camlint_of_coqint imm)
   | Oneg, [r1] -> fprintf pp "-(%a)" reg r1
   | Osub, [r1;r2] -> fprintf pp "%a - %a" reg r1 reg r2
+  | Orevsubimm(imm), [r1] -> fprintf pp "%ld - %a" (camlint_of_coqint imm) reg r1
+  | Orevsubx(s14), [r1; r2] -> fprintf pp "%a - (%a << %d)" reg r2 reg r1 (int_of_s14 s14)
+  | Orevsubximm(s14, imm), [r1] -> fprintf pp "%ld - (%a << %d)" (camlint_of_coqint imm) reg r1 (int_of_s14 s14)
   | Omul, [r1;r2] -> fprintf pp "%a * %a" reg r1 reg r2
+  | Omulimm(imm), [r1] -> fprintf pp "%a * %ld" reg r1 (camlint_of_coqint imm)
   | Omulhs, [r1;r2] -> fprintf pp "%a *hs %a" reg r1 reg r2
   | Omulhu, [r1;r2] -> fprintf pp "%a *hu %a" reg r1 reg r2
   | Odiv, [r1;r2] -> fprintf pp "%a /s %a" reg r1 reg r2
@@ -101,6 +107,13 @@ let print_operation reg pp = function
   | Oorimm n, [r1] ->  fprintf pp "%a | %ld" reg r1 (camlint_of_coqint n)
   | Oxor, [r1;r2] -> fprintf pp "%a ^ %a" reg r1 reg r2
   | Oxorimm n, [r1] -> fprintf pp "%a ^ %ld" reg r1 (camlint_of_coqint n)
+  | Onxor, [r1;r2] -> fprintf pp "~(%a ^ %a)" reg r1 reg r2
+  | Onxorimm n, [r1] -> fprintf pp "~(%a ^ %ld)" reg r1 (camlint_of_coqint n)
+  | Onot, [r1] -> fprintf pp "~%a" reg r1
+  | Oandn, [r1; r2] -> fprintf pp "(~%a) & %a" reg r1 reg r2
+  | Oandnimm n, [r1] -> fprintf pp "(~%a) & %ld" reg r1 (camlint_of_coqint n)
+  | Oorn, [r1;r2] -> fprintf pp "(~%a) | %a" reg r1 reg r2
+  | Oornimm n, [r1] -> fprintf pp "(~%a) | %ld" reg r1 (camlint_of_coqint n)
   | Oshl, [r1;r2] -> fprintf pp "%a << %a" reg r1 reg r2
   | Oshlimm n, [r1] -> fprintf pp "%a << %ld" reg r1 (camlint_of_coqint n)
   | Oshr, [r1;r2] -> fprintf pp "%a >>s %a" reg r1 reg r2
@@ -108,6 +121,10 @@ let print_operation reg pp = function
   | Oshru, [r1;r2] -> fprintf pp "%a >>u %a" reg r1 reg r2
   | Oshruimm n, [r1] -> fprintf pp "%a >>u %ld" reg r1 (camlint_of_coqint n)
   | Oshrximm n, [r1] -> fprintf pp "%a >>x %ld" reg r1 (camlint_of_coqint n)
+  | Ororimm n, [r1] -> fprintf pp "(%a ror %ld)" reg r1 (camlint_of_coqint n)
+  | Omadd, [r1; r2; r3] -> fprintf pp "%a + %a * %a" reg r1 reg r2 reg r3
+  | Omaddimm imm, [r1; r2] -> fprintf pp "%a + %a * %ld" reg r1 reg r2 (camlint_of_coqint imm)
+  | Omsub, [r1; r2; r3] -> fprintf pp "%a - %a * %a" reg r1 reg r2 reg r3
 
   | Omakelong, [r1;r2] -> fprintf pp "makelong(%a,%a)" reg r1 reg r2
   | Olowlong, [r1] -> fprintf pp "lowlong(%a)" reg r1
@@ -116,9 +133,15 @@ let print_operation reg pp = function
   | Ocast32unsigned, [r1] -> fprintf pp "long32unsigned(%a)" reg r1
   | Oaddl, [r1;r2] -> fprintf pp "%a +l %a" reg r1 reg r2
   | Oaddlimm n, [r1] -> fprintf pp "%a +l %Ld" reg r1 (camlint64_of_coqint n)
+  | Oaddxl(s14), [r1; r2] -> fprintf pp "(%a <<l %d) +l %a" reg r1 (int_of_s14 s14) reg r2
+  | Oaddxlimm(s14, imm), [r1] -> fprintf pp "(%a <<l %d) +l %Ld" reg r1 (int_of_s14 s14) (camlint64_of_coqint imm)
+  | Orevsublimm(imm), [r1] -> fprintf pp "%Ld -l %a" (camlint64_of_coqint imm) reg r1
+  | Orevsubxl(s14), [r1; r2] -> fprintf pp "%a -l (%a <<l %d)" reg r2 reg r1  (int_of_s14 s14)
+  | Orevsubxlimm(s14, imm), [r1] -> fprintf pp "%Ld -l (%a <<l %d)" (camlint64_of_coqint imm) reg r1 (int_of_s14 s14)
   | Onegl, [r1] -> fprintf pp "-l (%a)" reg r1
   | Osubl, [r1;r2] -> fprintf pp "%a -l %a" reg r1 reg r2
   | Omull, [r1;r2] -> fprintf pp "%a *l %a" reg r1 reg r2
+  | Omullimm(imm), [r1] -> fprintf pp "%a *l %Ld" reg r1 (camlint64_of_coqint imm)
   | Omullhs, [r1;r2] -> fprintf pp "%a *lhs %a" reg r1 reg r2
   | Omullhu, [r1;r2] -> fprintf pp "%a *lhu %a" reg r1 reg r2
   | Odivl, [r1;r2] -> fprintf pp "%a /ls %a" reg r1 reg r2
@@ -129,8 +152,17 @@ let print_operation reg pp = function
   | Oandlimm n, [r1] -> fprintf pp "%a &l %Ld" reg r1 (camlint64_of_coqint n)
   | Oorl, [r1;r2] -> fprintf pp "%a |l %a" reg r1 reg r2
   | Oorlimm n, [r1] ->  fprintf pp "%a |l %Ld" reg r1 (camlint64_of_coqint n)
+  | Onorl, [r1; r2] -> fprintf pp "~(%a |l %a)" reg r1 reg r2
+  | Onorlimm n, [r1] -> fprintf pp "~(%a |l %Ld)" reg r1 (camlint64_of_coqint n)
   | Oxorl, [r1;r2] -> fprintf pp "%a ^l %a" reg r1 reg r2
   | Oxorlimm n, [r1] -> fprintf pp "%a ^l %Ld" reg r1 (camlint64_of_coqint n)
+  | Onxorl, [r1;r2] -> fprintf pp "~(%a ^l %a)" reg r1 reg r2
+  | Onxorlimm n, [r1] -> fprintf pp "~(%a ^l %Ld)" reg r1 (camlint64_of_coqint n)
+  | Onotl, [r1] -> fprintf pp "~%a" reg r1
+  | Oandnl, [r1;r2] -> fprintf pp "(~%a) &l %a" reg r1 reg r2
+  | Oandnlimm n, [r1] -> fprintf pp "(~%a) &l %Ld" reg r1 (camlint64_of_coqint n)
+  | Oornl, [r1;r2] -> fprintf pp "(~%a) |l %a" reg r1 reg r2
+  | Oornlimm n, [r1;r2] -> fprintf pp "(~%a) |l %Ld" reg r1 (camlint64_of_coqint n)
   | Oshll, [r1;r2] -> fprintf pp "%a <<l %a" reg r1 reg r2
   | Oshllimm n, [r1] -> fprintf pp "%a <<l %Ld" reg r1 (camlint64_of_coqint n)
   | Oshrl, [r1;r2] -> fprintf pp "%a >>ls %a" reg r1 reg r2
@@ -138,6 +170,9 @@ let print_operation reg pp = function
   | Oshrlu, [r1;r2] -> fprintf pp "%a >>lu %a" reg r1 reg r2
   | Oshrluimm n, [r1] -> fprintf pp "%a >>lu %ld" reg r1 (camlint_of_coqint n)
   | Oshrxlimm n, [r1] -> fprintf pp "%a >>lx %ld" reg r1 (camlint_of_coqint n)
+  | Omaddl, [r1; r2; r3] -> fprintf pp "%a +l %a *l %a" reg r1 reg r2 reg r3
+  | Omaddlimm imm, [r1; r2] -> fprintf pp "%a +l %a *l %Ld" reg r1 reg r2 (camlint64_of_coqint imm)
+  | Omsubl, [r1; r2; r3] -> fprintf pp "%a -l %a *l %a" reg r1 reg r2 reg r3
 
   | Onegf, [r1] -> fprintf pp "negf(%a)" reg r1
   | Oabsf, [r1] -> fprintf pp "absf(%a)" reg r1
@@ -155,14 +190,14 @@ let print_operation reg pp = function
   | Ofloatofsingle, [r1] -> fprintf pp "floatofsingle(%a)" reg r1
   | Ointoffloat, [r1] -> fprintf pp "intoffloat(%a)" reg r1
   | Ointuoffloat, [r1] -> fprintf pp "intuoffloat(%a)" reg r1
-  | Olongoffloat, [r1] -> fprintf pp "longoffloat(%a)" reg r1
-  | Olonguoffloat, [r1] -> fprintf pp "longuoffloat(%a)" reg r1
-  | Ofloatoflong, [r1] -> fprintf pp "floatoflong(%a)" reg r1
-  | Ofloatoflongu, [r1] -> fprintf pp "floatoflongu(%a)" reg r1
   | Ointofsingle, [r1] -> fprintf pp "intofsingle(%a)" reg r1
   | Ointuofsingle, [r1] -> fprintf pp "intuofsingle(%a)" reg r1
   | Osingleofint, [r1] -> fprintf pp "singleofint(%a)" reg r1
   | Osingleofintu, [r1] -> fprintf pp "singleofintu(%a)" reg r1
+  | Olongoffloat, [r1] -> fprintf pp "longoffloat(%a)" reg r1
+  | Olonguoffloat, [r1] -> fprintf pp "longuoffloat(%a)" reg r1
+  | Ofloatoflong, [r1] -> fprintf pp "floatoflong(%a)" reg r1
+  | Ofloatoflongu, [r1] -> fprintf pp "floatoflongu(%a)" reg r1
   | Olongofsingle, [r1] -> fprintf pp "longofsingle(%a)" reg r1
   | Olonguofsingle, [r1] -> fprintf pp "longuofsingle(%a)" reg r1
   | Osingleoflong, [r1] -> fprintf pp "singleoflong(%a)" reg r1
@@ -184,29 +219,12 @@ let print_operation reg pp = function
   | Osellimm(cond0, imm), [r1; rc] ->
      print_condition0 reg pp cond0 rc;
      fprintf pp " ? %a :l %Ld" reg r1 (camlint64_of_coqint imm)
-  | Oaddx(s14), [r1; r2] -> fprintf pp "(%a << %d) + %a" reg r1 (int_of_s14 s14) reg r2
-  | Oaddximm(s14, imm), [r1] -> fprintf pp "(%a << %d) + %ld" reg r1 (int_of_s14 s14) (camlint_of_coqint imm)
-  | Oaddxl(s14), [r1; r2] -> fprintf pp "(%a <<l %d) +l %a" reg r1 (int_of_s14 s14) reg r2
-  | Oaddxlimm(s14, imm), [r1] -> fprintf pp "(%a <<l %d) +l %Ld" reg r1 (int_of_s14 s14) (camlint64_of_coqint imm)
-  | Orevsubimm(imm), [r1] -> fprintf pp "%ld - %a" (camlint_of_coqint imm) reg r1 
-  | Orevsubximm(s14, imm), [r1] -> fprintf pp "%ld - (%a << %d)" (camlint_of_coqint imm) reg r1 (int_of_s14 s14)
-  | Orevsublimm(imm), [r1] -> fprintf pp "%Ld -l %a" (camlint64_of_coqint imm) reg r1 
-  | Orevsubxlimm(s14, imm), [r1] -> fprintf pp "%Ld -l (%a <<l %d)" (camlint64_of_coqint imm) reg r1 (int_of_s14 s14)
-  | Orevsubx(s14), [r1; r2] -> fprintf pp "%a - (%a << %d)" reg r2 reg r1 (int_of_s14 s14)
-  | Orevsubxl(s14), [r1; r2] -> fprintf pp "%a -l (%a <<l %d)" reg r2 reg r1  (int_of_s14 s14)
-  | Omulimm(imm), [r1] -> fprintf pp "%a * %ld" reg r1 (camlint_of_coqint imm)
-  | Omullimm(imm), [r1] -> fprintf pp "%a *l %Ld" reg r1 (camlint64_of_coqint imm)
-  | Omadd, [r1; r2; r3] -> fprintf pp "%a + %a * %a" reg r1 reg r2 reg r3
-  | Omaddl, [r1; r2; r3] -> fprintf pp "%a +l %a *l %a" reg r1 reg r2 reg r3
-  | (Omaddimm imm), [r1; r2] -> fprintf pp "%a + %a * %ld" reg r1 reg r2 (camlint_of_coqint imm)
-  | (Omaddlimm imm), [r1; r2] -> fprintf pp "%a +l %a *l %Ld" reg r1 reg r2 (camlint64_of_coqint imm)
-  | Omsub, [r1; r2; r3] -> fprintf pp "%a - %a * %a" reg r1 reg r2 reg r3
-  | Omsubl, [r1; r2; r3] -> fprintf pp "%a -l %a *l %a" reg r1 reg r2 reg r3
  | _, _ -> fprintf pp "<bad operator>"
 
 let print_addressing reg pp = function
-  | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)
+  | Aindexed2XS scale, [r1;r2] -> fprintf pp "%a + (%a << %ld)" reg r1 reg r2 (camlint_of_coqint scale)
   | Aindexed2, [r1;r2] -> fprintf pp "%a + %a" reg r1 reg r2
+  | Aindexed n, [r1] -> fprintf pp "%a + %Ld" reg r1 (camlint64_of_ptrofs n)
   | Aglobal(id, ofs), [] ->
       fprintf pp "\"%s\" + %Ld" (extern_atom id) (camlint64_of_ptrofs ofs)
   | Ainstack ofs, [] -> fprintf pp "stack(%Ld)" (camlint64_of_ptrofs ofs)

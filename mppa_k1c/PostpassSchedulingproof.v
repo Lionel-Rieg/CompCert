@@ -240,7 +240,7 @@ Lemma exec_basic_instr_pc_var:
   exec_basic_instr ge i rs m = Next rs' m' ->
   exec_basic_instr ge i (rs # PC <- v) m = Next (rs' # PC <- v) m'.
 Proof.
-  intros. unfold exec_basic_instr in *. unfold parexec_basic_instr in *. destruct i.
+  intros. unfold exec_basic_instr in *. unfold bstep in *. destruct i.
   - unfold exec_arith_instr in *. destruct i; destruct i.
       all: try (exploreInst; inv H; apply next_eq; auto;
       apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
@@ -681,7 +681,7 @@ Lemma transf_exec_basic_instr:
   forall i rs m, exec_basic_instr ge i rs m = exec_basic_instr tge i rs m.
 Proof.
   intros. pose symbol_address_preserved.
-  unfold exec_basic_instr. unfold parexec_basic_instr. exploreInst; simpl; auto; try congruence.
+  unfold exec_basic_instr. unfold bstep. exploreInst; simpl; auto; try congruence.
   unfold parexec_arith_instr; unfold arith_eval_r; exploreInst; simpl; auto; try congruence.
 Qed.
 
@@ -736,7 +736,7 @@ Proof.
   induction 1; intros; inv MS.
   - exploit function_ptr_translated; eauto. intros (tf & FFP & TRANSF). monadInv TRANSF.
     exploit transf_find_bblock; eauto. intros (lbb & VES & c & TAIL).
-    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ).
+    exploit verified_schedule_correct; eauto. intros (tbb & CONC & BBEQ). inv CONC. rename H3 into CONC.
     assert (NOOV: size_blocks x.(fn_blocks) <= Ptrofs.max_unsigned).
       eapply transf_function_no_overflow; eauto. 
 
@@ -798,7 +798,7 @@ Lemma verified_schedule_nob_checks_alls_bundles bb lb bundle:
   List.In bundle lb -> verify_par_bblock bundle = OK tt.
 Proof.
   unfold verified_schedule_nob. intros H;
-  monadInv H. destruct x3. 
+  monadInv H. destruct x4.
   intros; eapply verified_par_checks_alls_bundles; eauto.
 Qed.
 

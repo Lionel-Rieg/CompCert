@@ -15,7 +15,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for K1c assembly language. *)
+(** Sequential block semantics for K1c assembly. The syntax is given in AsmVLIW *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -172,7 +172,6 @@ Proof.
 Qed.
 
 Ltac bblock_auto_correct := (apply non_empty_bblock_refl; try discriminate; try (left; discriminate); try (right; discriminate)).
-(* Local Obligation Tactic := bblock_auto_correct. *)
 
 Lemma Istrue_proof_irrelevant (b: bool): forall (p1 p2:Is_true b), p1=p2.
 Proof.
@@ -250,9 +249,6 @@ Proof.
   intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
 Qed.
 
-
-
-
 (** * Sequential Semantics of basic blocks *)
 Section RELSEM.
 
@@ -286,7 +282,7 @@ Definition exec_store_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro:
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := parexec_basic_instr ge bi rs rs m m.
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := bstep ge bi rs rs m m.
 
 Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
   match body with
@@ -302,28 +298,7 @@ Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
 
 Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome := par_goto_label f lbl rs rs m.
 
-(** Evaluating a branch 
-
-Warning: in m PC is assumed to be already pointing on the next instruction !
-
-*)
 Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome := par_eval_branch f l rs rs m res.
-
-(** Execution of a single control-flow instruction [i] in initial state [rs] and
-    [m].  Return updated state.
-
-    As above: PC is assumed to be incremented on the next block before the control-flow instruction
-
-    For instructions that correspond tobuiltin
-    actual RISC-V instructions, the cases are straightforward
-    transliterations of the informal descriptions given in the RISC-V
-    user-mode specification.  For pseudo-instructions, refer to the
-    informal descriptions given above.
-
-    Note that we set to [Vundef] the registers used as temporaries by
-    the expansions of the pseudo-instructions, so that the RISC-V code
-    we generate cannot use those registers to hold values that must
-    survive the execution of the pseudo-instruction. *)
 
 Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome := parexec_control ge f oc rs rs m.
 
@@ -368,15 +343,10 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State rs m) t (State rs' m')
   .
 
-
-
 End RELSEM.
-
-
 
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
-
 
 Definition data_preg (r: preg) : bool :=
   match r with
@@ -386,4 +356,3 @@ Definition data_preg (r: preg) : bool :=
   | IR _   => true
   | PC     => false
   end.
-

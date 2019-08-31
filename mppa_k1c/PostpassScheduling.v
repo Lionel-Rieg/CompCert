@@ -19,7 +19,7 @@ Local Open Scope error_monad_scope.
 
 (** Oracle taking as input a basic block,
     returns a schedule expressed as a list of bundles *)
-Axiom schedule: bblock -> list bblock.
+Axiom schedule: bblock -> (list (list basic)) * option control.
 
 Extract Constant schedule => "PostpassSchedulingOracle.schedule".
 
@@ -208,7 +208,8 @@ Proof.
     + apply IHlbb in EQ. assumption.
 Qed.
 
-
+Inductive is_concat : bblock -> list bblock -> Prop :=
+  | mk_is_concat: forall tbb lbb, concat_all lbb = OK tbb -> is_concat tbb lbb.
 
 Definition verify_schedule (bb bb' : bblock) : res unit :=
   match bblock_simub bb bb' with
@@ -333,10 +334,49 @@ Proof.
     apply stick_header_concat_all. assumption.
 Qed.
 
+Program Definition make_bblock_from_basics lb :=
+  match lb with
+  | nil => Error (msg "PostpassScheduling.make_bblock_from_basics")
+  | b :: lb => OK {| header := nil; body := b::lb; exit := None |}
+  end.
 
+Fixpoint schedule_to_bblocks_nocontrol llb :=
+  match llb with
+  | nil => OK nil
+  | lb :: llb => do bb <- make_bblock_from_basics lb;
+                 do lbb <- schedule_to_bblocks_nocontrol llb;
+                 OK (bb :: lbb)
+  end.
 
-Definition do_schedule (bb: bblock) : list bblock :=
-  if (Z.eqb (size bb) 1) then bb::nil else schedule bb.
+Program Definition make_bblock_from_basics_and_control lb c := 
+  match c with
+  | PExpand (Pbuiltin _ _ _) => Error (msg "PostpassScheduling.make_bblock_from_basics_and_control")
+  | PCtlFlow cf => OK {| header := nil; body := lb; exit := Some (PCtlFlow cf) |}
+  end.
+Next Obligation.
+  apply wf_bblock_refl. constructor.
+  - right. discriminate.
+  - discriminate.
+Qed.
+
+Fixpoint schedule_to_bblocks_wcontrol llb c :=
+  match llb with
+  | nil => OK ((bblock_single_inst (PControl c)) :: nil)
+  | lb :: nil => do bb <- make_bblock_from_basics_and_control lb c; OK (bb :: nil)
+  | lb :: llb => do bb <- make_bblock_from_basics lb;
+                 do lbb <- schedule_to_bblocks_wcontrol llb c;
+                 OK (bb :: lbb)
+  end.
+
+Definition schedule_to_bblocks (llb: list (list basic)) (oc: option control) : res (list bblock) :=
+  match oc with
+  | None => schedule_to_bblocks_nocontrol llb
+  | Some c => schedule_to_bblocks_wcontrol llb c
+  end.
+
+Definition do_schedule (bb: bblock) : res (list bblock) :=
+  if (Z.eqb (size bb) 1) then OK (bb::nil) 
+  else match (schedule bb) with (llb, oc) => schedule_to_bblocks llb oc end.
 
 Definition verify_par_bblock (bb: bblock) : res unit :=
   if (bblock_para_check bb) then OK tt else Error (msg "PostpassScheduling.verify_par_bblock").
@@ -350,7 +390,7 @@ Fixpoint verify_par (lbb: list bblock) :=
 Definition verified_schedule_nob (bb : bblock) : res (list bblock) :=
   let bb'  := no_header bb in
   let bb'' := Peephole.optimize_bblock bb' in
-  let lbb := do_schedule bb'' in
+  do lbb <- do_schedule bb'';
   do tbb <- concat_all lbb;
   do sizecheck <- verify_size bb lbb;
   do schedcheck <- verify_schedule bb' tbb;
@@ -363,7 +403,7 @@ Lemma verified_schedule_nob_size:
 Proof.
   intros. monadInv H. erewrite <- stick_header_code_size; eauto.
   apply verify_size_size.
-  destruct x0; try discriminate. assumption.
+  destruct x1; try discriminate. assumption.
 Qed.
 
 Lemma verified_schedule_nob_no_header_in_middle:
@@ -382,7 +422,7 @@ Lemma verified_schedule_nob_header:
   /\ Forall (fun b => header b = nil) lbb.
 Proof.
   intros. split.
-  - monadInv H. unfold stick_header_code in EQ2. destruct (hd_error _); try discriminate. inv EQ2.
+  - monadInv H. unfold stick_header_code in EQ3. destruct (hd_error _); try discriminate. inv EQ3.
     simpl. reflexivity.
   - apply verified_schedule_nob_no_header_in_middle in H. assumption.
 Qed.
@@ -427,29 +467,29 @@ Qed.
 Lemma verified_schedule_nob_correct:
   forall ge f bb lbb,
   verified_schedule_nob bb = OK lbb ->
-  exists tbb, 
-     concat_all lbb = OK tbb
+  exists tbb,
+     is_concat tbb lbb
   /\ bblock_simu ge f bb tbb.
 Proof.
   intros. monadInv H.
   exploit stick_header_code_concat_all; eauto.
   intros (tbb & CONC & STH).
-  exists tbb. split; auto.
-  rewrite verify_schedule_no_header in EQ0. erewrite stick_header_verify_schedule in EQ0; eauto.
-  eapply bblock_simub_correct; eauto. unfold verify_schedule in EQ0.
+  exists tbb. split; auto. constructor; auto.
+  rewrite verify_schedule_no_header in EQ2. erewrite stick_header_verify_schedule in EQ2; eauto.
+  eapply bblock_simub_correct; eauto. unfold verify_schedule in EQ2.
   destruct (bblock_simub _ _); auto; try discriminate.
 Qed.
 
 Theorem verified_schedule_correct:
   forall ge f bb lbb,
   verified_schedule bb = OK lbb ->
-  exists tbb, 
-     concat_all lbb = OK tbb
+  exists tbb,
+     is_concat tbb lbb
   /\ bblock_simu ge f bb tbb.
 Proof.
   intros. unfold verified_schedule in H. destruct (exit bb). destruct c. destruct i.
   all: try (eapply verified_schedule_nob_correct; eauto; fail).
-  inv H. eexists. split; simpl; auto. constructor; auto.
+  inv H. eexists. split; simpl; auto. constructor; auto. simpl; auto. constructor; auto.
 Qed.
 
 Lemma verified_schedule_builtin_idem:

@@ -1,35 +1,45 @@
 import fileinput
+import sys
 
-occurs = {}
+all_loads_stores = "lbs lbz lhz lo lq ld lhs lws sb sd sh so sq sw".split(" ")
 
+all_bconds = "wnez weqz wltz wgez wlez wgtz dnez deqz dltz dgez dlez dgtz".split(" ")
+
+all_iconds = "ne eq lt ge le gt ltu geu leu gtu all nall any none".split(" ")
+
+all_fconds = "one ueq oeq une olt uge oge ult".split(" ")
+
+replaces_a = [(["cb.", "cmoved."], all_bconds),
+              (["compd.", "compw."], all_iconds),
+              (["fcompd.", "fcompw."], all_fconds),
+              (all_loads_stores, [".xs", ""])]
+
+replaces_dd = [(["addx", "sbfx"], ["2d", "4d", "8d", "16d"])]
+replaces_dw = [(["addx", "sbfx"], ["2w", "4w", "8w", "16w"])]
+
+macros_binds = {"%a": replaces_a, "%dd": replaces_dd, "%dw": replaces_dw}
+
+def expand_macro(fullinst, macro, replaceTable):
+    inst = fullinst.replace(macro, "")
+    for (searchlist, mods) in replaceTable:
+        if inst in searchlist:
+            return [fullinst.replace(macro, mod) for mod in mods]
+    raise NameError
+
+insts = []
 for line in fileinput.input():
-    line_noc = line.replace('\n', '')
-    if line_noc not in occurs:
-        occurs[line_noc] = 0
-    occurs[line_noc] += 1
+    fullinst = line[:-1]
+    try:
+        for macro in macros_binds:
+            if macro in fullinst:
+                insts.extend(expand_macro(fullinst, macro, macros_binds[macro]))
+                break
+        else:
+            insts.append(fullinst)
+    except NameError:
+        print >> sys.stderr, fullinst + " could not be found any match for macro " + macro
+        sys.exit(1)
 
-# HACK: Removing all the instructions with "%a", replacing them with all their variations
-# Also removing all instructions starting with '.'
-pruned_occurs = dict(occurs)
-for inst in occurs:
-    if inst[0] == '.':
-        del pruned_occurs[inst]
-    if "%a" not in inst:
-        continue
-    inst_no_a = inst.replace(".%a", "")
-    if inst_no_a in ("compw", "compd"):
-        del pruned_occurs[inst]
-        for mod in ("ne", "eq", "lt", "gt", "le", "ge", "ltu", "leu", "geu",
-                    "gtu", "all", "any", "nall", "none"):
-            pruned_occurs[inst_no_a + "." + mod] = 1
-    elif inst_no_a in ("cb"):
-        del pruned_occurs[inst]
-        for mod in ("wnez", "weqz", "wltz", "wgez", "wlez", "wgtz", "deqz", "dnez",
-                    "dltz", "dgez", "dlez", "dgtz"):
-            pruned_occurs[inst_no_a + "." + mod] = 1
-    else:
-        assert False, "Found instruction with %a: " + inst
-occurs = pruned_occurs
-
-for inst in sorted(occurs):
+for inst in insts:
     print inst
+occurs = {}

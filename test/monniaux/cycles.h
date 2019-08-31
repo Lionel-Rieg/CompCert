@@ -46,5 +46,5 @@ static inline cycle_t get_cycle(void) { return 0; }
 #ifdef MAX_MEASURES
   #define TIMEINIT(i) {_last_stop[i] = get_cycle();}
   #define TIMESTOP(i) {cycle_t cur = get_cycle(); _total_cycles[i] += cur - _last_stop[i]; _last_stop[i] = cur;}
-  #define TIMEPRINT(n) { for (int i = 0; i <= n; i++) printf("(%d) cycles: %" PRIu64 "\n", i, _total_cycles[i]); }
+  #define TIMEPRINT(n) { for (int i = 0; i <= n; i++) printf("%d cycles: %" PRIu64 "\n", i, _total_cycles[i]); }
 #endif
