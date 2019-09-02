@@ -226,7 +226,7 @@ Definition pair_instr_block
       | operation_other _ _ =>
           pair_Iop_block op args res s b
       end
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       let (mv1, b1) := extract_moves nil b in
       match b1 with
       | Lload chunk' addr' args' dst' :: b2 =>

@@ -157,7 +157,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               let (op', args') := op_strength_reduction op args aargs in
               Iop op' args' res s'
           end
-      | Iload chunk addr args dst s =>
+      | Iload trap chunk addr args dst s =>
           let aargs := aregs ae args in
           let a := ValueDomain.loadv chunk rm am (eval_static_addressing addr aargs) in
           match const_for_result a with
@@ -165,7 +165,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               Iop cop nil dst s
           | None =>
               let (addr', args') := addr_strength_reduction addr args aargs in
-              Iload chunk addr' args' dst s
+              Iload trap chunk addr' args' dst s
           end
       | Istore chunk addr args src s =>
           let aargs := aregs ae args in

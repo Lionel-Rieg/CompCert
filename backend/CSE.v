@@ -459,7 +459,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           before
       | Iop op args res s =>
           add_op before res op args
-      | Iload chunk addr args dst s =>
+      | Iload trap chunk addr args dst s =>
           add_load before dst chunk addr args
       | Istore chunk addr args src s =>
           let app := approx!!pc in
@@ -529,14 +529,14 @@ Definition transf_instr (n: numbering) (instr: instruction) :=
             let (op', args') := reduce _ combine_op n1 op args vl in
             Iop op' args' res s
         end
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       let (n1, vl) := valnum_regs n args in
       match find_rhs n1 (Load chunk addr vl) with
       | Some r =>
           Iop Omove (r :: nil) dst s
       | None =>
           let (addr', args') := reduce _ combine_addr n1 addr args vl in
-          Iload chunk addr' args' dst s
+          Iload trap chunk addr' args' dst s
       end
   | Istore chunk addr args src s =>
       let (n1, vl) := valnum_regs n args in

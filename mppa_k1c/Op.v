@@ -1649,6 +1649,27 @@ Proof.
   - apply Val.offset_ptr_inject; auto. 
 Qed.
 
+Lemma eval_addressing_inj_none:
+  forall addr sp1 vl1 sp2 vl2,
+  (forall id ofs,
+      In id (globals_addressing addr) ->
+      Val.inject f (Genv.symbol_address ge1 id ofs) (Genv.symbol_address ge2 id ofs)) ->
+  Val.inject f sp1 sp2 ->
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing ge1 sp1 addr vl1 = None ->
+  eval_addressing ge2 sp2 addr vl2 = None.
+Proof.
+  intros until vl2. intros Hglobal Hinjsp Hinjvl.
+  destruct addr; simpl in *.
+  1,2: inv Hinjvl; trivial;
+       inv H0; trivial;
+       inv H2; trivial;
+       discriminate.
+  2,3: inv Hinjvl; trivial; discriminate.
+  inv Hinjvl; trivial; inv H0; trivial;
+    inv H; trivial; discriminate.
+Qed.
+  
 End EVAL_COMPAT.
 
 (** Compatibility of the evaluation functions with the ``is less defined'' relation over values. *)
@@ -1755,6 +1776,24 @@ Proof.
   destruct H1 as [v2 [A B]]. exists v2; split; auto. rewrite val_inject_lessdef; auto.
 Qed.
 
+
+Lemma eval_addressing_lessdef_none:
+  forall sp addr vl1 vl2,
+  Val.lessdef_list vl1 vl2 ->
+  eval_addressing genv sp addr vl1 = None ->
+  eval_addressing genv sp addr vl2 = None.
+Proof.
+  intros until vl2. intros Hlessdef Heval1.
+  destruct addr; simpl in *.
+  1, 2, 4, 5: inv Hlessdef; trivial;
+  inv H0; trivial;
+  inv H2; trivial;
+    discriminate.
+  inv Hlessdef; trivial.
+  inv H0; trivial.
+  discriminate.
+Qed.
+  
 End EVAL_LESSDEF.
 
 (** Compatibility of the evaluation functions with memory injections. *)

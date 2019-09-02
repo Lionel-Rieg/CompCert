@@ -438,6 +438,19 @@ Proof.
   apply eval_addressing_preserved. exact symbols_preserved. eauto.
   econstructor; eauto. apply set_reg_lessdef; auto.
 
+  (* TODO *)
+- (* load notrap1 *)
+  TransfInstr.
+  assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.
+  
+  intros [a' [ADDR' ALD]].
+  exploit Mem.loadv_extends; eauto.
+  intros [v' [LOAD' VLD]].
+  left. exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- v') m'); split.
+  eapply exec_Iload with (a := a'). eauto.  rewrite <- ADDR'.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto.
+  econstructor; eauto. apply set_reg_lessdef; auto.
+
 - (* store *)
   TransfInstr.
   assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.

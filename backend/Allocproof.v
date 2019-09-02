@@ -96,10 +96,10 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
       expand_block_shape (BSopdead op args res mv s)
                          (Iop op args res s)
                          (expand_moves mv (Lbranch s :: k))
-  | ebs_load: forall chunk addr args dst mv1 args' dst' mv2 s k,
+  | ebs_load: forall trap chunk addr args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
       expand_block_shape (BSload chunk addr args dst mv1 args' dst' mv2 s)
-                         (Iload chunk addr args dst s)
+                         (Iload trap chunk addr args dst s)
                          (expand_moves mv1
                            (Lload chunk addr args' dst' :: expand_moves mv2 (Lbranch s :: k)))
   | ebs_load2: forall addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s k,
@@ -130,10 +130,10 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
                          (expand_moves mv1
                            (Lload Mint32 addr2 args' dst' ::
                             expand_moves mv2 (Lbranch s :: k)))
-  | ebs_load_dead: forall chunk addr args dst mv s k,
+  | ebs_load_dead: forall trap chunk addr args dst mv s k,
       wf_moves mv ->
       expand_block_shape (BSloaddead chunk addr args dst mv s)
-                         (Iload chunk addr args dst s)
+                         (Iload trap chunk addr args dst s)
                          (expand_moves mv (Lbranch s :: k))
   | ebs_store: forall chunk addr args src mv1 args' src' s k,
       wf_moves mv1 ->

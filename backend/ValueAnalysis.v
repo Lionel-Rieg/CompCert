@@ -121,7 +121,7 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
   | Some(Iop op args res s) =>
       let a := eval_static_operation op (aregs ae args) in
       VA.State (AE.set res a ae) am
-  | Some(Iload chunk addr args dst s) =>
+  | Some(Iload trap chunk addr args dst s) =>
       let a := loadv chunk rm am (eval_static_addressing addr (aregs ae args)) in
       VA.State (AE.set dst a ae) am
   | Some(Istore chunk addr args src s) =>
