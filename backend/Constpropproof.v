@@ -406,6 +406,8 @@ Proof.
   assert (VM1: vmatch bc a aa) by (eapply eval_static_addressing_sound; eauto with va).
   set (av := loadv chunk (romem_for cu) am aa).
   assert (VM2: vmatch bc v av) by (eapply loadv_sound; eauto).
+  destruct trap.
+  {
   destruct (const_for_result av) as [cop|] eqn:?; intros.
 + (* constant-propagated *)
   exploit const_for_result_correct; eauto. intros (v' & A & B).
@@ -431,7 +433,25 @@ Proof.
   left; econstructor; econstructor; split.
   eapply exec_Iload; eauto.
   eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+  }
+  {
+    assert (exists v2 : val,
+         eval_addressing ge (Vptr sp0 Ptrofs.zero) addr (rs' ## args) = Some v2 /\ Val.lessdef a v2) as Hexist2.
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Hexist2 as [v2 [Heval2 Hlessdef2]].
+    destruct (Mem.loadv_extends chunk m m' a v2 v MEM H1 Hlessdef2) as [vX [Hvx1 Hvx2]].
+    left; econstructor; econstructor; split.
+    eapply exec_Iload with (a := v2); eauto.
+    erewrite eval_addressing_preserved with (ge1:=ge); auto.
+    exact symbols_preserved.
+  eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    
+  }
 
+- (* Iload notrap2 *)
+  (* TODO *)
 - (* Istore *)
   rename pc'0 into pc. TransfInstr.
   assert (ADDR:
