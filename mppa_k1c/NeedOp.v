@@ -121,9 +121,12 @@ Definition needs_of_operation (op: operation) (nv: nval): list nval :=
   | Omaddlimm n => op2 (default nv)
   | Omsubl => op3 (default nv)
   | Onegf | Oabsf => op1 (default nv)
-  | Oaddf | Osubf | Omulf | Odivf => op2 (default nv)
+  | Oaddf | Osubf | Omulf | Odivf | Ominf | Omaxf => op2 (default nv)
+  | Ofmaddf | Ofmsubf => op3 (default nv)
   | Onegfs | Oabsfs => op1 (default nv)
-  | Oaddfs | Osubfs | Omulfs | Odivfs => op2 (default nv)
+  | Oaddfs | Osubfs | Omulfs | Odivfs | Ominfs | Omaxfs => op2 (default nv)
+  | Oinvfs => op1 (default nv)
+  | Ofmaddfs | Ofmsubfs => op3 (default nv)
   | Ofloatofsingle | Osingleoffloat => op1 (default nv)
   | Ointoffloat | Ointuoffloat => op1 (default nv)
   | Olongoffloat | Olonguoffloat | Ofloatoflong | Ofloatoflongu => op1 (default nv)
@@ -285,7 +288,53 @@ Remark default_idem: forall nv, default (default nv) = default nv.
 Proof.
   destruct nv; simpl; trivial.
 Qed.
-  
+
+Lemma vagree_triple_op_float :
+  forall f a b c x y z nv,
+    (vagree a x (default nv)) ->
+    (vagree b y (default nv)) ->
+    (vagree c z (default nv)) ->
+    (vagree (ExtValues.triple_op_float f a b c)
+            (ExtValues.triple_op_float f x y z) nv).
+Proof.
+  induction nv;
+  intros Hax Hby Hcz.
+  - trivial.
+  - simpl in *. destruct a; simpl; trivial.
+    destruct b; simpl; trivial.
+    destruct c; simpl; trivial.
+  - simpl in *. destruct a; simpl; trivial.
+    destruct b; simpl; trivial.
+    destruct c; simpl; trivial.
+    inv Hax. inv Hby. inv Hcz.
+    simpl.
+    constructor.
+Qed.
+
+Lemma vagree_triple_op_single :
+  forall f a b c x y z nv,
+    (vagree a x (default nv)) ->
+    (vagree b y (default nv)) ->
+    (vagree c z (default nv)) ->
+    (vagree (ExtValues.triple_op_single f a b c)
+            (ExtValues.triple_op_single f x y z) nv).
+Proof.
+  induction nv;
+  intros Hax Hby Hcz.
+  - trivial.
+  - simpl in *. destruct a; simpl; trivial.
+    destruct b; simpl; trivial.
+    destruct c; simpl; trivial.
+  - simpl in *. destruct a; simpl; trivial.
+    destruct b; simpl; trivial.
+    destruct c; simpl; trivial.
+    inv Hax. inv Hby. inv Hcz.
+    simpl.
+    constructor.
+Qed.
+
+Hint Resolve vagree_triple_op_float vagree_triple_op_single : na.
+
 Lemma needs_of_operation_sound:
   forall op args v nv args',
   eval_operation ge (Vptr sp Ptrofs.zero) op args m1 = Some v ->
@@ -344,7 +393,10 @@ Proof.
   apply mull_sound; trivial.
   rewrite default_idem; trivial.
   rewrite default_idem; trivial.
-  (* select *)
+- apply vagree_triple_op_float; assumption.
+- apply vagree_triple_op_float; assumption.
+- apply vagree_triple_op_single; assumption.
+- apply vagree_triple_op_single; assumption.
 - destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
   erewrite needs_of_condition0_sound by eauto.
   apply select_sound; auto.

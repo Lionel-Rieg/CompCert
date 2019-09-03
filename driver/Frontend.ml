@@ -119,7 +119,7 @@ let init () =
     | "mppa_k1c" -> Machine.mppa_k1c
     | _         -> assert false
   end;
-  Builtins.set C2C.builtins;
+  Env.set_builtins C2C.builtins;
   Cutil.declare_attributes C2C.attributes;
   CPragmas.initialize()
 

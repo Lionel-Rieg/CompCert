@@ -17,18 +17,10 @@
 
 (** Correctness of instruction selection for operators *)
 
-Require Import Coqlib.
-Require Import Maps.
-Require Import AST.
-Require Import Zbits.
-Require Import Integers.
-Require Import Floats.
-Require Import Values.
-Require Import Memory.
-Require Import Globalenvs.
-Require Import Cminor.
-Require Import Op.
-Require Import CminorSel.
+Require Import Coqlib Zbits.
+Require Import AST Integers Floats.
+Require Import Values Memory Builtins Globalenvs.
+Require Import Cminor Op CminorSel.
 Require Import SelectOp.
 Require Import OpHelpers.
 Require Import OpHelpersproof.
@@ -941,7 +933,6 @@ Proof.
 - constructor; auto.
 Qed.
 
-
 (* floating-point division without HELPERS *)
 Theorem eval_divf_base:
   forall le a b x y,
@@ -962,4 +953,17 @@ Proof.
   intros; unfold divfs_base.
   TrivialExists.
 Qed.
+
+(** Platform-specific known builtins *)
+
+Theorem eval_platform_builtin:
+  forall bf al a vl v le,
+  platform_builtin bf al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem bf vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  intros. discriminate.
+Qed.
+
 End CMCONSTR.

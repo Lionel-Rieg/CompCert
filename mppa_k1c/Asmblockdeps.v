@@ -1338,6 +1338,7 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Pfabsw => "Pfabsw"
   | Pfnegd => "Pfnegd"
   | Pfnegw => "Pfnegw"
+  | Pfinvw => "Pfinvw"
   | Pfnarrowdw => "Pfnarrowdw"
   | Pfwidenlwd => "Pfwidenlwd"
   | Pfloatwrnsz => "Pfloatwrnsz"
@@ -1418,6 +1419,10 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Pfsbfw => "Pfsbfw"
   | Pfmuld => "Pfmuld"
   | Pfmulw => "Pfmulw"
+  | Pfmind => "Pfmind"
+  | Pfminw => "Pfminw"
+  | Pfmaxd => "Pfmaxd"
+  | Pfmaxw => "Pfmaxw"
   end.
 
 Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
@@ -1473,6 +1478,10 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   | Pmsubl  => "Pmsubl"
   | Pcmove _ => "Pcmove"
   | Pcmoveu _ => "Pcmoveu"
+  | Pfmaddfw  => "Pfmaddfw"
+  | Pfmaddfl  => "Pfmaddfl"
+  | Pfmsubfw  => "Pfmsubfw"
+  | Pfmsubfl  => "Pfmsubfl"
   end.
 
 Definition string_of_name_arr (n: arith_name_arr): pstring :=

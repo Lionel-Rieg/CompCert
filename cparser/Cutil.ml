@@ -29,7 +29,7 @@ let no_loc = ("", -1)
 
 module Ident = struct
   type t = ident
-  let compare id1 id2 = Pervasives.compare id1.stamp id2.stamp
+  let compare id1 id2 = compare id1.stamp id2.stamp
 end
 
 module IdentSet = Set.Make(Ident)
@@ -819,6 +819,11 @@ let is_scalar_type env t =
 let is_composite_type env t =
   match unroll env t with
   | TStruct _ | TUnion _ -> true
+  | _ -> false
+
+let is_array_type env t =
+  match unroll env t with
+  | TArray _ -> true
   | _ -> false
 
 let is_function_type env t =

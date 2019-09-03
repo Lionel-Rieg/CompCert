@@ -1,6 +1,7 @@
 Require Import Coqlib.
 Require Import Integers.
 Require Import Values.
+Require Import Floats ExtFloats.
 
 Open Scope Z_scope.
 
@@ -689,3 +690,51 @@ Definition revsubx sh v1 v2 :=
 
 Definition revsubxl sh v1 v2 :=
   Val.subl v2 (Val.shll v1 (Vint sh)).
+
+Definition minf v1 v2 :=
+  match v1, v2 with
+  | (Vfloat f1), (Vfloat f2) => Vfloat (ExtFloat.min f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition maxf v1 v2 :=
+  match v1, v2 with
+  | (Vfloat f1), (Vfloat f2) => Vfloat (ExtFloat.max f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition minfs v1 v2 :=
+  match v1, v2 with
+  | (Vsingle f1), (Vsingle f2) => Vsingle (ExtFloat32.min f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition maxfs v1 v2 :=
+  match v1, v2 with
+  | (Vsingle f1), (Vsingle f2) => Vsingle (ExtFloat32.max f1 f2)
+  | _, _ => Vundef
+  end.
+
+Definition invfs v1 :=
+  match v1 with
+  | (Vsingle f1) => Vsingle (ExtFloat32.inv f1)
+  | _ => Vundef
+  end.
+
+Definition triple_op_float f v1 v2 v3 :=
+  match v1, v2, v3 with
+  | (Vfloat f1), (Vfloat f2), (Vfloat f3) => Vfloat (f f1 f2 f3)
+  | _, _, _ => Vundef
+  end.
+
+Definition triple_op_single f v1 v2 v3 :=
+  match v1, v2, v3 with
+  | (Vsingle f1), (Vsingle f2), (Vsingle f3) => Vsingle (f f1 f2 f3)
+  | _, _, _ => Vundef
+  end.
+
+Definition fmaddf := triple_op_float (fun f1 f2 f3 => Float.fma f2 f3 f1).
+Definition fmaddfs := triple_op_single (fun f1 f2 f3 => Float32.fma f2 f3 f1).
+
+Definition fmsubf := triple_op_float (fun f1 f2 f3 => Float.fma (Float.neg f2) f3 f1).
+Definition fmsubfs := triple_op_single (fun f1 f2 f3 => Float32.fma (Float32.neg f2) f3 f1).

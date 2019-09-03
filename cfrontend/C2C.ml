@@ -153,19 +153,17 @@ let ais_annot_functions =
       true);]
   else
     []
-
-let builtin_ternary suffix typ =
-  ("__builtin_ternary_" ^ suffix),
-  (typ, [TInt(IInt, []); typ; typ], false);;
   
 let builtins_generic = {
-  Builtins.typedefs = [];
-  Builtins.functions =
+  builtin_typedefs = [];
+  builtin_functions =
     ais_annot_functions
       @
     [
     (* Integer arithmetic *)
-    "__builtin_bswap",
+    "__builtin_bswap64",
+    (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
+      "__builtin_bswap",
     (TInt(IUInt, []), [TInt(IUInt, [])], false);
     "__builtin_bswap32",
       (TInt(IUInt, []), [TInt(IUInt, [])], false);
@@ -184,15 +182,12 @@ let builtins_generic = {
             TPtr(TVoid [AConst], []);
             TInt(IULong, []);
             TInt(IULong, [])],
-           false);
-    (* Ternary operator *)
-    builtin_ternary "uint" (TInt(IUInt, []));
-    builtin_ternary "ulong" (TInt(IULong, []));
-    builtin_ternary "int" (TInt(IInt, []));
-    builtin_ternary "long" (TInt(ILong, []));
-    builtin_ternary "double" (TFloat(FDouble, []));
-    builtin_ternary "float" (TFloat(FFloat, []));
-	    
+          false);
+    (* Selection *)
+    "__builtin_sel",
+        (TVoid [],
+           [TInt(C.IBool, [])],
+           true);
     (* Annotations *)
     "__builtin_annot",
         (TVoid [],
@@ -336,9 +331,12 @@ let builtins_generic = {
 
 (* Add processor-dependent builtins *)
 
-let builtins =
-  Builtins.({ typedefs = builtins_generic.typedefs @ CBuiltins.builtins.typedefs;
-    functions = builtins_generic.Builtins.functions @ CBuiltins.builtins.functions })
+let builtins = {
+  builtin_typedefs =
+    builtins_generic.builtin_typedefs @ CBuiltins.builtins.builtin_typedefs;
+  builtin_functions =
+    builtins_generic.builtin_functions @ CBuiltins.builtins.builtin_functions
+}
 
 (** ** The known attributes *)
 
@@ -632,6 +630,12 @@ and convertParams env = function
     | [] -> Tnil
     | (id, ty) :: rem -> Tcons(convertTyp env ty, convertParams env rem)
 
+(* Convert types for the arguments to a function call.  The types for
+   fixed arguments are taken from the function prototype.  The types
+   for other arguments (variable-argument function or unprototyped K&R
+   functions) are taken from the types of the function arguments,
+   after default argument conversion. *)
+
 let rec convertTypArgs env tl el =
   match tl, el with
   | _, [] -> Tnil
@@ -640,6 +644,20 @@ let rec convertTypArgs env tl el =
             convertTypArgs env [] el)
   | (id, t1) :: tl, e1 :: el ->
       Tcons(convertTyp env t1, convertTypArgs env tl el)
+
+(* Convert types for the arguments to inline asm statements and to
+   the special built-in functions __builtin_annot, __builtin_ais_annot_
+   and __builtin_debug.  The types are taken from the types of the
+   arguments, after performing the usual unary conversions.
+   Hence char becomes int but float remains float and is not promoted
+   to double.  The goal is to preserve the representation of the arguments
+   and avoid inserting compiled code to convert the arguments. *)
+
+let rec convertTypAnnotArgs env = function
+  | [] -> Tnil
+  | e1 :: el ->
+      Tcons(convertTyp env (Cutil.unary_conversion env e1.etyp),
+            convertTypAnnotArgs env el)
 
 let convertField env f =
   if f.fld_bitfield <> None then
@@ -881,7 +899,7 @@ let rec convertExpr env e =
         | {edesc = C.EVar id} :: args2 -> (id.name, args2)
         | _::args2 -> error "argument 2 of '__builtin_debug' must be either a string literal or a variable"; ("", args2)
         | [] -> assert false (* catched earlier *) in
-      let targs2 = convertTypArgs env [] args2 in
+      let targs2 = convertTypAnnotArgs env args2 in
       Ebuiltin(
          AST.EF_debug(P.of_int64 kind, intern_string text,
                  typlist_of_typelist targs2),
@@ -890,7 +908,7 @@ let rec convertExpr env e =
   | C.ECall({edesc = C.EVar {name = "__builtin_annot"}}, args) ->
       begin match args with
       | {edesc = C.EConst(CStr txt)} :: args1 ->
-          let targs1 = convertTypArgs env [] args1 in
+          let targs1 = convertTypAnnotArgs env args1 in
           Ebuiltin(
              AST.EF_annot(P.of_int 1,coqstring_of_camlstring txt, typlist_of_typelist targs1),
             targs1, convertExprList env args1, convertTyp env e.etyp)
@@ -918,7 +936,7 @@ let rec convertExpr env e =
         let file,line = !currentLocation in
         let fun_name = !currentFunction in
         let loc_string = Printf.sprintf "# file:%s line:%d function:%s\n" file line fun_name in
-        let targs1 = convertTypArgs env [] args1 in
+        let targs1 = convertTypAnnotArgs env args1 in
         AisAnnot.validate_ais_annot env !currentLocation txt args1;
           Ebuiltin(
              AST.EF_annot(P.of_int 2,coqstring_of_camlstring (loc_string ^ txt), typlist_of_typelist targs1),
@@ -953,6 +971,10 @@ let rec convertExpr env e =
                  Tcons(Tpointer(Tvoid, noattr), Tnil)),
                Econs(va_list_ptr dst, Econs(va_list_ptr src, Enil)),
                Tvoid)
+
+  | C.ECall({edesc = C.EVar {name = "__builtin_sel"}}, [arg1; arg2; arg3]) ->
+      ewrap (Ctyping.eselection (convertExpr env arg1)
+                                (convertExpr env arg2) (convertExpr env arg3))
 
   | C.ECall({edesc = C.EVar {name = "printf"}}, args)
     when !Clflags.option_interp ->
@@ -1019,14 +1041,14 @@ let convertAsm loc env txt outputs inputs clobber =
     match output' with None -> TVoid [] | Some e -> e.etyp in
   (* Build the Ebuiltin expression *)
   let e =
-    let tinputs = convertTypArgs env [] inputs' in
+    let tinputs = convertTypAnnotArgs env inputs' in
     let toutput = convertTyp env ty_res in
     Ebuiltin( AST.EF_inline_asm(coqstring_of_camlstring txt',
                            signature_of_type tinputs toutput  AST.cc_default,
                            clobber'),
              tinputs,
              convertExprList env inputs',
-             convertTyp env ty_res) in
+             toutput) in
   (* Add an assignment to the output, if any *)
   match output' with
   | None -> e
@@ -1257,7 +1279,7 @@ let convertFundecl env (sto, id, ty, optinit) =
       then  AST.EF_runtime(id'', sg)
       else
     if Str.string_match re_builtin id.name 0
-    && List.mem_assoc id.name builtins.Builtins.functions
+    && List.mem_assoc id.name builtins.builtin_functions
     then AST.EF_builtin(id'', sg)
     else AST.EF_external(id'', sg) in
   (id',  AST.Gfun(Ctypes.External(ef, args, res, cconv)))
@@ -1456,7 +1478,7 @@ let convertProgram p =
   Hashtbl.clear decl_atom;
   Hashtbl.clear stringTable;
   Hashtbl.clear wstringTable;
-  let p = cleanupGlobals (Builtins.declarations() @ p) in
+  let p = cleanupGlobals (Env.initial_declarations() @ p) in
   try
     let env = translEnv Env.empty p in
     let typs = convertCompositedefs env [] p in

@@ -80,10 +80,10 @@ let fast_cmove ty =
   | a, m -> failwith (Printf.sprintf "fast_cmove: unknown arch %s %s" a m)
 
 (* The if-conversion heuristic depend on the
-   -fif-conversion and -ffavor-branchless flags.
+   -fif-conversion and -Obranchless flags.
 
 With [-fno-if-conversion] or [-0O], if-conversion is turned off entirely.
-With [-ffavor-branchless], if-conversion is performed whenever semantically
+With [-Obranchless], if-conversion is performed whenever semantically
 correct, regardless of how much it could cost.
 Otherwise (and by default), optimization is performed when it seems beneficial.
 
@@ -96,22 +96,17 @@ If-conversion seems beneficial if:
 Intuition: on a modern processor, the "then" and the "else" branches
 can generally be computed in parallel, there is enough ILP for that.
 So, the bad case is if the most taken branch is much cheaper than the
-<<<<<<< HEAD
-other branch.  Since our cost estimates are very imprecise, the
-bound on the total cost acts as a safety guard, 
-=======
 other branch.  Another bad case is if both branches are big: since the
 code for one branch precedes entirely the code for the other branch,
 if the first branch contains a lot of instructions,
 dynamic reordering of instructions will not look ahead far enough
 to execute instructions from the other branch in parallel with
 instructions from the first branch.
->>>>>>> ddb2c968e6c57d2117434f169471d87f643d831a
 *)
 
 let if_conversion_heuristic cond ifso ifnot ty =
   if not !Clflags.option_fifconversion then false else
-  if !Clflags.option_ffavor_branchless then true else
+  if !Clflags.option_Obranchless then true else
   if not (fast_cmove ty) then false else
   let c1 = cost_expr ifso and c2 = cost_expr ifnot in
   c1 + c2 <= 24 && abs (c1 - c2) <= 8
