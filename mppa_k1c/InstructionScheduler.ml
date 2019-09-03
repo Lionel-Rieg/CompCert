@@ -307,9 +307,8 @@ let priority_list_scheduler (order : list_scheduler_order)
 
 let list_scheduler = priority_list_scheduler CRITICAL_PATH_ORDER;;
 
-(* FIXME DUMMY CODE to placate warnings
- *)
-let _ = priority_list_scheduler INSTRUCTION_ORDER;;
+(* dummy code for placating ocaml's warnings *)
+let _ = fun x -> priority_list_scheduler INSTRUCTION_ORDER x;;
 
 type bundle = int list;;
 
