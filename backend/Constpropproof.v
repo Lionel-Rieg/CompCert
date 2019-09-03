@@ -450,8 +450,48 @@ Proof.
     
   }
 
+- (* Iload notrap1 *)
+  rename pc'0 into pc. TransfInstr.
+  assert (eval_static_addressing addr (aregs ae args) = Vbot) as Hbot by (eapply eval_static_addressing_sound_none; eauto with va).
+  assert (eval_addressing tge (Vptr sp0 Ptrofs.zero) addr rs' ## args = None) as Hnone.
+  rewrite eval_addressing_preserved with (ge1 := ge).
+  apply eval_addressing_lessdef_none with (vl1 := rs ## args).
+  apply regs_lessdef_regs; assumption.
+  assumption.
+  exact symbols_preserved.
+  
+  left; econstructor; econstructor; split.
+  eapply exec_Iload_notrap1; eauto.
+  eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+
 - (* Iload notrap2 *)
-  (* TODO *)
+  rename pc'0 into pc. TransfInstr.
+    assert (exists v2 : val,
+         eval_addressing ge (Vptr sp0 Ptrofs.zero) addr (rs' ## args) = Some v2 /\ Val.lessdef a v2) as Hexist2.
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Hexist2 as [a' [Heval' Hlessdef']].
+    destruct (Mem.loadv chunk m' a') eqn:Hload'.
+    {
+    left; econstructor; econstructor; split.
+    eapply exec_Iload; eauto.
+   
+    rewrite eval_addressing_preserved with (ge1 := ge).
+    exact Heval'.
+    exact symbols_preserved.
+    eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    }
+    {
+      left; econstructor; econstructor; split.
+      eapply exec_Iload_notrap2; eauto.
+   
+    rewrite eval_addressing_preserved with (ge1 := ge).
+    exact Heval'.
+    exact symbols_preserved.
+    eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    }
+
 - (* Istore *)
   rename pc'0 into pc. TransfInstr.
   assert (ADDR:
