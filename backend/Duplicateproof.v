@@ -84,10 +84,18 @@ Inductive match_states: state -> state -> Prop :=
   | match_states_intro:
     forall st f sp pc rs m st' f' pc'
       (STACKS: list_forall2 match_stackframes st st')
-      (TRANSF: transf_function f = OK f')
+      (TRANSL: transf_function f = OK f')
       (DUPLIC: match_nodes f pc pc'),
       match_states (State st f sp pc rs m) (State st' f' sp pc' rs m)
-  (* TODO - fill the rest *).
+  | match_states_call:
+    forall st st' f f' args m
+      (STACKS: list_forall2 match_stackframes st st')
+      (TRANSF: transf_fundef f = OK f'),
+      match_states (Callstate st f args m) (Callstate st' f' args m)
+  | match_states_return:
+    forall st st' v m
+      (STACKS: list_forall2 match_stackframes st st'),
+      match_states (Returnstate st v m) (Returnstate st' v m).
 
 Theorem transf_program_correct:
   forward_simulation (RTL.semantics prog) (RTL.semantics tprog).
