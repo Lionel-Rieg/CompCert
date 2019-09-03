@@ -851,6 +851,16 @@ Proof.
   eapply wt_regset_assign; eauto. rewrite H9; eapply Mem.load_type; eauto.
 Qed.
 
+Lemma wt_exec_Iload_notrap:
+  forall env f chunk addr args dst s rs,
+  wt_instr f env (Iload NOTRAP chunk addr args dst s) ->
+  wt_regset env rs ->
+  wt_regset env (rs#dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros. 
+  eapply wt_regset_assign; eauto. simpl. trivial.
+Qed.
+
 Lemma wt_exec_Ibuiltin:
   forall env f ef (ge: genv) args res s vargs m t vres m' rs,
   wt_instr f env (Ibuiltin ef args res s) ->
@@ -930,6 +940,10 @@ Proof.
   econstructor; eauto. eapply wt_exec_Iop; eauto.
   (* Iload *)
   econstructor; eauto. eapply wt_exec_Iload; eauto.
+  (* Iload notrap1*)
+  econstructor; eauto. eapply wt_exec_Iload_notrap; eauto.
+  (* Iload notrap2*)
+  econstructor; eauto. eapply wt_exec_Iload_notrap; eauto.
   (* Istore *)
   econstructor; eauto.
   (* Icall *)
