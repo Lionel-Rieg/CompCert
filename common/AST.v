@@ -193,6 +193,15 @@ Definition chunk_of_type (ty: typ) :=
 Lemma chunk_of_Tptr: chunk_of_type Tptr = Mptr.
 Proof. unfold Mptr, Tptr; destruct Archi.ptr64; auto. Qed.
 
+(** Trapping mode: does undefined behavior result in a trap or an undefined value (e.g. for loads) *)
+Inductive trapping_mode : Type := TRAP | NOTRAP.
+
+Definition trapping_mode_eq : forall x y : trapping_mode,
+    { x=y } + { x <> y}.
+Proof.
+  decide equality.
+Defined.
+
 (** Initialization data for global variables. *)
 
 Inductive init_data: Type :=

@@ -36,8 +36,6 @@ Require Import Op Registers.
 
 Definition node := positive.
 
-Inductive trapping_mode : Type := TRAP | NOTRAP.
-
 Inductive instruction: Type :=
   | Inop: node -> instruction
       (** No operation -- just branch to the successor. *)
