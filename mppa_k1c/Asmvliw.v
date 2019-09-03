@@ -375,6 +375,7 @@ Inductive arith_name_rr : Type :=
   | Pfabsw                                          (**r float absolute word *)
   | Pfnegd                                          (**r float negate double *)
   | Pfnegw                                          (**r float negate word *)
+  | Pfinvw                                          (**r float invert word *)
   | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
   | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
@@ -453,6 +454,10 @@ Inductive arith_name_rrr : Type :=
   | Pfsbfw                                          (**r float sub word *)
   | Pfmuld                                          (**r float multiply double *)
   | Pfmulw                                          (**r float multiply word *)
+  | Pfmind                                          (**r float min double *)
+  | Pfminw                                          (**r float min word *)
+  | Pfmaxd                                          (**r float max double *)
+  | Pfmaxw                                          (**r float max word *)
 .
 
 Inductive arith_name_rri32 : Type :=
@@ -506,6 +511,10 @@ Inductive arith_name_arrr : Type :=
   | Pmsubl                                           (**r multiply subtract long *)
   | Pcmove (bt: btest)                               (**r conditional move *)
   | Pcmoveu (bt: btest)                              (**r conditional move, test on unsigned semantics *)
+  | Pfmaddfw                                         (**r float fused multiply add word *)
+  | Pfmaddfl                                         (**r float fused multiply add long *)
+  | Pfmsubfw                                         (**r float fused multiply subtract word *)
+  | Pfmsubfl                                         (**r float fused multiply subtract long *)
 .
 
 Inductive arith_name_arri32 : Type :=
@@ -975,6 +984,7 @@ Definition arith_eval_rr n v :=
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v
   | Pfabsw => Val.absfs v
+  | Pfinvw => ExtValues.invfs v
   | Pfnarrowdw => Val.singleoffloat v
   | Pfwidenlwd => Val.floatofsingle v
   | Pfloatwrnsz => match Val.singleofint v with Some f => f | _ => Vundef end
@@ -1054,6 +1064,11 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfsbfw => Val.subfs v1 v2
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
+
+  | Pfmind => ExtValues.minf v1 v2
+  | Pfminw => ExtValues.minfs v1 v2
+  | Pfmaxd => ExtValues.maxf v1 v2
+  | Pfmaxw => ExtValues.maxfs v1 v2
 
   | Paddxw shift => ExtValues.addx (int_of_shift1_4 shift) v1 v2
   | Paddxl shift => ExtValues.addxl (int_of_shift1_4 shift) v1 v2
@@ -1149,6 +1164,10 @@ Definition arith_eval_arrr n v1 v2 v3 :=
   | Pmsubl => Val.subl v1 (Val.mull v2 v3)
   | Pcmove bt => cmove bt v1 v2 v3
   | Pcmoveu bt => cmoveu bt v1 v2 v3
+  | Pfmaddfw => ExtValues.fmaddfs v1 v2 v3
+  | Pfmaddfl => ExtValues.fmaddf v1 v2 v3
+  | Pfmsubfw => ExtValues.fmsubfs v1 v2 v3
+  | Pfmsubfl => ExtValues.fmsubf v1 v2 v3
   end.
 
 Definition arith_eval_arr n v1 v2 :=

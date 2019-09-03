@@ -258,7 +258,7 @@ let enter_or_refine_function loc env id sto ty =
 
 (* Forward declarations *)
 
-let elab_expr_f : (cabsloc -> Env.t -> Cabs.expression -> C.exp * Env.t) ref
+let elab_expr_f : (Cabs.loc -> Env.t -> Cabs.expression -> C.exp * Env.t) ref
   = ref (fun _ _ _ -> assert false)
 
 let elab_funbody_f : (C.typ -> bool -> bool -> Env.t -> statement -> C.stmt) ref
@@ -1802,6 +1802,42 @@ let elab_expr ctx loc env a =
           (print_typ env) ty (print_typ env) ty'  (print_typ env) ty'  (print_typ env) ty;
       { edesc = ECall(ident, [b2; b3]); etyp = ty },env
 
+  | CALL((VARIABLE "__builtin_sel" as a0), al) ->
+      begin match al with
+      | [a1; a2; a3] ->
+          let b0,env = elab env a0 in
+          let b1,env = elab env a1 in
+          let b2,env = elab env a2 in
+          let b3,env = elab env a3 in
+          if not (is_scalar_type env b1.etyp) then
+            error "first argument of '__builtin_sel' is not a scalar type (invalid %a)"
+               (print_typ env) b1.etyp;
+          let tyres =
+            match pointer_decay env b2.etyp, pointer_decay env b3.etyp with
+            | (TInt _ | TFloat _ | TEnum _), (TInt _ | TFloat _ | TEnum _) ->
+                binary_conversion env b2.etyp b3.etyp
+            | (TPtr(ty1, a1) as pty1), (TPtr(ty2, a2)  as pty2) ->
+                if is_void_type env ty1 || is_void_type env ty2 then
+                  TPtr(TVoid (add_attributes a1 a2), [])
+                else begin
+                  match combine_types AttrIgnoreAll env pty1 pty2 with
+                  | None ->
+                      warning Pointer_type_mismatch "the second and third arguments of '__builtin_sel' have incompatible pointer types (%a and %a)"
+                     (print_typ env) pty1  (print_typ env) pty2;
+                     (* tolerance *)
+                     TPtr(TVoid (add_attributes a1 a2), [])
+                  | Some ty -> ty
+                end
+            | _, _ ->
+                fatal_error "wrong types (%a and %a) for the second and third arguments of '__builtin_sel'"
+                  (print_typ env) b2.etyp (print_typ env) b3.etyp
+
+            in
+          { edesc = ECall(b0, [b1; b2; b3]); etyp = tyres }, env
+      | _ ->
+          fatal_error "'__builtin_sel' expect 3 arguments"
+      end
+
   | CALL(a1, al) ->
       let b1,env =
         (* Catch the old-style usage of calling a function without
@@ -2708,7 +2744,7 @@ let elab_fundef genv spec name defs body loc =
 (* Definitions *)
 let elab_decdef (for_loop: bool) (local: bool) (nonstatic_inline: bool)
                 (env: Env.t) ((spec, namelist): Cabs.init_name_group)
-                (loc: Cabs.cabsloc) : decl list * Env.t =
+                (loc: Cabs.loc) : decl list * Env.t =
   let (sto, inl, noret, tydef, bty, env') =
     elab_specifier ~only:(namelist=[]) loc env spec in
   (* Sanity checks on storage class *)
@@ -3089,10 +3125,11 @@ let _ = elab_funbody_f := elab_funbody
 
 let elab_file prog =
   reset();
-  let env = Builtins.environment () in
+  let env = Env.initial () in
   let elab_def env d = snd (elab_definition false false false env d) in
   ignore (List.fold_left elab_def env prog);
   let p = elaborated_program () in
   Checks.unused_variables p;
   Checks.unknown_attrs_program p;
+  Checks.non_linear_conditional p;
   p

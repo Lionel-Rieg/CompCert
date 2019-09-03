@@ -14,7 +14,7 @@ Require Stacklayout.
 Require Import Mach.
 Require Import Linking.
 
-(** instructions "basiques" (ie non control-flow) *)
+(** basic instructions (ie no control-flow) *)
 Inductive basic_inst: Type :=
   | MBgetstack: ptrofs -> typ -> mreg -> basic_inst
   | MBsetstack: mreg -> ptrofs -> typ -> basic_inst
@@ -26,7 +26,7 @@ Inductive basic_inst: Type :=
 
 Definition bblock_body := list basic_inst.
 
-(** instructions de control flow *)
+(** control flow instructions *)
 Inductive control_flow_inst: Type :=
   | MBcall: signature -> mreg + ident -> control_flow_inst
   | MBtailcall: signature -> mreg + ident -> control_flow_inst

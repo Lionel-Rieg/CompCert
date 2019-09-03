@@ -18,11 +18,11 @@
 open C
 
 let builtins = {
-  Builtins.typedefs = [
+  builtin_typedefs = [
     "__builtin_va_list", TPtr(TVoid [], [])
   ];
   (* The builtin list is inspired from the GCC file builtin_k1.h *)
-  Builtins.functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
+  builtin_functions = [ (* Some builtins are commented out because their opcode is not present (yet?) *)
       (* BCU Instructions *)
       "__builtin_k1_await", (TVoid [], [], false); (* DONE *)
       "__builtin_k1_barrier", (TVoid [], [], false); (* DONE *)
@@ -113,14 +113,29 @@ let builtins = {
        [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fnmsub",
       (TFloat(FDouble, []),
-       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false); *)
+    "__builtin_fabsf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, [])], false);
     "__builtin_fmax",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, [])], false);
     "__builtin_fmin",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, [])], false);
-*)]
+    "__builtin_fmaxf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, [])], false);
+    "__builtin_fminf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, [])], false);
+    "__builtin_fma",
+      (TFloat(FDouble, []),
+       [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);
+    "__builtin_fmaf",
+      (TFloat(FFloat, []),
+       [TFloat(FFloat, []); TFloat(FFloat, []); TFloat(FFloat, [])], false);
+]
 }
 
 let va_list_type = TPtr(TVoid [], [])  (* to check! *)

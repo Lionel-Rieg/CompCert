@@ -467,11 +467,11 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pdzerol addr)
 (*| "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
-      then (emit (Pmv(res, incr_res)); emit Psemi));
+      then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddd(addr, res))
   | "__builtin_k1_afaddw", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
-      then (emit (Pmv(res, incr_res)); emit Psemi));
+      then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddw(addr, res)) *) (* see #157 *)
   | "__builtin_alclrd", [BA(IR addr)], BR(IR res) ->
      emit (Palclrd(res, addr))

@@ -57,12 +57,9 @@ Definition add_to_new_bblock (i:Machblock_inst) : bblock :=
   | MB_cfi i => cfi_bblock i
   end.
 
-(* ajout d'une instruction en début d'une liste de blocks *)
-(* Soit /1\ ajout en tête de block, soit /2\ ajout dans un nouveau block*)
-(* bl est vide -> /2\ *)
-(* cfi -> /2\ (ajout dans exit)*)
-(* basic -> /1\ si header vide, /2\ si a un header *)
-(* label -> /1\ (dans header)*)
+(** Adding an instruction to the beginning of a bblock list
+  * Either adding the instruction to the head of the list,
+  * or create a new bblock with the instruction *)
 Definition add_to_code (i:Machblock_inst) (bl:code) : code :=
   match bl with
   | bh::bl0 => match i with
@@ -86,8 +83,6 @@ Fixpoint trans_code_rev (c: Mach.code) (bl:code) : code :=
 Function trans_code (c: Mach.code) : code :=
   trans_code_rev (List.rev_append c nil) nil.
 
-
-(* à finir pour passer des Mach.function au function, etc. *)
 Definition transf_function (f: Mach.function) : function :=
   {| fn_sig:=Mach.fn_sig f;
      fn_code:=trans_code (Mach.fn_code f);
@@ -103,7 +98,7 @@ Definition transf_program (src: Mach.program) : program :=
   transform_program transf_fundef src.
 
 
-(** Abstraction de trans_code *)
+(** Abstracting trans_code *)
 
 Inductive is_end_block: Machblock_inst -> code -> Prop :=
   | End_empty mbi: is_end_block mbi nil

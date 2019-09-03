@@ -541,14 +541,14 @@ missingtools=false
 echo "Testing Coq... " | tr -d '\n'
 coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
 case "$coq_ver" in
-  8.7.0|8.7.1|8.7.2|8.8.0|8.8.1|8.8.2|8.9.0|8.9.1|8.10+beta2)
+  8.7.0|8.7.1|8.7.2|8.8.0|8.8.1|8.8.2|8.9.0|8.9.1|8.10)
         echo "version $coq_ver -- good!";;
   ?*)
         echo "version $coq_ver -- UNSUPPORTED"
         if $ignore_coq_version; then
             echo "Warning: this version of Coq is unsupported, proceed at your own risks."
         else
-            echo "Error: CompCert requires one of the following Coq versions: 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0, 8.7.2, 8.7.1, 8.7.0"
+            echo "Error: CompCert requires one of the following Coq versions: 8.10, 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0, 8.7.2, 8.7.1, 8.7.0"
             missingtools=true
         fi;;
   "")
@@ -591,29 +591,23 @@ else
   ocaml_opt_comp=false
 fi
 
-MENHIR_REQUIRED=20161201
-MENHIR_NEW_API=20180530
-MENHIR_MAX=20181113
-menhir_flags=''
+MENHIR_REQUIRED=20190626
 echo "Testing Menhir... " | tr -d '\n'
 menhir_ver=`menhir --version 2>/dev/null | sed -n -e 's/^.*version \([0-9]*\).*$/\1/p'`
 case "$menhir_ver" in
   20[0-9][0-9][0-9][0-9][0-9][0-9])
-      if test "$menhir_ver" -ge $MENHIR_REQUIRED -a "$menhir_ver" -le $MENHIR_MAX; then
+      if test "$menhir_ver" -ge $MENHIR_REQUIRED; then
           echo "version $menhir_ver -- good!"
-          menhir_include_dir=`menhir --suggest-menhirLib`
+          menhir_include_dir=$(menhir --suggest-menhirLib | tr -d '\r' | tr '\\' '/')
           if test -z "$menhir_include_dir"; then
               echo "Error: cannot determine the location of the Menhir API library."
               echo "This can be due to an incorrect Menhir package."
               echo "Consider using the OPAM package for Menhir."
               missingtools=true
           fi
-          if test "$menhir_ver" -ge $MENHIR_NEW_API; then
-              menhir_flags="--coq-lib-path compcert.cparser.MenhirLib"
-          fi
       else
           echo "version $menhir_ver -- UNSUPPORTED"
-          echo "Error: CompCert requires a version of Menhir between $MENHIR_REQUIRED and $MENHIR_MAX, included."
+          echo "Error: CompCert requires a version greater or equal to $MENHIR_REQUIRED."
           missingtools=true
       fi;;
   *)
@@ -677,7 +671,8 @@ echo "-R lib compcert.lib \
 -R driver compcert.driver \
 -R flocq compcert.flocq \
 -R exportclight compcert.exportclight \
--R cparser compcert.cparser" > _CoqProject
+-R cparser compcert.cparser \
+-R MenhirLib compcert.MenhirLib" > _CoqProject
 case $arch in
     x86)
         echo "-R x86_${bitsize} compcert.x86_${bitsize}" >> _CoqProject
@@ -699,7 +694,6 @@ SHAREDIR=$sharedir
 COQDEVDIR=$coqdevdir
 OCAML_OPT_COMP=$ocaml_opt_comp
 MENHIR_INCLUDES=-I "$menhir_include_dir"
-MENHIR_FLAGS=$menhir_flags
 COMPFLAGS=-bin-annot
 EOF
 
@@ -827,7 +821,7 @@ CFLAGS= -D __K1C_COS__
 BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
     Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\
-    Asmblockdeps.v DecBoolOps.v Chunks.v Peephole.v ExtValues.v\\
+    Asmblockdeps.v DecBoolOps.v Chunks.v Peephole.v ExtValues.v ExtFloats.v\\
     AbstractBasicBlocksDef.v SeqSimuTheory.v ImpSimuTest.v Parallelizability.v\\
     ImpConfig.v ImpCore.v ImpExtern.v ImpHCons.v ImpIO.v ImpLoops.v ImpMonads.v ImpPrelude.v
 EOF

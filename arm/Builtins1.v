@@ -2,7 +2,7 @@
 (*                                                                     *)
 (*              The Compcert verified compiler                         *)
 (*                                                                     *)
-(*          Xavier Leroy, INRIA Paris-Rocquencourt                     *)
+(*          Xavier Leroy, Collège de France and Inria Paris            *)
 (*                                                                     *)
 (*  Copyright Institut National de Recherche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
@@ -13,13 +13,21 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-val environment: unit -> Env.t
-val identifiers: unit -> C.ident list
-val declarations: unit -> C.globdecl list
+(** Platform-specific built-in functions *)
 
-type t = {
-  typedefs: (string * C.typ) list;
-  functions: (string * (C.typ * C.typ list * bool)) list
-}
+Require Import String Coqlib.
+Require Import AST Integers Floats Values.
+Require Import Builtins0.
 
-val set: t -> unit
+Inductive platform_builtin : Type := .
+
+Local Open Scope string_scope.
+
+Definition platform_builtin_table : list (string * platform_builtin) :=
+  nil.
+
+Definition platform_builtin_sig (b: platform_builtin) : signature :=
+  match b with end.
+
+Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (proj_sig_res (platform_builtin_sig b)) :=
+  match b with end.

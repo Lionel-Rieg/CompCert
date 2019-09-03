@@ -17,6 +17,7 @@
 
 (** Correctness of instruction selection for operators *)
 
+Require Import Builtins.
 Require Import Coqlib.
 Require Import Maps.
 Require Import AST.
@@ -29,6 +30,7 @@ Require Import Globalenvs.
 Require Import Cminor.
 Require Import Op.
 Require Import CminorSel.
+Require Import Builtins1.
 Require Import SelectOp.
 Require Import Events.
 Require Import OpHelpers.
@@ -1620,6 +1622,29 @@ Proof.
   econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
 Qed.
 
+
+Lemma eval_divfs_base1:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_base1 b) v /\ Val.lessdef (ExtValues.invfs y) v.
+Proof.
+  intros; unfold divfs_base1.
+  econstructor; split.
+  repeat (try econstructor; try eassumption).
+  trivial.
+Qed.
+
+Lemma eval_divfs_baseX:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_baseX a b) v /\ Val.lessdef (Val.divfs x y) v.
+Proof.
+  intros; unfold divfs_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
 Theorem eval_divfs_base:
   forall le a b x y,
   eval_expr ge sp e m le a x ->
@@ -1627,6 +1652,82 @@ Theorem eval_divfs_base:
   exists v, eval_expr ge sp e m le (divfs_base a b) v /\ Val.lessdef (Val.divfs x y) v.
 Proof.
   intros; unfold divfs_base.
-  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+  destruct (divfs_base_match _).
+  - destruct (Float32.eq_dec _ _).
+    + exists (Val.divfs x y).
+      split; trivial. repeat (try econstructor; try eassumption).
+      simpl. InvEval. reflexivity.
+    + apply eval_divfs_baseX; assumption.
+  - apply eval_divfs_baseX; assumption.
 Qed.
+
+(** Platform-specific known builtins *)
+
+Lemma eval_fma:
+  forall al a vl v le,
+  gen_fma al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem BI_fma vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  unfold gen_fma.
+  intros until le.
+  intro Heval.
+  destruct (gen_fma_match _) in *; try discriminate.
+  all: inversion Heval; subst a; clear Heval; intro; InvEval.
+  - subst v1.
+    TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v2; simpl; trivial;
+      destruct v3; simpl; trivial.
+  - intro Heval.
+  simpl in Heval.
+  inv Heval.
+  TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v1; simpl; trivial;
+      destruct v2; simpl; trivial.
+Qed.
+
+Lemma eval_fmaf:
+  forall al a vl v le,
+  gen_fmaf al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem BI_fmaf vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  unfold gen_fmaf.
+  intros until le.
+  intro Heval.
+  destruct (gen_fmaf_match _) in *; try discriminate.
+  all: inversion Heval; subst a; clear Heval; intro; InvEval.
+  - subst v1.
+    TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v2; simpl; trivial;
+      destruct v3; simpl; trivial.
+  - intro Heval.
+  simpl in Heval.
+  inv Heval.
+  TrivialExists.
+  destruct v0; simpl; trivial;
+    destruct v1; simpl; trivial;
+      destruct v2; simpl; trivial.
+Qed.
+
+Theorem eval_platform_builtin:
+  forall bf al a vl v le,
+  platform_builtin bf al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem bf vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  destruct bf; intros until le; intro Heval.
+  all: try (inversion Heval; subst a; clear Heval;
+       exists v; split; trivial;
+       repeat (try econstructor; try eassumption)).
+  - apply eval_fma; assumption.
+  - apply eval_fmaf; assumption.
+Qed.
+
 End CMCONSTR.

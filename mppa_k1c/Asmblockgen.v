@@ -740,12 +740,52 @@ Definition transl_op
   | Omulfs, a1 :: a2 :: nil =>
       do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
       OK (Pfmulw rd rs1 rs2 ::i k)
+  | Ominf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmind rd rs1 rs2 ::i k)
+  | Ominfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfminw rd rs1 rs2 ::i k)
+  | Omaxf, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmaxd rd rs1 rs2 ::i k)
+  | Omaxfs, a1 :: a2 :: nil =>
+      do rd <- freg_of res; do rs1 <- freg_of a1; do rs2 <- freg_of a2;
+      OK (Pfmaxw rd rs1 rs2 ::i k)
   | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegd rd rs ::i k)
   | Onegfs, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
       OK (Pfnegw rd rs ::i k)
+  | Oinvfs, a1 :: nil =>
+      do rd <- freg_of res; do rs <- freg_of a1;
+      OK (Pfinvw rd rs ::i k)
+
+  | Ofmaddf, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmaddfl rs1 rs2 rs3 ::i k)
+  | Ofmaddfs, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmaddfw rs1 rs2 rs3 ::i k)
+  | Ofmsubf, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmsubfl rs1 rs2 rs3 ::i k)
+  | Ofmsubfs, a1 :: a2 :: a3 :: nil =>
+    assertion (mreg_eq a1 res);
+        do rs1 <- freg_of a1;
+        do rs2 <- freg_of a2;
+        do rs3 <- freg_of a3;
+      OK (Pfmsubfw rs1 rs2 rs3 ::i k)
 
   | Osingleofint, a1 :: nil =>
       do rd <- freg_of res; do rs <- ireg_of a1;
