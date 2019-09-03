@@ -472,7 +472,6 @@ Proof.
   rewrite Ptrofs.add_zero_l; eauto with va.
 Qed.
 
-(* not needed
 Theorem eval_static_addressing_sound_none:
   forall addr vargs aargs,
   eval_addressing ge (Vptr sp Ptrofs.zero) addr vargs = None ->
@@ -490,7 +489,6 @@ Proof.
   inv H3;
   destruct addr; trivial; discriminate.
 Qed.
- *)
 
 Theorem eval_static_operation_sound:
   forall op vargs m vres aargs,
