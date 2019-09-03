@@ -929,6 +929,15 @@ Proof.
   intros. inv H. eauto.
 Qed.
 
+Lemma eval_addressing_none:
+  forall sp' ctx addr rs,
+  eval_addressing ge (Vptr sp' (Ptrofs.repr (dstk ctx))) addr rs = None ->
+  eval_addressing ge (Vptr sp' Ptrofs.zero) (saddr ctx addr) rs = None.
+Proof.
+  intros until rs; intro Heval.
+  destruct addr; destruct rs as [| r0 rs1]; simpl in *; trivial; discriminate.
+Qed.
+
 Theorem step_simulation:
   forall S1 t S2,
   step ge S1 t S2 ->
@@ -976,6 +985,51 @@ Proof.
   apply match_stacks_inside_set_reg; auto.
   apply agree_set_reg; auto.
 
+- (* load notrap1 *)
+  exploit tr_funbody_inv; eauto. intros TR; inv TR.
+  left; econstructor; split.
+  eapply plus_one. eapply exec_Iload_notrap1. eassumption.
+  rewrite eval_addressing_preserved with (ge1:=ge) (ge2:=tge).
+  exploit eval_addressing_inj_none.
+  4: eassumption.
+  intros. eapply symbol_address_inject.
+  eapply match_stacks_inside_globals; eauto.
+  eauto.
+  instantiate (1 := rs'##(sregs ctx args)). eapply agree_val_regs; eauto.
+  rewrite Ptrofs.add_zero_l.
+  apply eval_addressing_none.
+  exact symbols_preserved.
+  econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+
+- (* load notrap2 *)
+  exploit tr_funbody_inv; eauto. intros TR; inv TR.
+
+  exploit eval_addressing_inject.
+    eapply match_stacks_inside_globals; eauto.
+    eexact SP.
+    instantiate (2 := rs##args). instantiate (1 := rs'##(sregs ctx args)). eapply agree_val_regs; eauto.
+    eauto.
+  fold (saddr ctx addr). intros [a' [P Q]].
+
+  destruct (Mem.loadv chunk m' a') eqn:Hload'.
+  + left; econstructor; split.
+    eapply plus_one.
+    eapply exec_Iload; eauto.
+    rewrite <- P. apply eval_addressing_preserved. exact symbols_preserved.
+    econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+    
+  + left; econstructor; split.
+    eapply plus_one.
+    eapply exec_Iload_notrap2; eauto.
+    rewrite <- P. apply eval_addressing_preserved. exact symbols_preserved.
+    econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+  
 - (* store *)
   exploit tr_funbody_inv; eauto. intros TR; inv TR.
   exploit eval_addressing_inject.
