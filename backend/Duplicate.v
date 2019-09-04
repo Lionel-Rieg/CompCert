@@ -33,6 +33,15 @@ Proof.
   repeat (split; try reflexivity).
 Qed.
 
+Remark transf_function_fnsig: forall f tf, transf_function f = OK tf -> fn_sig f = fn_sig tf.
+  Proof. apply transf_function_preserves. Qed.
+Remark transf_function_fnparams: forall f tf, transf_function f = OK tf -> fn_params f = fn_params tf.
+  Proof. apply transf_function_preserves. Qed.
+Remark transf_function_fnstacksize: forall f tf, transf_function f = OK tf -> fn_stacksize f = fn_stacksize tf.
+  Proof. apply transf_function_preserves. Qed.
+Remark transf_function_fnentrypoint: forall f tf, transf_function f = OK tf -> fn_entrypoint f = fn_entrypoint tf.
+  Proof. apply transf_function_preserves. Qed.
+
 Definition transf_fundef (f: fundef) : res fundef :=
   transf_partial_fundef transf_function f.
 

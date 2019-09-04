@@ -144,15 +144,47 @@ Theorem transf_final_states:
   forall s1 s2 r,
   match_states s1 s2 -> final_state s1 r -> final_state s2 r.
 Proof.
-Admitted.
+  intros. inv H0. inv H. inv STACKS. constructor.
+Qed.
 
 Theorem step_simulation:
   forall s1 t s1', step ge s1 t s1' ->
-  forall s2, match_states s1 s2 ->
+  forall s2 (MS: match_states s1 s2),
   exists s2',
      step tge s2 t s2'
   /\ match_states s1' s2'.
 Proof.
+  induction 1; intros; inv MS.
+(* Inop *)
+  - admit.
+(* Iop *)
+  - admit.
+(* Iload *)
+  - admit.
+(* Istore *)
+  - admit.
+(* Icall *)
+  - admit.
+(* Itailcall *)
+  - admit.
+(* Ibuiltin *)
+  - admit.
+(* Icond *)
+  - admit.
+(* Ijumptable *)
+  - admit.
+(* Ireturn *)
+  - admit.
+(* exec_function_internal *)
+  - monadInv TRANSF. eexists. split.
+    + econstructor. erewrite <- transf_function_fnstacksize; eauto.
+    + erewrite transf_function_fnentrypoint; eauto.
+      erewrite transf_function_fnparams; eauto.
+      econstructor; eauto. constructor.
+(* exec_function_external *)
+  - admit.
+(* exec_return *)
+  - admit.
 Admitted.
 
 Theorem transf_program_correct:
