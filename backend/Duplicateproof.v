@@ -1,6 +1,6 @@
 (** Correctness proof for code duplication *)
 Require Import AST Linking Errors Globalenvs Smallstep.
-Require Import Coqlib Maps.
+Require Import Coqlib Maps Events.
 Require Import RTL Duplicate.
 
 Definition match_prog (p tp: program) :=
@@ -182,9 +182,13 @@ Proof.
       erewrite transf_function_fnparams; eauto.
       econstructor; eauto. constructor.
 (* exec_function_external *)
-  - admit.
+  - monadInv TRANSF. eexists. split.
+    + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+    + constructor. assumption.
 (* exec_return *)
-  - admit.
+  - inv STACKS. destruct b1 as [res' f' sp' pc' rs']. eexists. split.
+    + constructor.
+    + inv H1. constructor; assumption.
 Admitted.
 
 Theorem transf_program_correct:
