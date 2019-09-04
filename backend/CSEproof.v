@@ -608,8 +608,17 @@ Proof.
   unfold aaddressing. apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
   erewrite <- regs_valnums_sound by eauto. eauto with va.
   auto.
-
-(* TODO *)
+- eapply load_notrap1_eval_to; assumption.
+- destruct (regs_valnums n vl) as [rl|] eqn:RV; try discriminate.
+  eapply load_notrap2_eval_to; eauto. rewrite <- H11.
+  destruct a; simpl in H10; try discriminate; simpl; trivial.
+  rewrite negb_false_iff in H8.
+  eapply Mem.load_storebytes_other. eauto.
+  rewrite H6. rewrite Z2Nat.id by omega.
+  eapply pdisjoint_sound. eauto.
+  unfold aaddressing. apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
+  erewrite <- regs_valnums_sound by eauto. eauto with va.
+  auto.
 Qed.
 
 Lemma load_memcpy:
