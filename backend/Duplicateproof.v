@@ -45,64 +45,63 @@ Proof.
   inv H. reflexivity.
 Qed.
 
-Inductive match_nodes (f: function): node -> node -> Prop :=
-  | match_node_intro: forall n, match_nodes f n n
+Inductive match_nodes (f f': function): node -> node -> Prop :=
   | match_node_nop: forall n n' n1 n1',
       (fn_code f)!n  = Some (Inop n1) ->
-      (fn_code f)!n' = Some (Inop n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Inop n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_op: forall n n' n1 n1' op lr r,
       (fn_code f)!n  = Some (Iop op lr r n1) ->
-      (fn_code f)!n' = Some (Iop op lr r n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Iop op lr r n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_load: forall n n' n1 n1' m a lr r,
       (fn_code f)!n  = Some (Iload m a lr r n1) ->
-      (fn_code f)!n' = Some (Iload m a lr r n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Iload m a lr r n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_store: forall n n' n1 n1' m a lr r,
       (fn_code f)!n  = Some (Istore m a lr r n1) ->
-      (fn_code f)!n' = Some (Istore m a lr r n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Istore m a lr r n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_call: forall n n' n1 n1' s ri lr r,
       (fn_code f)!n  = Some (Icall s ri lr r n1) ->
-      (fn_code f)!n' = Some (Icall s ri lr r n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Icall s ri lr r n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_tailcall: forall n n' s ri lr,
       (fn_code f)!n  = Some (Itailcall s ri lr) ->
-      (fn_code f)!n' = Some (Itailcall s ri lr) ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Itailcall s ri lr) ->
+      match_nodes f f' n n'
   | match_node_builtin: forall n n' n1 n1' ef la br,
       (fn_code f)!n  = Some (Ibuiltin ef la br n1) ->
-      (fn_code f)!n' = Some (Ibuiltin ef la br n1') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Ibuiltin ef la br n1') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n n'
   | match_node_cond: forall n n' n1 n1' n2 n2' c lr,
       (fn_code f)!n  = Some (Icond c lr n1 n2) ->
-      (fn_code f)!n' = Some (Icond c lr n1' n2') ->
-      match_nodes f n1 n1' ->
-      match_nodes f n2 n2' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Icond c lr n1' n2') ->
+      match_nodes f f' n1 n1' ->
+      match_nodes f f' n2 n2' ->
+      match_nodes f f' n n'
   | match_node_jumptable: forall n n' ln ln' r,
       (fn_code f)!n  = Some (Ijumptable r ln) ->
-      (fn_code f)!n' = Some (Ijumptable r ln') ->
-      list_forall2 (match_nodes f) ln ln' ->
-      match_nodes f n n'
+      (fn_code f')!n' = Some (Ijumptable r ln') ->
+      list_forall2 (match_nodes f f') ln ln' ->
+      match_nodes f f' n n'
   | match_node_return: forall n n' or,
       (fn_code f)!n  = Some (Ireturn or) ->
-      (fn_code f)!n  = Some (Ireturn or) ->
-      match_nodes f n n'
+      (fn_code f')!n  = Some (Ireturn or) ->
+      match_nodes f f' n n'
 .
 
 Inductive match_stackframes: stackframe -> stackframe -> Prop :=
   | match_stackframe_intro:
     forall res f sp pc rs f' pc'
       (TRANSF: transf_function f = OK f')
-      (DUPLIC: match_nodes f pc pc'),
+      (DUPLIC: match_nodes f f' pc pc'),
       match_stackframes (Stackframe res f sp pc rs) (Stackframe res f' sp pc' rs).
 
 Inductive match_states: state -> state -> Prop :=
@@ -110,7 +109,7 @@ Inductive match_states: state -> state -> Prop :=
     forall st f sp pc rs m st' f' pc'
       (STACKS: list_forall2 match_stackframes st st')
       (TRANSF: transf_function f = OK f')
-      (DUPLIC: match_nodes f pc pc'),
+      (DUPLIC: match_nodes f f' pc pc'),
       match_states (State st f sp pc rs m) (State st' f' sp pc' rs m)
   | match_states_call:
     forall st st' f f' args m
@@ -156,9 +155,17 @@ Theorem step_simulation:
 Proof.
   induction 1; intros; inv MS.
 (* Inop *)
-  - admit.
+  - inv DUPLIC; try (rewrite H0 in H; discriminate).
+    rewrite H0 in H. inv H.
+    eexists. split.
+    + eapply exec_Inop. eassumption.
+    + constructor; eauto.
 (* Iop *)
-  - admit.
+  - admit. (* inv DUPLIC; try (rewrite H1 in H; discriminate).
+    rewrite H1 in H. inv H.
+    eexists. split.
+    + eapply exec_Iop. eassumption.
+    + constructor; eauto. *)
 (* Iload *)
   - admit.
 (* Istore *)
@@ -180,7 +187,7 @@ Proof.
     + econstructor. erewrite <- transf_function_fnstacksize; eauto.
     + erewrite transf_function_fnentrypoint; eauto.
       erewrite transf_function_fnparams; eauto.
-      econstructor; eauto. constructor.
+      econstructor; eauto. admit. (* econstructor. *)
 (* exec_function_external *)
   - monadInv TRANSF. eexists. split.
     + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
@@ -190,6 +197,7 @@ Proof.
     + constructor.
     + inv H1. constructor; assumption.
 Admitted.
+
 
 Theorem transf_program_correct:
   forward_simulation (semantics prog) (semantics tprog).
