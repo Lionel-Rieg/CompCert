@@ -142,6 +142,9 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
   | Some(Iload TRAP chunk addr args dst s) =>
       let a := loadv chunk rm am (eval_static_addressing addr (aregs ae args)) in
       VA.State (AE.set dst a ae) am
+
+  (* TODO: maybe a case analysis on the results of loadv? *)
+               
   | Some(Iload NOTRAP chunk addr args dst s) =>
       VA.State (AE.set dst Vtop ae) am
   | Some(Istore chunk addr args src s) =>

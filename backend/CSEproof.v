@@ -378,11 +378,11 @@ Proof.
 Qed.
 
 Lemma add_load_holds:
-  forall valu1 ge sp rs m n addr (args: list reg) a chunk v dst,
+  forall valu1 ge sp rs m n addr (args: list reg) a trap chunk v dst,
   numbering_holds valu1 ge sp rs m n ->
   eval_addressing ge sp addr rs##args = Some a ->
   Mem.loadv chunk m a = Some v ->
-  exists valu2, numbering_holds valu2 ge sp (rs#dst <- v) m (add_load n dst chunk addr args).
+  exists valu2, numbering_holds valu2 ge sp (rs#dst <- v) m (add_load n dst trap chunk addr args).
 Proof.
   unfold add_load; intros.
   destruct (valnum_regs n args) as [n1 vl] eqn:VN.
@@ -641,7 +641,7 @@ Lemma shift_memcpy_eq_holds:
 Proof with (try discriminate).
   intros. set (delta := dst - src) in *. unfold shift_memcpy_eq in H.
   destruct e as [l strict rhs] eqn:E.
-  destruct rhs as [op vl | chunk addr vl]...
+  destruct rhs as [op vl | trap chunk addr vl]...
   destruct addr...
   try (rename i into ofs).
   set (i1 := Ptrofs.unsigned ofs) in *. set (j := i1 + delta) in *.
@@ -1034,7 +1034,7 @@ Proof.
   destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
   destruct SAT as [valu1 NH1].
   exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
-  destruct (find_rhs n1 (Load chunk addr vl)) as [r|] eqn:?.
+  destruct (find_rhs n1 (Load trap chunk addr vl)) as [r|] eqn:?.
 + (* replaced by move *)
   exploit find_rhs_sound; eauto. intros (v' & EV & LD).
   assert (v' = v) by (inv EV; congruence). subst v'.
@@ -1063,6 +1063,8 @@ Proof.
   unfold transfer; rewrite H.
   eapply add_load_holds; eauto.
   apply set_reg_lessdef; auto.
+
+  (* TODO *)
 
 - (* Istore *)
   destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.

@@ -32,7 +32,7 @@ Definition valnum := positive.
 
 Inductive rhs : Type :=
   | Op: operation -> list valnum -> rhs
-  | Load: memory_chunk -> addressing -> list valnum -> rhs.
+  | Load: trapping_mode -> memory_chunk -> addressing -> list valnum -> rhs.
 
 Inductive equation : Type :=
   | Eq (v: valnum) (strict: bool) (r: rhs).
@@ -43,7 +43,7 @@ Definition eq_list_valnum: forall (x y: list valnum), {x=y}+{x<>y} := list_eq_de
 
 Definition eq_rhs (x y: rhs) : {x=y}+{x<>y}.
 Proof.
-  generalize chunk_eq eq_operation eq_addressing eq_valnum eq_list_valnum.
+  generalize trapping_mode_eq chunk_eq eq_operation eq_addressing eq_valnum eq_list_valnum.
   decide equality.
 Defined.
 
@@ -74,7 +74,7 @@ Definition empty_numbering :=
 Definition valnums_rhs (r: rhs): list valnum :=
   match r with
   | Op op vl => vl
-  | Load chunk addr vl => vl
+  | Load trap chunk addr vl => vl
   end.
 
 Definition wf_rhs (next: valnum) (r: rhs) : Prop :=
@@ -106,10 +106,10 @@ Inductive rhs_eval_to (valu: valuation) (ge: genv) (sp: val) (m: mem):
   | op_eval_to: forall op vl v,
       eval_operation ge sp op (map valu vl) m = Some v ->
       rhs_eval_to valu ge sp m (Op op vl) v
-  | load_eval_to: forall chunk addr vl a v,
+  | load_eval_to: forall trap chunk addr vl a v,
       eval_addressing ge sp addr (map valu vl) = Some a ->
       Mem.loadv chunk m a = Some v ->
-      rhs_eval_to valu ge sp m (Load chunk addr vl) v.
+      rhs_eval_to valu ge sp m (Load trap chunk addr vl) v.
 
 Inductive equation_holds (valu: valuation) (ge: genv) (sp: val) (m: mem):
                                                       equation -> Prop :=
