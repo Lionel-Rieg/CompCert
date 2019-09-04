@@ -20,6 +20,31 @@ Hypothesis TRANSL: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
+Lemma symbols_preserved:
+  forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
+Proof (Genv.find_symbol_match TRANSL).
+
+Lemma senv_preserved:
+  Senv.equiv ge tge.
+Proof (Genv.senv_match TRANSL).
+
+Lemma function_ptr_translated:
+  forall v f,
+  Genv.find_funct_ptr ge v = Some f ->
+  exists tf,
+  Genv.find_funct_ptr tge v = Some tf /\ transf_fundef f = OK tf.
+Proof (Genv.find_funct_ptr_transf_partial TRANSL).
+
+Lemma sig_preserved:
+  forall f tf,
+  transf_fundef f = OK tf ->
+  funsig tf = funsig f.
+Proof.
+  unfold transf_fundef, transf_partial_fundef; intros.
+  destruct f. monadInv H. simpl. symmetry; apply transf_function_preserves. assumption.
+  inv H. reflexivity.
+Qed.
+
 Inductive match_nodes (f: function): node -> node -> Prop :=
   | match_node_intro: forall n, match_nodes f n n
   | match_node_nop: forall n n' n1 n1',
@@ -84,7 +109,7 @@ Inductive match_states: state -> state -> Prop :=
   | match_states_intro:
     forall st f sp pc rs m st' f' pc'
       (STACKS: list_forall2 match_stackframes st st')
-      (TRANSL: transf_function f = OK f')
+      (TRANSF: transf_function f = OK f')
       (DUPLIC: match_nodes f pc pc'),
       match_states (State st f sp pc rs m) (State st' f' sp pc' rs m)
   | match_states_call:
@@ -97,10 +122,47 @@ Inductive match_states: state -> state -> Prop :=
       (STACKS: list_forall2 match_stackframes st st'),
       match_states (Returnstate st v m) (Returnstate st' v m).
 
-Theorem transf_program_correct:
-  forward_simulation (RTL.semantics prog) (RTL.semantics tprog).
+Theorem transf_initial_states:
+  forall s1, initial_state prog s1 ->
+  exists s2, initial_state tprog s2 /\ match_states s1 s2.
 Proof.
-  (* TODO *)
+  intros. inv H.
+  exploit function_ptr_translated; eauto. intros (tf & FIND & TRANSF).
+  eexists. split.
+  - econstructor.
+    + eapply (Genv.init_mem_transf_partial TRANSL); eauto.
+    + replace (prog_main tprog) with (prog_main prog). rewrite symbols_preserved. eauto.
+      symmetry. eapply match_program_main. eauto.
+    + exploit function_ptr_translated; eauto.
+    + destruct f.
+      * monadInv TRANSF. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
+      * monadInv TRANSF. assumption.
+  - constructor; eauto. constructor.
+Qed.
+
+Theorem transf_final_states:
+  forall s1 s2 r,
+  match_states s1 s2 -> final_state s1 r -> final_state s2 r.
+Proof.
 Admitted.
+
+Theorem step_simulation:
+  forall s1 t s1', step ge s1 t s1' ->
+  forall s2, match_states s1 s2 ->
+  exists s2',
+     step tge s2 t s2'
+  /\ match_states s1' s2'.
+Proof.
+Admitted.
+
+Theorem transf_program_correct:
+  forward_simulation (semantics prog) (semantics tprog).
+Proof.
+  eapply forward_simulation_step with match_states.
+  - eapply senv_preserved.
+  - eapply transf_initial_states.
+  - eapply transf_final_states.
+  - eapply step_simulation.
+Qed.
 
 End PRESERVATION.
