@@ -1204,6 +1204,14 @@ Local Transparent destroyed_by_op.
     eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
     simpl; congruence.
 
+  - (* MBload notrap1 TODO *)
+    simpl in EQ0.
+    discriminate.
+    
+  - (* MBload notrap2 TODO *)
+    simpl in EQ0.
+    discriminate.
+    
   - (* MBstore *)
     simpl in EQ0. rewrite Hheader in DXP.
 
