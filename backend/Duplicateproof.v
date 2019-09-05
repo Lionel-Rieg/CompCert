@@ -1,7 +1,7 @@
 (** Correctness proof for code duplication *)
 Require Import AST Linking Errors Globalenvs Smallstep.
-Require Import Coqlib Maps Events.
-Require Import RTL Duplicate.
+Require Import Coqlib Maps Events Values.
+Require Import Op RTL Duplicate.
 
 Definition match_prog (p tp: program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
@@ -11,6 +11,40 @@ Lemma transf_program_match:
 Proof.
   intros. eapply match_transform_partial_program_contextual; eauto.
 Qed.
+
+(* est-ce plus simple de prendre is_copy: node -> node, avec un noeud hors CFG à la place de None ? *)
+Inductive match_inst (is_copy: node -> option node): instruction -> instruction -> Prop :=
+  | match_inst_nop: forall n n',
+      is_copy n' = (Some n) -> match_inst is_copy (Inop n) (Inop n')
+  | match_inst_op: forall n n' op lr r,
+      is_copy n' = (Some n) -> match_inst is_copy (Iop op lr r n) (Iop op lr r n')
+  | match_inst_load: forall n n' m a lr r,
+      is_copy n' = (Some n) -> match_inst is_copy (Iload m a lr r n) (Iload m a lr r n')
+  | match_inst_store: forall n n' m a lr r,
+      is_copy n' = (Some n) -> match_inst is_copy (Istore m a lr r n) (Istore m a lr r n')
+  | match_inst_call: forall n n' s ri lr r,
+      is_copy n' = (Some n) -> match_inst is_copy (Icall s ri lr r n) (Icall s ri lr r n')
+  | match_inst_tailcall: forall n n' s ri lr,
+      is_copy n' = (Some n) -> match_inst is_copy (Itailcall s ri lr) (Itailcall s ri lr)
+  | match_inst_builtin: forall n n' ef la br,
+      is_copy n' = (Some n) -> match_inst is_copy (Ibuiltin ef la br n) (Ibuiltin ef la br n')
+  | match_inst_cond: forall ifso ifso' ifnot ifnot' c lr,
+      is_copy ifso' = (Some ifso) -> is_copy ifnot' = (Some ifnot) ->
+      match_inst is_copy (Icond c lr ifso ifnot) (Icond c lr ifso' ifnot')
+  | match_inst_jumptable: forall ln ln' r,
+      list_forall2 (fun n n' => (is_copy n' = (Some n))) ln ln' ->
+      match_inst is_copy (Ijumptable r ln) (Ijumptable r ln')
+  | match_inst_return: forall or, match_inst is_copy (Ireturn or) (Ireturn or).
+
+Axiom revmap: function -> node -> option node. (* mapping from nodes of [tprog], to nodes of [prog], for function [f] *)
+
+Axiom revmap_correct: forall f f' n n',
+    transf_function f = OK f' ->
+    revmap f n' = Some n ->
+    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code f')!n' = Some i' /\ match_inst (revmap f) i i').
+
+Axiom revmap_entrypoint:
+  forall f f', transf_function f = OK f' -> revmap f (fn_entrypoint f') = Some (fn_entrypoint f).
 
 Section PRESERVATION.
 
@@ -28,12 +62,29 @@ Lemma senv_preserved:
   Senv.equiv ge tge.
 Proof (Genv.senv_match TRANSL).
 
+Lemma functions_translated:
+  forall (v: val) (f: fundef),
+  Genv.find_funct ge v = Some f ->
+  exists tf cunit, transf_fundef f = OK tf /\ Genv.find_funct tge v = Some tf /\ linkorder cunit prog.
+Proof.
+  intros. exploit (Genv.find_funct_match TRANSL); eauto.
+  intros (cu & tf & A & B & C). exists tf, cu. split; auto.
+Qed.
+
 Lemma function_ptr_translated:
   forall v f,
   Genv.find_funct_ptr ge v = Some f ->
   exists tf,
   Genv.find_funct_ptr tge v = Some tf /\ transf_fundef f = OK tf.
 Proof (Genv.find_funct_ptr_transf_partial TRANSL).
+
+Lemma function_sig_translated:
+  forall f f', transf_fundef f = OK f' -> funsig f' = funsig f.
+Proof.
+  intros. destruct f.
+  - simpl in H. monadInv H. simpl. symmetry. apply transf_function_preserves. assumption.
+  - simpl in H. monadInv H. reflexivity.
+Qed.
 
 Lemma sig_preserved:
   forall f tf,
@@ -45,63 +96,11 @@ Proof.
   inv H. reflexivity.
 Qed.
 
-Inductive match_nodes (f f': function): node -> node -> Prop :=
-  | match_node_nop: forall n n' n1 n1',
-      (fn_code f)!n  = Some (Inop n1) ->
-      (fn_code f')!n' = Some (Inop n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_op: forall n n' n1 n1' op lr r,
-      (fn_code f)!n  = Some (Iop op lr r n1) ->
-      (fn_code f')!n' = Some (Iop op lr r n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_load: forall n n' n1 n1' m a lr r,
-      (fn_code f)!n  = Some (Iload m a lr r n1) ->
-      (fn_code f')!n' = Some (Iload m a lr r n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_store: forall n n' n1 n1' m a lr r,
-      (fn_code f)!n  = Some (Istore m a lr r n1) ->
-      (fn_code f')!n' = Some (Istore m a lr r n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_call: forall n n' n1 n1' s ri lr r,
-      (fn_code f)!n  = Some (Icall s ri lr r n1) ->
-      (fn_code f')!n' = Some (Icall s ri lr r n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_tailcall: forall n n' s ri lr,
-      (fn_code f)!n  = Some (Itailcall s ri lr) ->
-      (fn_code f')!n' = Some (Itailcall s ri lr) ->
-      match_nodes f f' n n'
-  | match_node_builtin: forall n n' n1 n1' ef la br,
-      (fn_code f)!n  = Some (Ibuiltin ef la br n1) ->
-      (fn_code f')!n' = Some (Ibuiltin ef la br n1') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n n'
-  | match_node_cond: forall n n' n1 n1' n2 n2' c lr,
-      (fn_code f)!n  = Some (Icond c lr n1 n2) ->
-      (fn_code f')!n' = Some (Icond c lr n1' n2') ->
-      match_nodes f f' n1 n1' ->
-      match_nodes f f' n2 n2' ->
-      match_nodes f f' n n'
-  | match_node_jumptable: forall n n' ln ln' r,
-      (fn_code f)!n  = Some (Ijumptable r ln) ->
-      (fn_code f')!n' = Some (Ijumptable r ln') ->
-      list_forall2 (match_nodes f f') ln ln' ->
-      match_nodes f f' n n'
-  | match_node_return: forall n n' or,
-      (fn_code f)!n  = Some (Ireturn or) ->
-      (fn_code f')!n  = Some (Ireturn or) ->
-      match_nodes f f' n n'
-.
-
 Inductive match_stackframes: stackframe -> stackframe -> Prop :=
   | match_stackframe_intro:
     forall res f sp pc rs f' pc'
       (TRANSF: transf_function f = OK f')
-      (DUPLIC: match_nodes f f' pc pc'),
+      (DUPLIC: revmap f pc' = Some pc),
       match_stackframes (Stackframe res f sp pc rs) (Stackframe res f' sp pc' rs).
 
 Inductive match_states: state -> state -> Prop :=
@@ -109,7 +108,7 @@ Inductive match_states: state -> state -> Prop :=
     forall st f sp pc rs m st' f' pc'
       (STACKS: list_forall2 match_stackframes st st')
       (TRANSF: transf_function f = OK f')
-      (DUPLIC: match_nodes f f' pc pc'),
+      (DUPLIC: revmap f pc' = Some pc),
       match_states (State st f sp pc rs m) (State st' f' sp pc' rs m)
   | match_states_call:
     forall st st' f f' args m
@@ -155,39 +154,103 @@ Theorem step_simulation:
 Proof.
   induction 1; intros; inv MS.
 (* Inop *)
-  - inv DUPLIC; try (rewrite H0 in H; discriminate).
-    rewrite H0 in H. inv H.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3).
+    inv H3.
     eexists. split.
-    + eapply exec_Inop. eassumption.
+    + eapply exec_Inop; eauto.
     + constructor; eauto.
 (* Iop *)
-  - admit. (* inv DUPLIC; try (rewrite H1 in H; discriminate).
-    rewrite H1 in H. inv H.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Iop. eassumption.
-    + constructor; eauto. *)
+    + eapply exec_Iop; eauto. erewrite eval_operation_preserved; eauto.
+    + constructor; eauto.
 (* Iload *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Iload; eauto. erewrite eval_addressing_preserved; eauto.
+    + constructor; auto.
 (* Istore *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Istore; eauto. erewrite eval_addressing_preserved; eauto.
+    + constructor; auto.
 (* Icall *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    destruct ros.
+    * simpl in H0. apply functions_translated in H0.
+      destruct H0 as (tf & cunit & TFUN & GFIND & LO).
+      eexists. split.
+      + eapply exec_Icall. eassumption. simpl. eassumption.
+        apply function_sig_translated. assumption.
+      + repeat (constructor; auto).
+    * simpl in H0. destruct (Genv.find_symbol _ _) eqn:GFS; try discriminate.
+      apply function_ptr_translated in H0. destruct H0 as (tf & GFF & TF).
+      eexists. split.
+      + eapply exec_Icall. eassumption. simpl. rewrite symbols_preserved. rewrite GFS.
+        eassumption. apply function_sig_translated. assumption.
+      + repeat (constructor; auto).
 (* Itailcall *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H10 & H11). inv H11.
+    pose symbols_preserved as SYMPRES.
+    destruct ros.
+    * simpl in H0. apply functions_translated in H0.
+      destruct H0 as (tf & cunit & TFUN & GFIND & LO).
+      eexists. split.
+      + eapply exec_Itailcall. eassumption. simpl. eassumption.
+        apply function_sig_translated. assumption.
+        erewrite <- transf_function_fnstacksize; eauto.
+      + repeat (constructor; auto).
+    * simpl in H0. destruct (Genv.find_symbol _ _) eqn:GFS; try discriminate.
+      apply function_ptr_translated in H0. destruct H0 as (tf & GFF & TF).
+      eexists. split.
+      + eapply exec_Itailcall. eassumption. simpl. rewrite symbols_preserved. rewrite GFS.
+        eassumption. apply function_sig_translated. assumption.
+        erewrite <- transf_function_fnstacksize; eauto.
+      + repeat (constructor; auto).
 (* Ibuiltin *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Ibuiltin; eauto. eapply eval_builtin_args_preserved; eauto.
+      eapply external_call_symbols_preserved; eauto. eapply senv_preserved.
+    + constructor; auto.
 (* Icond *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Icond; eauto.
+    + constructor; auto. destruct b; auto.
 (* Ijumptable *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Ijumptable; eauto. admit.
+    + admit.
 (* Ireturn *)
-  - admit.
+  - eapply revmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Ireturn; eauto. erewrite <- transf_function_fnstacksize; eauto.
+    + constructor; auto.
 (* exec_function_internal *)
   - monadInv TRANSF. eexists. split.
     + econstructor. erewrite <- transf_function_fnstacksize; eauto.
-    + erewrite transf_function_fnentrypoint; eauto.
-      erewrite transf_function_fnparams; eauto.
-      econstructor; eauto. admit. (* econstructor. *)
+    + erewrite transf_function_fnparams; eauto.
+      econstructor; eauto. apply revmap_entrypoint. assumption.
 (* exec_function_external *)
   - monadInv TRANSF. eexists. split.
     + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
@@ -197,6 +260,7 @@ Proof.
     + constructor.
     + inv H1. constructor; assumption.
 Admitted.
+
 
 
 Theorem transf_program_correct:
