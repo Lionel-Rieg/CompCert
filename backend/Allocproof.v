@@ -2082,7 +2082,7 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iop; eauto.
 
-(* load regular *)
+(* load regular TRAP *)
 - generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
   exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
   exploit transfer_use_def_satisf; eauto. intros [X Y].
@@ -2229,6 +2229,24 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iload; eauto.
 
+- (* BSload notrap1 *)
+  generalize (wt_exec_Iload_notrap _ _ _ _ _ _ _ _ WTI WTRS).
+  intro WTRS'.
+  exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
+  exploit transfer_use_def_satisf; eauto. intros [X Y].
+  exploit eval_addressing_lessdef_none; eauto. intro Haddr.
+  exploit (exec_moves mv2); eauto.  intros [ls2 [A2 B2]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_trans. eexact A1.
+  eapply star_left. eapply exec_Lload_notrap1. rewrite <- Haddr.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto.
+  
+  eapply star_right. eexact A2. constructor.
+  eauto. eauto. eauto. traceEq.
+  exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
+  econstructor; eauto.
+  
 (* store *)
 - exploit exec_moves; eauto. intros [ls1 [X Y]].
   exploit add_equations_lessdef; eauto. intros LD. simpl in LD. inv LD.
