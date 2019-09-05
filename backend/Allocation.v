@@ -1029,7 +1029,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
       do e1 <- track_moves env mv2 e;
       do e2 <- transfer_use_def args dst args' dst' (destroyed_by_load chunk addr) e1;
       track_moves env mv1 e2
-  | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s =>
+  | BSload2 trap addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s =>
       do e1 <- track_moves env mv3 e;
       let e2 := remove_equation (Eq kind_second_word dst (R dst2')) e1 in
       assertion (loc_unconstrained (R dst2') e2);
@@ -1042,14 +1042,14 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
       assertion (reg_unconstrained dst e5);
       do e6 <- add_equations args args1' e5;
       track_moves env mv1 e6
-  | BSload2_1 addr args dst mv1 args' dst' mv2 s =>
+  | BSload2_1 trap addr args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       let e2 := remove_equation (Eq kind_first_word dst (R dst')) e1 in
       assertion (reg_loc_unconstrained dst (R dst') e2);
       assertion (can_undef (destroyed_by_load Mint32 addr) e2);
       do e3 <- add_equations args args' e2;
       track_moves env mv1 e3
-  | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s =>
+  | BSload2_2 trap addr addr' args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       let e2 := remove_equation (Eq kind_second_word dst (R dst')) e1 in
       assertion (reg_loc_unconstrained dst (R dst') e2);
@@ -1265,10 +1265,10 @@ Definition successors_block_shape (bsh: block_shape) : list node :=
   | BShighlong src dst mv s => s :: nil
   | BSop op args res mv1 args' res' mv2 s => s :: nil
   | BSopdead op args res mv s => s :: nil
-  | BSload chunk addr args dst mv1 args' dst' mv2 s => s :: nil
-  | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
-  | BSload2_1 addr args dst mv1 args' dst' mv2 s => s :: nil
-  | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload trap chunk addr args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload2 trap addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
+  | BSload2_1 trap addr args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload2_2 trap addr addr' args dst mv1 args' dst' mv2 s => s :: nil
   | BSloaddead chunk addr args dst mv s => s :: nil
   | BSstore chunk addr args src mv1 args' src' s => s :: nil
   | BSstore2 addr addr' args src mv1 args1' src1' mv2 args2' src2' s => s :: nil
