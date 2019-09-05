@@ -74,6 +74,7 @@ BEGIN_TEST(long long)
     c += a^b;
     c += (unsigned int) a;
 
+    /* Testing if, cb */
     if (0 != (a & 0x1LL))
         c += fact(1);
     else
@@ -108,6 +109,42 @@ BEGIN_TEST(long long)
         c += fact(1024);
     else
         c += fact(2048);
+
+    /* Testing if, cmoved */
+    if (0 != (a & 0x1LL))
+        c += 1;
+    else
+        c += 2;
+
+    if (0 > (a & 0x1LL))
+        c += 4;
+    else
+        c += 8;
+
+    if (0 >= (a & 0x1LL) - 1)
+        c += 16;
+    else
+        c += 32;
+
+    if (a-41414141 > 0)
+        c += 13;
+    else
+        c += 31;
+
+    if (a & 0x1LL > 0)
+        c += 64;
+    else
+        c += 128;
+
+    if ((a & 0x1LL) - 1 >= 0)
+        c += 256;
+    else
+        c += 512;
+
+    if (0 == (a & 0x1LL))
+        c += 1024;
+    else
+        c += 2048;
 
     c += ((a & 0x1LL) == (b & 0x1LL));
     c += (a >= b);
