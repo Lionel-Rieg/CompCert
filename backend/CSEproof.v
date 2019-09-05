@@ -1164,8 +1164,76 @@ Proof.
     apply set_reg_lessdef; assumption.
   }
 
-(* TODO *)
+- (* Iload notrap 1*)
+  destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
+  destruct SAT as [valu1 NH1].
+  exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
+
+    econstructor. split.
+    eapply exec_Iload_notrap1; eauto.
+    rewrite eval_addressing_preserved with (ge1 := ge).
+    apply eval_addressing_lessdef_none with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    exact symbols_preserved.
+
+    econstructor; eauto.
+    eapply analysis_correct_1; eauto. simpl; eauto.
+    unfold transfer. rewrite H.
+    exists valu1.
+    apply set_unknown_holds.
+    assumption.
+    apply set_reg_lessdef.
+    constructor. assumption.
   
+- (* Iload notrap 2*)
+  destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
+  destruct SAT as [valu1 NH1].
+  exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
+
+    assert (exists a' : val,
+       eval_addressing ge sp addr rs' ## args = Some a' /\ Val.lessdef a a')
+       as Haa'.    
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Haa' as [a' [Ha'1 Ha'2]].
+
+    destruct (Mem.loadv chunk m' a') eqn:Hload'.
+
+    {
+      econstructor. split.
+      eapply exec_Iload; eauto.
+      rewrite eval_addressing_preserved with (ge1 := ge).
+      exact Ha'1.
+      exact symbols_preserved.
+      
+      econstructor; eauto.
+      eapply analysis_correct_1; eauto. simpl; eauto.
+      unfold transfer. rewrite H.
+      exists valu1.
+      apply set_unknown_holds.
+      assumption.
+      unfold default_notrap_load_value.
+      apply set_reg_lessdef; eauto.
+    }
+    {
+      econstructor. split.
+      eapply exec_Iload_notrap2; eauto.
+      rewrite eval_addressing_preserved with (ge1 := ge).
+      exact Ha'1.
+      exact symbols_preserved.
+      
+      econstructor; eauto.
+      eapply analysis_correct_1; eauto. simpl; eauto.
+      unfold transfer. rewrite H.
+      exists valu1.
+      apply set_unknown_holds.
+      assumption.
+      apply set_reg_lessdef.
+      constructor. assumption.
+    }
+    
 - (* Istore *)
   destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
   destruct SAT as [valu1 NH1].

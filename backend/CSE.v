@@ -202,10 +202,10 @@ Definition add_op (n: numbering) (rd: reg) (op: operation) (rs: list reg) :=
   and added to [n] as described in [add_rhs]. *)
 
 Definition add_load (n: numbering) (rd: reg)
-                    (trap: trapping_mode) (chunk: memory_chunk) (addr: addressing)
+                    (chunk: memory_chunk) (addr: addressing)
                     (rs: list reg) :=
   let (n1, vs) := valnum_regs n rs in
-  add_rhs n1 rd (Load trap chunk addr vs).
+  add_rhs n1 rd (Load chunk addr vs).
 
 (** [set_unknown n rd] returns a numbering where [rd] is mapped to
   no value number, and no equations are added.  This is useful
@@ -246,7 +246,7 @@ Definition kill_equations (pred: rhs -> bool) (n: numbering) : numbering :=
 Definition filter_loads (r: rhs) : bool :=
   match r with
   | Op op _ => op_depends_on_memory op
-  | Load _ _ _ _ => true
+  | Load _ _ _ => true
   end.
 
 Definition kill_all_loads (n: numbering) : numbering :=
@@ -262,7 +262,7 @@ Definition filter_after_store (app: VA.t) (n: numbering) (p: aptr) (sz: Z) (r: r
   match r with
   | Op op vl =>
       op_depends_on_memory op
-  | Load trap chunk addr vl =>
+  | Load chunk addr vl =>
       match regs_valnums n vl with
       | None => true
       | Some rl =>
@@ -297,7 +297,7 @@ Definition add_store_result (app: VA.t) (n: numbering) (chunk: memory_chunk) (ad
     let (n1, vsrc) := valnum_reg n rsrc in
     let (n2, vargs) := valnum_regs n1 rargs in
     {| num_next := n2.(num_next);
-       num_eqs  := Eq vsrc false (Load TRAP chunk addr vargs) :: n2.(num_eqs);
+       num_eqs  := Eq vsrc false (Load chunk addr vargs) :: n2.(num_eqs);
        num_reg  := n2.(num_reg);
        num_val  := n2.(num_val) |}
   else n.
@@ -326,7 +326,7 @@ Definition kill_loads_after_storebytes
 
 Definition shift_memcpy_eq (src sz delta: Z) (e: equation) :=
   match e with
-  | Eq l strict (Load trap chunk (Ainstack i) _) =>
+  | Eq l strict (Load chunk (Ainstack i) _) =>
       let i := Ptrofs.unsigned i in
       let j := i + delta in
       if zle src i
@@ -334,7 +334,7 @@ Definition shift_memcpy_eq (src sz delta: Z) (e: equation) :=
       && zeq (Z.modulo delta (align_chunk chunk)) 0
       && zle 0 j
       && zle j Ptrofs.max_unsigned
-      then Some(Eq l strict (Load trap chunk (Ainstack (Ptrofs.repr j)) nil))
+      then Some(Eq l strict (Load chunk (Ainstack (Ptrofs.repr j)) nil))
       else None
   | _ => None
   end.
@@ -459,8 +459,10 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           before
       | Iop op args res s =>
           add_op before res op args
-      | Iload trap chunk addr args dst s =>
-          add_load before dst trap chunk addr args
+      | Iload TRAP chunk addr args dst s =>
+        add_load before dst chunk addr args
+      | Iload NOTRAP _ _ _ dst _ =>
+        set_unknown before dst
       | Istore chunk addr args src s =>
           let app := approx!!pc in
           let n := kill_loads_after_store app before chunk addr args in
@@ -534,14 +536,14 @@ Definition transf_instr (n: numbering) (instr: instruction) :=
             let (op', args') := reduce _ combine_op n1 op args vl in
             Iop op' args' res s
         end
-  | Iload trap chunk addr args dst s =>
+  | Iload TRAP chunk addr args dst s =>
       let (n1, vl) := valnum_regs n args in
-      match find_rhs n1 (Load trap chunk addr vl) with
+      match find_rhs n1 (Load chunk addr vl) with
       | Some r =>
           Iop Omove (r :: nil) dst s
       | None =>
           let (addr', args') := reduce _ combine_addr n1 addr args vl in
-          Iload trap chunk addr' args' dst s
+          Iload TRAP chunk addr' args' dst s
       end
   | Istore chunk addr args src s =>
       let (n1, vl) := valnum_regs n args in
