@@ -1903,6 +1903,19 @@ Proof.
   econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
 Qed.
 
+Lemma eval_addressing_inject_none:
+  forall addr vl1 vl2,
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing genv (Vptr sp1 Ptrofs.zero) addr vl1 = None ->
+  eval_addressing genv (Vptr sp2 Ptrofs.zero) (shift_stack_addressing delta addr) vl2 = None.
+Proof.
+  intros.
+  rewrite eval_shift_stack_addressing.
+  eapply eval_addressing_inj_none with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
+  intros. apply symbol_address_inject.
+  econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
+Qed.
+  
 Lemma eval_operation_inject:
   forall op vl1 vl2 v1 m1 m2,
   Val.inject_list f vl1 vl2 ->
