@@ -202,6 +202,7 @@ Proof.
   decide equality.
 Defined.
 
+
 (** Initialization data for global variables. *)
 
 Inductive init_data: Type :=

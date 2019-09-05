@@ -76,7 +76,7 @@ Definition wt_instr (i: instruction) : bool :=
           let (targs, tres) := type_of_operation op in
           subtype tres (mreg_type res)
       end
-  | Lload chunk addr args dst =>
+  | Lload trap chunk addr args dst =>
       subtype (type_of_chunk chunk) (mreg_type dst)
   | Ltailcall sg ros =>
       zeq (size_arguments sg) 0
@@ -331,6 +331,20 @@ Local Opaque mreg_type.
   econstructor; eauto.
   apply wt_setreg. eapply Val.has_subtype; eauto.
   destruct a; simpl in H0; try discriminate. eapply Mem.load_type; eauto.
+  apply wt_undef_regs; auto.
+- (* load notrap1 *)
+  simpl in *; InvBooleans.
+  econstructor; eauto.
+  apply wt_setreg. eapply Val.has_subtype; eauto.
+  unfold default_notrap_load_value.
+  constructor.
+  apply wt_undef_regs; auto.
+- (* load notrap2 *)
+  simpl in *; InvBooleans.
+  econstructor; eauto.
+  apply wt_setreg. eapply Val.has_subtype; eauto.
+  unfold default_notrap_load_value.
+  constructor.
   apply wt_undef_regs; auto.
 - (* store *)
   simpl in *; InvBooleans.

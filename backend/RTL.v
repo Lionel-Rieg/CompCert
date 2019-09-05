@@ -195,8 +195,6 @@ Definition find_function
       end
   end.
 
-Definition default_notrap_load_value (chunk : memory_chunk) := Vundef.
-
 (** The transitions are presented as an inductive predicate
   [step ge st1 t st2], where [ge] is the global environment,
   [st1] the initial state, [st2] the final state, and [t] the trace
