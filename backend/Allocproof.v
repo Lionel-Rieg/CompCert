@@ -102,33 +102,33 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
                          (Iload trap chunk addr args dst s)
                          (expand_moves mv1
                            (Lload trap chunk addr args' dst' :: expand_moves mv2 (Lbranch s :: k)))
-  | ebs_load2: forall trap addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s k,
+  | ebs_load2: forall addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s k,
       wf_moves mv1 -> wf_moves mv2 -> wf_moves mv3 ->
       Archi.splitlong = true ->
       offset_addressing addr 4 = Some addr2 ->
-      expand_block_shape (BSload2 trap addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s)
-                         (Iload trap Mint64 addr args dst s)
+      expand_block_shape (BSload2 addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload trap Mint32 addr args1' dst1' ::
+                           (Lload TRAP Mint32 addr args1' dst1' ::
                            expand_moves mv2
-                             (Lload trap Mint32 addr2 args2' dst2' ::
+                             (Lload TRAP Mint32 addr2 args2' dst2' ::
                               expand_moves mv3 (Lbranch s :: k))))
-  | ebs_load2_1: forall trap addr args dst mv1 args' dst' mv2 s k,
+  | ebs_load2_1: forall addr args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
       Archi.splitlong = true ->
-      expand_block_shape (BSload2_1 trap addr args dst mv1 args' dst' mv2 s)
-                         (Iload trap Mint64 addr args dst s)
+      expand_block_shape (BSload2_1 addr args dst mv1 args' dst' mv2 s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload trap Mint32 addr args' dst' ::
+                           (Lload TRAP Mint32 addr args' dst' ::
                             expand_moves mv2 (Lbranch s :: k)))
-  | ebs_load2_2: forall trap addr addr2 args dst mv1 args' dst' mv2 s k,
+  | ebs_load2_2: forall addr addr2 args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
       Archi.splitlong = true ->
       offset_addressing addr 4 = Some addr2 ->
-      expand_block_shape (BSload2_2 trap addr addr2 args dst mv1 args' dst' mv2 s)
-                         (Iload trap Mint64 addr args dst s)
+      expand_block_shape (BSload2_2 addr addr2 args dst mv1 args' dst' mv2 s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload trap Mint32 addr2 args' dst' ::
+                           (Lload TRAP Mint32 addr2 args' dst' ::
                             expand_moves mv2 (Lbranch s :: k)))
   | ebs_load_dead: forall trap chunk addr args dst mv s k,
       wf_moves mv ->
@@ -2246,7 +2246,20 @@ Proof.
   eauto. eauto. eauto. traceEq.
   exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
   econstructor; eauto.
-  
+
+(* BSload notrap dead? *)
+- exploit exec_moves; eauto. intros [ls1 [X Y]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_right. eexact X. econstructor; eauto.
+  eauto. traceEq.
+  exploit satisf_successors. eauto. eauto. simpl; eauto. eauto.
+  eapply reg_unconstrained_satisf; eauto.
+  intros [enext [U V]].
+  econstructor; eauto.
+  eapply wt_exec_Iload_notrap; eauto.
+
+
 (* store *)
 - exploit exec_moves; eauto. intros [ls1 [X Y]].
   exploit add_equations_lessdef; eauto. intros LD. simpl in LD. inv LD.
