@@ -1008,12 +1008,17 @@ Definition transl_load_rrrXS (chunk: memory_chunk) (scale : Z)
   do r <- ireg_of dst;
   transl_memory_access2XS chunk (PLoadRRRXS (chunk2load chunk) r) scale args k.
 
-Definition transl_load (chunk: memory_chunk) (addr: addressing)
+Definition transl_load (trap : trapping_mode)
+           (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
-  match addr with
-  | Aindexed2XS scale => transl_load_rrrXS chunk scale args dst k
-  | Aindexed2 => transl_load_rrr chunk addr args dst k
-  | _ => transl_load_rro chunk addr args dst k
+  match trap with
+  | NOTRAP => Error(msg "Asmblockgen.transl_load NOTRAP TODO")
+  | TRAP =>
+    match addr with
+    | Aindexed2XS scale => transl_load_rrrXS chunk scale args dst k
+    | Aindexed2 => transl_load_rrr chunk addr args dst k
+    | _ => transl_load_rro chunk addr args dst k
+  end
   end.
 
 Definition chunk2store (chunk: memory_chunk) :=
@@ -1073,8 +1078,8 @@ Definition transl_instr_basic (f: Machblock.function) (i: Machblock.basic_inst)
                 else (loadind_ptr SP f.(fn_link_ofs) FP) ::i c)
   | MBop op args res =>
       transl_op op args res k
-  | MBload chunk addr args dst =>
-      transl_load chunk addr args dst k
+  | MBload trap chunk addr args dst =>
+      transl_load trap chunk addr args dst k
   | MBstore chunk addr args src =>
       transl_store chunk addr args src k
   end.

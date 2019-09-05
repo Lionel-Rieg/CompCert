@@ -1947,9 +1947,9 @@ Proof.
 Qed.
 
 Lemma transl_load_memory_access_ok:
-  forall addr chunk args dst k c rs a v m,
+  forall addr trap chunk args dst k c rs a v m,
   (match addr with Aindexed2XS _ | Aindexed2 => False | _ => True end) ->
-  transl_load chunk addr args dst k = OK c ->
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr rd,
@@ -1958,6 +1958,8 @@ Lemma transl_load_memory_access_ok:
   /\ forall base ofs rs,
         exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs.
 Proof.
+  destruct trap.
+  { (* TRAP *)
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
@@ -1967,12 +1969,15 @@ Proof.
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
     [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
     | eauto ].
+  }
+  intros until m. intros ADDR TR ? ?.
+  monadInv TR.
 Qed.
 
 Lemma transl_load_memory_access2_ok:
-  forall addr chunk args dst k c rs a v m,
+  forall addr trap chunk args dst k c rs a v m,
   addr = Aindexed2 ->
-  transl_load chunk addr args dst k = OK c ->
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr mr0 mro rd ro,
@@ -1983,17 +1988,24 @@ Lemma transl_load_memory_access2_ok:
    /\ forall base rs,
       exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro.
 Proof.
+  destruct trap.
+  { (* TRAP *)
   intros until m. intros ? TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
   | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ x)); simpl; reflexivity
   | eauto].
+  }
+  { (* NOTRAP *)
+    intros until m. intros ? TR ? ?.
+    unfold transl_load in TR. subst. monadInv TR.
+  }
 Qed.
 
 Lemma transl_load_memory_access2XS_ok:
-  forall scale chunk args dst k c rs a v m,
-  transl_load chunk (Aindexed2XS scale) args dst k = OK c ->
+  forall scale trap chunk args dst k c rs a v m,
+  transl_load trap chunk (Aindexed2XS scale) args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) (Aindexed2XS scale) (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr mr0 mro rd ro,
@@ -2004,17 +2016,23 @@ Lemma transl_load_memory_access2XS_ok:
    /\ forall base rs,
       exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs chunk rs m rd base ro.
 Proof.
+  destruct trap.
+  { (* TRAP *)
   intros until m. intros TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2XS in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
   | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ x)); simpl; rewrite Heqb; eauto
   | eauto].
+  }
+  { (* NOTRAP *)
+  intros until m. intros TR ? ?.
+  unfold transl_load in TR. subst. monadInv TR.  }
 Qed.
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) m a v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) m a v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',

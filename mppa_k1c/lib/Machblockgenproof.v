@@ -483,6 +483,10 @@ Proof.
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
   - eapply exec_MBload; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
+  - eapply exec_MBload_notrap1; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
+    unfold Genv.symbol_address; rewrite symbols_preserved; auto.
+  - eapply exec_MBload_notrap2; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
+    unfold Genv.symbol_address; rewrite symbols_preserved; auto.
   - eapply exec_MBstore; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
 Qed.

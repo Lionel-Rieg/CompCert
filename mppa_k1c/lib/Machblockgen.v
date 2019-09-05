@@ -33,7 +33,7 @@ Definition trans_inst (i:Mach.instruction) : Machblock_inst :=
   | Msetstack src ofs ty          => MB_basic (MBsetstack src ofs ty)
   | Mgetparam ofs ty dst          => MB_basic (MBgetparam ofs ty dst)
   | Mop       op args res         => MB_basic (MBop       op args res)
-  | Mload     chunk addr args dst => MB_basic (MBload     chunk addr args dst)
+  | Mload trap chunk addr args dst=> MB_basic (MBload trap chunk addr args dst)
   | Mstore    chunk addr args src => MB_basic (MBstore    chunk addr args src)
   | Mlabel l => MB_label l
   end.
