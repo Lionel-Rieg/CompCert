@@ -61,9 +61,10 @@ let print_succ pp s dfl =
 let print_instruction pp succ = function
   | Lop(op, args, res) ->
       fprintf pp "%a = %a" mreg res (print_operation mreg) (op, args)
-  | Lload(chunk, addr, args, dst) ->
-      fprintf pp "%a = %s[%a]"
-         mreg dst (name_of_chunk chunk) (print_addressing mreg) (addr, args)
+  | Lload(trap,chunk, addr, args, dst) ->
+      fprintf pp "%a = %s[%a]%a"
+        mreg dst (name_of_chunk chunk) (print_addressing mreg) (addr, args)
+        print_trapping_mode trap
   | Lgetstack(sl, ofs, ty, dst) ->
       fprintf pp "%a = %a" mreg dst slot (sl, ofs, ty)
   | Lsetstack(src, sl, ofs, ty) ->

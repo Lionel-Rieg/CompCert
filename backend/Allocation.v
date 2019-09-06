@@ -63,14 +63,14 @@ Inductive block_shape: Type :=
          (mv2: moves) (s: node)
   | BSloaddead (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
          (mv: moves) (s: node)
-  | BSload2 (trap : trapping_mode) (addr1 addr2: addressing) (args: list reg) (dst: reg)
+  | BSload2 (addr1 addr2: addressing) (args: list reg) (dst: reg)
          (mv1: moves) (args1': list mreg) (dst1': mreg)
          (mv2: moves) (args2': list mreg) (dst2': mreg)
          (mv3: moves) (s: node)
-  | BSload2_1 (trap : trapping_mode) (addr: addressing) (args: list reg) (dst: reg)
+  | BSload2_1 (addr: addressing) (args: list reg) (dst: reg)
          (mv1: moves) (args': list mreg) (dst': mreg)
          (mv2: moves) (s: node)
-  | BSload2_2 (trap : trapping_mode) (addr addr': addressing) (args: list reg) (dst: reg)
+  | BSload2_2 (addr addr': addressing) (args: list reg) (dst: reg)
          (mv1: moves) (args': list mreg) (dst': mreg)
          (mv2: moves) (s: node)
   | BSstore (chunk: memory_chunk) (addr: addressing) (args: list reg) (src: reg)
@@ -232,24 +232,26 @@ Definition pair_instr_block
       | Lload trap' chunk' addr' args' dst' :: b2 =>
         assertion (trapping_mode_eq trap' trap);
           if chunk_eq chunk Mint64 && Archi.splitlong then
+            (* TODO: do not support non trapping split loads *)
+            assertion (trapping_mode_eq trap TRAP);
             assertion (chunk_eq chunk' Mint32);
             let (mv2, b3) := extract_moves nil b2 in
             match b3 with
             | Lload trap'' chunk'' addr'' args'' dst'' :: b4 =>
-              assertion (trapping_mode_eq trap'' trap);
+              assertion (trapping_mode_eq trap'' TRAP);
                 let (mv3, b5) := extract_moves nil b4 in
                 assertion (chunk_eq chunk'' Mint32);
                 assertion (eq_addressing addr addr');
                 assertion (option_eq eq_addressing (offset_addressing addr 4) (Some addr''));
                 assertion (check_succ s b5);
-                Some(BSload2 trap addr addr'' args dst mv1 args' dst' mv2 args'' dst'' mv3 s)
+                Some(BSload2 addr addr'' args dst mv1 args' dst' mv2 args'' dst'' mv3 s)
             | _ =>
                 assertion (check_succ s b3);
                 if (eq_addressing addr addr') then
-                  Some(BSload2_1 trap addr args dst mv1 args' dst' mv2 s)
+                  Some(BSload2_1 addr args dst mv1 args' dst' mv2 s)
                 else
                  (assertion (option_eq eq_addressing (offset_addressing addr 4) (Some addr'));
-                  Some(BSload2_2 trap addr addr' args dst mv1 args' dst' mv2 s))
+                  Some(BSload2_2 addr addr' args dst mv1 args' dst' mv2 s))
             end
           else (
             let (mv2, b3) := extract_moves nil b2 in
@@ -1029,7 +1031,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
       do e1 <- track_moves env mv2 e;
       do e2 <- transfer_use_def args dst args' dst' (destroyed_by_load chunk addr) e1;
       track_moves env mv1 e2
-  | BSload2 trap addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s =>
+  | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s =>
       do e1 <- track_moves env mv3 e;
       let e2 := remove_equation (Eq kind_second_word dst (R dst2')) e1 in
       assertion (loc_unconstrained (R dst2') e2);
@@ -1042,14 +1044,14 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
       assertion (reg_unconstrained dst e5);
       do e6 <- add_equations args args1' e5;
       track_moves env mv1 e6
-  | BSload2_1 trap addr args dst mv1 args' dst' mv2 s =>
+  | BSload2_1 addr args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       let e2 := remove_equation (Eq kind_first_word dst (R dst')) e1 in
       assertion (reg_loc_unconstrained dst (R dst') e2);
       assertion (can_undef (destroyed_by_load Mint32 addr) e2);
       do e3 <- add_equations args args' e2;
       track_moves env mv1 e3
-  | BSload2_2 trap addr addr' args dst mv1 args' dst' mv2 s =>
+  | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       let e2 := remove_equation (Eq kind_second_word dst (R dst')) e1 in
       assertion (reg_loc_unconstrained dst (R dst') e2);
@@ -1266,9 +1268,9 @@ Definition successors_block_shape (bsh: block_shape) : list node :=
   | BSop op args res mv1 args' res' mv2 s => s :: nil
   | BSopdead op args res mv s => s :: nil
   | BSload trap chunk addr args dst mv1 args' dst' mv2 s => s :: nil
-  | BSload2 trap addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
-  | BSload2_1 trap addr args dst mv1 args' dst' mv2 s => s :: nil
-  | BSload2_2 trap addr addr' args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
+  | BSload2_1 addr args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s => s :: nil
   | BSloaddead chunk addr args dst mv s => s :: nil
   | BSstore chunk addr args src mv1 args' src' s => s :: nil
   | BSstore2 addr addr' args src mv1 args1' src1' mv2 args2' src2' s => s :: nil

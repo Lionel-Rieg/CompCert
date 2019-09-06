@@ -2229,7 +2229,7 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iload; eauto.
 
-- (* BSload notrap1 *)
+- (* load notrap1 *)
   generalize (wt_exec_Iload_notrap _ _ _ _ _ _ _ _ WTI WTRS).
   intro WTRS'.
   exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
@@ -2247,7 +2247,7 @@ Proof.
   exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
   econstructor; eauto.
 
-(* BSload notrap dead? *)
+(* load notrap1 dead *)
 - exploit exec_moves; eauto. intros [ls1 [X Y]].
   econstructor; split.
   eapply plus_left. econstructor; eauto.
@@ -2259,7 +2259,38 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iload_notrap; eauto.
 
+(* load regular notrap2 *)
+- (* exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
+  exploit transfer_use_def_satisf; eauto. intros [X Y].
+  exploit eval_addressing_lessdef; eauto. intros [a' [F G]].
 
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_trans. eexact A1.
+  eapply star_left. eapply exec_Lload_notrap2 with (a := a'). rewrite <- F.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto. eauto.
+  eapply star_right. eexact A2. constructor.
+  eauto. eauto. eauto. traceEq.
+  exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
+  econstructor; eauto.
+
+    generalize (wt_exec_Iload_notrap _ _ _ _ _ _ _ _ WTI WTRS). intro WTRS'.
+   *)
+  
+  admit.
+
+- (* load notrap2 dead *)
+  exploit exec_moves; eauto. intros [ls1 [X Y]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_right. eexact X. econstructor; eauto.
+  eauto. traceEq.
+  exploit satisf_successors. eauto. eauto. simpl; eauto. eauto.
+  eapply reg_unconstrained_satisf; eauto.
+  intros [enext [U V]].
+  econstructor; eauto.
+  eapply wt_exec_Iload_notrap; eauto.
+  
 (* store *)
 - exploit exec_moves; eauto. intros [ls1 [X Y]].
   exploit add_equations_lessdef; eauto. intros LD. simpl in LD. inv LD.
@@ -2511,7 +2542,7 @@ Proof.
   eapply plus_left. constructor. eexact A. traceEq.
   econstructor; eauto.
   apply wt_regset_assign; auto. rewrite WTRES0; auto.
-Qed.
+Admitted.
 
 Lemma initial_states_simulation:
   forall st1, RTL.initial_state prog st1 ->
