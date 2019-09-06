@@ -96,6 +96,23 @@ Proof.
   inv H. reflexivity.
 Qed.
 
+Lemma list_nth_z_revmap:
+  forall ln f ln' (pc pc': node) val,
+  list_nth_z ln val = Some pc ->
+  list_forall2 (fun n n' => revmap f n' = Some n) ln ln' ->
+  exists pc',
+     list_nth_z ln' val = Some pc'
+  /\ revmap f pc' = Some pc.
+Proof.
+  induction ln; intros until val; intros LNZ LFA.
+  - inv LNZ.
+  - inv LNZ. destruct (zeq val 0) eqn:ZEQ.
+    + inv H0. destruct ln'; inv LFA.
+      simpl. exists n. split; auto.
+    + inv LFA. simpl. rewrite ZEQ. exploit IHln. 2: eapply H0. all: eauto.
+      intros (pc'1 & LNZ & REV). exists pc'1. split; auto. congruence.
+Qed.
+
 Inductive match_stackframes: stackframe -> stackframe -> Prop :=
   | match_stackframe_intro:
     forall res f sp pc rs f' pc'
@@ -236,9 +253,10 @@ Proof.
   - eapply revmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
+    exploit list_nth_z_revmap; eauto. intros (pc'1 & LNZ & REVM).
     eexists. split.
-    + eapply exec_Ijumptable; eauto. admit.
-    + admit.
+    + eapply exec_Ijumptable; eauto.
+    + constructor; auto.
 (* Ireturn *)
   - eapply revmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
@@ -259,9 +277,7 @@ Proof.
   - inv STACKS. destruct b1 as [res' f' sp' pc' rs']. eexists. split.
     + constructor.
     + inv H1. constructor; assumption.
-Admitted.
-
-
+Qed.
 
 Theorem transf_program_correct:
   forward_simulation (semantics prog) (semantics tprog).
