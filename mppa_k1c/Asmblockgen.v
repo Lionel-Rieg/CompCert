@@ -912,12 +912,12 @@ end.
 
 Definition loadind (base: ireg) (ofs: ptrofs) (ty: typ) (dst: mreg) (k: bcode) :=
   match ty, preg_of dst with
-  | Tint,    IR rd => OK (indexed_memory_access (PLoadRRO Plw rd) base ofs ::i k)
-  | Tlong,   IR rd => OK (indexed_memory_access (PLoadRRO Pld rd) base ofs ::i k)
-  | Tsingle, IR rd => OK (indexed_memory_access (PLoadRRO Pfls rd) base ofs ::i k)
-  | Tfloat,  IR rd => OK (indexed_memory_access (PLoadRRO Pfld rd) base ofs ::i k)
-  | Tany32,  IR rd => OK (indexed_memory_access (PLoadRRO Plw_a rd) base ofs ::i k)
-  | Tany64,  IR rd => OK (indexed_memory_access (PLoadRRO Pld_a rd) base ofs ::i k)
+  | Tint,    IR rd => OK (indexed_memory_access (PLoadRRO TRAP Plw rd) base ofs ::i k)
+  | Tlong,   IR rd => OK (indexed_memory_access (PLoadRRO TRAP Pld rd) base ofs ::i k)
+  | Tsingle, IR rd => OK (indexed_memory_access (PLoadRRO TRAP Pfls rd) base ofs ::i k)
+  | Tfloat,  IR rd => OK (indexed_memory_access (PLoadRRO TRAP Pfld rd) base ofs ::i k)
+  | Tany32,  IR rd => OK (indexed_memory_access (PLoadRRO TRAP Plw_a rd) base ofs ::i k)
+  | Tany64,  IR rd => OK (indexed_memory_access (PLoadRRO TRAP Pld_a rd) base ofs ::i k)
   | _, _           => Error (msg "Asmblockgen.loadind")
   end.
 
@@ -933,7 +933,7 @@ Definition storeind (src: mreg) (base: ireg) (ofs: ptrofs) (ty: typ) (k: bcode) 
   end.
 
 Definition loadind_ptr (base: ireg) (ofs: ptrofs) (dst: ireg) :=
-  indexed_memory_access (PLoadRRO Pld dst) base ofs.
+  indexed_memory_access (PLoadRRO TRAP Pld dst) base ofs.
 
 Definition storeind_ptr (src: ireg) (base: ireg) (ofs: ptrofs) :=
   indexed_memory_access (PStoreRRO Psd src) base ofs.
@@ -993,32 +993,28 @@ Definition chunk2load (chunk: memory_chunk) :=
   | Many64 => Pld_a
   end.
 
-Definition transl_load_rro (chunk: memory_chunk) (addr: addressing)
+Definition transl_load_rro (trap: trapping_mode) (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access (PLoadRRO (chunk2load chunk) r) addr args k.
+  transl_memory_access (PLoadRRO trap (chunk2load chunk) r) addr args k.
 
-Definition transl_load_rrr (chunk: memory_chunk) (addr: addressing)
+Definition transl_load_rrr (trap: trapping_mode)  (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access2 (PLoadRRR (chunk2load chunk) r) addr args k.
+  transl_memory_access2 (PLoadRRR trap (chunk2load chunk) r) addr args k.
 
-Definition transl_load_rrrXS (chunk: memory_chunk) (scale : Z)
+Definition transl_load_rrrXS (trap: trapping_mode) (chunk: memory_chunk) (scale : Z)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
   do r <- ireg_of dst;
-  transl_memory_access2XS chunk (PLoadRRRXS (chunk2load chunk) r) scale args k.
+  transl_memory_access2XS chunk (PLoadRRRXS trap (chunk2load chunk) r) scale args k.
 
 Definition transl_load (trap : trapping_mode)
            (chunk: memory_chunk) (addr: addressing)
            (args: list mreg) (dst: mreg) (k: bcode) : res bcode :=
-  match trap with
-  | NOTRAP => Error(msg "Asmblockgen.transl_load NOTRAP TODO")
-  | TRAP =>
-    match addr with
-    | Aindexed2XS scale => transl_load_rrrXS chunk scale args dst k
-    | Aindexed2 => transl_load_rrr chunk addr args dst k
-    | _ => transl_load_rro chunk addr args dst k
-  end
+  match addr with
+    | Aindexed2XS scale => transl_load_rrrXS trap chunk scale args dst k
+    | Aindexed2 => transl_load_rrr trap chunk addr args dst k
+    | _ => transl_load_rro trap chunk addr args dst k
   end.
 
 Definition chunk2store (chunk: memory_chunk) :=

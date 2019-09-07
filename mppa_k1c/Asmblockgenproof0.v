@@ -897,34 +897,36 @@ Lemma exec_basic_instr_pc:
 Proof.
   intros. destruct b; try destruct i; try destruct i.
   all: try (inv H; Simpl).
-  1-10: try (unfold parexec_load_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold parexec_load_reg in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold parexec_load_regxs in H1; destruct (Mem.loadv _ _ _); [inv H1; Simpl | discriminate]).
-  1-10: try (unfold parexec_store_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]).
-  1-10: try (unfold parexec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
-  1-10: try (unfold parexec_store_regxs in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]); auto.
-  - (* PLoadQRRO *)
+  1-10: unfold parexec_load_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.loadv _ _ _); unfold parexec_incorrect_load in *; destruct trap; try discriminate; unfold concrete_default_notrap_load_value in *; inv H1; Simpl; fail.
+
+  1-20: unfold parexec_load_reg, parexec_load_regxs in H1; destruct (Mem.loadv _ _ _); unfold parexec_incorrect_load in *; destruct trap; try discriminate; unfold concrete_default_notrap_load_value in *; inv H1; Simpl; fail.
+
+  { (* PLoadQRRO *)
     unfold  parexec_load_q_offset in H1.
     destruct (gpreg_q_expand _) as [r0 r1] in H1.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
-    inv H1. Simpl.
-  - (* PLoadORRO *)
+    inv H1. Simpl. }
+  { (* PLoadORRO *)
     unfold  parexec_load_o_offset in H1.
     destruct (gpreg_o_expand _) as [[[r0 r1] r2] r3] in H1.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
     destruct (Mem.loadv _ _ _) in H1; try discriminate.
-    inv H1. Simpl.
-  - (* PStoreQRRO *)
+    inv H1. Simpl. }
+  1-8: unfold parexec_store_offset in H1; destruct (eval_offset ofs); try discriminate; destruct (Mem.storev _ _ _); [inv H1; auto | discriminate]; fail.
+  1-8: unfold parexec_store_reg in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]; auto; fail.
+  1-8: unfold parexec_store_regxs in H1; destruct (Mem.storev _ _ _); [inv H1; Simpl | discriminate]; auto; fail.
+  
+  { (* PStoreQRRO *)
     unfold  parexec_store_q_offset in H1.
     destruct (gpreg_q_expand _) as [r0 r1] in H1.
     unfold eval_offset in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
-    inv H1. Simpl. reflexivity.
-  - (* PStoreORRO *)
+    inv H1. Simpl. reflexivity. }
+  { (* PStoreORRO *)
     unfold  parexec_store_o_offset in H1.
     destruct (gpreg_o_expand _) as [[[r0 r1] r2] r3] in H1.
     unfold eval_offset in H1; try discriminate.
@@ -932,7 +934,7 @@ Proof.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
     destruct (Mem.storev _ _ _) in H1; try discriminate.
-    inv H1. Simpl. reflexivity.
+    inv H1. Simpl. reflexivity. }
   - destruct (Mem.alloc _ _ _). destruct (Mem.store _ _ _ _ _). inv H1. Simpl. discriminate.
   - destruct (Mem.loadv _ _ _); try discriminate. destruct (rs1 _); try discriminate.
     destruct (Mem.free _ _ _ _). inv H1. Simpl. discriminate.

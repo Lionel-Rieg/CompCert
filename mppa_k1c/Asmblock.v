@@ -260,11 +260,11 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset := parexec
 
 (** Auxiliaries for memory accesses *)
 
-Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) := parexec_load_offset chunk rs rs m m d a ofs.
+Definition exec_load_offset (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) := parexec_load_offset trap chunk rs rs m m d a ofs.
 
-Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_reg chunk rs rs m m d a ro.
+Definition exec_load_reg (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_reg trap chunk rs rs m m d a ro.
 
-Definition exec_load_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_regxs chunk rs rs m m d a ro.
+Definition exec_load_regxs (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_regxs trap chunk rs rs m m d a ro.
 
 Definition exec_load_q_offset (rs: regset) (m: mem) (d : gpreg_q) (a: ireg) (ofs: offset) := parexec_load_q_offset rs rs m m d a ofs.
 

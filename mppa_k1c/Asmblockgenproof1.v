@@ -1661,9 +1661,9 @@ Qed.
 
 
 Lemma indexed_load_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> basic) rd m,
+  forall trap chunk (mk_instr: ireg -> offset -> basic) rd m,
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs) ->
   forall (base: ireg) ofs k (rs: regset) v,
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
   exists rs',
@@ -1716,7 +1716,7 @@ Proof.
              /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_load_offset (chunk_of_type ty) rs' m rd base' ofs').
+                   exec_load_offset TRAP (chunk_of_type ty) rs' m rd base' ofs').
   { unfold loadind in TR.
     destruct ty, (preg_of dst); inv TR; econstructor; esplit; eauto. }
   destruct A as (mk_instr & rd & rdEq & B & C). subst c. rewrite rdEq.
@@ -1784,7 +1784,9 @@ Lemma loadind_ptr_correct:
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
-  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H0. auto.
+  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H0.
+  instantiate (1 := TRAP).
+  auto.
 Qed.
 
 Lemma storeind_ptr_correct:
@@ -1877,11 +1879,11 @@ Proof.
 Qed.
 
 Lemma transl_load_access2_correct:
-  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro v',
+  forall trap chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro v',
   args = mr1 :: mro :: nil ->
   ireg_of mro = OK ro ->
   (forall base rs,
-     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro) ->
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg trap chunk rs m rd base ro) ->
   transl_memory_access2 mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -1900,11 +1902,11 @@ Proof.
 Qed.
 
 Lemma transl_load_access2XS_correct:
-  forall chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro v',
+  forall trap chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro v',
   args = mr1 :: mro :: nil ->
   ireg_of mro = OK ro ->
   (forall base rs,
-     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs chunk rs m rd base ro) ->
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs trap chunk rs m rd base ro) ->
   transl_memory_access2XS chunk mk_instr scale args k = OK c ->
   eval_addressing ge rs#SP (Aindexed2XS scale) (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -1926,9 +1928,9 @@ Proof.
 Qed.
 
 Lemma transl_load_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
+  forall trap chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -1956,22 +1958,17 @@ Lemma transl_load_memory_access_ok:
      preg_of dst = IR rd
   /\ transl_memory_access mk_instr addr args k = OK c
   /\ forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs.
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs.
 Proof.
-  destruct trap.
-  { (* TRAP *)
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
-    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
     | eauto ].
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
-    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
     | eauto ].
-  }
-  intros until m. intros ADDR TR ? ?.
-  monadInv TR.
 Qed.
 
 Lemma transl_load_memory_access2_ok:
@@ -1986,21 +1983,14 @@ Lemma transl_load_memory_access2_ok:
    /\ preg_of mro = IR ro
    /\ transl_memory_access2 mk_instr addr args k = OK c
    /\ forall base rs,
-      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro.
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg trap chunk rs m rd base ro.
 Proof.
-  destruct trap.
-  { (* TRAP *)
   intros until m. intros ? TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
-  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ x)); simpl; reflexivity
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ _ x)); simpl; reflexivity
   | eauto].
-  }
-  { (* NOTRAP *)
-    intros until m. intros ? TR ? ?.
-    unfold transl_load in TR. subst. monadInv TR.
-  }
 Qed.
 
 Lemma transl_load_memory_access2XS_ok:
@@ -2014,20 +2004,14 @@ Lemma transl_load_memory_access2XS_ok:
    /\ preg_of mro = IR ro
    /\ transl_memory_access2XS chunk mk_instr scale args k = OK c
    /\ forall base rs,
-      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs chunk rs m rd base ro.
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs trap chunk rs m rd base ro.
 Proof.
-  destruct trap.
-  { (* TRAP *)
   intros until m. intros TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2XS in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
-  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ x)); simpl; rewrite Heqb; eauto
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ _ x)); simpl; rewrite Heqb; eauto
   | eauto].
-  }
-  { (* NOTRAP *)
-  intros until m. intros TR ? ?.
-  unfold transl_load in TR. subst. monadInv TR.  }
 Qed.
 
 Lemma transl_load_correct:

@@ -313,6 +313,16 @@ Inductive cf_instruction : Type :=
 .
 
 (** Loads **)
+Definition concrete_default_notrap_load_value chunk :=
+  match chunk with
+  | Mint8signed | Mint8unsigned | Mint16signed | Mint16unsigned
+  | Mint32 => Vint Int.zero
+  | Mint64 => Vlong Int64.zero
+  | Many32 | Many64 => Vundef
+  | Mfloat32 => Vsingle Float32.zero
+  | Mfloat64 => Vfloat Float.zero
+  end.
+
 Inductive load_name : Type :=
   | Plb                                             (**r load byte *)
   | Plbu                                            (**r load byte unsigned *)
@@ -327,9 +337,9 @@ Inductive load_name : Type :=
 .
 
 Inductive ld_instruction : Type :=
-  | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
-  | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
-  | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRO   (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
+  | PLoadRRR   (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRRXS (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
   | PLoadQRRO  (rd: gpreg_q) (ra: ireg) (ofs: offset)
   | PLoadORRO  (rd: gpreg_o) (ra: ireg) (ofs: offset)
 .
@@ -1215,10 +1225,16 @@ Definition eval_offset (ofs: offset) : res ptrofs := OK ofs.
 
 (** * load/store *)
 
-Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
+Definition parexec_incorrect_load trap chunk d rsw mw :=
+  match trap with
+  | TRAP => Stuck
+  | NOTRAP => Next (rsw#d <- (concrete_default_notrap_load_value chunk)) mw
+  end.
+
+Definition parexec_load_offset (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
-              | None => Stuck
+              | None => parexec_incorrect_load trap chunk d rsw mw
               | Some v => Next (rsw#d <- v) mw
               end
   | _ => Stuck
@@ -1263,15 +1279,15 @@ Definition parexec_load_o_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_o) (a
     end
   end.
 
-Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+Definition parexec_load_reg (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (rsr ro)) with
-  | None => Stuck
+  | None => parexec_incorrect_load trap chunk d rsw mw
   | Some v => Next (rsw#d <- v) mw
   end.
 
-Definition parexec_load_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+Definition parexec_load_regxs (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) with
-  | None => Stuck
+  | None => parexec_incorrect_load trap chunk d rsw mw
   | Some v => Next (rsw#d <- v) mw
   end.
 
@@ -1284,7 +1300,8 @@ Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: 
   | _ => Stuck
   end.
 
-Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
+Definition parexec_store_reg
+           (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
   match Mem.storev chunk mr (Val.addl (rsr a) (rsr ro)) (rsr s) with
   | None => Stuck
   | Some m' => Next rsw m'
@@ -1342,7 +1359,7 @@ Definition load_chunk n :=
   | Pfls => Mfloat32
   | Pfld => Mfloat64
   end.
-
+              
 Definition store_chunk n :=
   match n with
   | Psb => Mint8unsigned
@@ -1361,12 +1378,12 @@ Definition bstep (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   match bi with
   | PArith ai => Next (parexec_arith_instr ai rsr rsw) mw
 
-  | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
-  | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
-  | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
-  | PLoadQRRO d a ofs => 
+  | PLoad (PLoadRRO trap n d a ofs) => parexec_load_offset trap (load_chunk n) rsr rsw mr mw d a ofs
+  | PLoad (PLoadRRR trap n d a ro) => parexec_load_reg trap (load_chunk n) rsr rsw mr mw d a ro
+  | PLoad (PLoadRRRXS trap n d a ro) => parexec_load_regxs trap (load_chunk n) rsr rsw mr mw d a ro
+  | PLoad (PLoadQRRO d a ofs) => 
     parexec_load_q_offset rsr rsw mr mw d a ofs
-  | PLoadORRO d a ofs => 
+  | PLoad (PLoadORRO d a ofs) => 
     parexec_load_o_offset rsr rsw mr mw d a ofs
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
