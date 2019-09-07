@@ -1025,7 +1025,7 @@ Proof.
   + left; econstructor; split.
     eapply plus_one.
     eapply exec_Iload_notrap2; eauto.
-    try (rewrite <- P; apply eval_addressing_preserved; assumption).
+    try (rewrite <- P; apply eval_addressing_preserved; exact symbols_preserved).
     econstructor; eauto.
   apply match_stacks_inside_set_reg; auto.
   apply agree_set_reg; auto.

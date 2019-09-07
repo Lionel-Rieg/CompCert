@@ -1151,7 +1151,7 @@ Proof.
 
     econstructor. split.
     eapply exec_Iload; eauto.
-    try (rewrite eval_addressing_preserved with (ge1 := ge) by assumption).
+    try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
 
     econstructor; eauto.
     eapply analysis_correct_1; eauto. simpl; eauto.
@@ -1202,7 +1202,7 @@ Proof.
     {
       econstructor. split.
       eapply exec_Iload; eauto.
-      try (rewrite eval_addressing_preserved with (ge1 := ge) by assumption).
+      try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
       
       econstructor; eauto.
       eapply analysis_correct_1; eauto. simpl; eauto.
@@ -1216,7 +1216,7 @@ Proof.
     {
       econstructor. split.
       eapply exec_Iload_notrap2; eauto.
-      try (rewrite eval_addressing_preserved with (ge1 := ge) by assumption).
+      try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
       
       econstructor; eauto.
       eapply analysis_correct_1; eauto. simpl; eauto.
