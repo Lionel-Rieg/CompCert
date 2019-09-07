@@ -1540,8 +1540,8 @@ Proof.
 Qed.
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) a m v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) a m v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs#SP) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -1549,7 +1549,9 @@ Lemma transl_load_correct:
    /\ rs'#(preg_of dst) = v
    /\ forall r, data_preg r = true -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
-  intros. destruct chunk; simpl in H.
+  intros.
+  destruct trap; try (simpl in *; discriminate).
+  destruct chunk; simpl in H.
   eapply transl_load_int_correct; eauto.
   eapply transl_load_int_correct; eauto.
   eapply transl_load_int_correct; eauto.

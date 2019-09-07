@@ -18,7 +18,6 @@ open Asm
 open Asmexpandaux
 open AST
 open Camlcoq
-open Integers
 
 exception Error of string
 
@@ -104,7 +103,7 @@ let memcpy_small_arg sz arg tmp =
       (r, _0)
   | BA_addrstack ofs ->
       if offset_in_range ofs
-      && offset_in_range (Int.add ofs (Int.repr (Z.of_uint sz)))
+      && offset_in_range (Integers.Int.add ofs (Integers.Int.repr (Z.of_uint sz)))
       then (IR13, ofs)
       else begin expand_addimm tmp IR13 ofs; (tmp, _0) end
   | _ ->
@@ -119,19 +118,19 @@ let expand_builtin_memcpy_small sz al src dst =
     if sz >= 8 && al >= 4 && !Clflags.option_ffpu then begin
       emit (Pfldd (FR7,rsrc,osrc));
       emit (Pfstd (FR7,rdst,odst));
-      copy (Int.add osrc _8) (Int.add odst _8) (sz - 8)
+      copy (Integers.Int.add osrc _8) (Integers.Int.add odst _8) (sz - 8)
     end else if sz >= 4 && al >= 4 then begin
       emit (Pldr (IR14,rsrc,SOimm osrc));
       emit (Pstr (IR14,rdst,SOimm odst));
-      copy (Int.add osrc _4) (Int.add odst _4) (sz - 4)
+      copy (Integers.Int.add osrc _4) (Integers.Int.add odst _4) (sz - 4)
     end else if sz >= 2 && al >= 2 then begin
       emit (Pldrh (IR14,rsrc,SOimm osrc));
       emit (Pstrh (IR14,rdst,SOimm odst));
-      copy (Int.add osrc _2) (Int.add odst _2) (sz - 2)
+      copy (Integers.Int.add osrc _2) (Integers.Int.add odst _2) (sz - 2)
     end else if sz >= 1 then begin
       emit (Pldrb (IR14,rsrc,SOimm osrc));
       emit (Pstrb (IR14,rdst,SOimm odst));
-      copy (Int.add osrc _1) (Int.add odst _1) (sz - 1)
+      copy (Integers.Int.add osrc _1) (Integers.Int.add odst _1) (sz - 1)
     end in
   copy osrc odst sz
 
@@ -188,8 +187,8 @@ let expand_builtin_vload_common chunk base ofs res =
   | Mint32, BR(IR res) ->
      emit (Pldr (res, base, SOimm ofs))
   | Mint64, BR_splitlong(BR(IR res1), BR(IR res2)) ->
-     let ofs_hi = if Archi.big_endian then ofs else Int.add ofs _4 in
-     let ofs_lo = if Archi.big_endian then Int.add ofs _4 else ofs in
+     let ofs_hi = if Archi.big_endian then ofs else Integers.Int.add ofs _4 in
+     let ofs_lo = if Archi.big_endian then Integers.Int.add ofs _4 else ofs in
      if base <> res2 then begin
 	 emit (Pldr (res2, base, SOimm ofs_lo));
 	 emit (Pldr (res1, base, SOimm ofs_hi))
@@ -209,7 +208,7 @@ let expand_builtin_vload chunk args res =
   | [BA(IR addr)] ->
       expand_builtin_vload_common chunk addr _0 res
   | [BA_addrstack ofs] ->
-      if offset_in_range (Int.add ofs (Memdata.size_chunk chunk)) then
+      if offset_in_range (Integers.Int.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vload_common chunk IR13 ofs res
       else begin
         expand_addimm IR14 IR13 ofs;
@@ -219,7 +218,7 @@ let expand_builtin_vload chunk args res =
       emit (Ploadsymbol (IR14,id,ofs));
       expand_builtin_vload_common chunk IR14 _0 res
   | [BA_addptr(BA(IR addr), BA_int ofs)] ->
-      if offset_in_range (Int.add ofs (Memdata.size_chunk chunk)) then
+      if offset_in_range (Integers.Int.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vload_common chunk addr ofs res
       else begin
         expand_addimm IR14 addr ofs;
@@ -237,8 +236,8 @@ let expand_builtin_vstore_common chunk base ofs src =
   | Mint32, BA(IR src) ->
      emit (Pstr (src, base, SOimm ofs))
   | Mint64, BA_splitlong(BA(IR src1), BA(IR src2)) ->
-     let ofs_hi = if Archi.big_endian then ofs else Int.add ofs _4 in
-     let ofs_lo = if Archi.big_endian then Int.add ofs _4 else ofs in
+     let ofs_hi = if Archi.big_endian then ofs else Integers.Int.add ofs _4 in
+     let ofs_lo = if Archi.big_endian then Integers.Int.add ofs _4 else ofs in
      emit (Pstr (src2, base, SOimm ofs_lo));
      emit (Pstr (src1, base, SOimm ofs_hi))
   | Mfloat32, BA(FR src) ->
@@ -253,7 +252,7 @@ let expand_builtin_vstore chunk args =
   | [BA(IR addr); src] ->
       expand_builtin_vstore_common chunk addr _0 src
   | [BA_addrstack ofs; src] ->
-      if offset_in_range (Int.add ofs (Memdata.size_chunk chunk)) then
+      if offset_in_range (Integers.Int.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vstore_common chunk IR13 ofs src
       else begin
         expand_addimm IR14 IR13 ofs;
@@ -263,7 +262,7 @@ let expand_builtin_vstore chunk args =
       emit (Ploadsymbol (IR14,id,ofs));
       expand_builtin_vstore_common chunk IR14 _0 src
   | [BA_addptr(BA(IR addr), BA_int ofs); src] ->
-      if offset_in_range (Int.add ofs (Memdata.size_chunk chunk)) then
+      if offset_in_range (Integers.Int.add ofs (Memdata.size_chunk chunk)) then
         expand_builtin_vstore_common chunk addr ofs src
       else begin
         expand_addimm IR14 addr ofs;

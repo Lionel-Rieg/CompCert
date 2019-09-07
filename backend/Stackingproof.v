@@ -1943,7 +1943,7 @@ Proof.
   {
   econstructor; split.
   apply plus_one. apply exec_Mload with (a:=a') (v:=v'); eauto.
-  rewrite <- A. apply eval_addressing_preserved. exact symbols_preserved.
+  try (rewrite <- A; apply eval_addressing_preserved; assumption).
   econstructor; eauto with coqlib.
   apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
   apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.
@@ -1951,7 +1951,8 @@ Proof.
   {
   econstructor; split.
   apply plus_one. apply exec_Mload_notrap2 with (a:=a'); eauto.
-  rewrite <- A. apply eval_addressing_preserved. exact symbols_preserved.
+  try (rewrite <- A; apply eval_addressing_preserved; assumption).
+  
   econstructor; eauto with coqlib.
   apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
   apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.

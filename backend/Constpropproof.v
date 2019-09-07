@@ -444,8 +444,8 @@ Proof.
     destruct (Mem.loadv_extends chunk m m' a v2 v MEM H1 Hlessdef2) as [vX [Hvx1 Hvx2]].
     left; econstructor; econstructor; split.
     eapply exec_Iload with (a := v2); eauto.
-    erewrite eval_addressing_preserved with (ge1:=ge); auto.
-    exact symbols_preserved.
+    try (erewrite eval_addressing_preserved with (ge1:=ge); auto;
+    exact symbols_preserved).
   eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
     
   }
@@ -476,18 +476,14 @@ Proof.
     left; econstructor; econstructor; split.
     eapply exec_Iload; eauto.
    
-    rewrite eval_addressing_preserved with (ge1 := ge).
-    exact Heval'.
-    exact symbols_preserved.
+    try (rewrite eval_addressing_preserved with (ge1 := ge); eassumption).
     eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
     }
     {
       left; econstructor; econstructor; split.
       eapply exec_Iload_notrap2; eauto.
    
-    rewrite eval_addressing_preserved with (ge1 := ge).
-    exact Heval'.
-    exact symbols_preserved.
+    try (rewrite eval_addressing_preserved with (ge1 := ge); eassumption).
     eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
     }
 
