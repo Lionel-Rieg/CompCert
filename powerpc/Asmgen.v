@@ -783,8 +783,13 @@ Definition transl_memory_access
       Error(msg "Asmgen.transl_memory_access")
   end.
 
-Definition transl_load (chunk: memory_chunk) (addr: addressing)
-                       (args: list mreg) (dst: mreg) (k: code) :=
+Definition transl_load
+           (trap : trapping_mode)
+           (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: code) :=
+  match trap with
+  | NOTRAP => Error (msg "Asmgen.transl_load non-trapping loads unsupported on PPC")
+  | TRAP =>
   match chunk with
   | Mint8signed =>
       do r <- ireg_of dst;
@@ -812,6 +817,7 @@ Definition transl_load (chunk: memory_chunk) (addr: addressing)
       transl_memory_access (Plfd r) (Plfdx r) addr args GPR12 k
   | _ =>
       Error (msg "Asmgen.transl_load")
+  end
   end.
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
@@ -869,8 +875,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
          loadind GPR1 f.(fn_link_ofs) Tint R11 k1)
   | Mop op args res =>
       transl_op op args res k
-  | Mload chunk addr args dst =>
-      transl_load chunk addr args dst k
+  | Mload trap chunk addr args dst =>
+      transl_load trap chunk addr args dst k
   | Mstore chunk addr args src =>
       transl_store chunk addr args src k
   | Mcall sig (inl r) =>

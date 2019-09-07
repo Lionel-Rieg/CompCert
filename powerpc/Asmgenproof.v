@@ -328,6 +328,7 @@ Proof.
   eapply loadind_label; eauto.
   eapply tail_nolabel_trans; eapply loadind_label; eauto.
   eapply transl_op_label; eauto.
+  destruct t; try discriminate.
   destruct m; monadInv H; (eapply tail_nolabel_trans; [eapply transl_memory_access_label; TailNoLabel|TailNoLabel]).
   destruct m; monadInv H; eapply transl_memory_access_label; TailNoLabel.
   destruct s0; monadInv H; TailNoLabel.
@@ -656,6 +657,13 @@ Opaque loadind.
   intros; auto with asmgen.
   split. simpl; congruence.
   apply R; auto with asmgen.
+
+
+- (* Mload notrap *) (* isn't there a nicer way? *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
 
 - (* Mstore *)
   assert (eval_addressing tge sp addr rs##args = Some a).

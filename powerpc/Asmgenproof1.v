@@ -1677,8 +1677,8 @@ Qed.
 (** Translation of loads *)
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) m a v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) m a v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs#GPR1) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -1687,6 +1687,7 @@ Lemma transl_load_correct:
   /\ forall r, r <> PC -> r <> GPR12 -> r <> GPR0 -> r <> preg_of dst -> rs' r = rs r.
 Proof.
   intros.
+  destruct trap; try discriminate.
   assert (LD: forall v, Val.lessdef a v -> v = a).
   { intros. inv H2; auto. discriminate H1. }
   assert (BASE: forall mk1 mk2 k' chunk' v',

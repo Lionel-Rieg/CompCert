@@ -1032,6 +1032,21 @@ Proof.
   apply Val.add_inject; auto. apply H; simpl; auto.
 Qed.
 
+
+Lemma eval_addressing_inj_none:
+  forall addr sp1 vl1 sp2 vl2,
+  (forall id ofs,
+      In id (globals_addressing addr) ->
+      Val.inject f (Genv.symbol_address ge1 id ofs) (Genv.symbol_address ge2 id ofs)) ->
+  Val.inject f sp1 sp2 ->
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing ge1 sp1 addr vl1 = None ->
+  eval_addressing ge2 sp2 addr vl2 = None.
+Proof.
+  intros until vl2. intros Hglobal Hinjsp Hinjvl.
+  destruct addr; simpl in *;
+  inv Hinjvl; trivial; try discriminate; inv H0; trivial; try discriminate; inv H2; trivial; try discriminate.
+Qed.
 End EVAL_COMPAT.
 
 (** Compatibility of the evaluation functions with the ``is less defined'' relation over values. *)
@@ -1096,6 +1111,20 @@ Proof.
   apply weak_valid_pointer_no_overflow_extends; auto.
   apply valid_different_pointers_extends; auto.
   rewrite <- val_inject_list_lessdef. eauto. auto.
+Qed.
+
+
+Lemma eval_addressing_lessdef_none:
+  forall sp addr vl1 vl2,
+  Val.lessdef_list vl1 vl2 ->
+  eval_addressing genv sp addr vl1 = None ->
+  eval_addressing genv sp addr vl2 = None.
+Proof.
+  intros until vl2. intros Hlessdef Heval1.
+  destruct addr; simpl in *;
+  inv Hlessdef; trivial; try discriminate;
+  inv H0; trivial; try discriminate;
+  inv H2; trivial; try discriminate.
 Qed.
 
 Lemma eval_operation_lessdef:
@@ -1187,6 +1216,19 @@ Proof.
   eapply eval_addressing_inj with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
   intros. apply symbol_address_inject.
   econstructor; eauto. rewrite Ptrofs.add_zero_l; auto.
+Qed.
+
+Lemma eval_addressing_inject_none:
+  forall addr vl1 vl2,
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing genv (Vptr sp1 Ptrofs.zero) addr vl1 = None ->
+  eval_addressing genv (Vptr sp2 Ptrofs.zero) (shift_stack_addressing delta addr) vl2 = None.
+Proof.
+  intros.
+  rewrite eval_shift_stack_addressing.
+  eapply eval_addressing_inj_none with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
+  intros. apply symbol_address_inject.
+  econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
 Qed.
 
 Lemma eval_operation_inject:

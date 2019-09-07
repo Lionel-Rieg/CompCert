@@ -14,7 +14,6 @@
    of the PPC assembly code. *)
 
 open Camlcoq
-open Integers
 open AST
 open Asm
 open Asmexpandaux
@@ -89,7 +88,7 @@ let expand_annot_val kind txt targ args res =
    Note that lfd and stfd cannot trap on ill-formed floats. *)
 
 let offset_in_range ofs =
-  Int.eq (Asmgen.high_s ofs) _0
+  Integers.Int.eq (Asmgen.high_s ofs) _0
 
 let memcpy_small_arg sz arg tmp =
   match arg with
@@ -97,7 +96,7 @@ let memcpy_small_arg sz arg tmp =
       (r, _0)
   | BA_addrstack ofs ->
       if offset_in_range ofs
-      && offset_in_range (Int.add ofs (Int.repr (Z.of_uint sz)))
+      && offset_in_range (Integers.Int.add ofs (Integers.Int.repr (Z.of_uint sz)))
       then (GPR1, ofs)
       else begin emit_addimm tmp GPR1 ofs; (tmp, _0) end
   | _ ->
@@ -112,19 +111,19 @@ let expand_builtin_memcpy_small sz al src dst =
     if sz >= 8 && al >= 4 && !Clflags.option_ffpu then begin
       emit (Plfd(FPR13, Cint osrc, rsrc));
       emit (Pstfd(FPR13, Cint odst, rdst));
-      copy (Int.add osrc _8) (Int.add odst _8) (sz - 8)
+      copy (Integers.Int.add osrc _8) (Integers.Int.add odst _8) (sz - 8)
     end else if sz >= 4 then begin
       emit (Plwz(GPR0, Cint osrc, rsrc));
       emit (Pstw(GPR0, Cint odst, rdst));
-      copy (Int.add osrc _4) (Int.add odst _4) (sz - 4)
+      copy (Integers.Int.add osrc _4) (Integers.Int.add odst _4) (sz - 4)
     end else if sz >= 2 then begin
       emit (Plhz(GPR0, Cint osrc, rsrc));
       emit (Psth(GPR0, Cint odst, rdst));
-      copy (Int.add osrc _2) (Int.add odst _2) (sz - 2)
+      copy (Integers.Int.add osrc _2) (Integers.Int.add odst _2) (sz - 2)
     end else if sz >= 1 then begin
       emit (Plbz(GPR0, Cint osrc, rsrc));
       emit (Pstb(GPR0, Cint odst, rdst));
-      copy (Int.add osrc _1) (Int.add odst _1) (sz - 1)
+      copy (Integers.Int.add osrc _1) (Integers.Int.add odst _1) (sz - 1)
     end in
   copy osrc odst sz
 
@@ -134,7 +133,7 @@ let memcpy_big_arg arg tmp =
   | BA (IR r) ->
       emit (Paddi(tmp, r, Cint _m4))
   | BA_addrstack ofs ->
-      emit_addimm tmp GPR1 (Int.add ofs _m4)
+      emit_addimm tmp GPR1 (Integers.Int.add ofs _m4)
   | _ ->
       assert false
 
@@ -227,10 +226,10 @@ let expand_volatile_access
 let offset_constant cst delta =
   match cst with
   | Cint n ->
-      let n' = Int.add n delta in
+      let n' = Integers.Int.add n delta in
       if offset_in_range n' then Some (Cint n') else None
   | Csymbol_sda(id, ofs) ->
-      Some (Csymbol_sda(id, Int.add ofs delta))
+      Some (Csymbol_sda(id, Integers.Int.add ofs delta))
   | _ -> None
 
 let expand_load_int64 hi lo base ofs_hi ofs_lo =
@@ -438,7 +437,7 @@ let expand_integer_cond_move a1 a2 a3 res =
   if a2 = a3 then
     emit (Pmr (res, a2))
   else if eref then begin
-    emit (Pcmpwi (a1,Cint (Int.zero)));
+    emit (Pcmpwi (a1,Cint (Integers.Int.zero)));
     emit (Pisel (res,a3,a2,CRbit_2))
   end else begin
     (* a1 has type _Bool, hence it is 0 or 1 *)
@@ -683,23 +682,23 @@ let expand_builtin_inline name args res =
   | "__builtin_icbi", [BA(IR a1)],_ ->
       emit (Picbi(GPR0,a1))
   | "__builtin_dcbtls", [BA (IR a1); BA_int loc],_ ->
-      if not ((Int.eq loc _0) || (Int.eq loc _2)) then
+      if not ((Integers.Int.eq loc _0) || (Integers.Int.eq loc _2)) then
         raise (Error "the second argument of __builtin_dcbtls must be 0 or 2");
       emit (Pdcbtls (loc,GPR0,a1))
   | "__builtin_dcbtls",_,_ ->
       raise (Error "the second argument of __builtin_dcbtls must be a constant")
   | "__builtin_icbtls", [BA (IR a1); BA_int loc],_ ->
-    if not ((Int.eq loc _0) || (Int.eq loc _2)) then
+    if not ((Integers.Int.eq loc _0) || (Integers.Int.eq loc _2)) then
         raise (Error "the second argument of __builtin_icbtls must be 0 or 2");
       emit (Picbtls (loc,GPR0,a1))
   | "__builtin_icbtls",_,_ ->
       raise (Error "the second argument of __builtin_icbtls must be a constant")
   | "__builtin_prefetch" , [BA (IR a1) ;BA_int rw; BA_int loc],_ ->
-      if not (Int.ltu loc _4) then
+      if not (Integers.Int.ltu loc _4) then
         raise (Error "the last argument of __builtin_prefetch must be 0, 1 or 2");
-      if Int.eq rw _0 then begin
+      if Integers.Int.eq rw _0 then begin
         emit (Pdcbt (loc,GPR0,a1));
-      end else if Int.eq rw _1 then begin
+      end else if Integers.Int.eq rw _1 then begin
         emit (Pdcbtst (loc,GPR0,a1));
       end else
         raise (Error "the second argument of __builtin_prefetch must be 0 or 1")
