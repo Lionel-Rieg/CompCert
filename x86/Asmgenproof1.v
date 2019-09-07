@@ -1464,8 +1464,8 @@ Qed.
 (** Translation of memory loads. *)
 
 Lemma transl_load_correct:
-  forall chunk addr args dest k c (rs: regset) m a v,
-  transl_load chunk addr args dest k = OK c ->
+  forall trap chunk addr args dest k c (rs: regset) m a v,
+  transl_load trap chunk addr args dest k = OK c ->
   eval_addressing ge (rs#RSP) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -1473,7 +1473,9 @@ Lemma transl_load_correct:
   /\ rs'#(preg_of dest) = v
   /\ forall r, data_preg r = true -> r <> preg_of dest -> rs'#r = rs#r.
 Proof.
-  unfold transl_load; intros. monadInv H.
+  unfold transl_load; intros.
+  destruct trap; simpl; try discriminate.
+  monadInv H.
   exploit transl_addressing_mode_correct; eauto. intro EA.
   assert (EA': eval_addrmode ge x rs = a). destruct a; simpl in H1; try discriminate; inv EA; auto.
   set (rs2 := nextinstr_nf (rs#(preg_of dest) <- v)).

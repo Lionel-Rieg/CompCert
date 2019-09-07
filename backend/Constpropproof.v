@@ -452,7 +452,8 @@ Proof.
 
 - (* Iload notrap1 *)
   rename pc'0 into pc. TransfInstr.
-  assert (eval_static_addressing addr (aregs ae args) = Vbot) as Hbot by (eapply eval_static_addressing_sound_none; eauto with va).
+  destruct (eval_static_addressing addr (aregs ae args)) eqn:Hstatic.
+  {
   assert (eval_addressing tge (Vptr sp0 Ptrofs.zero) addr rs' ## args = None) as Hnone.
   rewrite eval_addressing_preserved with (ge1 := ge).
   apply eval_addressing_lessdef_none with (vl1 := rs ## args).
@@ -463,7 +464,14 @@ Proof.
   left; econstructor; econstructor; split.
   eapply exec_Iload_notrap1; eauto.
   eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
-
+  }
+  { exploit eval_static_addressing_sound; eauto.
+  rewrite eval_addressing_preserved with (ge1 := ge).
+  apply eval_addressing_lessdef with (vl1 := rs ## args).
+  apply regs_lessdef_regs; assumption.
+  assumption.
+  exact symbols_preserved.
+  }
 - (* Iload notrap2 *)
   rename pc'0 into pc. TransfInstr.
     assert (exists v2 : val,
