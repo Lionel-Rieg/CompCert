@@ -1901,6 +1901,29 @@ Proof.
   split; intros; Simpl. auto.
 Qed.
 
+Lemma transl_load_access2_correct_notrap2:
+  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro,
+  args = mr1 :: mro :: nil ->
+  ireg_of mro = OK ro ->
+  (forall base rs,
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg NOTRAP chunk rs m rd base ro) ->
+  transl_memory_access2 mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = concrete_default_notrap_load_value chunk
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until ro; intros ARGS IREGE INSTR TR EV LOAD. 
+  exploit transl_memory_access2_correct; eauto.
+  intros (base & ro2 & mro2 & mr2 & rs' & ARGSS & IREGEQ & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mr2 mro2. clear ARGS.
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
+  rewrite INSTR. unfold exec_load_reg. unfold parexec_load_reg. rewrite B, LOAD. reflexivity. Simpl. 
+  split; intros; Simpl. auto.
+Qed.
+
 Lemma transl_load_access2XS_correct:
   forall trap chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro v',
   args = mr1 :: mro :: nil ->
@@ -1924,7 +1947,7 @@ Proof.
   unfold scale_of_chunk.
   subst scale.
   rewrite B, LOAD. reflexivity. Simpl. 
-  split; intros; Simpl. auto.
+  split. trivial. intros. Simpl.
 Qed.
 
 Lemma transl_load_access2XS_correct_notrap2:
@@ -1972,6 +1995,27 @@ Proof.
   eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
   rewrite INSTR. unfold exec_load_offset. unfold parexec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
   split; intros; Simpl. auto.
+Qed.
+
+Lemma transl_load_access_correct_notrap2:
+  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v,
+  (forall base ofs rs,
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset NOTRAP chunk rs m rd base ofs) ->
+  transl_memory_access mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = concrete_default_notrap_load_value chunk
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until v; intros INSTR TR EV LOAD. 
+  exploit transl_memory_access_correct; eauto.
+  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
+  rewrite INSTR. unfold exec_load_offset. unfold parexec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
+  split. trivial. intros. Simpl.
 Qed.
 
 Lemma transl_load_memory_access_ok:
@@ -2144,18 +2188,18 @@ Lemma transl_load_correct_notrap2:
 Proof.
   intros until a; intros TR EV LOAD. destruct addr.
   - exploit transl_load_memory_access2XS_ok_notrap2; eauto. intros (mk_instr & mr0 & mro & rd & ro & argsEq & rdEq & roEq & B & C).
-    rewrite rdEq. eapply transl_load_access2XS_correct; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
+    rewrite rdEq. eapply transl_load_access2XS_correct_notrap2; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
   - exploit transl_load_memory_access2_ok_notrap2; eauto. intros (mk_instr & mr0 & mro & rd & ro & argsEq & rdEq & roEq & B & C).
-    rewrite rdEq. eapply transl_load_access2_correct; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
-  - exploit transl_load_memory_access_ok; eauto; try discriminate; try (simpl; reflexivity).
+    rewrite rdEq. eapply transl_load_access2_correct_notrap2; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
-      eapply transl_load_access_correct; eauto with asmgen.
-  - exploit transl_load_memory_access_ok; eauto; try discriminate; try (simpl; reflexivity).
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
-      eapply transl_load_access_correct; eauto with asmgen.
-  - exploit transl_load_memory_access_ok; eauto; try discriminate; try (simpl; reflexivity).
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
-      eapply transl_load_access_correct; eauto with asmgen.
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
 Qed.
 
 Lemma transl_store_access2_correct:
