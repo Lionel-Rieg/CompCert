@@ -313,7 +313,7 @@ Inductive cf_instruction : Type :=
 .
 
 (** Loads **)
-Definition concrete_default_notrap_load_value chunk :=
+Definition concrete_default_notrap_load_value (chunk : memory_chunk) :=
   match chunk with
   | Mint8signed | Mint8unsigned | Mint16signed | Mint16unsigned
   | Mint32 => Vint Int.zero
