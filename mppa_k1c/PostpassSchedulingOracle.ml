@@ -302,7 +302,7 @@ let arith_rec i =
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
-  | PLoadRRO (i, rs1, rs2, imm) ->
+  | PLoadRRO (trap, i, rs1, rs2, imm) ->
       { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false;
         read_at_id = []; read_at_e1 = [] }
   | PLoadQRRO(rs, ra, imm) ->
@@ -313,7 +313,7 @@ let load_rec i = match i with
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
      {  inst = loadorro_real; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)];
         imm = (Some (Off imm)) ; is_control = false; read_at_id = []; read_at_e1 = []}
-  | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
+  | PLoadRRR (trap, i, rs1, rs2, rs3) | PLoadRRRXS (trap, i, rs1, rs2, rs3) ->
       { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false;
         read_at_id = []; read_at_e1 = [] }
 

@@ -190,10 +190,10 @@ let expand_builtin_memcpy_big sz al src dst =
         end);
     
       cpy tmpbuf2 16L (fun x y z -> Plq(x, y, z)) (fun x y z -> Psq(x, y, z));
-      cpy tmpbuf 8L (fun x y z -> Pld(x, y, z)) (fun x y z -> Psd(x, y, z));
-      cpy tmpbuf 4L (fun x y z -> Plw(x, y, z)) (fun x y z -> Psw(x, y, z));
-      cpy tmpbuf 2L (fun x y z -> Plh(x, y, z)) (fun x y z -> Psh(x, y, z));
-      cpy tmpbuf 1L (fun x y z -> Plb(x, y, z)) (fun x y z -> Psb(x, y, z));
+      cpy tmpbuf 8L (fun x y z -> Pld(TRAP, x, y, z)) (fun x y z -> Psd(x, y, z));
+      cpy tmpbuf 4L (fun x y z -> Plw(TRAP, x, y, z)) (fun x y z -> Psw(x, y, z));
+      cpy tmpbuf 2L (fun x y z -> Plh(TRAP, x, y, z)) (fun x y z -> Psh(x, y, z));
+      cpy tmpbuf 1L (fun x y z -> Plb(TRAP, x, y, z)) (fun x y z -> Psb(x, y, z));
       assert (!remaining = 0L)
     end
   else
@@ -203,7 +203,7 @@ let expand_builtin_memcpy_big sz al src dst =
       let lbl = new_label() in
       emit (Ploopdo (tmpbuf, lbl));
       emit Psemi;
-      emit (Plb (tmpbuf, srcptr, AOff Z.zero));
+      emit (Plb (TRAP, tmpbuf, srcptr, AOff Z.zero));
       emit (Paddil (srcptr, srcptr, Z.one));
       emit Psemi;
       emit (Psb (tmpbuf, dstptr, AOff Z.zero));
@@ -223,30 +223,30 @@ let expand_builtin_memcpy  sz al args =
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
   | Mint8unsigned, BR(Asmvliw.IR res) ->
-     emit (Plbu (res, base, AOff ofs))
+     emit (Plbu (TRAP, res, base, AOff ofs))
   | Mint8signed, BR(Asmvliw.IR res) ->
-     emit (Plb  (res, base, AOff ofs))
+     emit (Plb  (TRAP, res, base, AOff ofs))
   | Mint16unsigned, BR(Asmvliw.IR res) ->
-     emit (Plhu (res, base, AOff ofs))
+     emit (Plhu (TRAP, res, base, AOff ofs))
   | Mint16signed, BR(Asmvliw.IR res) ->
-     emit (Plh  (res, base, AOff ofs))
+     emit (Plh  (TRAP, res, base, AOff ofs))
   | Mint32, BR(Asmvliw.IR res) ->
-     emit (Plw  (res, base, AOff ofs))
+     emit (Plw  (TRAP, res, base, AOff ofs))
   | Mint64, BR(Asmvliw.IR res) ->
-     emit (Pld  (res, base, AOff ofs))
+     emit (Pld  (TRAP, res, base, AOff ofs))
   | Mint64, BR_splitlong(BR(Asmvliw.IR res1), BR(Asmvliw.IR res2)) ->
      let ofs' = Integers.Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, AOff ofs));
-         emit (Plw (res1, base, AOff ofs'))
+         emit (Plw (TRAP, res2, base, AOff ofs));
+         emit (Plw (TRAP, res1, base, AOff ofs'))
        end else begin
-         emit (Plw (res1, base, AOff ofs'));
-         emit (Plw (res2, base, AOff ofs))
+         emit (Plw (TRAP, res1, base, AOff ofs'));
+         emit (Plw (TRAP, res2, base, AOff ofs))
        end
   | Mfloat32, BR(Asmvliw.IR res) ->
-     emit (Pfls (res, base, AOff ofs))
+     emit (Pfls (TRAP, res, base, AOff ofs))
   | Mfloat64, BR(Asmvliw.IR res) ->
-     emit (Pfld (res, base, AOff ofs))
+     emit (Pfld (TRAP, res, base, AOff ofs))
   | _ ->
      assert false
 
