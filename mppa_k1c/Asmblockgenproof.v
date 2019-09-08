@@ -1204,30 +1204,18 @@ Local Transparent destroyed_by_op.
     eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
     simpl; congruence.
 
-  - simpl in EQ0. rewrite Hheader in DXP.
-
-    assert (eval_addressing tge sp addr (map ms args) = None).
-      rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
-    exploit eval_addressing_lessdef_none. eapply preg_vals; eauto. eassumption.
-    intros Haddr. rewrite (sp_val _ _ _ AG) in Haddr.                                                 
-    eapply exec_straight_body in P.
-      2: eapply code_to_basics_id; eauto.
-    destruct P as (l & ll & TBC & CTB & EXECB).
-    exists rs2, m1, ll.
-    eexists. eexists. split. instantiate (1 := x). eauto.
-    repeat (split; auto).
-      eapply basics_to_code_app; eauto.
-    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
-    eapply match_codestate_intro; eauto. simpl. simpl in EQ.
-
-    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
-    simpl; congruence.
+  - (* notrap1 cannot happen *)
+    simpl in EQ0. unfold transl_load in EQ0.
+    destruct addr; simpl in H.
+    all: unfold transl_load_rrrXS, transl_load_rrr, transl_load_rro in EQ0;
+    monadInv EQ0; unfold transl_memory_access2XS, transl_memory_access2, transl_memory_access in EQ2;
+    destruct args as [|h0 t0]; try discriminate;
+    destruct t0 as [|h1 t1]; try discriminate;
+    destruct t1 as [|h2 t2]; try discriminate.
     
   - (* MBload notrap2 TODO *)
     simpl in EQ0.
-    discriminate.
+    admit.
     
   - (* MBstore *)
     simpl in EQ0. rewrite Hheader in DXP.
@@ -1253,7 +1241,7 @@ Local Transparent destroyed_by_op.
 
     eapply agree_undef_regs; eauto with asmgen.
     simpl; congruence.
-Qed.
+Admitted.
 
 Lemma exec_body_trans:
   forall l l' rs0 m0 rs1 m1 rs2 m2,
