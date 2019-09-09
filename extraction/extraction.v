@@ -127,6 +127,10 @@ Extract Constant Compopts.optim_addx =>
   "fun _ -> !Clflags.option_faddx".
 Extract Constant Compopts.optim_coalesce_mem =>
   "fun _ -> !Clflags.option_fcoalesce_mem".
+Extract Constant Compopts.va_strict =>
+  "fun _ -> false".
+Extract Constant Compopts.all_loads_nontrap =>
+  "fun _ -> !Clflags.option_all_loads_nontrap".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".

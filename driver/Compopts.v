@@ -62,3 +62,6 @@ Parameter thumb: unit -> bool.
 
 (** Flag -g.  For insertion of debugging information. *)
 Parameter debug: unit -> bool.
+
+(** Flag -fall-loads-nontrap. Turn user loads into non trapping. *)
+Parameter all_loads_nontrap: unit -> bool.
