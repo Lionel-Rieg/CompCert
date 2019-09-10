@@ -28,10 +28,16 @@ BEGIN_TEST(int)
     c = a+b;
     c += a&b;
 
+    /* testing if, cb version */
     if ((a & 0x1) == 1)
         c += fact(1);
     else
         c += fact(2);
+
+    if (a & 0x1 == 0)
+        c += fact(4);
+    else
+        c += fact(8);
 
     if (a & 0x1 == 0)
         c += fact(4);
@@ -66,6 +72,48 @@ BEGIN_TEST(int)
         c += fact(4096);
     else
         c += fact(8192);
+
+    /* cmoved version */
+    if ((a & 0x1) == 1)
+        c += 1;
+    else
+        c += 2;
+
+    if (a & 0x1 == 0)
+        c += 4;
+    else
+        c += 8;
+
+    if (a & 0x1 == 0)
+        c += 4;
+    else
+        c += 8;
+
+    b = !(a & 0x01);
+    if (!b)
+        c += 16;
+    else
+        c += 32;
+
+    if (0 > (a & 0x1) - 1)
+        c += 64;
+    else
+        c += 128;
+
+    if (0 >= (a & 0x1))
+        c += 256;
+    else
+        c += 512;
+
+    if ((a & 0x1) > 0)
+        c += 1024;
+    else
+        c += 2048;
+
+    if ((a & 0x1) - 1 >= 0)
+        c += 4096;
+    else
+        c += 8192;
 
     c += ((a & 0x1) == (b & 0x1));
     c += (a > b);
