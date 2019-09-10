@@ -262,10 +262,6 @@ module Target (*: TARGET*) =
       | ITgeu  -> "geu"
       | ITleu  -> "leu"
       | ITgtu  -> "gtu"
-      | ITall  -> "all"
-      | ITnall -> "nall"
-      | ITany  -> "any"
-      | ITnone -> "none"
 
     let icond oc c = fprintf oc "%s" (icond_name c)
 

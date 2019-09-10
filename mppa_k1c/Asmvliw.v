@@ -203,11 +203,6 @@ Inductive itest: Type :=
   | ITgeu                               (**r Greater Than or Equal Unsigned *)
   | ITleu                               (**r Less Than or Equal Unsigned *)
   | ITgtu                               (**r Greater Than Unsigned *)
-  (* Not used yet *)
-  | ITall                               (**r All Bits Set in Mask *)
-  | ITnall                              (**r Not All Bits Set in Mask *)
-  | ITany                               (**r Any Bits Set in Mask *)
-  | ITnone                              (**r Not Any Bits Set in Mask *)
   .
 
 Inductive ftest: Type :=
@@ -909,10 +904,6 @@ Definition compare_int (t: itest) (v1 v2: val): val :=
   | ITgeu => Val_cmpu Cge v1 v2
   | ITleu => Val_cmpu Cle v1 v2
   | ITgtu => Val_cmpu Cgt v1 v2
-  | ITall
-  | ITnall
-  | ITany
-  | ITnone => Vundef
   end.
 
 Definition compare_long (t: itest) (v1 v2: val): val :=
@@ -929,10 +920,6 @@ Definition compare_long (t: itest) (v1 v2: val): val :=
   | ITgeu => Some (Val_cmplu Cge v1 v2)
   | ITleu => Some (Val_cmplu Cle v1 v2)
   | ITgtu => Some (Val_cmplu Cgt v1 v2)
-  | ITall
-  | ITnall
-  | ITany
-  | ITnone => Some Vundef
   end in 
   match res with
   | Some v => v

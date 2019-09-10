@@ -8,6 +8,7 @@
    http://cvs.alioth.debian.org/cgi-bin/cvsweb.cgi/shootout/bench/Include/?cvsroot=shootout
 
 */
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -76,9 +77,11 @@ struct ht_node *ht_node_create(char *key) {
 struct ht_ht *ht_create(int size) {
     int i = 0;
     struct ht_ht *ht = (struct ht_ht *)malloc(sizeof(struct ht_ht));
+    assert (ht != NULL && "ht_create: ht malloc failed");
     while (ht_prime_list[i] < size) { i++; }
     ht->size = ht_prime_list[i];
     ht->tbl = (struct ht_node **)calloc(ht->size, sizeof(struct ht_node *));
+    assert (ht->tbl != NULL && "ht_create: ht->tbl calloc failed");
     ht->iter_index = 0;
     ht->iter_next = 0;
     ht->items = 0;
@@ -250,6 +253,7 @@ write_frequencies (int fl, char *buffer, long buflen)
       size++;
     }
   s = calloc (size, sizeof (sorter));
+  assert(s != NULL && "write_frequencies: s alloc failed");
   i = 0;
   for (nd = ht_first (ht); nd != NULL; nd = ht_next (ht))
     {
@@ -293,6 +297,7 @@ main ()
   FILE * f;
 
   line = malloc (256);
+  assert (line != NULL && "line alloc failed");
   if (!line)
     return 2;
   seqlen = 0;
@@ -308,6 +313,7 @@ main ()
 
   buflen = 10240;
   buffer = malloc (buflen + 1);
+  assert (buffer != NULL && "buffer alloc failed");
   if (!buffer)
     return 2;
   x = buffer;

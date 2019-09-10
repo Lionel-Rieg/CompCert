@@ -5,7 +5,7 @@ all_loads_stores = "lbs lbz lhz lo lq ld lhs lws sb sd sh so sq sw".split(" ")
 
 all_bconds = "wnez weqz wltz wgez wlez wgtz dnez deqz dltz dgez dlez dgtz".split(" ")
 
-all_iconds = "ne eq lt ge le gt ltu geu leu gtu all nall any none".split(" ")
+all_iconds = "ne eq lt ge le gt ltu geu leu gtu".split(" ")
 
 all_fconds = "one ueq oeq une olt uge oge ult".split(" ")
 
