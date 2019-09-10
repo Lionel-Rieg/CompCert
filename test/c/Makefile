@@ -3,18 +3,22 @@ include ../../Makefile.config
 CCOMP=../../ccomp
 CCOMPFLAGS=$(CCOMPOPTS) -stdlib ../../runtime -dc -dclight -dasm
 
-CFLAGS+=-O1 -Wall
+CFLAGS+=-O2 -Wall
+EXECUTE:=timeout --signal=SIGTERM 90s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
 #TIME=xtime -o /dev/null -mintime 2.0     # Xavier's hack
 TIME=time >/dev/null                    # Otherwise
 
-PROGS?=fib qsort fftw sha1 sha3 aes \
-  lists binarytrees fannkuch \
-  nsieve nsievebits vmach \
-  chomp perlin siphash24\
-  integr fft fftsp almabench knucleotide mandelbrot nbody spectral bisect
+PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
+  lists binarytrees fannkuch mandelbrot nbody \
+  nsieve nsievebits spectral vmach \
+  bisect chomp perlin siphash24
+
+# Kalray NOTE : removed knucleotide from PROGS, it is hard to edit the input
+# to modify its size without resulting in a seg fault, and the base input
+# takes a too long time to complete in the simulator.
 
 all: $(PROGS:%=%.compcert)
 
@@ -33,7 +37,8 @@ all_gcc: $(PROGS:%=%.gcc)
 
 test: all
 	@for i in $(PROGS); do \
-	   if $(EXECUTE) ./$$i.compcert | cmp -s - Results/$$i; \
+	   $(EXECUTE) ./$$i.compcert > $$i.compcert.out;\
+	   if cmp -s $$i.compcert.out Results/$$i; \
            then echo "$$i: passed"; \
            else echo "$$i: FAILED"; exit 2; \
 	   fi; \
@@ -41,7 +46,8 @@ test: all
 
 test_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   if $(EXECUTE) ./$$i.gcc | cmp -s - Results/$$i; \
+	   $(EXECUTE) ./$$i.gcc > $$i.gcc.out;\
+	   if cmp -s $$i.gcc.out Results/$$i; \
            then echo "$$i: passed"; \
            else echo "$$i: FAILED"; \
 	   fi; \
@@ -60,3 +66,4 @@ bench: all
 clean:
 	rm -f *.compcert *.gcc
 	rm -f *.compcert.c *.light.c *.parsed.c *.s *.o *.sdump *~ 
+	rm -f *.out

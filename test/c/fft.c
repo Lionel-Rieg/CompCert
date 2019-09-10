@@ -3,6 +3,7 @@
  by: Dave Edelblute, edelblut@cod.nosc.mil, 05 Jan 1993
 */
 
+#include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -151,13 +152,15 @@ int main(int argc, char ** argv)
   double enp, t, y, z, zr, zi, zm, a;
   double * xr, * xi, * pxr, * pxi;
 
-  if (argc >= 2) n = atoi(argv[1]); else n = 18;
+  if (argc >= 2) n = atoi(argv[1]); else n = 12;
   np = 1 << n;
   enp = np; 
   npm = np / 2  - 1;  
   t = PI / enp;
   xr = calloc(np, sizeof(double));
+  assert(xr != NULL && "xr calloc failed");
   xi = calloc(np, sizeof(double));
+  assert(xi != NULL && "xi calloc failed");
   pxr = xr;
   pxi = xi;
   for (nruns = 0; nruns < NRUNS; nruns++) {
