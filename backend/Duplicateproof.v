@@ -3,7 +3,7 @@ Require Import AST Linking Errors Globalenvs Smallstep.
 Require Import Coqlib Maps Events Values.
 Require Import Op RTL Duplicate.
 
-Definition match_prog (p: program) (tp: program) :=
+Definition match_prog (p tp: program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
@@ -37,12 +37,12 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
   | match_inst_return: forall or, match_inst is_copy (Ireturn or) (Ireturn or).
 
 Axiom revmap_correct: forall f xf n n',
-    transf_function f = OK xf ->
+    transf_function_aux f = OK xf ->
     (fn_revmap xf)!n' = Some n ->
     (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n => (fn_revmap xf)!n) i i').
 
 Axiom revmap_entrypoint:
-  forall f xf, transf_function f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
+  forall f xf, transf_function_aux f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
 
 Section PRESERVATION.
 
@@ -96,8 +96,8 @@ Lemma function_sig_translated:
   forall f tf, transf_fundef f = OK tf -> funsig tf = funsig f.
 Proof.
   intros. destruct f.
-  - simpl in H. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_preserves. assumption.
-  - simpl in H. monadInv H. monadInv EQ. reflexivity.
+  - simpl in H. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_aux_preserves. assumption.
+  - simpl in H. monadInv H. (* monadInv EQ. *) reflexivity.
 Qed.
 
 Lemma sig_preserved:
@@ -106,7 +106,7 @@ Lemma sig_preserved:
   funsig tf = funsig f.
 Proof.
   unfold transf_fundef, transf_partial_fundef; intros.
-  destruct f. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_preserves. assumption.
+  destruct f. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_aux_preserves. assumption.
   inv H. reflexivity.
 Qed.
 
@@ -130,7 +130,7 @@ Qed.
 Inductive match_stackframes: stackframe -> stackframe -> Prop :=
   | match_stackframe_intro:
     forall res f sp pc rs xf pc'
-      (TRANSF: transf_function f = OK xf)
+      (TRANSF: transf_function_aux f = OK xf)
       (DUPLIC: (fn_revmap xf)!pc' = Some pc),
       match_stackframes (Stackframe res f sp pc rs) (Stackframe res (fn_RTL xf) sp pc' rs).
 
@@ -138,7 +138,7 @@ Inductive match_states: state -> state -> Prop :=
   | match_states_intro:
     forall st f sp pc rs m st' xf pc'
       (STACKS: list_forall2 match_stackframes st st')
-      (TRANSF: transf_function f = OK xf)
+      (TRANSF: transf_function_aux f = OK xf)
       (DUPLIC: (fn_revmap xf)!pc' = Some pc),
       match_states (State st f sp pc rs m) (State st' (fn_RTL xf) sp pc' rs m)
   | match_states_call:
@@ -164,8 +164,8 @@ Proof.
       symmetry. eapply match_program_main. eauto.
     + exploit function_ptr_translated; eauto.
     + destruct f.
-      * monadInv TRANSF. monadInv EQ. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
-      * monadInv TRANSF. monadInv EQ. assumption.
+      * monadInv TRANSF. monadInv EQ. rewrite <- H3. symmetry; eapply transf_function_aux_preserves. assumption.
+      * monadInv TRANSF. (* monadInv EQ. *) assumption.
   - constructor; eauto. constructor.
 Qed.
 
@@ -239,14 +239,14 @@ Proof.
       eexists. split.
       + eapply exec_Itailcall. eassumption. simpl. eassumption.
         apply function_sig_translated. assumption.
-        erewrite <- transf_function_fnstacksize; eauto.
+        erewrite <- transf_function_aux_fnstacksize; eauto.
       + repeat (constructor; auto).
     * simpl in H0. destruct (Genv.find_symbol _ _) eqn:GFS; try discriminate.
       apply function_ptr_translated in H0. destruct H0 as (tf & GFF & TF).
       eexists. split.
       + eapply exec_Itailcall. eassumption. simpl. rewrite symbols_preserved. rewrite GFS.
         eassumption. apply function_sig_translated. assumption.
-        erewrite <- transf_function_fnstacksize; eauto.
+        erewrite <- transf_function_aux_fnstacksize; eauto.
       + repeat (constructor; auto).
 (* Ibuiltin *)
   - eapply revmap_correct in DUPLIC; eauto.
@@ -276,15 +276,15 @@ Proof.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Ireturn; eauto. erewrite <- transf_function_fnstacksize; eauto.
+    + eapply exec_Ireturn; eauto. erewrite <- transf_function_aux_fnstacksize; eauto.
     + constructor; auto.
 (* exec_function_internal *)
   - monadInv TRANSF. monadInv EQ. eexists. split.
-    + eapply exec_function_internal. erewrite <- transf_function_fnstacksize; eauto.
-    + erewrite transf_function_fnparams; eauto.
+    + eapply exec_function_internal. erewrite <- transf_function_aux_fnstacksize; eauto.
+    + erewrite transf_function_aux_fnparams; eauto.
       econstructor; eauto. apply revmap_entrypoint. assumption.
 (* exec_function_external *)
-  - monadInv TRANSF. monadInv EQ. eexists. split.
+  - monadInv TRANSF. (* monadInv EQ. *) eexists. split.
     + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
     + constructor. assumption.
 (* exec_return *)
