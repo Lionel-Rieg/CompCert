@@ -3,7 +3,7 @@ Require Import AST Linking Errors Globalenvs Smallstep.
 Require Import Coqlib Maps Events Values.
 Require Import Op RTL Duplicate.
 
-Definition match_prog (p tp: program) :=
+Definition match_prog (p: program) (tp: program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
@@ -36,31 +36,39 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
       match_inst is_copy (Ijumptable r ln) (Ijumptable r ln')
   | match_inst_return: forall or, match_inst is_copy (Ireturn or) (Ireturn or).
 
-Axiom revmap: function -> node -> option node. (* mapping from nodes of [tprog], to nodes of [prog], for function [f] *)
-
-Axiom revmap_correct: forall f f' n n',
-    transf_function f = OK f' ->
-    revmap f n' = Some n ->
-    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code f')!n' = Some i' /\ match_inst (revmap f) i i').
+Axiom revmap_correct: forall f xf n n',
+    transf_function f = OK xf ->
+    (fn_revmap xf)!n' = Some n ->
+    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n => (fn_revmap xf)!n) i i').
 
 Axiom revmap_entrypoint:
-  forall f f', transf_function f = OK f' -> revmap f (fn_entrypoint f') = Some (fn_entrypoint f).
+  forall f xf, transf_function f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
 
 Section PRESERVATION.
 
 Variable prog: program.
 Variable tprog: program.
+
 Hypothesis TRANSL: match_prog prog tprog.
+
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
-Lemma symbols_preserved:
-  forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
-Proof (Genv.find_symbol_match TRANSL).
+Lemma symbols_preserved s: Genv.find_symbol tge s = Genv.find_symbol ge s.
+Proof.
+  rewrite <- (Genv.find_symbol_match TRANSL). reflexivity.
+Qed.
+
+Lemma senv_transitivity x y z: Senv.equiv x y -> Senv.equiv y z -> Senv.equiv x z.
+Proof.
+  unfold Senv.equiv. intuition congruence.
+Qed.
 
 Lemma senv_preserved:
   Senv.equiv ge tge.
-Proof (Genv.senv_match TRANSL).
+Proof.
+  eapply (Genv.senv_match TRANSL).
+Qed.
 
 Lemma functions_translated:
   forall (v: val) (f: fundef),
@@ -68,7 +76,10 @@ Lemma functions_translated:
   exists tf cunit, transf_fundef f = OK tf /\ Genv.find_funct tge v = Some tf /\ linkorder cunit prog.
 Proof.
   intros. exploit (Genv.find_funct_match TRANSL); eauto.
-  intros (cu & tf & A & B & C). exists tf, cu. split; auto.
+  intros (cu & tf & A & B & C).
+  repeat eexists; intuition eauto.
+  + unfold incl; auto.
+  + eapply linkorder_refl.
 Qed.
 
 Lemma function_ptr_translated:
@@ -76,14 +87,17 @@ Lemma function_ptr_translated:
   Genv.find_funct_ptr ge v = Some f ->
   exists tf,
   Genv.find_funct_ptr tge v = Some tf /\ transf_fundef f = OK tf.
-Proof (Genv.find_funct_ptr_transf_partial TRANSL).
+Proof.
+  intros.
+  exploit (Genv.find_funct_ptr_transf_partial TRANSL); eauto.
+Qed.
 
 Lemma function_sig_translated:
-  forall f f', transf_fundef f = OK f' -> funsig f' = funsig f.
+  forall f tf, transf_fundef f = OK tf -> funsig tf = funsig f.
 Proof.
   intros. destruct f.
-  - simpl in H. monadInv H. simpl. symmetry. apply transf_function_preserves. assumption.
-  - simpl in H. monadInv H. reflexivity.
+  - simpl in H. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_preserves. assumption.
+  - simpl in H. monadInv H. monadInv EQ. reflexivity.
 Qed.
 
 Lemma sig_preserved:
@@ -92,41 +106,41 @@ Lemma sig_preserved:
   funsig tf = funsig f.
 Proof.
   unfold transf_fundef, transf_partial_fundef; intros.
-  destruct f. monadInv H. simpl. symmetry; apply transf_function_preserves. assumption.
+  destruct f. monadInv H. simpl. symmetry. monadInv EQ. apply transf_function_preserves. assumption.
   inv H. reflexivity.
 Qed.
 
 Lemma list_nth_z_revmap:
   forall ln f ln' (pc pc': node) val,
   list_nth_z ln val = Some pc ->
-  list_forall2 (fun n n' => revmap f n' = Some n) ln ln' ->
+  list_forall2 (fun n n' => (fn_revmap f)!n' = Some n) ln ln' ->
   exists pc',
      list_nth_z ln' val = Some pc'
-  /\ revmap f pc' = Some pc.
+  /\ (fn_revmap f)!pc' = Some pc.
 Proof.
   induction ln; intros until val; intros LNZ LFA.
   - inv LNZ.
   - inv LNZ. destruct (zeq val 0) eqn:ZEQ.
     + inv H0. destruct ln'; inv LFA.
-      simpl. exists n. split; auto.
+      simpl. exists p. split; auto.
     + inv LFA. simpl. rewrite ZEQ. exploit IHln. 2: eapply H0. all: eauto.
       intros (pc'1 & LNZ & REV). exists pc'1. split; auto. congruence.
 Qed.
 
 Inductive match_stackframes: stackframe -> stackframe -> Prop :=
   | match_stackframe_intro:
-    forall res f sp pc rs f' pc'
-      (TRANSF: transf_function f = OK f')
-      (DUPLIC: revmap f pc' = Some pc),
-      match_stackframes (Stackframe res f sp pc rs) (Stackframe res f' sp pc' rs).
+    forall res f sp pc rs xf pc'
+      (TRANSF: transf_function f = OK xf)
+      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
+      match_stackframes (Stackframe res f sp pc rs) (Stackframe res (fn_RTL xf) sp pc' rs).
 
 Inductive match_states: state -> state -> Prop :=
   | match_states_intro:
-    forall st f sp pc rs m st' f' pc'
+    forall st f sp pc rs m st' xf pc'
       (STACKS: list_forall2 match_stackframes st st')
-      (TRANSF: transf_function f = OK f')
-      (DUPLIC: revmap f pc' = Some pc),
-      match_states (State st f sp pc rs m) (State st' f' sp pc' rs m)
+      (TRANSF: transf_function f = OK xf)
+      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
+      match_states (State st f sp pc rs m) (State st' (fn_RTL xf) sp pc' rs m)
   | match_states_call:
     forall st st' f f' args m
       (STACKS: list_forall2 match_stackframes st st')
@@ -150,8 +164,8 @@ Proof.
       symmetry. eapply match_program_main. eauto.
     + exploit function_ptr_translated; eauto.
     + destruct f.
-      * monadInv TRANSF. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
-      * monadInv TRANSF. assumption.
+      * monadInv TRANSF. monadInv EQ. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
+      * monadInv TRANSF. monadInv EQ. assumption.
   - constructor; eauto. constructor.
 Qed.
 
@@ -265,12 +279,12 @@ Proof.
     + eapply exec_Ireturn; eauto. erewrite <- transf_function_fnstacksize; eauto.
     + constructor; auto.
 (* exec_function_internal *)
-  - monadInv TRANSF. eexists. split.
-    + econstructor. erewrite <- transf_function_fnstacksize; eauto.
+  - monadInv TRANSF. monadInv EQ. eexists. split.
+    + eapply exec_function_internal. erewrite <- transf_function_fnstacksize; eauto.
     + erewrite transf_function_fnparams; eauto.
       econstructor; eauto. apply revmap_entrypoint. assumption.
 (* exec_function_external *)
-  - monadInv TRANSF. eexists. split.
+  - monadInv TRANSF. monadInv EQ. eexists. split.
     + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
     + constructor. assumption.
 (* exec_return *)
