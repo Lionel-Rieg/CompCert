@@ -3,6 +3,8 @@ Require Import AST Linking Errors Globalenvs Smallstep.
 Require Import Coqlib Maps Events Values.
 Require Import Op RTL Duplicate.
 
+Local Open Scope positive_scope.
+
 Definition match_prog (p tp: program) :=
   match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
 
@@ -41,8 +43,15 @@ Axiom revmap_correct: forall f xf n n',
     (fn_revmap xf)!n' = Some n ->
     (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n => (fn_revmap xf)!n) i i').
 
-Axiom revmap_entrypoint:
+Theorem revmap_entrypoint:
   forall f xf, transf_function_aux f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
+Proof.
+  intros. unfold transf_function_aux in H. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te).
+  monadInv H. simpl. monadInv EQ. unfold verify_mapping_entrypoint in EQ0. simpl in EQ0.
+  destruct (mp ! te) eqn:PT; try discriminate.
+  destruct (n ?= fn_entrypoint f) eqn:EQ; try discriminate. inv EQ0.
+  apply Pos.compare_eq in EQ. congruence.
+Qed.
 
 Section PRESERVATION.
 

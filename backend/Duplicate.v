@@ -5,6 +5,7 @@ Require Import AST RTL Maps Globalenvs.
 Require Import Coqlib Errors.
 
 Local Open Scope error_monad_scope.
+Local Open Scope positive_scope.
 
 (** External oracle returning the new RTL code (entry point unchanged),
     along with the new entrypoint, and a mapping of new nodes to old nodes *)
@@ -29,8 +30,19 @@ Definition fundef_RTL (fu: xfundef) : fundef :=
 
 (** * Verification of node duplications *)
 
-(** Verifies that the mapping [mp] is giving correct information *)
-Definition verify_mapping (xf: xfunction) (tc: code) (tentry: node) : res unit := OK tt. (* TODO *)
+Definition verify_mapping_entrypoint (f: function) (xf: xfunction) : res unit :=
+  match ((fn_revmap xf)!(fn_entrypoint (fn_RTL xf))) with
+  | None => Error (msg "verify_mapping: No node in xf revmap for entrypoint")
+  | Some n => match (Pos.compare n (fn_entrypoint f)) with
+              | Eq => OK tt
+              | _ => Error (msg "verify_mapping_entrypoint: xf revmap for entrypoint does not correspond to the entrypoint of f")
+              end
+  end.
+
+(** Verifies that the [fn_revmap] of the translated function [xf] is giving correct information in regards to [f] *)
+Definition verify_mapping (f: function) (xf: xfunction) : res unit :=
+  do u <- verify_mapping_entrypoint f xf; OK tt.
+(* TODO - verify the other axiom *)
 
 (** * Entry points *)
 
@@ -38,7 +50,7 @@ Definition transf_function_aux (f: function) : res xfunction :=
   let (tcte, mp) := duplicate_aux f in
   let (tc, te) := tcte in
   let xf := {| fn_RTL := (mkfunction (fn_sig f) (fn_params f) (fn_stacksize f) tc te); fn_revmap := mp |} in
-  do u <- verify_mapping xf tc te;
+  do u <- verify_mapping f xf;
   OK xf.
 
 Theorem transf_function_aux_preserves:
