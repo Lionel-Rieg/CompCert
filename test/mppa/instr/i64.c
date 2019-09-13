@@ -90,6 +90,12 @@ BEGIN_TEST(long long)
     else
         c += fact(32);
 
+    if ((unsigned long long)(a & 0x1LL) >= 1)
+        c += fact(18);
+    else
+        c += fact(31);
+
+
     if (a-41414141 > 0)
         c += fact(13);
     else

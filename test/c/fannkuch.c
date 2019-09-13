@@ -8,6 +8,7 @@
  * $Id: fannkuch-gcc.code,v 1.33 2006/02/25 16:38:58 igouy-guest Exp $
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,8 +32,11 @@ fannkuch( int n )
     if( n < 1 ) return 0;
 
     perm  = calloc(n, sizeof(*perm ));
+    assert(perm != NULL && "fannkuch: perm malloc failed");
     perm1 = calloc(n, sizeof(*perm1));
+    assert(perm != NULL && "fannkuch: perm1 malloc failed");
     count = calloc(n, sizeof(*count));
+    assert(perm != NULL && "fannkuch: count malloc failed");
 
     for( i=0 ; i<n ; ++i ) perm1[i] = i;	/* initial (trivial) permu */
 
@@ -98,7 +102,7 @@ fannkuch( int n )
     int
 main( int argc, char* argv[] )
 {
-    int		n = (argc>1) ? atoi(argv[1]) : 10;
+    int		n = (argc>1) ? atoi(argv[1]) : 6;
 
     printf("Pfannkuchen(%d) = %ld\n", n, fannkuch(n));
     return 0;

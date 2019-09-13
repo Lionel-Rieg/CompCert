@@ -159,8 +159,10 @@ long wordcode_interp(unsigned int* code)
 
 #define I(a,b,c,d) ((a) + ((b) << 8) + ((c) << 16) + ((d) << 24))
 
+#define FIBSIZE 15
+
 unsigned int wordcode_fib[] = {
-/* 0 */ I(WCONST, 30, 0, 0),
+/* 0 */ I(WCONST, FIBSIZE, 0, 0),
 /* 1 */ I(WCALL1_pop1, 0, 3-1-1, 0),
 /* 2 */ I(WSTOP, 0, 1, 0),
 /* 3 */ I(WCONST, 2, 0, 0),
@@ -175,10 +177,15 @@ unsigned int wordcode_fib[] = {
 /* 12 */ I(WCONST, 1, 0, 0),
 /* 13 */ I(WRETURN, 0, 2, 0)
 };
+
+#define TAKSIZE1 6
+#define TAKSIZE2 9
+#define TAKSIZE3 12
+
 unsigned int wordcode_tak[] = {
-/* 0 */ I(WCONST, 6, 0, 0),
-/* 1 */ I(WCONST, 12, 0, 0),
-/* 2 */ I(WCONST, 18, 0, 0),
+/* 0 */ I(WCONST, TAKSIZE1, 0, 0),
+/* 1 */ I(WCONST, TAKSIZE2, 0, 0),
+/* 2 */ I(WCONST, TAKSIZE3, 0, 0),
 /* 3 */ I(WCALL3, 3, 6-3-2, 0),
 /* 4 */ I(0, 1, 2, 0),
 /* 5 */ I(WSTOP, 0, 1, 0),
@@ -203,8 +210,8 @@ unsigned int wordcode_tak[] = {
 
 int main(int argc, char ** argv)
 {
-  printf("fib(30) = %ld\n", wordcode_interp(wordcode_fib));
-  printf("tak(18, 12, 6) = %ld\n", wordcode_interp(wordcode_tak));
+  printf("fib(%d) = %ld\n", FIBSIZE, wordcode_interp(wordcode_fib));
+  printf("tak(%d, %d, %d) = %ld\n", TAKSIZE3, TAKSIZE2, TAKSIZE1, wordcode_interp(wordcode_tak));
 
   return 0;
 }

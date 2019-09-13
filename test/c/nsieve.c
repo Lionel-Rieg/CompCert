@@ -29,10 +29,10 @@ static unsigned int nsieve(int m) {
 #define NITER 2
 
 int main(int argc, char * argv[]) {
-    int m = argc < 2 ? 9 : atoi(argv[1]);
+    int m = argc < 2 ? 6 : atoi(argv[1]);
     int i, j;
     for (i = 0; i < 3; i++) {
-      int n = 10000 << (m-i);
+      int n = 200 << (m-i);
       unsigned count;
       for (j = 0; j < NITER; j++) { count = nsieve(n); }
       printf("Primes up to %8d %8u\n", n, count);

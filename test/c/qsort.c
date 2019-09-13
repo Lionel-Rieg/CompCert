@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
   int n, i, j;
   int * a, * b;
 
-  if (argc >= 2) n = atoi(argv[1]); else n = 100000;
+  if (argc >= 2) n = atoi(argv[1]); else n = 500;
   a = malloc(n * sizeof(int));
   b = malloc(n * sizeof(int));
   for (j = 0; j < NITER; j++) {
