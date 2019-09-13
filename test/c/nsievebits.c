@@ -30,7 +30,7 @@ nsieve(unsigned int m)
 	return (count);
 }
 
-#define NITER 2
+#define NITER 1
 
 static void
 test(unsigned int n)
@@ -48,7 +48,7 @@ main(int ac, char **av)
 {
 	unsigned int n;
 
-	n = ac < 2 ? 3 : atoi(av[1]);
+	n = ac < 2 ? 2 : atoi(av[1]);
 	test(n);
 	if (n >= 1)
 		test(n - 1);

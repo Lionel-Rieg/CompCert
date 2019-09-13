@@ -152,7 +152,7 @@ int main(int argc, char ** argv)
   double enp, t, y, z, zr, zi, zm, a;
   double * xr, * xi, * pxr, * pxi;
 
-  if (argc >= 2) n = atoi(argv[1]); else n = 12;
+  if (argc >= 2) n = atoi(argv[1]); else n = 10;
   np = 1 << n;
   enp = np; 
   npm = np / 2  - 1;  

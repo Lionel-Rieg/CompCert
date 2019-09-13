@@ -4,7 +4,7 @@ CCOMP=../../ccomp
 CCOMPFLAGS=$(CCOMPOPTS) -stdlib ../../runtime -dc -dclight -dasm
 
 CFLAGS+=-O2 -Wall
-EXECUTE:=timeout --signal=SIGTERM 90s $(EXECUTE)
+EXECUTE:=timeout --signal=SIGTERM 20s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
@@ -45,7 +45,7 @@ test: all
 	   $(EXECUTE) ./$$i.compcert > $$i.compcert.out;\
 	   if cmp -s $$i.compcert.out Results/$$i; \
            then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2; \
+           else echo "$$i: FAILED"; \
 	   fi; \
          done
 

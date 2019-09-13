@@ -64,8 +64,8 @@ static void init(void) {
 }
 
 #define INCREMENT 0.5
-#define MIN -5.0
-#define MAX 5.0
+#define MIN -3.0
+#define MAX 3.0
 int main(int argc, char ** argv) {
   init();
   

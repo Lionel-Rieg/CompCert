@@ -29,7 +29,7 @@ static unsigned int nsieve(int m) {
 #define NITER 2
 
 int main(int argc, char * argv[]) {
-    int m = argc < 2 ? 9 : atoi(argv[1]);
+    int m = argc < 2 ? 6 : atoi(argv[1]);
     int i, j;
     for (i = 0; i < 3; i++) {
       int n = 200 << (m-i);

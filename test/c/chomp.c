@@ -338,8 +338,8 @@ int main(void)
   struct _play *tree;
 
 
-  ncol = 5;
-  nrow = 5;
+  ncol = 4;
+  nrow = 4;
   tree = make_play(1); /* create entire tree structure, not just the */
   player = 0;          /* needed part for first move */
   current = make_data(nrow,ncol); /* start play at full board */

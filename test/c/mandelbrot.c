@@ -17,7 +17,7 @@ int main (int argc, char **argv)
 {
     int w, h, bit_num = 0;
     char byte_acc = 0;
-    int i, iter = 50;
+    int i, iter = 30;
     double x, y, limit = 2.0;
     double Zr, Zi, Cr, Ci, Tr, Ti;
 
