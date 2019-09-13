@@ -48,7 +48,7 @@ main(int ac, char **av)
 {
 	unsigned int n;
 
-	n = ac < 2 ? 9 : atoi(av[1]);
+	n = ac < 2 ? 3 : atoi(av[1]);
 	test(n);
 	if (n >= 1)
 		test(n - 1);

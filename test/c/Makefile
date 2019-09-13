@@ -14,11 +14,16 @@ TIME=time >/dev/null                    # Otherwise
 PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
   lists binarytrees fannkuch mandelbrot nbody \
   nsieve nsievebits spectral vmach \
-  bisect chomp perlin siphash24
+  chomp perlin siphash24
 
-# Kalray NOTE : removed knucleotide from PROGS, it is hard to edit the input
-# to modify its size without resulting in a seg fault, and the base input
-# takes a too long time to complete in the simulator.
+##
+# Kalray NOTE :
+# * removed knucleotide from PROGS, it is hard to edit the input
+#   to modify its size without resulting in a seg fault, and the base input
+#   takes a too long time to complete in the simulator.
+# * also removed bisect, who is exhibiting different float values on the Kalray
+#   architecture than using x86 GCC (for both CompCert and GCC ports) (tested with n=10)
+##
 
 all: $(PROGS:%=%.compcert)
 
