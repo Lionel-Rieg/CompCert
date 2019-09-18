@@ -27,7 +27,7 @@ Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
 Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := (time "Machblock generation" Machblockgen.transf_program) p in
   do abp <- (time "Asmblock generation" Asmblockgen.transf_program) mbp;
-  do abp' <- (time "PostpassScheduling optimization" PostpassScheduling.transf_program) abp;
+  do abp' <- (time "PostpassScheduling total oracle+verification" PostpassScheduling.transf_program) abp;
   OK ((time "Asm generation" Asm.transf_program) abp').
 
 Definition transf_function (f: Mach.function) : res Asm.function :=
