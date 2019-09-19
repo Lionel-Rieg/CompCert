@@ -1,6 +1,8 @@
 include ../Makefile.config
 
-DIRS=c compression raytracer spass regression
+#DIRS=c compression raytracer spass regression
+# Kalray note - removing compression, raytracer and spass that cannot be executed by the simulator in reasonable time
+DIRS=c regression
 ifeq ($(CLIGHTGEN),true)
 DIRS+=clightgen
 endif
