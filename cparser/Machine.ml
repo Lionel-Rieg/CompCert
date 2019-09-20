@@ -270,6 +270,10 @@ let mppa_k1c =
     supports_unaligned_accesses = true;
     struct_passing_style = SP_split_args;
     struct_return_style = SR_int1248 }
+let aarch64 =
+  { i32lpll64 with name = "aarch64";
+                   struct_passing_style = SP_ref_callee; (* Wrong *)
+                   struct_return_style = SR_ref } (* Wrong *)
 
 (* Add GCC extensions re: sizeof and alignof *)
 
