@@ -723,13 +723,13 @@ Proof.
     exists nil; simpl; eexists. eapply Tr_add_label; eauto.
   - (*i=basic*)
     destruct i'.
-    Focus 10. exists (add_to_new_bblock (MB_basic bi)::nil).  exists b. 
+    10: { exists (add_to_new_bblock (MB_basic bi)::nil).  exists b. 
       cutrewrite ((add_to_new_bblock (MB_basic bi) :: nil) ++ (b::l)=(add_to_new_bblock (MB_basic bi) :: (b::l)));eauto.
       rewrite Heqti.        
       eapply  Tr_end_block; eauto.
       rewrite <-Heqti.
       eapply End_basic. inversion H; try(simpl; congruence).
-      simpl in H5; congruence.
+      simpl in H5; congruence. }
     all: try(exists nil; simpl; eexists;  eapply  Tr_add_basic; eauto; inversion H; try(eauto || congruence)).
   - (*i=cfi*)
     destruct i; try(simpl in Heqti; congruence).
