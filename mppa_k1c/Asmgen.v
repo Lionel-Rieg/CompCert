@@ -22,7 +22,8 @@ Require Import Errors String.
 
 Local Open Scope error_monad_scope.
 
-Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B :=
+  Compiler.time.
 
 Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := (time "Machblock generation" Machblockgen.transf_program) p in
