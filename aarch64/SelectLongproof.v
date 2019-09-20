@@ -16,6 +16,7 @@ Require Import Coqlib Zbits.
 Require Import AST Integers Floats Values Memory Globalenvs.
 Require Import Cminor Op CminorSel.
 Require Import SelectOp SelectLong SelectOpproof.
+Require Import OpHelpers OpHelpersproof.
 
 Local Open Scope cminorsel_scope.
 Local Transparent Archi.ptr64.
@@ -23,8 +24,10 @@ Local Transparent Archi.ptr64.
 (** * Correctness of the smart constructors *)
 
 Section CMCONSTR.
-
-Variable ge: genv.
+Variable prog: program.
+Variable hf: helper_functions.
+Hypothesis HELPERS: helper_functions_declared prog hf.
+Let ge := Genv.globalenv prog.
 Variable sp: val.
 Variable e: env.
 Variable m: mem.

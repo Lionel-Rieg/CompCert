@@ -547,6 +547,13 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
   | _ => (Aindexed Int64.zero, e:::Enil)
   end.
 
+(* floats *)
+Definition divf_base (e1: expr) (e2: expr) :=
+  Eop Odivf (e1 ::: e2 ::: Enil).
+
+Definition divfs_base (e1: expr) (e2: expr) :=
+  Eop Odivfs (e1 ::: e2 ::: Enil).
+
 (** ** Arguments of builtins *)
 
 Nondetfunction builtin_arg (e: expr) :=
