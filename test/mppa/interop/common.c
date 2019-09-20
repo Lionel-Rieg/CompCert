@@ -1,16 +1,20 @@
 #define STACK int a[100];\
   a[42] = 42;
 
-#define ONEARG_OP(arg) (3*arg+2)
+#define ONEARG_OP(arg) (3*magic(arg)+2)
 
-#define MULTIARG_OP(arg1, arg2, arg3, arg4) (arg1 ^ arg2 << arg3 - arg4)
+#define MULTIARG_OP(arg1, arg2, arg3, arg4) (arg1 ^ magic(arg2) << arg3 - arg4)
 
 #define MANYARG_OP(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9,\
                    a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,\
                    a20, a21, a22, a23, a24, a25, a26, a27, a28, a29)\
-  (a0 * a1 * a2 * a3 * a4 * a5 * a6 * a7 * a8 * a9 *\
+  (a0 * a1 * a2 * magic(a3) * a4 * a5 * a6 * a7 * a8 * a9 *\
           a10 * a11 * a12 * a13 * a14 * a15 * a16 * a17 * a18 * a19 *\
           a20 * a21 * a22 * a23 * a24 * a25 * a26 * a27 * a28 * a29)
+
+int magic(long a){
+  return a*42 + 26;
+}
 
 void void_void(){
   STACK;

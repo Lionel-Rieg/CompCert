@@ -148,7 +148,7 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
   @@@ partial_if Compopts.debug (time "Debugging info for local variables" Debugvar.transf_program)
   @@@ time "Mach generation" Stacking.transf_program
    @@ print print_Mach
-  @@@ time "Asm generation" Asmgen.transf_program.
+  @@@ time "Total Mach->Asm generation" Asmgen.transf_program.
 
 Definition transf_cminor_program (p: Cminor.program) : res Asm.program :=
    OK p

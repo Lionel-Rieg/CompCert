@@ -1,5 +1,7 @@
 include ../../Makefile.config
 
+SIMU=timeout --signal=SIGKILL 20s $(EXECUTE)
+
 CC=../../ccomp 
 CFLAGS=$(CCOMPOPTS) -U__GNUC__ -stdlib ../../runtime -dclight -dasm
 LIBS=
@@ -30,15 +32,19 @@ TESTFILE:=$(firstword $(wildcard /usr/share/dict/words) ./lzss)
 TESTCOMPR=/tmp/testcompr.$$$$
 TESTEXPND=/tmp/testexpnd.$$$$
 
+LIGHTERFILEPRE:=/tmp/lighter
+LIGHTERFILE:=$(LIGHTERFILEPRE)aa
+
 test:
-	@rm -f $(TESTCOMPR) $(TESTEXPND); \
-	echo "Test data: $(TESTFILE)"; \
+	@split -l15 $(TESTFILE) $(LIGHTERFILEPRE); \
+	rm -f $(TESTCOMPR) $(TESTEXPND); \
+	echo "Test data: $(LIGHTERFILE)"; \
 	for i in $(EXE); do \
           echo "$$i: compression..."; \
-          $(SIMU) ./$$i -c -i $(TESTFILE) -o $(TESTCOMPR); \
+          $(SIMU) ./$$i -c -i $(LIGHTERFILE) -o $(TESTCOMPR); \
           echo "$$i: decompression..."; \
           $(SIMU) ./$$i -d -i $(TESTCOMPR) -o $(TESTEXPND); \
-          if cmp $(TESTFILE) $(TESTEXPND); \
+          if cmp $(LIGHTERFILE) $(TESTEXPND); \
           then echo "$$i: passed"; \
           else echo "$$i: FAILED"; exit 2; \
           fi; \
@@ -49,7 +55,7 @@ bench:
 	@rm -f $(TESTCOMPR)
 	@for i in $(EXE); do \
           echo -n "$$i: "; \
-          $(TIME) sh -c "./$$i -c -i $(TESTFILE) -o $(TESTCOMPR) && ./$$i -d -i $(TESTCOMPR) -o /dev/null"; \
+          $(TIME) sh -c "./$$i -c -i $(LIGHTERFILE) -o $(TESTCOMPR) && ./$$i -d -i $(TESTCOMPR) -o /dev/null"; \
          done
 	@rm -f $(TESTCOMPR)
 

@@ -991,4 +991,5 @@ let rec bundles_to_coq_schedule = function
 
 (** Called schedule function from Coq *)
 
-let schedule bb = let toto = bundles_to_coq_schedule @@ bblock_to_bundles bb in toto
+let schedule_notime bb = let toto = bundles_to_coq_schedule @@ bblock_to_bundles bb in toto
+let schedule bb = Timing.time_coq ('P'::('o'::('s'::('t'::('p'::('a'::('s'::('s'::('S'::('c'::('h'::('e'::('d'::('u'::('l'::('i'::('n'::('g'::(' '::('o'::('r'::('a'::('c'::('l'::('e'::([])))))))))))))))))))))))))) schedule_notime bb

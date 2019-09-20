@@ -45,7 +45,7 @@ test: all
 	   $(EXECUTE) ./$$i.compcert > $$i.compcert.out;\
 	   if cmp -s $$i.compcert.out Results/$$i; \
            then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; \
+           else echo "$$i: FAILED"; exit 2; \
 	   fi; \
          done
 
@@ -54,7 +54,7 @@ test_gcc: all_gcc
 	   $(EXECUTE) ./$$i.gcc > $$i.gcc.out;\
 	   if cmp -s $$i.gcc.out Results/$$i; \
            then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; \
+           else echo "$$i: FAILED"; exit 2;\
 	   fi; \
          done
 
