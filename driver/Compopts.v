@@ -62,3 +62,7 @@ Parameter thumb: unit -> bool.
 
 (** Flag -g.  For insertion of debugging information. *)
 Parameter debug: unit -> bool.
+
+(* TODO is there a more appropriate place? *)
+Require Import Coqlib.
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
