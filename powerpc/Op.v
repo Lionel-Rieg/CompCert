@@ -581,6 +581,30 @@ Proof with (try exact I; try reflexivity).
   unfold Val.select. destruct (eval_condition c vl m). apply Val.normalize_type. exact I.
 Qed.
 
+Definition is_trapping_op (op : operation) :=
+  match op with
+  | Odiv | Odivl | Odivu | Odivlu
+  | Oshrximm _ | Oshrxlimm _
+  | Ointoffloat | Ointuoffloat
+  | Ofloatofint | Ofloatofintu
+  | Olongoffloat
+  | Ofloatoflong => true
+  | _ => false
+  end.
+
+Lemma is_trapping_op_sound:
+  forall op vl sp m,
+    op <> Omove ->
+    is_trapping_op op = false ->
+    (List.length vl) = (List.length (fst (type_of_operation op))) ->
+    eval_operation genv sp op vl m <> None.
+Proof.
+  destruct op; intros; simpl in *; try congruence.
+  all: try (destruct vl as [ | vh1 vl1]; try discriminate).
+  all: try (destruct vl1 as [ | vh2 vl2]; try discriminate).
+  all: try (destruct vl2 as [ | vh3 vl3]; try discriminate).
+  all: try (destruct vl3 as [ | vh4 vl4]; try discriminate).
+Qed.
 End SOUNDNESS.
 
 (** * Manipulating and transforming operations *)
