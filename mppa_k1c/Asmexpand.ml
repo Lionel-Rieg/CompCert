@@ -507,8 +507,8 @@ let expand_instruction instr =
         expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
-            sz in
-          (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
+          let extra_ofs = if n <= _nbregargs_ then 0 else ((n - _nbregargs_) * wordsize) in
+          Z.add sz (Z.of_sint extra_ofs) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
