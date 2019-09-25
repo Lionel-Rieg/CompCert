@@ -24,6 +24,10 @@ PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
 # * also removed bisect, who is exhibiting different float values on the Kalray
 #   architecture than using x86 GCC (for both CompCert and GCC ports) (tested with n=10)
 ##
+ifeq ($(ARCH),mppa_k1c)
+	PROGS:=$(filter-out knucleotide,$(PROGS))
+	PROGS:=$(filter-out bisect,$(PROGS))
+endif
 
 all: $(PROGS:%=%.compcert)
 
