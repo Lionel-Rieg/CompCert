@@ -28,6 +28,8 @@ TESTS_COMP?=attribs1 bitfields1 bitfields2 bitfields3 bitfields4 \
 # varargs2 ---> bug in k1-cos-gcc
 ifeq ($(ARCH),mppa_k1c)
 	TESTS_COMP:=$(filter-out varargs2,$(TESTS_COMP))
+	TESTS_COMP:=$(filter-out packedstruct1,$(TESTS_COMP))
+	TESTS_COMP:=$(filter-out packedstruct2,$(TESTS_COMP))
 endif
 
 # Can run, both in compiled mode and in interpreter mode,
