@@ -34,7 +34,11 @@ int main(int argc, char ** argv)
   int n, i, j;
   int * a, * b;
 
+#ifdef __K1C__
   if (argc >= 2) n = atoi(argv[1]); else n = 500;
+#else
+  if (argc >= 2) n = atoi(argv[1]); else n = 100000;
+#endif
   a = malloc(n * sizeof(int));
   b = malloc(n * sizeof(int));
   for (j = 0; j < NITER; j++) {

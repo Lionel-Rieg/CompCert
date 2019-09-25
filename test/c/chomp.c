@@ -338,8 +338,13 @@ int main(void)
   struct _play *tree;
 
 
+#ifdef __K1C__
   ncol = 4;
   nrow = 4;
+#else
+  ncol = 7;
+  nrow = 7;
+#endif
   tree = make_play(1); /* create entire tree structure, not just the */
   player = 0;          /* needed part for first move */
   current = make_data(nrow,ncol); /* start play at full board */
