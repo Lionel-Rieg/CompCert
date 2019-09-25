@@ -25,6 +25,6 @@ extern long long __compcert_afaddd(void *address, unsigned long long incr);
 extern int __compcert_afaddw(void *address, unsigned int incr);
 #endif
 
-#define __builtin_expect(x, y) (x)
+/* #define __builtin_expect(x, y) (x) */
 #define __builtin_ctz(x) __builtin_k1_ctzw(x)
 #define __builtin_clz(x) __builtin_k1_clzw(x)

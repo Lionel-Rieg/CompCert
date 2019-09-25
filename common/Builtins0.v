@@ -337,6 +337,7 @@ Inductive standard_builtin : Type :=
   | BI_addl
   | BI_subl
   | BI_mull
+  | BI_expect
   | BI_i16_bswap
   | BI_i32_bswap
   | BI_i64_bswap
@@ -373,6 +374,7 @@ Definition standard_builtin_table : list (string * standard_builtin) :=
  :: ("__builtin_bswap", BI_i32_bswap)
  :: ("__builtin_bswap32", BI_i32_bswap)
  :: ("__builtin_bswap64", BI_i64_bswap)
+ :: ("__builtin_expect", BI_expect)
  :: ("__compcert_i64_umulh", BI_i64_umulh)
  :: ("__compcert_i64_smulh", BI_i64_smulh)
  :: ("__compcert_i64_sdiv", BI_i64_sdiv)
@@ -402,7 +404,9 @@ Definition standard_builtin_sig (b: standard_builtin) : signature :=
   | BI_i64_sdiv | BI_i64_udiv | BI_i64_smod | BI_i64_umod =>
       mksignature (Tlong :: Tlong :: nil) (Some Tlong) cc_default
   | BI_mull =>
-      mksignature (Tint :: Tint :: nil) (Some Tlong) cc_default
+    mksignature (Tint :: Tint :: nil) (Some Tlong) cc_default
+  | BI_expect =>
+    mksignature (Tlong :: Tlong :: nil) (Some Tlong) cc_default
   | BI_i32_bswap =>
       mksignature (Tint :: nil) (Some Tint) cc_default
   | BI_i64_bswap =>
@@ -433,6 +437,8 @@ Program Definition standard_builtin_sem (b: standard_builtin) : builtin_sem (pro
   | BI_addl => mkbuiltin_v2t Tlong Val.addl _ _ 
   | BI_subl => mkbuiltin_v2t Tlong Val.subl _ _
   | BI_mull => mkbuiltin_v2t Tlong Val.mull' _ _
+  | BI_expect =>
+    mkbuiltin_n2t Tlong Tlong Tlong (fun x _ => x)
   | BI_i16_bswap =>
     mkbuiltin_n1t Tint Tint
                   (fun n => Int.repr (decode_int (List.rev (encode_int 2%nat (Int.unsigned n)))))

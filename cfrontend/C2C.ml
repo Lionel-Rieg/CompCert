@@ -157,9 +157,10 @@ let ais_annot_functions =
 let builtins_generic = {
   builtin_typedefs = [];
   builtin_functions =
-    ais_annot_functions
-      @
+    ais_annot_functions @
     [
+    "__builtin_expect",
+    (TInt(ILong, []), [TInt(ILong, []); TInt(ILong, [])], false);
     (* Integer arithmetic *)
     "__builtin_bswap64",
     (TInt(IULongLong, []), [TInt(IULongLong, [])], false);

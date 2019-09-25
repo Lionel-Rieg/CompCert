@@ -243,7 +243,8 @@ Definition sel_builtin_res (optid: option ident) : builtin_res ident :=
 Function sel_known_builtin (bf: builtin_function) (args: exprlist) :=
   match bf, args with
   | BI_platform b, _ =>
-      SelectOp.platform_builtin b args
+    SelectOp.platform_builtin b args
+  | BI_standard BI_expect, a1 ::: a2 ::: Enil => Some a1
   | BI_standard (BI_select ty), a1 ::: a2 ::: a3 ::: Enil =>
       Some (sel_select ty a1 a2 a3)
   | BI_standard BI_fabs, a1 ::: Enil =>

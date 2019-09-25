@@ -395,6 +395,13 @@ Proof.
   inv ARGS; try discriminate. inv H0; try discriminate.
   inv SEL.  
   simpl in SEM; inv SEM. apply eval_absf; auto.
++ (* expect *)
+  inv ARGS; try discriminate.
+  inv H0; try discriminate.
+  inv H2; try discriminate.
+  simpl in SEM. inv SEM. inv SEL.
+  destruct v1; destruct v0.
+  all: econstructor; split; eauto.
 - eapply eval_platform_builtin; eauto.
 Qed.
 
