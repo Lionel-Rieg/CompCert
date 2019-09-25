@@ -46,20 +46,12 @@ all_gcc: $(PROGS:%=%.gcc)
 
 test: all
 	@for i in $(PROGS); do \
-	   $(EXECUTE) ./$$i.compcert > $$i.compcert.out;\
-	   if cmp -s $$i.compcert.out Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2; \
-	   fi; \
+		 SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.compcert;\
          done
 
 test_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   $(EXECUTE) ./$$i.gcc > $$i.gcc.out;\
-	   if cmp -s $$i.gcc.out Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2;\
-	   fi; \
+	   SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.gcc;\
          done
 
 bench_gcc: all_gcc
