@@ -34,6 +34,9 @@ endif
 # but produce processor-dependent results, so no reference output in Results
 
 TESTS_DIFF=NaNs
+ifeq ($(ARCH),mppa_k1c)
+	TESTS_DIFF:=$(filter-out NaNs,$(TESTS_DIFF))
+endif
 
 # Other tests: should compile to .s without errors (but expect warnings)
 
