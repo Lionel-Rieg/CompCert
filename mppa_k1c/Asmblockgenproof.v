@@ -354,7 +354,7 @@ Record codestate :=
                   pbody1: list basic;
                   pbody2: list basic;
                   pctl: option control;
-                  fpok: bool;
+                  ep: bool;
                   rem: list AB.bblock;
                   cur: option bblock }.
 
@@ -379,7 +379,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
             pbody1 := tbc;
             pbody2 := (extract_basic tbi);
             pctl := extract_ctl tbi;
-            fpok := ep;
+            ep := ep;
             rem := tc;
             cur := Some tbb
         |}
@@ -400,7 +400,7 @@ Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
             pbody1 := tbdy;
             pbody2 := extract_basic tex;
             pctl := extract_ctl tex;
-            fpok := ep;
+            ep := ep;
             rem := tc;
             cur := Some tbb |}
         (Asmvliw.State rs m)
@@ -422,7 +422,7 @@ Lemma transl_blocks_nonil:
   transl_blocks f (bb::c) ep = OK tc ->
   exists tbb tc', tc = tbb :: tc'.
 Proof.
-  intros until ep. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
+  intros until ep0. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
   destruct (extract_ctl x2).
   - destruct c0; destruct i; simpl; eauto. destruct x1; simpl; eauto.
   - destruct x1; simpl; eauto.
@@ -469,7 +469,7 @@ Lemma transl_blocks_distrib:
   -> transl_block f bb (if MB.header bb then ep else false) = OK (tbb :: nil)
   /\ transl_blocks f c false = OK tc.
 Proof.
-  intros until ep. intros TLBS Hbuiltin.
+  intros until ep0. intros TLBS Hbuiltin.
   destruct bb as [hd bdy ex].
   monadInv TLBS. monadInv EQ.
   exploit no_builtin_preserved; eauto. intros Hectl. destruct Hectl.
@@ -611,7 +611,7 @@ Proof.
     eapply transl_instr_control_nobuiltin; eauto.
   intros (Hth & Htbdy & Htexit).
   exists {| pstate := (State rs m'); pheader := (Machblock.header bb); pbody1 := x; pbody2 := extract_basic x0;
-            pctl := extract_ctl x0; fpok := ep; rem := tc'; cur := Some tbb |}, fb, f, tbb, tc', ep.
+            pctl := extract_ctl x0; ep := ep0; rem := tc'; cur := Some tbb |}, fb, f, tbb, tc', ep0.
   repeat split. 1-2: econstructor; eauto.
   { destruct (MB.header bb). eauto. discriminate. } eauto.
   unfold transl_blocks. fold transl_blocks. unfold transl_block. rewrite EQ. simpl. rewrite EQ1; simpl.
@@ -1032,7 +1032,7 @@ Lemma step_simu_basic:
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 l cs2 tbdy',
        cs2 = {| pstate := (State rs2 m2); pheader := nil; pbody1 := tbdy'; pbody2 := pbody2 cs1;
-                pctl := pctl cs1; fpok := fp_is_parent (fpok cs1) bi; rem := rem cs1; cur := cur cs1 |}
+                pctl := pctl cs1; ep := fp_is_parent (ep cs1) bi; rem := rem cs1; cur := cur cs1 |}
     /\ tbdy = l ++ tbdy'
     /\ exec_body tge l rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2).
@@ -1098,7 +1098,7 @@ Proof.
   (* Opaque loadind. *)
 (*     left; eapply exec_straight_steps; eauto; intros. monadInv TR. *)
     monadInv EQ0. rewrite Hheader. rewrite Hheader in DXP.
-    destruct ep eqn:EPeq.
+    destruct ep0 eqn:EPeq.
   (* RTMP contains parent *)
     + exploit loadind_correct. eexact EQ1.
       instantiate (2 := rs1). rewrite DXP; eauto.
@@ -1253,7 +1253,7 @@ Qed.
 Inductive exec_header: codestate -> codestate -> Prop :=
   | exec_header_cons: forall cs1,
       exec_header cs1 {| pstate := pstate cs1; pheader := nil; pbody1 := pbody1 cs1; pbody2 := pbody2 cs1;
-                          pctl := pctl cs1; fpok := (if pheader cs1 then fpok cs1 else false); rem := rem cs1;
+                          pctl := pctl cs1; ep := (if pheader cs1 then ep cs1 else false); rem := rem cs1;
                           (* cur := match cur cs1 with None => None | Some bcur => Some (remove_header bcur) end *)
                           cur := cur cs1 |}.
 
@@ -1293,14 +1293,14 @@ Lemma step_simu_body:
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 cs2 ep,
        cs2 = {| pstate := (State rs2 m2); pheader := nil; pbody1 := nil; pbody2 := pbody2 cs1;
-                pctl := pctl cs1; fpok := ep; rem := rem cs1; cur := cur cs1 |}
+                pctl := pctl cs1; ep := ep; rem := rem cs1; cur := cur cs1 |}
     /\ exec_body tge (pbody1 cs1) rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp ({| MB.header := nil; MB.body := nil; MB.exit := MB.exit bb |}::c) ms' m') cs2).
 Proof.
   intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
   - intros until m'. intros Hheader Hnobuiltin BSTEP Hpstate MCS.
     inv BSTEP.
-    exists rs1, m1, cs1, (fpok cs1).
+    exists rs1, m1, cs1, (ep cs1).
     inv MCS. inv Hpstate. simpl in *. monadInv TBC. repeat (split; simpl; auto).
     econstructor; eauto.
   - intros until m'. intros Hheader Hnobuiltin BSTEP Hpstate MCS. inv BSTEP.
