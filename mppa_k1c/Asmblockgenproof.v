@@ -356,7 +356,7 @@ Record codestate :=
                   pctl: option control;
                   ep: bool;
                   rem: list AB.bblock;
-                  cur: option bblock }.
+                  cur: bblock }.
 
 (*   | Codestate: state -> list AB.bblock -> option bblock -> codestate. *)
 
@@ -381,7 +381,7 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
             pctl := extract_ctl tbi;
             ep := ep;
             rem := tc;
-            cur := Some tbb
+            cur := tbb
         |}
 .
 
@@ -402,7 +402,7 @@ Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
             pctl := extract_ctl tex;
             ep := ep;
             rem := tc;
-            cur := Some tbb |}
+            cur := tbb |}
         (Asmvliw.State rs m)
 .
 
@@ -596,7 +596,7 @@ Theorem match_state_codestate:
     /\ transl_blocks f (bb::c) ep = OK (tbb::tc)
     /\ body tbb = pbody1 cs ++ pbody2 cs
     /\ exit tbb = pctl cs
-    /\ cur cs = Some tbb /\ rem cs = tc
+    /\ cur cs = tbb /\ rem cs = tc
     /\ pstate cs = abs.
 Proof.
   intros until m. intros Hnobuiltin Hnotempty Hmbs MS. subst. inv MS.
@@ -611,7 +611,7 @@ Proof.
     eapply transl_instr_control_nobuiltin; eauto.
   intros (Hth & Htbdy & Htexit).
   exists {| pstate := (State rs m'); pheader := (Machblock.header bb); pbody1 := x; pbody2 := extract_basic x0;
-            pctl := extract_ctl x0; ep := ep0; rem := tc'; cur := Some tbb |}, fb, f, tbb, tc', ep0.
+            pctl := extract_ctl x0; ep := ep0; rem := tc'; cur := tbb |}, fb, f, tbb, tc', ep0.
   repeat split. 1-2: econstructor; eauto.
   { destruct (MB.header bb). eauto. discriminate. } eauto.
   unfold transl_blocks. fold transl_blocks. unfold transl_block. rewrite EQ. simpl. rewrite EQ1; simpl.
@@ -719,7 +719,7 @@ Theorem step_simu_control:
   Genv.find_funct_ptr tge fb = Some (Internal fn) ->
   pstate cs2 = (Asmvliw.State rs2 m2) ->
   pbody1 cs2 = nil -> pbody2 cs2 = tbdy2 -> pctl cs2 = tex ->
-  cur cs2 = Some tbb ->
+  cur cs2 = tbb ->
   match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2 ->
   match_asmstate fb cs2 (Asmvliw.State rs1 m1) ->
   exit_step return_address_offset ge (MB.exit bb') (MB.State s fb sp (bb'::c) ms' m') E0 S'' ->
@@ -731,7 +731,7 @@ Proof.
   intros until cs2. intros Hbody Hbuiltin FIND Hpstate Hpbody1 Hpbody2 Hpctl Hcur MCS MAS ESTEP.
   inv ESTEP.
   - inv MCS. inv MAS. simpl in *.
-    inv Hcur. inv Hpstate.
+    inv Hpstate.
     destruct ctl.
     + (* MBcall *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
@@ -962,7 +962,7 @@ Proof.
       econstructor; eauto.
         unfold nextblock, incrPC. repeat apply agree_set_other; auto with asmgen.
 
-  - inv MCS. inv MAS. simpl in *. subst. inv Hpstate. inv Hcur.
+  - inv MCS. inv MAS. simpl in *. subst. inv Hpstate.
 (*     exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
     intros (TLB & TLBS).
  *) destruct bb' as [hd' bdy' ex']; simpl in *. subst.
@@ -1446,8 +1446,8 @@ Proof.
       9: eapply MCS'. all: simpl.
       10: eapply ESTEP.
       all: simpl; eauto.
-      rewrite Hpbody2. rewrite Hpctl. rewrite Hcur.
-      { inv MAS; simpl in *. inv Hcur. inv Hpstate2. eapply match_asmstate_some; eauto.
+      rewrite Hpbody2. rewrite Hpctl.
+      { inv MAS; simpl in *. inv Hpstate2. eapply match_asmstate_some; eauto.
         erewrite exec_body_pc; eauto. }
     intros (rs3 & m3 & rs4 & m4 & EXEB' & EXECTL' & MS').
 
@@ -1472,7 +1472,7 @@ Proof.
     assert (f1 = f0) by congruence. subst f0.
     rewrite PCeq in Hrs1pc. inv Hrs1pc.
     exploit functions_translated; eauto. intros (tf1 & FIND'' & TRANS''). rewrite FIND' in FIND''.
-    inv FIND''. monadInv TRANS''. rewrite TRANSF0 in EQ. inv EQ. inv Hcur.
+    inv FIND''. monadInv TRANS''. rewrite TRANSF0 in EQ. inv EQ.
     eapply find_bblock_tail; eauto.
 Qed.
 
