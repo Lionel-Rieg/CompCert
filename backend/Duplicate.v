@@ -39,6 +39,39 @@ Definition verify_mapping_entrypoint (f: function) (xf: xfunction) : res unit :=
               end
   end.
 
+Definition verify_is_copy revmap n n' :=
+  match revmap!n' with
+  | None => Error(msg "verify_is_copy None")
+  | Some revn => match (Pos.compare n revn) with Eq => OK tt | _ => Error(msg "verify_is_copy invalid map") end
+  end.
+
+Definition verify_match_inst revmap inst tinst :=
+  match inst with
+  | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
+  | _ => Error(msg "not implemented")
+  end.
+
+Definition verify_mapping_mn f xf (m: positive*positive) :=
+  let (tn, n) := m in
+  match (fn_code f)!n with
+  | None => Error (msg "verify_mapping_mn: Could not get an instruction at (fn_code f)!n")
+  | Some inst => match (fn_code (fn_RTL xf))!tn with
+                 | None => Error (msg "verify_mapping_mn: Could not get an instruction at (fn_code xf)!tn")
+                 | Some tinst => verify_match_inst (fn_revmap xf) inst tinst
+                 end
+  end.
+
+Fixpoint verify_mapping_mn_rec f xf lm :=
+  match lm with
+  | nil => OK tt
+  | m :: lm => do u <- verify_mapping_mn f xf m;
+               do u2 <- verify_mapping_mn_rec f xf lm;
+               OK tt
+  end.
+
+Definition verify_mapping_match_nodes (f: function) (xf: xfunction) : res unit :=
+  verify_mapping_mn_rec f xf (PTree.elements (fn_revmap xf)).
+
 (** Verifies that the [fn_revmap] of the translated function [xf] is giving correct information in regards to [f] *)
 Definition verify_mapping (f: function) (xf: xfunction) : res unit :=
   do u <- verify_mapping_entrypoint f xf; OK tt.

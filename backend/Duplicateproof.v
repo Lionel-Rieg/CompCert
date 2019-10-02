@@ -41,7 +41,7 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
 Axiom revmap_correct: forall f xf n n',
     transf_function_aux f = OK xf ->
     (fn_revmap xf)!n' = Some n ->
-    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n => (fn_revmap xf)!n) i i').
+    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n' => (fn_revmap xf)!n') i i').
 
 Theorem revmap_entrypoint:
   forall f xf, transf_function_aux f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
