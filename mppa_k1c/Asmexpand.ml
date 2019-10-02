@@ -345,34 +345,32 @@ let expand_int64_arith conflict rl fn = assert false
 (* Byte swaps.  There are no specific instructions, so we use standard,
    not-very-efficient formulas. *)
 
-let expand_bswap16 d s = assert false
+let expand_bswap16 d s = let open Asmvliw in
   (* d = (s & 0xFF) << 8 | (s >> 8) & 0xFF *)
-(*emit (Pandiw(X31, X s, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _8));
-  emit (Psrliw(d, X s, _8));
-  emit (Pandiw(d, X d, coqint_of_camlint 0xFFl));
-  emit (Porw(d, X X31, X d))
-*)
+  emit (Pandiw(GPR32, s, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _8)); emit Psemi;
+  emit (Psrliw(d, s, _8)); emit Psemi;
+  emit (Pandiw(d, d, coqint_of_camlint 0xFFl));
+  emit (Porw(d, GPR32, d)); emit Psemi
 
-let expand_bswap32 d s = assert false
+let expand_bswap32 d s = let open Asmvliw in
   (* d = (s << 24)
        | (((s >> 8) & 0xFF) << 16)
        | (((s >> 16) & 0xFF) << 8)
        | (s >> 24)  *)
-(*emit (Pslliw(X1, X s, coqint_of_camlint 24l));
-  emit (Psrliw(X31, X s, _8));
-  emit (Pandiw(X31, X X31, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _16));
-  emit (Porw(X1, X X1, X X31));
-  emit (Psrliw(X31, X s, _16));
-  emit (Pandiw(X31, X X31, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _8));
-  emit (Porw(X1, X X1, X X31));
-  emit (Psrliw(X31, X s, coqint_of_camlint 24l));
-  emit (Porw(d, X X1, X X31))
-*)
+  emit (Pslliw(GPR16, s, coqint_of_camlint 24l)); emit Psemi;
+  emit (Psrliw(GPR32, s, _8)); emit Psemi;
+  emit (Pandiw(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _16)); emit Psemi;
+  emit (Porw(GPR16, GPR16, GPR31)); emit Psemi;
+  emit (Psrliw(GPR32, s, _16)); emit Psemi;
+  emit (Pandiw(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _8)); emit Psemi;
+  emit (Porw(GPR16, GPR16, GPR32)); emit Psemi;
+  emit (Psrliw(GPR32, s, coqint_of_camlint 24l)); emit Psemi;
+  emit (Porw(d, GPR16, GPR32)); emit Psemi
 
-let expand_bswap64 d s = assert false
+let expand_bswap64 d s = let open Asmvliw in
   (* d = s << 56
          | (((s >> 8) & 0xFF) << 48)
          | (((s >> 16) & 0xFF) << 40)
@@ -381,17 +379,16 @@ let expand_bswap64 d s = assert false
          | (((s >> 40) & 0xFF) << 16)
          | (((s >> 48) & 0xFF) << 8)
          | s >> 56 *)
-(*emit (Psllil(X1, X s, coqint_of_camlint 56l));
+  emit (Psllil(GPR16, s, coqint_of_camlint 56l)); emit Psemi;
   List.iter
     (fun (n1, n2) ->
-      emit (Psrlil(X31, X s, coqint_of_camlint n1));
-      emit (Pandil(X31, X X31, coqint_of_camlint 0xFFl));
-      emit (Psllil(X31, X X31, coqint_of_camlint n2));
-      emit (Porl(X1, X X1, X X31)))
+      emit (Psrlil(GPR32, s, coqint_of_camlint n1)); emit Psemi;
+      emit (Pandil(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+      emit (Psllil(GPR32, GPR32, coqint_of_camlint n2)); emit Psemi;
+      emit (Porl(GPR16, GPR16, GPR32)); emit Psemi;)
     [(8l,48l); (16l,40l); (24l,32l); (32l,24l); (40l,16l); (48l,8l)];
-  emit (Psrlil(X31, X s, coqint_of_camlint 56l));
-  emit (Porl(d, X X1, X X31))
-*)
+  emit (Psrlil(GPR32, s, coqint_of_camlint 56l)); emit Psemi;
+  emit (Porl(d, GPR16, GPR32)); emit Psemi
 
 (* Handling of compiler-inlined builtins *)
 let last_system_register = 511l
@@ -477,6 +474,12 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Palclrd(res, addr))
   | "__builtin_alclrw", [BA(IR addr)], BR(IR res) ->
      emit (Palclrw(res, addr))
+  | "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
+     expand_bswap16 res a1
+  | ("__builtin_bswap"| "__builtin_bswap32"), [BA(IR a1)], BR(IR res) ->
+     expand_bswap32 res a1
+  | "__builtin_bswap64", [BA(IR src)], BR(IR res) ->
+     expand_bswap64 res src
 	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
@@ -504,8 +507,8 @@ let expand_instruction instr =
         expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
-            sz in
-          (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
+          let extra_ofs = if n <= _nbregargs_ then 0 else ((n - _nbregargs_) * wordsize) in
+          Z.add sz (Z.of_sint extra_ofs) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin

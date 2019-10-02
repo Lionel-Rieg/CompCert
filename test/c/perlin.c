@@ -63,13 +63,22 @@ static void init(void) {
     p[256+i] = p[i] = permutation[i];
 }
 
+#ifdef __K1C__
+#define INCREMENT 0.5
+#define MIN -3.0
+#define MAX 3.0
+#else
+#define INCREMENT 0.1
+#define MIN -5.0
+#define MAX 5.0
+#endif
 int main(int argc, char ** argv) {
   init();
   
   double x, y, z, sum = 0.0;
-  for (x = -5.0; x < 5.0; x += 0.1)
-    for (y = -5.0; y < 5.0; y += 0.1)
-      for (z = -5.0; z < 5.0; z += 0.1)
+  for (x = MIN; x < MAX; x += INCREMENT)
+    for (y = MIN; y < MAX; y += INCREMENT)
+      for (z = MIN; z < MAX; z += INCREMENT)
         sum += noise(x, y, z);
   
   printf("%.4e\n", sum);

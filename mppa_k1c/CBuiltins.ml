@@ -96,12 +96,8 @@ let builtins = {
 
     (* Synchronization *)
 (*  "__builtin_fence",
-      (TVoid [], [], false);
-    (* Integer arithmetic *)
-    "__builtin_bswap64",
-      (TInt(IULongLong, []), 
-       [TInt(IULongLong, [])], false);
-    (* Float arithmetic *)
+      (TVoid [], [], false); *)
+(*  (* Float arithmetic *)
     "__builtin_fmadd",
       (TFloat(FDouble, []),
        [TFloat(FDouble, []); TFloat(FDouble, []); TFloat(FDouble, [])], false);

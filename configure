@@ -818,6 +818,7 @@ cat >> Makefile.config <<EOF
 ARCHDIRS=$arch $arch/lib $arch/abstractbb $arch/abstractbb/Impure
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 CFLAGS= -D __K1C_COS__
+SIMU=k1-cluster -- 
 BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
     Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\

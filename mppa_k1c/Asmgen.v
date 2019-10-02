@@ -18,15 +18,17 @@
 Require Import Integers.
 Require Import Mach Asm Asmblock Asmblockgen Machblockgen.
 Require Import PostpassScheduling.
-Require Import Errors.
+Require Import Errors String.
 
 Local Open Scope error_monad_scope.
 
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
+
 Definition transf_program (p: Mach.program) : res Asm.program :=
-  let mbp := Machblockgen.transf_program p in
-  do abp <- Asmblockgen.transf_program mbp;
-  do abp' <- PostpassScheduling.transf_program abp;
-  OK (Asm.transf_program abp').
+  let mbp := (time "Machblock generation" Machblockgen.transf_program) p in
+  do abp <- (time "Asmblock generation" Asmblockgen.transf_program) mbp;
+  do abp' <- (time "PostpassScheduling total oracle+verification" PostpassScheduling.transf_program) abp;
+  OK ((time "Asm generation" Asm.transf_program) abp').
 
 Definition transf_function (f: Mach.function) : res Asm.function :=
   let mbf := Machblockgen.transf_function f in
