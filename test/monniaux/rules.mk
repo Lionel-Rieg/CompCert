@@ -7,6 +7,9 @@ ALL_CFILES?=$(wildcard *.c)
 # Name of the target
 TARGET?=toto
 
+# Arguments of execution
+EXECUTE_ARGS?=
+
 # Name of the clock object
 CLOCK=../clock
 
@@ -92,7 +95,7 @@ obj/%.o: asm/%.s
 
 out/%.out: bin/%.bin
 	@mkdir -p $(@D)
-	$(EXECUTE_CYCLES) $< | tee $@
+	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) | tee $@
 
 ##
 # Generating the rules for all the compiler/flags..
