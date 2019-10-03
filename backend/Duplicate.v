@@ -74,7 +74,8 @@ Definition verify_mapping_match_nodes (f: function) (xf: xfunction) : res unit :
 
 (** Verifies that the [fn_revmap] of the translated function [xf] is giving correct information in regards to [f] *)
 Definition verify_mapping (f: function) (xf: xfunction) : res unit :=
-  do u <- verify_mapping_entrypoint f xf; OK tt.
+  do u <- verify_mapping_entrypoint f xf;
+  do v <- verify_mapping_match_nodes f xf; OK tt.
 (* TODO - verify the other axiom *)
 
 (** * Entry points *)

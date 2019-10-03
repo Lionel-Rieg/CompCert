@@ -38,10 +38,88 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
       match_inst is_copy (Ijumptable r ln) (Ijumptable r ln')
   | match_inst_return: forall or, match_inst is_copy (Ireturn or) (Ireturn or).
 
-Axiom revmap_correct: forall f xf n n',
+Lemma verify_mapping_mn_rec_step:
+  forall lb b f xf,
+  In b lb ->
+  verify_mapping_mn_rec f xf lb = OK tt ->
+  verify_mapping_mn f xf b = OK tt.
+Proof.
+  induction lb; intros.
+  - monadInv H0. inversion H.
+  - inversion H.
+    + subst. monadInv H0. destruct x. assumption.
+    + monadInv H0. destruct x0. eapply IHlb; assumption.
+Qed.
+
+Lemma verify_is_copy_correct:
+  forall xf n n',
+  verify_is_copy (fn_revmap xf) n n' = OK tt ->
+  match_inst (fun nn => (fn_revmap xf) ! nn) (Inop n) (Inop n').
+Proof.
+  intros. unfold verify_is_copy in H. destruct (_ ! n') eqn:REVM; [|inversion H].
+  destruct (n ?= p) eqn:NP; try (inversion H; fail). clear H.
+  eapply Pos.compare_eq in NP. subst.
+  constructor; eauto.
+Qed.
+
+Lemma verify_match_inst_correct:
+  forall xf i i',
+  verify_match_inst (fn_revmap xf) i i' = OK tt ->
+  match_inst (fun nn => (fn_revmap xf) ! nn) i i'.
+Proof.
+  intros. unfold verify_match_inst in H.
+  destruct i; try (inversion H; fail).
+(* Inop *)
+  - destruct i'; try (inversion H; fail). monadInv H. eapply verify_is_copy_correct. destruct x. assumption.
+Qed.
+
+Lemma verify_mapping_mn_correct:
+  forall mp n n' i f xf tc,
+  mp ! n' = Some n ->
+  (fn_code f) ! n = Some i ->
+  (fn_code (fn_RTL xf)) = tc ->
+  fn_revmap xf = mp ->
+  verify_mapping_mn f xf (n', n) = OK tt ->
+  exists i',
+     tc ! n' = Some i'
+  /\ match_inst (fun nn => mp ! nn) i i'.
+Proof.
+  intros. unfold verify_mapping_mn in H3. rewrite H0 in H3. clear H0. rewrite H1 in H3. clear H1.
+  destruct (tc ! n') eqn:TCN; [| inversion H3].
+  exists i0. split; auto. rewrite <- H2.
+  eapply verify_match_inst_correct. assumption.
+Qed.
+
+
+Lemma verify_mapping_mn_rec_correct:
+  forall mp n n' i f xf tc,
+  mp ! n' = Some n ->
+  (fn_code f) ! n = Some i ->
+  (fn_code (fn_RTL xf)) = tc ->
+  fn_revmap xf = mp ->
+  verify_mapping_mn_rec f xf (PTree.elements mp) = OK tt ->
+  exists i',
+     tc ! n' = Some i'
+  /\ match_inst (fun nn => mp ! nn) i i'.
+Proof.
+  intros. exploit PTree.elements_correct. eapply H. intros IN.
+  eapply verify_mapping_mn_rec_step in H3; eauto.
+  eapply verify_mapping_mn_correct; eauto.
+Qed.
+
+
+Theorem revmap_correct: forall f xf n n',
     transf_function_aux f = OK xf ->
     (fn_revmap xf)!n' = Some n ->
     (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n' => (fn_revmap xf)!n') i i').
+Proof.
+  intros until n'. intros TRANSF REVM i FNC.
+  unfold transf_function_aux in TRANSF. destruct (duplicate_aux f) as (tcte & mp). destruct tcte as (tc & te). monadInv TRANSF.
+  simpl in *. monadInv EQ. clear EQ0.
+  unfold verify_mapping_match_nodes in EQ. simpl in EQ. destruct x1.
+  eapply verify_mapping_mn_rec_correct. 5: eapply EQ. all: eauto.
+Qed.
+
 
 Theorem revmap_entrypoint:
   forall f xf, transf_function_aux f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
@@ -49,8 +127,8 @@ Proof.
   intros. unfold transf_function_aux in H. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te).
   monadInv H. simpl. monadInv EQ. unfold verify_mapping_entrypoint in EQ0. simpl in EQ0.
   destruct (mp ! te) eqn:PT; try discriminate.
-  destruct (n ?= fn_entrypoint f) eqn:EQ; try discriminate. inv EQ0.
-  apply Pos.compare_eq in EQ. congruence.
+  destruct (n ?= fn_entrypoint f) eqn:EQQ; try discriminate. inv EQ0.
+  apply Pos.compare_eq in EQQ. congruence.
 Qed.
 
 Section PRESERVATION.
