@@ -51,15 +51,26 @@ Proof.
     + monadInv H0. destruct x0. eapply IHlb; assumption.
 Qed.
 
-Lemma verify_is_copy_correct:
-  forall xf n n',
+Inductive rtl_one_successor : node -> node -> instruction -> instruction -> Prop :=
+  | inop_one_succ : forall n n', rtl_one_successor n n' (Inop n) (Inop n')
+  | iop_one_succ : forall op lr r n n', rtl_one_successor n n' (Iop op lr r n) (Iop op lr r n')
+  | iload_one_succ : forall m a lr r n n', rtl_one_successor n n' (Iload m a lr r n) (Iload m a lr r n')
+  | istore_one_succ : forall m a lr r n n', rtl_one_successor n n' (Istore m a lr r n) (Istore m a lr r n')
+  | icall_one_succ : forall s ri lr r n n', rtl_one_successor n n' (Icall s ri lr r n) (Icall s ri lr r n')
+  | ibuiltin_one_succ : forall ef lbr br n n', rtl_one_successor n n' (Ibuiltin ef lbr br n) (Ibuiltin ef lbr br n')
+.
+
+Lemma verify_is_copy_correct_one:
+  forall xf n n' i i',
   verify_is_copy (fn_revmap xf) n n' = OK tt ->
-  match_inst (fun nn => (fn_revmap xf) ! nn) (Inop n) (Inop n').
+  rtl_one_successor n n' i i' ->
+  match_inst (fun nn => (fn_revmap xf) ! nn) i i'.
 Proof.
   intros. unfold verify_is_copy in H. destruct (_ ! n') eqn:REVM; [|inversion H].
   destruct (n ?= p) eqn:NP; try (inversion H; fail). clear H.
   eapply Pos.compare_eq in NP. subst.
-  constructor; eauto.
+  inv H0.
+  all: constructor; eauto.
 Qed.
 
 Lemma verify_match_inst_correct:
@@ -70,7 +81,8 @@ Proof.
   intros. unfold verify_match_inst in H.
   destruct i; try (inversion H; fail).
 (* Inop *)
-  - destruct i'; try (inversion H; fail). monadInv H. eapply verify_is_copy_correct. destruct x. assumption.
+  - destruct i'; try (inversion H; fail). monadInv H. eapply verify_is_copy_correct_one. destruct x. eassumption.
+    constructor; eauto.
 Qed.
 
 Lemma verify_mapping_mn_correct:
