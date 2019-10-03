@@ -2,7 +2,7 @@
   structures *)
 
 Require Import AST RTL Maps Globalenvs.
-Require Import Coqlib Errors.
+Require Import Coqlib Errors Op.
 
 Local Open Scope error_monad_scope.
 Local Open Scope positive_scope.
@@ -45,9 +45,21 @@ Definition verify_is_copy revmap n n' :=
   | Some revn => match (Pos.compare n revn) with Eq => OK tt | _ => Error(msg "verify_is_copy invalid map") end
   end.
 
+
 Definition verify_match_inst revmap inst tinst :=
   match inst with
   | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
+  | Iop op lr r n => match tinst with
+      Iop op' lr' r' n' =>
+          do u <- verify_is_copy revmap n n';
+          if (eq_operation op op') then
+            if (list_eq_dec Pos.eq_dec lr lr') then
+              if (Pos.eq_dec r r') then
+                OK tt
+              else Error (msg "Different r in Iop")
+            else Error (msg "Different lr in Iop")
+          else Error(msg "Different operations in Iop")
+      | _ => Error(msg "verify_match_inst Inop") end
   | _ => Error(msg "not implemented")
   end.
 
