@@ -85,9 +85,25 @@ Proof.
     constructor; eauto.
 (* Iop *)
   - destruct i'; try (inversion H; fail). monadInv H.
-    destruct (eq_operation _ _) eqn:EQO; try discriminate.
-    destruct (list_eq_dec _ _ _) eqn:LEQ; try discriminate.
-    destruct (Pos.eq_dec _ _) eqn:POS; try discriminate. clear EQ0. subst.
+    destruct (eq_operation _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate.
+    destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
+    eapply verify_is_copy_correct_one. destruct x. eassumption.
+    constructor.
+(* Iload *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct (chunk_eq _ _); try discriminate.
+    destruct (eq_addressing _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate.
+    destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
+    eapply verify_is_copy_correct_one. destruct x. eassumption.
+    constructor.
+(* Istore *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct (chunk_eq _ _); try discriminate.
+    destruct (eq_addressing _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate.
+    destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
     eapply verify_is_copy_correct_one. destruct x. eassumption.
     constructor.
 Qed.
