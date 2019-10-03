@@ -106,6 +106,14 @@ Proof.
     destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
     eapply verify_is_copy_correct_one. destruct x. eassumption.
     constructor.
+(* Icall *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct (signature_eq _ _); try discriminate.
+    destruct (product_eq _ _ _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate.
+    destruct (Pos.eq_dec _ _); try discriminate.
+    eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
+    constructor.
 Qed.
 
 Lemma verify_mapping_mn_correct:

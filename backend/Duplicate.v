@@ -45,6 +45,13 @@ Definition verify_is_copy revmap n n' :=
   | Some revn => match (Pos.compare n revn) with Eq => OK tt | _ => Error(msg "verify_is_copy invalid map") end
   end.
 
+Lemma product_eq {A B: Type} :
+  (forall (a b: A), {a=b} + {a<>b}) ->
+  (forall (c d: B), {c=d} + {c<>d}) ->
+  forall (x y: A+B), {x=y} + {x<>y}.
+Proof.
+  intros H H'. intros. decide equality.
+Qed.
 
 Definition verify_match_inst revmap inst tinst :=
   match inst with
@@ -84,6 +91,18 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different addressing in Istore")
           else Error (msg "Different mchunk in Istore")
       | _ => Error (msg "verify_match_inst Istore") end
+  | Icall s ri lr r n => match tinst with
+      | Icall s' ri' lr' r' n' =>
+          do u <- verify_is_copy revmap n n';
+          if (signature_eq s s') then
+            if (product_eq Pos.eq_dec ident_eq ri ri') then
+              if (list_eq_dec Pos.eq_dec lr lr') then
+                if (Pos.eq_dec r r') then OK tt
+                else Error (msg "Different r r' in Icall")
+              else Error (msg "Different lr in Icall")
+            else Error (msg "Different ri in Icall")
+          else Error (msg "Different signatures in Icall")
+      | _ => Error (msg "verify_match_inst Icall") end
   | _ => Error(msg "not implemented")
   end.
 
