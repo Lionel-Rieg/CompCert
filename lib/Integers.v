@@ -101,17 +101,6 @@ Hint Resolve modulus_pos: ints.
 
 Record int: Type := mkint { intval: Z; intrange: -1 < intval < modulus }.
 
-Definition int_eq: forall (i1 i2: int), {i1=i2} + {i1<>i2}.
-Proof.
-  generalize Z.eq_dec. intros.
-  destruct i1. destruct i2. generalize (H intval0 intval1). intro.
-  inversion H0.
-  - subst. left. assert (intrange0 = intrange1) by (apply proof_irr). congruence.
-  - right. intro. inversion H2. contradiction.
-Qed.
-
-(* TODO - continue for the rest *)
-
 (** Fast normalization modulo [2^wordsize] *)
 
 Definition Z_mod_modulus (x: Z) : Z :=
@@ -4167,7 +4156,25 @@ End Int64.
 
 Strategy 0 [Wordsize_64.wordsize].
 
+Definition int_eq: forall (i1 i2: int), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
+
 Notation int64 := Int64.int.
+
+Definition int64_eq: forall (i1 i2: int64), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Int.repr Int64.repr Byte.repr.
 
@@ -4444,6 +4451,15 @@ End Ptrofs.
 Strategy 0 [Wordsize_Ptrofs.wordsize].
 
 Notation ptrofs := Ptrofs.int.
+
+Definition ptrofs_eq: forall (i1 i2: ptrofs), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Ptrofs.repr.
 

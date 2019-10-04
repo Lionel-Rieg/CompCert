@@ -114,6 +114,13 @@ Proof.
     destruct (Pos.eq_dec _ _); try discriminate.
     eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
     constructor.
+(* Ibuiltin *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct (external_function_eq _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate.
+    destruct (builtin_res_eq_pos _ _); try discriminate.
+    eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
+    constructor.
 Qed.
 
 Lemma verify_mapping_mn_correct:

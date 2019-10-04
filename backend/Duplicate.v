@@ -53,6 +53,20 @@ Proof.
   intros H H'. intros. decide equality.
 Qed.
 
+(** FIXME Ideally i would like to put this in AST.v but i get an "illegal application"
+ * error when doing so *)
+Remark builtin_arg_eq_pos: forall (a b: builtin_arg positive), {a=b} + {a<>b}.
+Proof.
+  intros.
+  apply (builtin_arg_eq Pos.eq_dec).
+Defined.
+Global Opaque builtin_arg_eq_pos.
+
+Remark builtin_res_eq_pos: forall (a b: builtin_res positive), {a=b} + {a<>b}.
+Proof. intros. apply (builtin_res_eq Pos.eq_dec). Qed.
+Global Opaque builtin_res_eq_pos.
+
+
 Definition verify_match_inst revmap inst tinst :=
   match inst with
   | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
@@ -103,6 +117,16 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different ri in Icall")
           else Error (msg "Different signatures in Icall")
       | _ => Error (msg "verify_match_inst Icall") end
+  | Ibuiltin ef lbar brr n => match tinst with
+      | Ibuiltin ef' lbar' brr' n' =>
+          do u <- verify_is_copy revmap n n';
+          if (external_function_eq ef ef') then
+            if (list_eq_dec builtin_arg_eq_pos lbar lbar') then
+              if (builtin_res_eq_pos brr brr') then OK tt
+              else Error (msg "Different brr in Ibuiltin")
+            else Error (msg "Different lbar in Ibuiltin")
+          else Error (msg "Different ef in Ibuiltin")
+      | _ => Error (msg "verify_match_inst Ibuiltin") end
   | _ => Error(msg "not implemented")
   end.
 
