@@ -16,7 +16,7 @@
 (** Formalizations of machine integers modulo $2^N$ #2<sup>N</sup>#. *)
 
 Require Import Eqdep_dec Zquot Zwf.
-Require Import Coqlib Zbits.
+Require Import Coqlib Zbits Axioms.
 Require Archi.
 
 (** * Comparisons *)
@@ -100,6 +100,17 @@ Hint Resolve modulus_pos: ints.
   [modulus] (excluded). *)
 
 Record int: Type := mkint { intval: Z; intrange: -1 < intval < modulus }.
+
+Definition int_eq: forall (i1 i2: int), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval0 intval1). intro.
+  inversion H0.
+  - subst. left. assert (intrange0 = intrange1) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
+
+(* TODO - continue for the rest *)
 
 (** Fast normalization modulo [2^wordsize] *)
 
