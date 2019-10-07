@@ -45,6 +45,17 @@ Definition verify_is_copy revmap n n' :=
   | Some revn => match (Pos.compare n revn) with Eq => OK tt | _ => Error(msg "verify_is_copy invalid map") end
   end.
 
+Fixpoint verify_is_copy_list revmap ln ln' :=
+  match ln with
+  | n::ln => match ln' with
+             | n'::ln' => do u <- verify_is_copy revmap n n';
+                          verify_is_copy_list revmap ln ln'
+             | nil => Error (msg "verify_is_copy_list: ln' bigger than ln") end
+  | nil => match ln' with
+          | n :: ln' => Error (msg "verify_is_copy_list: ln bigger than ln'")
+          | nil => OK tt end
+  end.
+
 Lemma product_eq {A B: Type} :
   (forall (a b: A), {a=b} + {a<>b}) ->
   (forall (c d: B), {c=d} + {c<>d}) ->
@@ -152,12 +163,18 @@ Definition verify_match_inst revmap inst tinst :=
           else Error (msg "Different cond in Icond")
       | _ => Error (msg "verify_match_inst Icond") end
 
+  | Ijumptable r ln => match tinst with
+      | Ijumptable r' ln' =>
+          do u <- verify_is_copy_list revmap ln ln';
+          if (Pos.eq_dec r r') then OK tt
+          else Error (msg "Different r in Ijumptable")
+      | _ => Error (msg "verify_match_inst Ijumptable") end
+
   | Ireturn or => match tinst with
       | Ireturn or' =>
           if (option_eq Pos.eq_dec or or') then OK tt
           else Error (msg "Different or in Ireturn")
       | _ => Error (msg "verify_match_inst Ireturn") end
-  | _ => Error(msg "not implemented")
   end.
 
 Definition verify_mapping_mn f xf (m: positive*positive) :=

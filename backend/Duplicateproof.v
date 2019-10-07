@@ -51,26 +51,26 @@ Proof.
     + monadInv H0. destruct x0. eapply IHlb; assumption.
 Qed.
 
-Inductive rtl_one_successor : node -> node -> instruction -> instruction -> Prop :=
-  | inop_one_succ : forall n n', rtl_one_successor n n' (Inop n) (Inop n')
-  | iop_one_succ : forall op lr r n n', rtl_one_successor n n' (Iop op lr r n) (Iop op lr r n')
-  | iload_one_succ : forall m a lr r n n', rtl_one_successor n n' (Iload m a lr r n) (Iload m a lr r n')
-  | istore_one_succ : forall m a lr r n n', rtl_one_successor n n' (Istore m a lr r n) (Istore m a lr r n')
-  | icall_one_succ : forall s ri lr r n n', rtl_one_successor n n' (Icall s ri lr r n) (Icall s ri lr r n')
-  | ibuiltin_one_succ : forall ef lbr br n n', rtl_one_successor n n' (Ibuiltin ef lbr br n) (Ibuiltin ef lbr br n')
-.
-
-Lemma verify_is_copy_correct_one:
-  forall xf n n' i i',
+Lemma verify_is_copy_correct:
+  forall xf n n',
   verify_is_copy (fn_revmap xf) n n' = OK tt ->
-  rtl_one_successor n n' i i' ->
-  match_inst (fun nn => (fn_revmap xf) ! nn) i i'.
+  (fn_revmap xf) ! n' = Some n.
 Proof.
   intros. unfold verify_is_copy in H. destruct (_ ! n') eqn:REVM; [|inversion H].
-  destruct (n ?= p) eqn:NP; try (inversion H; fail). clear H.
+  destruct (n ?= n0) eqn:NP; try (inversion H; fail).
   eapply Pos.compare_eq in NP. subst.
-  inv H0.
-  all: constructor; eauto.
+  reflexivity.
+Qed.
+
+Lemma verify_is_copy_list_correct:
+  forall xf ln ln',
+  verify_is_copy_list (fn_revmap xf) ln ln' = OK tt ->
+  list_forall2 (fun n n' => (fn_revmap xf) ! n' = Some n) ln ln'.
+Proof.
+  induction ln.
+  - intros. destruct ln'; monadInv H. constructor.
+  - intros. destruct ln'; monadInv H. destruct x. apply verify_is_copy_correct in EQ.
+    eapply IHln in EQ0. constructor; assumption.
 Qed.
 
 Lemma verify_match_inst_correct:
@@ -81,39 +81,40 @@ Proof.
   intros. unfold verify_match_inst in H.
   destruct i; try (inversion H; fail).
 (* Inop *)
-  - destruct i'; try (inversion H; fail). monadInv H. eapply verify_is_copy_correct_one. destruct x. eassumption.
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     constructor; eauto.
 (* Iop *)
   - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     destruct (eq_operation _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
     destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
-    eapply verify_is_copy_correct_one. destruct x. eassumption.
-    constructor.
+    constructor. assumption.
 (* Iload *)
   - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     destruct (chunk_eq _ _); try discriminate.
     destruct (eq_addressing _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
     destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
-    eapply verify_is_copy_correct_one. destruct x. eassumption.
-    constructor.
+    constructor. assumption.
 (* Istore *)
   - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     destruct (chunk_eq _ _); try discriminate.
     destruct (eq_addressing _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
     destruct (Pos.eq_dec _ _); try discriminate. clear EQ0. subst.
-    eapply verify_is_copy_correct_one. destruct x. eassumption.
-    constructor.
+    constructor. assumption.
 (* Icall *)
   - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     destruct (signature_eq _ _); try discriminate.
     destruct (product_eq _ _ _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
-    destruct (Pos.eq_dec _ _); try discriminate.
-    eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
-    constructor.
+    destruct (Pos.eq_dec _ _); try discriminate. subst.
+    constructor. assumption.
 (* Itailcall *)
   - destruct i'; try (inversion H; fail).
     destruct (signature_eq _ _); try discriminate.
@@ -122,25 +123,29 @@ Proof.
     constructor.
 (* Ibuiltin *)
   - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_correct in EQ.
     destruct (external_function_eq _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
-    destruct (builtin_res_eq_pos _ _); try discriminate.
-    eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
-    constructor.
+    destruct (builtin_res_eq_pos _ _); try discriminate. subst.
+    constructor. assumption.
 (* Icond *)
   - destruct i'; try (inversion H; fail). monadInv H.
-    unfold verify_is_copy in EQ, EQ1.
-      destruct (_ ! n1) eqn:REVM; [|inversion EQ].
-      destruct (n ?= p) eqn:NP; try (inversion EQ; fail). eapply Pos.compare_eq in NP. subst. inv EQ.
-      destruct (_ ! n2) eqn:REVMM; [|inversion EQ1].
-      destruct (n0 ?= p0) eqn:NP0; try (inversion EQ1; fail). eapply Pos.compare_eq in NP0. subst. inv EQ1.
+    destruct x. eapply verify_is_copy_correct in EQ.
+    destruct x0. eapply verify_is_copy_correct in EQ1.
     destruct (condition_eq _ _); try discriminate.
-    destruct (list_eq_dec _ _ _); try discriminate. subst. constructor; assumption.
+    destruct (list_eq_dec _ _ _); try discriminate. subst.
+    constructor; assumption.
+(* Ijumptable *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    destruct x. eapply verify_is_copy_list_correct in EQ.
+    destruct (Pos.eq_dec _ _); try discriminate. subst.
+    constructor. assumption.
 (* Ireturn *)
   - destruct i'; try (inversion H; fail).
     destruct (option_eq _ _ _); try discriminate. subst. clear H.
     constructor.
 Qed.
+
 
 Lemma verify_mapping_mn_correct:
   forall mp n n' i f xf tc,
