@@ -29,6 +29,11 @@ Inductive comparison : Type :=
   | Cgt : comparison               (**r greater than *)
   | Cge : comparison.              (**r greater than or equal *)
 
+Definition comparison_eq: forall (x y: comparison), {x = y} + {x <> y}.
+Proof.
+  decide equality.
+Defined.
+
 Definition negate_comparison (c: comparison): comparison :=
   match c with
   | Ceq => Cne

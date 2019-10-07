@@ -127,6 +127,15 @@ Proof.
     destruct (builtin_res_eq_pos _ _); try discriminate.
     eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
     constructor.
+(* Icond *)
+  - destruct i'; try (inversion H; fail). monadInv H.
+    unfold verify_is_copy in EQ, EQ1.
+      destruct (_ ! n1) eqn:REVM; [|inversion EQ].
+      destruct (n ?= p) eqn:NP; try (inversion EQ; fail). eapply Pos.compare_eq in NP. subst. inv EQ.
+      destruct (_ ! n2) eqn:REVMM; [|inversion EQ1].
+      destruct (n0 ?= p0) eqn:NP0; try (inversion EQ1; fail). eapply Pos.compare_eq in NP0. subst. inv EQ1.
+    destruct (condition_eq _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate. subst. constructor; assumption.
 (* Ireturn *)
   - destruct i'; try (inversion H; fail).
     destruct (option_eq _ _ _); try discriminate. subst. clear H.

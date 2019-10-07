@@ -51,6 +51,12 @@ Inductive condition : Type :=
   | Ccompfs (c: comparison)     (**r 32-bit floating-point comparison *)
   | Cnotcompfs (c: comparison). (**r negation of a floating-point comparison *)
 
+Definition condition_eq: forall (x y: condition), {x = y} + {x <> y}.
+Proof.
+  generalize comparison_eq int_eq int64_eq.
+  decide equality.
+Defined.
+
 Inductive condition0 : Type :=
   | Ccomp0 (c: comparison) (**r signed integer comparison with 0 *)
   | Ccompu0 (c: comparison) (**r unsigned integer comparison with 0 *)

@@ -69,6 +69,7 @@ Global Opaque builtin_res_eq_pos.
 Definition verify_match_inst revmap inst tinst :=
   match inst with
   | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
+
   | Iop op lr r n => match tinst with
       Iop op' lr' r' n' =>
           do u <- verify_is_copy revmap n n';
@@ -80,6 +81,7 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different lr in Iop")
           else Error(msg "Different operations in Iop")
       | _ => Error(msg "verify_match_inst Inop") end
+
   | Iload m a lr r n => match tinst with
       | Iload m' a' lr' r' n' =>
           do u <- verify_is_copy revmap n n';
@@ -92,6 +94,7 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different addressing in Iload")
           else Error (msg "Different mchunk in Iload")
       | _ => Error (msg "verify_match_inst Iload") end
+
   | Istore m a lr r n => match tinst with
       | Istore m' a' lr' r' n' =>
           do u <- verify_is_copy revmap n n';
@@ -104,6 +107,7 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different addressing in Istore")
           else Error (msg "Different mchunk in Istore")
       | _ => Error (msg "verify_match_inst Istore") end
+
   | Icall s ri lr r n => match tinst with
       | Icall s' ri' lr' r' n' =>
           do u <- verify_is_copy revmap n n';
@@ -116,6 +120,7 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different ri in Icall")
           else Error (msg "Different signatures in Icall")
       | _ => Error (msg "verify_match_inst Icall") end
+
   | Itailcall s ri lr => match tinst with
       | Itailcall s' ri' lr' =>
           if (signature_eq s s') then
@@ -125,6 +130,7 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different ri in Itailcall")
           else Error (msg "Different signatures in Itailcall")
       | _ => Error (msg "verify_match_inst Itailcall") end
+
   | Ibuiltin ef lbar brr n => match tinst with
       | Ibuiltin ef' lbar' brr' n' =>
           do u <- verify_is_copy revmap n n';
@@ -135,6 +141,17 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different lbar in Ibuiltin")
           else Error (msg "Different ef in Ibuiltin")
       | _ => Error (msg "verify_match_inst Ibuiltin") end
+
+  | Icond cond lr n1 n2 => match tinst with
+      | Icond cond' lr' n1' n2' =>
+          do u1 <- verify_is_copy revmap n1 n1';
+          do u2 <- verify_is_copy revmap n2 n2';
+          if (condition_eq cond cond') then
+            if (list_eq_dec Pos.eq_dec lr lr') then OK tt
+            else Error (msg "Different lr in Icond")
+          else Error (msg "Different cond in Icond")
+      | _ => Error (msg "verify_match_inst Icond") end
+
   | Ireturn or => match tinst with
       | Ireturn or' =>
           if (option_eq Pos.eq_dec or or') then OK tt
