@@ -66,7 +66,6 @@ Remark builtin_res_eq_pos: forall (a b: builtin_res positive), {a=b} + {a<>b}.
 Proof. intros. apply (builtin_res_eq Pos.eq_dec). Qed.
 Global Opaque builtin_res_eq_pos.
 
-
 Definition verify_match_inst revmap inst tinst :=
   match inst with
   | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
@@ -127,6 +126,11 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different lbar in Ibuiltin")
           else Error (msg "Different ef in Ibuiltin")
       | _ => Error (msg "verify_match_inst Ibuiltin") end
+  | Ireturn or => match tinst with
+      | Ireturn or' =>
+          if (option_eq Pos.eq_dec or or') then OK tt
+          else Error (msg "Different or in Ireturn")
+      | _ => Error (msg "verify_match_inst Ireturn") end
   | _ => Error(msg "not implemented")
   end.
 

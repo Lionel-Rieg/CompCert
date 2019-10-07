@@ -121,6 +121,10 @@ Proof.
     destruct (builtin_res_eq_pos _ _); try discriminate.
     eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
     constructor.
+(* Ireturn *)
+  - destruct i'; try (inversion H; fail).
+    destruct (option_eq _ _ _); try discriminate. subst. clear H.
+    constructor.
 Qed.
 
 Lemma verify_mapping_mn_correct:
