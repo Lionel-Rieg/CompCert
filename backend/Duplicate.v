@@ -116,6 +116,15 @@ Definition verify_match_inst revmap inst tinst :=
             else Error (msg "Different ri in Icall")
           else Error (msg "Different signatures in Icall")
       | _ => Error (msg "verify_match_inst Icall") end
+  | Itailcall s ri lr => match tinst with
+      | Itailcall s' ri' lr' =>
+          if (signature_eq s s') then
+            if (product_eq Pos.eq_dec ident_eq ri ri') then
+              if (list_eq_dec Pos.eq_dec lr lr') then OK tt
+              else Error (msg "Different lr in Itailcall")
+            else Error (msg "Different ri in Itailcall")
+          else Error (msg "Different signatures in Itailcall")
+      | _ => Error (msg "verify_match_inst Itailcall") end
   | Ibuiltin ef lbar brr n => match tinst with
       | Ibuiltin ef' lbar' brr' n' =>
           do u <- verify_is_copy revmap n n';

@@ -26,8 +26,8 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
       is_copy n' = (Some n) -> match_inst is_copy (Istore m a lr r n) (Istore m a lr r n')
   | match_inst_call: forall n n' s ri lr r,
       is_copy n' = (Some n) -> match_inst is_copy (Icall s ri lr r n) (Icall s ri lr r n')
-  | match_inst_tailcall: forall n n' s ri lr,
-      is_copy n' = (Some n) -> match_inst is_copy (Itailcall s ri lr) (Itailcall s ri lr)
+  | match_inst_tailcall: forall s ri lr,
+      match_inst is_copy (Itailcall s ri lr) (Itailcall s ri lr)
   | match_inst_builtin: forall n n' ef la br,
       is_copy n' = (Some n) -> match_inst is_copy (Ibuiltin ef la br n) (Ibuiltin ef la br n')
   | match_inst_cond: forall ifso ifso' ifnot ifnot' c lr,
@@ -113,6 +113,12 @@ Proof.
     destruct (list_eq_dec _ _ _); try discriminate.
     destruct (Pos.eq_dec _ _); try discriminate.
     eapply verify_is_copy_correct_one. destruct x. eassumption. subst.
+    constructor.
+(* Itailcall *)
+  - destruct i'; try (inversion H; fail).
+    destruct (signature_eq _ _); try discriminate.
+    destruct (product_eq _ _ _ _); try discriminate.
+    destruct (list_eq_dec _ _ _); try discriminate. subst. clear H.
     constructor.
 (* Ibuiltin *)
   - destruct i'; try (inversion H; fail). monadInv H.
