@@ -1041,6 +1041,7 @@ Proof.
   simpl in *. inv Hpstate.
   rewrite Hbody in TBC. monadInv TBC.
   inv BSTEP.
+
   - (* MBgetstack *)
     simpl in EQ0.
     unfold Mach.load_stack in H.
@@ -1056,12 +1057,17 @@ Proof.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. simpl. auto. }
-    rewrite <- Hheadereq. *) subst.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. simpl. auto. }
+(*     rewrite <- Hheadereq. *) subst. simpl in Hheadereq.
 
-    eapply match_codestate_intro; eauto. simpl. simpl in EQ. (*  { destruct (MB.header bb); auto. } *)
+    eapply match_codestate_intro; eauto.
+      { simpl. simpl in EQ. rewrite <- Hheadereq in EQ. assumption. }
     eapply agree_set_mreg; eauto with asmgen.
-    intro Hep. simpl in Hep. inv Hep.
+    intro Hep. simpl in Hep. 
+    destruct (andb_prop _ _ Hep). clear Hep.
+    rewrite <- Hheadereq in DXP. subst. rewrite <- DXP. rewrite Hrs'2. reflexivity.
+    discriminate. apply preg_of_not_FP; assumption. reflexivity.
+
   - (* MBsetstack *)
     simpl in EQ0.
     unfold Mach.store_stack in H.
@@ -1197,12 +1203,15 @@ Local Transparent destroyed_by_op.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ.
-
-    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
-    simpl; congruence.
+    rewrite <- Hheadereq in EQ. assumption.
+    eapply agree_set_mreg; eauto with asmgen.
+    intro Hep. simpl in Hep. 
+    destruct (andb_prop _ _ Hep). clear Hep.
+    subst. rewrite <- DXP. rewrite R; try discriminate. reflexivity.
+    apply preg_of_not_FP; assumption. reflexivity.
 
   - (* MBstore *)
     simpl in EQ0. rewrite Hheader in DXP.
@@ -1223,11 +1232,13 @@ Local Transparent destroyed_by_op.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ.
-
+    rewrite <- Hheadereq in EQ. assumption.
     eapply agree_undef_regs; eauto with asmgen.
-    simpl; congruence.
+    intro Hep. simpl in Hep.
+    subst. rewrite <- DXP. rewrite Q; try discriminate. reflexivity. reflexivity.
 Qed.
 
 Lemma exec_body_trans:
