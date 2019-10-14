@@ -68,6 +68,14 @@ let classify_param env ty =
     match !struct_passing_style with
     | SP_ref_callee -> Param_unchanged
     | SP_ref_caller -> Param_ref_caller
+    | SP_value32_ref_callee ->
+      (match sizeof env ty, alignof env ty with
+      | Some sz, Some al ->
+          if (sz <= 4) then
+            Param_flattened ((sz+3)/4, sz, al) (* FIXME - why (sz+3)/4 ? *)
+          else
+            Param_unchanged
+      | _, _ -> failwith "StructPassing.classify_param SP_split_args32_ref_callee")
     | SP_split_args ->
       match sizeof env ty, alignof env ty with
       | Some sz, Some al ->
