@@ -75,7 +75,8 @@ let classify_param env ty =
             Param_flattened ((sz+3)/4, sz, al) (* FIXME - why (sz+3)/4 ? *)
           else
             Param_unchanged
-      | _, _ -> failwith "StructPassing.classify_param SP_split_args32_ref_callee")
+      | _, _ -> Param_unchanged (* when parsing prototype with incomplete structure definition *)
+      )
     | SP_split_args ->
       match sizeof env ty, alignof env ty with
       | Some sz, Some al ->
