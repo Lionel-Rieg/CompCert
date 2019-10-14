@@ -68,7 +68,7 @@ let classify_param env ty =
     match !struct_passing_style with
     | SP_ref_callee -> Param_unchanged
     | SP_ref_caller -> Param_ref_caller
-    | _ ->
+    | SP_split_args ->
       match sizeof env ty, alignof env ty with
       | Some sz, Some al ->
           Param_flattened ((sz + 3) / 4, sz, al)
