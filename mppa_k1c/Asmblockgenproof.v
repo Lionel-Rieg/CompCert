@@ -1621,12 +1621,12 @@ Proof.
   exploit (Pget_correct tge GPRA RA nil rs2 m2'); auto.
   intros (rs' & U' & V').
   exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPRA nil rs' m2').
-    rewrite chunk_of_Tptr in P.
+  { rewrite chunk_of_Tptr in P.
     assert (rs' GPRA = rs0 RA). { apply V'. }
     assert (rs' SP = rs2 SP). { apply V'; discriminate. }
     rewrite H4. rewrite H3.
     rewrite ATLR.
-    change (rs2 SP) with sp. eexact P.
+    change (rs2 SP) with sp. eexact P. }
   intros (rs3 & U & V).
   assert (EXEC_PROLOGUE: exists rs3',
             exec_straight_blocks tge tf
@@ -1652,7 +1652,7 @@ Proof.
   } destruct EXEC_PROLOGUE as (rs3' & EXEC_PROLOGUE & Heqrs3').
   exploit exec_straight_steps_2; eauto using functions_transl.
   simpl fn_blocks. simpl fn_blocks in g. omega. constructor.
-  intros (ofs' & X & Y).                    
+  intros (ofs' & X & Y).
   left; exists (State rs3' m3'); split.
   eapply exec_straight_steps_1; eauto.
   simpl fn_blocks. simpl fn_blocks in g. omega.
