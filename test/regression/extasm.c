@@ -5,14 +5,16 @@ int clobbers(int x, int z)
 {
   int y;
   asm("TEST0 out:%0 in:%1" : "=r"(y) : "r"(x) : "cc"
-#if defined(__x86_64__)
+#if defined(ARCH_x86) && defined(MODEL_64)
       , "rax", "rdx", "rbx"
-#elif defined(__i386__)
+#elif defined(ARCH_x86) && !defined(MODEL_64)
       , "eax", "edx", "ebx"
-#elif defined(__arm__)
+#elif defined(ARCH_arm)
       , "r0", "r1", "r4"
-#elif defined(__PPC__)
+#elif defined(ARCH_powerpc)
       , "r0", "r3", "r4", "r31"
+#elif defined(ARCH_aarch64)
+      , "x0", "x1", "x16", "x29", "x30"
 #endif
 );
   return y + z;
@@ -22,7 +24,8 @@ int clobbers(int x, int z)
  || (defined(ARCH_riscV) && defined(MODEL_64)) \
  || (defined(ARCH_powerpc) && defined(MODEL_ppc64)) \
  || (defined(ARCH_powerpc) && defined(MODEL_e5500)) \
- || (defined(ARCH_mppa_k1c) && defined(MODEL_64))
+ || (defined(ARCH_mppa_k1c) && defined(MODEL_64)) \
+ || defined(ARCH_aarch64)
 #define SIXTYFOUR
 #else
 #undef SIXTYFOUR
