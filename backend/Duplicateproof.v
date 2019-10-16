@@ -132,7 +132,7 @@ Proof.
   - destruct i'; try (inversion H; fail). monadInv H.
     destruct x. eapply verify_is_copy_correct in EQ.
     destruct x0. eapply verify_is_copy_correct in EQ1.
-    destruct (condition_eq _ _); try discriminate.
+    destruct (eq_condition _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate. subst.
     constructor; assumption.
 (* Ijumptable *)

@@ -157,7 +157,7 @@ Definition verify_match_inst revmap inst tinst :=
       | Icond cond' lr' n1' n2' =>
           do u1 <- verify_is_copy revmap n1 n1';
           do u2 <- verify_is_copy revmap n2 n2';
-          if (condition_eq cond cond') then
+          if (eq_condition cond cond') then
             if (list_eq_dec Pos.eq_dec lr lr') then OK tt
             else Error (msg "Different lr in Icond")
           else Error (msg "Different cond in Icond")
