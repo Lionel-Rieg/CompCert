@@ -1185,7 +1185,7 @@ Definition transl_block (f: Machblock.function) (fb: Machblock.bblock) (ep: bool
 Fixpoint transl_blocks (f: Machblock.function) (lmb: list Machblock.bblock) (ep: bool) :=
   match lmb with
   | nil => OK nil
-  | mb :: lmb => 
+  | mb :: lmb =>
       do lb <- transl_block f mb (if Machblock.header mb then ep else false);
       do lb' <- transl_blocks f lmb false;
       OK (lb @@ lb')
