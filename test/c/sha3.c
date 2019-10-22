@@ -190,8 +190,13 @@ test_triplet_t testvec[4] = {
   }
 };
 
+#ifdef __K1C__
+#define DATALEN 1000
+#define NITER 7
+#else
 #define DATALEN 100000
 #define NITER 25
+#endif
 
 int main()
 {
