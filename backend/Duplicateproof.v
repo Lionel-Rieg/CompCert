@@ -5,14 +5,7 @@ Require Import Op RTL Duplicate.
 
 Local Open Scope positive_scope.
 
-Definition match_prog (p tp: program) :=
-  match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
-
-Lemma transf_program_match:
-  forall prog tprog, transf_program prog = OK tprog -> match_prog prog tprog.
-Proof.
-  intros. eapply match_transform_partial_program_contextual; eauto.
-Qed.
+(** * Definition of [match_states] (independently of the translation) *)
 
 (* est-ce plus simple de prendre is_copy: node -> node, avec un noeud hors CFG à la place de None ? *)
 Inductive match_inst (is_copy: node -> option node): instruction -> instruction -> Prop :=
@@ -37,6 +30,46 @@ Inductive match_inst (is_copy: node -> option node): instruction -> instruction 
       list_forall2 (fun n n' => (is_copy n' = (Some n))) ln ln' ->
       match_inst is_copy (Ijumptable r ln) (Ijumptable r ln')
   | match_inst_return: forall or, match_inst is_copy (Ireturn or) (Ireturn or).
+
+Record match_function f xf: Prop := {
+  revmap_correct: forall n n', (fn_revmap xf)!n' = Some n ->
+    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n' => (fn_revmap xf)!n') i i');
+  revmap_entrypoint: (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f);
+  preserv_fnsig: fn_sig f = fn_sig (fn_RTL xf);
+  preserv_fnparams: fn_params f = fn_params (fn_RTL xf);
+  preserv_fnstacksize: fn_stacksize f = fn_stacksize (fn_RTL xf)
+}.
+
+Inductive match_fundef: RTL.fundef -> RTL.fundef -> Prop :=
+  | match_Internal f xf: match_function f xf -> match_fundef (Internal f) (Internal (fn_RTL xf))
+  | match_External ef: match_fundef (External ef) (External ef).
+
+
+Inductive match_stackframes: stackframe -> stackframe -> Prop :=
+  | match_stackframe_intro:
+    forall res f sp pc rs xf pc'
+      (TRANSF: match_function f xf)
+      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
+      match_stackframes (Stackframe res f sp pc rs) (Stackframe res (fn_RTL xf) sp pc' rs).
+
+Inductive match_states: state -> state -> Prop :=
+  | match_states_intro:
+    forall st f sp pc rs m st' xf pc'
+      (STACKS: list_forall2 match_stackframes st st')
+      (TRANSF: match_function f xf)
+      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
+      match_states (State st f sp pc rs m) (State st' (fn_RTL xf) sp pc' rs m)
+  | match_states_call:
+    forall st st' f f' args m
+      (STACKS: list_forall2 match_stackframes st st')
+      (TRANSF: match_fundef f f'),
+      match_states (Callstate st f args m) (Callstate st' f' args m)
+  | match_states_return:
+    forall st st' v m
+      (STACKS: list_forall2 match_stackframes st st'),
+      match_states (Returnstate st v m) (Returnstate st' v m).
+
+(** * Auxiliary properties *)
 
 Lemma verify_mapping_mn_rec_step:
   forall lb b f xf,
@@ -181,28 +214,42 @@ Proof.
   eapply verify_mapping_mn_correct; eauto.
 Qed.
 
-
-Theorem revmap_correct: forall f xf n n',
-    transf_function_aux f = OK xf ->
-    (fn_revmap xf)!n' = Some n ->
-    (forall i, (fn_code f)!n = Some i -> exists i', (fn_code (fn_RTL xf))!n' = Some i' /\ match_inst (fun n' => (fn_revmap xf)!n') i i').
+Theorem transf_function_correct f xf:
+    transf_function_aux f = OK xf -> match_function f xf.
 Proof.
-  intros until n'. intros TRANSF REVM i FNC.
+  intros TRANSF ; constructor 1; try (apply transf_function_aux_preserves; auto). 
+  + (* correct *) 
+  intros until n'. intros REVM i FNC.
   unfold transf_function_aux in TRANSF. destruct (duplicate_aux f) as (tcte & mp). destruct tcte as (tc & te). monadInv TRANSF.
   simpl in *. monadInv EQ. clear EQ0.
   unfold verify_mapping_match_nodes in EQ. simpl in EQ. destruct x1.
   eapply verify_mapping_mn_rec_correct. 5: eapply EQ. all: eauto.
-Qed.
-
-
-Theorem revmap_entrypoint:
-  forall f xf, transf_function_aux f = OK xf -> (fn_revmap xf)!(fn_entrypoint (fn_RTL xf)) = Some (fn_entrypoint f).
-Proof.
-  intros. unfold transf_function_aux in H. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te).
-  monadInv H. simpl. monadInv EQ. unfold verify_mapping_entrypoint in EQ0. simpl in EQ0.
+  + (* entrypoint *)
+  intros. unfold transf_function_aux in TRANSF. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te).
+  monadInv TRANSF. simpl. monadInv EQ. unfold verify_mapping_entrypoint in EQ0. simpl in EQ0.
   destruct (mp ! te) eqn:PT; try discriminate.
   destruct (n ?= fn_entrypoint f) eqn:EQQ; try discriminate. inv EQ0.
   apply Pos.compare_eq in EQQ. congruence.
+Qed.
+
+Lemma transf_fundef_correct f f':
+  transf_fundef f = OK f' -> match_fundef f f'.
+Proof.
+  intros TRANSF; destruct f; simpl; monadInv TRANSF.
+  + monadInv EQ.
+    eapply match_Internal; eapply transf_function_correct; eauto.
+  + eapply match_External.
+Qed.
+
+(** * Preservation proof *)
+
+Definition match_prog (p tp: program) :=
+  match_program (fun _ f tf => transf_fundef f = OK tf) eq p tp.
+
+Lemma transf_program_match:
+  forall prog tprog, transf_program prog = OK tprog -> match_prog prog tprog.
+Proof.
+  intros. eapply match_transform_partial_program_contextual; eauto.
 Qed.
 
 Section PRESERVATION.
@@ -288,30 +335,6 @@ Proof.
       intros (pc'1 & LNZ & REV). exists pc'1. split; auto. congruence.
 Qed.
 
-Inductive match_stackframes: stackframe -> stackframe -> Prop :=
-  | match_stackframe_intro:
-    forall res f sp pc rs xf pc'
-      (TRANSF: transf_function_aux f = OK xf)
-      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
-      match_stackframes (Stackframe res f sp pc rs) (Stackframe res (fn_RTL xf) sp pc' rs).
-
-Inductive match_states: state -> state -> Prop :=
-  | match_states_intro:
-    forall st f sp pc rs m st' xf pc'
-      (STACKS: list_forall2 match_stackframes st st')
-      (TRANSF: transf_function_aux f = OK xf)
-      (DUPLIC: (fn_revmap xf)!pc' = Some pc),
-      match_states (State st f sp pc rs m) (State st' (fn_RTL xf) sp pc' rs m)
-  | match_states_call:
-    forall st st' f f' args m
-      (STACKS: list_forall2 match_stackframes st st')
-      (TRANSF: transf_fundef f = OK f'),
-      match_states (Callstate st f args m) (Callstate st' f' args m)
-  | match_states_return:
-    forall st st' v m
-      (STACKS: list_forall2 match_stackframes st st'),
-      match_states (Returnstate st v m) (Returnstate st' v m).
-
 Theorem transf_initial_states:
   forall s1, initial_state prog s1 ->
   exists s2, initial_state tprog s2 /\ match_states s1 s2.
@@ -327,7 +350,7 @@ Proof.
     + destruct f.
       * monadInv TRANSF. monadInv EQ. rewrite <- H3. symmetry; eapply transf_function_aux_preserves. assumption.
       * monadInv TRANSF. (* monadInv EQ. *) assumption.
-  - constructor; eauto. constructor.
+  - constructor; eauto. constructor. apply transf_fundef_correct; auto.
 Qed.
 
 Theorem transf_final_states:
@@ -344,6 +367,7 @@ Theorem step_simulation:
      step tge s2 t s2'
   /\ match_states s1' s2'.
 Proof.
+  Local Hint Resolve transf_fundef_correct.
   induction 1; intros; inv MS.
 (* Inop *)
   - eapply revmap_correct in DUPLIC; eauto.
@@ -400,14 +424,14 @@ Proof.
       eexists. split.
       + eapply exec_Itailcall. eassumption. simpl. eassumption.
         apply function_sig_translated. assumption.
-        erewrite <- transf_function_aux_fnstacksize; eauto.
+        erewrite <- preserv_fnstacksize; eauto.
       + repeat (constructor; auto).
     * simpl in H0. destruct (Genv.find_symbol _ _) eqn:GFS; try discriminate.
       apply function_ptr_translated in H0. destruct H0 as (tf & GFF & TF).
       eexists. split.
       + eapply exec_Itailcall. eassumption. simpl. rewrite symbols_preserved. rewrite GFS.
         eassumption. apply function_sig_translated. assumption.
-        erewrite <- transf_function_aux_fnstacksize; eauto.
+        erewrite <- preserv_fnstacksize; eauto.
       + repeat (constructor; auto).
 (* Ibuiltin *)
   - eapply revmap_correct in DUPLIC; eauto.
@@ -437,15 +461,15 @@ Proof.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Ireturn; eauto. erewrite <- transf_function_aux_fnstacksize; eauto.
+    + eapply exec_Ireturn; eauto. erewrite <- preserv_fnstacksize; eauto.
     + constructor; auto.
 (* exec_function_internal *)
-  - monadInv TRANSF. monadInv EQ. eexists. split.
-    + eapply exec_function_internal. erewrite <- transf_function_aux_fnstacksize; eauto.
-    + erewrite transf_function_aux_fnparams; eauto.
+  - inversion TRANSF as [f0 xf MATCHF|]; subst. eexists. split.
+    + eapply exec_function_internal. erewrite <- preserv_fnstacksize; eauto.
+    + erewrite preserv_fnparams; eauto.
       econstructor; eauto. apply revmap_entrypoint. assumption.
 (* exec_function_external *)
-  - monadInv TRANSF. (* monadInv EQ. *) eexists. split.
+  - inversion TRANSF as [|]; subst. eexists. split.
     + econstructor. eapply external_call_symbols_preserved; eauto. apply senv_preserved.
     + constructor. assumption.
 (* exec_return *)
