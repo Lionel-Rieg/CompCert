@@ -222,13 +222,6 @@ Proof.
   repeat (split; try reflexivity).
 Qed.
 
-Remark transf_function_aux_fnsig: forall f xf, transf_function_aux f = OK xf -> fn_sig f = fn_sig (fn_RTL xf).
-  Proof. apply transf_function_aux_preserves. Qed.
-Remark transf_function_aux_fnparams: forall f xf, transf_function_aux f = OK xf -> fn_params f = fn_params (fn_RTL xf).
-  Proof. apply transf_function_aux_preserves. Qed.
-Remark transf_function_aux_fnstacksize: forall f xf, transf_function_aux f = OK xf -> fn_stacksize f = fn_stacksize (fn_RTL xf).
-  Proof. apply transf_function_aux_preserves. Qed.
-
 Definition transf_function (f: function) : res function :=
   do xf <- transf_function_aux f;
   OK (fn_RTL xf).
