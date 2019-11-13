@@ -16,7 +16,7 @@
 
 (** Formalization of floating-point numbers, using the Flocq library. *)
 
-Require Import Coqlib Zbits Integers.
+Require Import Coqlib Zbits Integers Axioms.
 (*From Flocq*)
 Require Import Binary Bits Core.
 Require Import IEEE754_extra.
@@ -27,7 +27,68 @@ Close Scope R_scope.
 Open Scope Z_scope.
 
 Definition float := binary64. (**r the type of IEE754 double-precision FP numbers *)
+
+Definition float_eq: forall (i1 i2: float), {i1=i2} + {i1<>i2}.
+Proof.
+  intros. destruct i1.
+(* B754_zero *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + apply eqb_prop in BEQ. subst. left. reflexivity.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_infinity *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + apply eqb_prop in BEQ. subst. left. reflexivity.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_nan *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + generalize (Pos.eq_dec pl pl0). intro. inv H.
+      ++ left. apply eqb_prop in BEQ. subst.
+         assert (e = e0) by (apply proof_irr). congruence.
+      ++ right. intro. inv H. contradiction.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_finite *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ; [apply eqb_prop in BEQ | apply eqb_false_iff in BEQ].
+    generalize (Pos.eq_dec m m0). intro. inv H.
+    generalize (Z.eq_dec e e1). intro. inv H.
+    1: { left. assert (e0 = e2) by (apply proof_irr). congruence. }
+    all: right; intro; inv H; contradiction.
+Qed.
+
 Definition float32 := binary32. (**r the type of IEE754 single-precision FP numbers *)
+
+Definition float32_eq: forall (i1 i2: float32), {i1=i2} + {i1<>i2}.
+Proof.
+  intros. destruct i1.
+(* B754_zero *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + apply eqb_prop in BEQ. subst. left. reflexivity.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_infinity *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + apply eqb_prop in BEQ. subst. left. reflexivity.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_nan *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ.
+    + generalize (Pos.eq_dec pl pl0). intro. inv H.
+      ++ left. apply eqb_prop in BEQ. subst.
+         assert (e = e0) by (apply proof_irr). congruence.
+      ++ right. intro. inv H. contradiction.
+    + apply eqb_false_iff in BEQ. right. intro. inv H. contradiction.
+(* B754_finite *)
+  - destruct i2; try (right; discriminate).
+    destruct (eqb s s0) eqn:BEQ; [apply eqb_prop in BEQ | apply eqb_false_iff in BEQ].
+    generalize (Pos.eq_dec m m0). intro. inv H.
+    generalize (Z.eq_dec e e1). intro. inv H.
+    1: { left. assert (e0 = e2) by (apply proof_irr). congruence. }
+    all: right; intro; inv H; contradiction.
+Qed.
 
 (** Boolean-valued comparisons *)
 

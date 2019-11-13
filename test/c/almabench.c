@@ -42,9 +42,14 @@
 #define R2D (180.0 / PI)
 #define GAUSSK 0.01720209895
 #define TEST_LOOPS 20
-#define TEST_LENGTH 36525
 #define sineps 0.3977771559319137
 #define coseps 0.9174820620691818
+
+#ifdef __K1C__
+#define TEST_LENGTH 12
+#else
+#define TEST_LENGTH 36525
+#endif
 
 const double amas [8] = { 6023600.0, 408523.5, 328900.5, 3098710.0, 1047.355, 3498.5, 22869.0, 19314.0 };
 

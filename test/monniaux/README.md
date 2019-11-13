@@ -37,6 +37,7 @@ float_mat c3,  1504675,  751514,  553235, 1929369,  1372441
 - `K1C_CC`: GCC compiler (default k1-cos-gcc)
 - `K1C_CCOMP`: compcert compiler (default ccomp)
 - `EXECUTE_CYCLES`: running command (default `k1-cluster` with some options)
+- `EXECUTE_ARGS`: execution arguments
 - `GCCiFLAGS` with i from 0 to 4: the wanted optimizations. If one of these flags is empty, nothing is done. Same for `CCOMPiFLAGS`. For now, the default values:
 ```
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
@@ -68,4 +69,10 @@ The `PREFIX` are the prefixes to add to the .s, .o, etc.. You should be careful 
 
 Assembly files will be generated in `asm/`, objects in `obj/`, binaries in `bin/` and outputs in `out/`.
 
-To compile and execute all the benches : `make`
+To compile and execute all the benches : `make` while in the `monniaux` directory (without any `-j` flag).
+
+To compile and/or execute a single bench, `cd` to the bench directory, then:
+- `make` for compiling the bench
+- `make run` for running it
+
+You can use `-j` flag when in a single bench directory

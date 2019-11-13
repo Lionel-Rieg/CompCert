@@ -43,7 +43,11 @@ void eval_AtA_times_u(int N, const double u[], double AtAu[])
 int main(int argc, char *argv[])
 {
   int i;
+#ifdef __K1C__
   int N = ((argc == 2) ? atoi(argv[1]) : 11);
+#else
+  int N = ((argc == 2) ? atoi(argv[1]) : 1000);
+#endif
   double * u, * v, vBv, vv;
   u = malloc(N * sizeof(double));
   v = malloc(N * sizeof(double));
