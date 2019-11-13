@@ -135,7 +135,7 @@ endif
 
 measures.csv: $(OUTFILES)
 	@echo $(FIRSTLINE) > $@
-	@for i in $(MEASURES); do\
+	@for i in "$(MEASURES)"; do\
 		first=$$(grep "$$i cycles" $(firstword $(OUTFILES)));\
 		if test ! -z "$$first"; then\
 			if [ "$$i" != "time" ]; then\
