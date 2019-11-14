@@ -13,48 +13,27 @@ Axiom duplicate_aux: function -> code * node * (PTree.t node).
 
 Extract Constant duplicate_aux => "Duplicateaux.duplicate_aux".
 
-Record xfunction : Type := 
- { fn_RTL: function;
-   fn_revmap: PTree.t node;
- }.
-
-Definition xfundef := AST.fundef xfunction.
-Definition xprogram := AST.program xfundef unit.
-Definition xgenv := Genv.t xfundef unit.
-
-Definition fundef_RTL (fu: xfundef) : fundef := 
-  match fu with
-  | Internal f => Internal (fn_RTL f)
-  | External ef => External ef
-  end.
-
 (** * Verification of node duplications *)
 
-Definition verify_mapping_entrypoint (f: function) (xf: xfunction) : res unit :=
-  match ((fn_revmap xf)!(fn_entrypoint (fn_RTL xf))) with
-  | None => Error (msg "verify_mapping: No node in xf revmap for entrypoint")
-  | Some n => match (Pos.compare n (fn_entrypoint f)) with
-              | Eq => OK tt
-              | _ => Error (msg "verify_mapping_entrypoint: xf revmap for entrypoint does not correspond to the entrypoint of f")
-              end
-  end.
-
-Definition verify_is_copy revmap n n' :=
-  match revmap!n' with
+Definition verify_is_copy dupmap n n' :=
+  match dupmap!n' with
   | None => Error(msg "verify_is_copy None")
   | Some revn => match (Pos.compare n revn) with Eq => OK tt | _ => Error(msg "verify_is_copy invalid map") end
   end.
 
-Fixpoint verify_is_copy_list revmap ln ln' :=
+Fixpoint verify_is_copy_list dupmap ln ln' :=
   match ln with
   | n::ln => match ln' with
-             | n'::ln' => do u <- verify_is_copy revmap n n';
-                          verify_is_copy_list revmap ln ln'
+             | n'::ln' => do u <- verify_is_copy dupmap n n';
+                          verify_is_copy_list dupmap ln ln'
              | nil => Error (msg "verify_is_copy_list: ln' bigger than ln") end
   | nil => match ln' with
           | n :: ln' => Error (msg "verify_is_copy_list: ln bigger than ln'")
           | nil => OK tt end
   end.
+
+Definition verify_mapping_entrypoint dupmap (f f': function): res unit :=
+  verify_is_copy dupmap (fn_entrypoint f) (fn_entrypoint f').
 
 Lemma product_eq {A B: Type} :
   (forall (a b: A), {a=b} + {a<>b}) ->
@@ -77,13 +56,13 @@ Remark builtin_res_eq_pos: forall (a b: builtin_res positive), {a=b} + {a<>b}.
 Proof. intros. apply (builtin_res_eq Pos.eq_dec). Qed.
 Global Opaque builtin_res_eq_pos.
 
-Definition verify_match_inst revmap inst tinst :=
+Definition verify_match_inst dupmap inst tinst :=
   match inst with
-  | Inop n => match tinst with Inop n' => do u <- verify_is_copy revmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
+  | Inop n => match tinst with Inop n' => do u <- verify_is_copy dupmap n n'; OK tt | _ => Error(msg "verify_match_inst Inop") end
 
   | Iop op lr r n => match tinst with
       Iop op' lr' r' n' =>
-          do u <- verify_is_copy revmap n n';
+          do u <- verify_is_copy dupmap n n';
           if (eq_operation op op') then
             if (list_eq_dec Pos.eq_dec lr lr') then
               if (Pos.eq_dec r r') then
@@ -95,7 +74,7 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Iload m a lr r n => match tinst with
       | Iload m' a' lr' r' n' =>
-          do u <- verify_is_copy revmap n n';
+          do u <- verify_is_copy dupmap n n';
           if (chunk_eq m m') then
             if (eq_addressing a a') then
               if (list_eq_dec Pos.eq_dec lr lr') then
@@ -108,7 +87,7 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Istore m a lr r n => match tinst with
       | Istore m' a' lr' r' n' =>
-          do u <- verify_is_copy revmap n n';
+          do u <- verify_is_copy dupmap n n';
           if (chunk_eq m m') then
             if (eq_addressing a a') then
               if (list_eq_dec Pos.eq_dec lr lr') then
@@ -121,7 +100,7 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Icall s ri lr r n => match tinst with
       | Icall s' ri' lr' r' n' =>
-          do u <- verify_is_copy revmap n n';
+          do u <- verify_is_copy dupmap n n';
           if (signature_eq s s') then
             if (product_eq Pos.eq_dec ident_eq ri ri') then
               if (list_eq_dec Pos.eq_dec lr lr') then
@@ -144,7 +123,7 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Ibuiltin ef lbar brr n => match tinst with
       | Ibuiltin ef' lbar' brr' n' =>
-          do u <- verify_is_copy revmap n n';
+          do u <- verify_is_copy dupmap n n';
           if (external_function_eq ef ef') then
             if (list_eq_dec builtin_arg_eq_pos lbar lbar') then
               if (builtin_res_eq_pos brr brr') then OK tt
@@ -155,8 +134,8 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Icond cond lr n1 n2 => match tinst with
       | Icond cond' lr' n1' n2' =>
-          do u1 <- verify_is_copy revmap n1 n1';
-          do u2 <- verify_is_copy revmap n2 n2';
+          do u1 <- verify_is_copy dupmap n1 n1';
+          do u2 <- verify_is_copy dupmap n2 n2';
           if (eq_condition cond cond') then
             if (list_eq_dec Pos.eq_dec lr lr') then OK tt
             else Error (msg "Different lr in Icond")
@@ -165,7 +144,7 @@ Definition verify_match_inst revmap inst tinst :=
 
   | Ijumptable r ln => match tinst with
       | Ijumptable r' ln' =>
-          do u <- verify_is_copy_list revmap ln ln';
+          do u <- verify_is_copy_list dupmap ln ln';
           if (Pos.eq_dec r r') then OK tt
           else Error (msg "Different r in Ijumptable")
       | _ => Error (msg "verify_match_inst Ijumptable") end
@@ -177,54 +156,40 @@ Definition verify_match_inst revmap inst tinst :=
       | _ => Error (msg "verify_match_inst Ireturn") end
   end.
 
-Definition verify_mapping_mn f xf (m: positive*positive) :=
+Definition verify_mapping_mn dupmap f f' (m: positive*positive) :=
   let (tn, n) := m in
   match (fn_code f)!n with
   | None => Error (msg "verify_mapping_mn: Could not get an instruction at (fn_code f)!n")
-  | Some inst => match (fn_code (fn_RTL xf))!tn with
+  | Some inst => match (fn_code f')!tn with
                  | None => Error (msg "verify_mapping_mn: Could not get an instruction at (fn_code xf)!tn")
-                 | Some tinst => verify_match_inst (fn_revmap xf) inst tinst
+                 | Some tinst => verify_match_inst dupmap inst tinst
                  end
   end.
 
-Fixpoint verify_mapping_mn_rec f xf lm :=
+Fixpoint verify_mapping_mn_rec dupmap f f' lm :=
   match lm with
   | nil => OK tt
-  | m :: lm => do u <- verify_mapping_mn f xf m;
-               do u2 <- verify_mapping_mn_rec f xf lm;
+  | m :: lm => do u <- verify_mapping_mn dupmap f f' m;
+               do u2 <- verify_mapping_mn_rec dupmap f f' lm;
                OK tt
   end.
 
-Definition verify_mapping_match_nodes (f: function) (xf: xfunction) : res unit :=
-  verify_mapping_mn_rec f xf (PTree.elements (fn_revmap xf)).
+Definition verify_mapping_match_nodes dupmap (f f': function): res unit :=
+  verify_mapping_mn_rec dupmap f f' (PTree.elements dupmap).
 
-(** Verifies that the [fn_revmap] of the translated function [xf] is giving correct information in regards to [f] *)
-Definition verify_mapping (f: function) (xf: xfunction) : res unit :=
-  do u <- verify_mapping_entrypoint f xf;
-  do v <- verify_mapping_match_nodes f xf; OK tt.
-(* TODO - verify the other axiom *)
+(** Verifies that the [dupmap] of the translated function [f'] is giving correct information in regards to [f] *)
+Definition verify_mapping dupmap (f f': function) : res unit :=
+  do u <- verify_mapping_entrypoint dupmap f f';
+  do v <- verify_mapping_match_nodes dupmap f f'; OK tt.
 
 (** * Entry points *)
 
-Definition transf_function_aux (f: function) : res xfunction :=
-  let (tcte, mp) := duplicate_aux f in
-  let (tc, te) := tcte in
-  let xf := {| fn_RTL := (mkfunction (fn_sig f) (fn_params f) (fn_stacksize f) tc te); fn_revmap := mp |} in
-  do u <- verify_mapping f xf;
-  OK xf.
-
-Theorem transf_function_aux_preserves:
-  forall f xf,
-  transf_function_aux f = OK xf ->
-     fn_sig f = fn_sig (fn_RTL xf) /\ fn_params f = fn_params (fn_RTL xf) /\ fn_stacksize f = fn_stacksize (fn_RTL xf).
-Proof.
-  intros. unfold transf_function_aux in H. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te). monadInv H.
-  repeat (split; try reflexivity).
-Qed.
-
 Definition transf_function (f: function) : res function :=
-  do xf <- transf_function_aux f;
-  OK (fn_RTL xf).
+  let (tcte, dupmap) := duplicate_aux f in
+  let (tc, te) := tcte in
+  let f' := mkfunction (fn_sig f) (fn_params f) (fn_stacksize f) tc te in
+  do u <- verify_mapping dupmap f f';
+  OK f'.
 
 Definition transf_fundef (f: fundef) : res fundef :=
   transf_partial_fundef transf_function f.
