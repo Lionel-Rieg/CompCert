@@ -1636,11 +1636,17 @@ Hint Resolve bblock_simu_test_correct: wlp.
 
 Import UnsafeImpure.
 
-Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
+Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := 
+  match unsafe_coerce (bblock_simu_test verb p1 p2) with
+  | Some b => b
+  | None => false
+  end.
 
 Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
-   intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
+   unfold pure_bblock_simu_test. 
+   destruct (unsafe_coerce (bblock_simu_test verb p1 p2)) eqn: UNSAFE; try discriminate.
+   intros; subst. eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
 Qed.
 
