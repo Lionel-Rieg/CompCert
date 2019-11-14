@@ -7,6 +7,9 @@ ALL_CFILES?=$(wildcard *.c)
 # Name of the target
 TARGET?=toto
 
+# Arguments of execution
+EXECUTE_ARGS?=
+
 # Name of the clock object
 CLOCK=../clock
 
@@ -28,27 +31,27 @@ K1C_CCOMP?=ccomp
 EXECUTE_CYCLES?=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
-GCC0FLAGS?=
-GCC1FLAGS?=$(ALL_GCCFLAGS) -O1 -g
+GCC0FLAGS?=$(ALL_GCCFLAGS) -O0
+GCC1FLAGS?=$(ALL_GCCFLAGS) -O1
 GCC2FLAGS?=$(ALL_GCCFLAGS) -O2
 GCC3FLAGS?=$(ALL_GCCFLAGS) -O3
 GCC4FLAGS?=
-CCOMP0FLAGS?=
-CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -O1 -g
-CCOMP2FLAGS?=$(ALL_CCOMPFLAGS)
-CCOMP3FLAGS?=
+CCOMP0FLAGS?=$(ALL_CCOMPFLAGS) -O2 -fno-postpass
+CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -O2 -fpostpass= greedy
+CCOMP2FLAGS?=$(ALL_CCOMPFLAGS) -O2 -fno-if-conversion
+CCOMP3FLAGS?=$(ALL_CCOMPFLAGS) -O2
 CCOMP4FLAGS?=
 
 # Prefix names
-GCC0PREFIX?=
+GCC0PREFIX?=.gcc.o0
 GCC1PREFIX?=.gcc.o1
 GCC2PREFIX?=.gcc.o2
 GCC3PREFIX?=.gcc.o3
 GCC4PREFIX?=
-CCOMP0PREFIX?=
-CCOMP1PREFIX?=.ccomp.o1
-CCOMP2PREFIX?=.ccomp.o2
-CCOMP3PREFIX?=
+CCOMP0PREFIX?=.ccomp.nobundle
+CCOMP1PREFIX?=.ccomp.greedy
+CCOMP2PREFIX?=.ccomp.noif
+CCOMP3PREFIX?=.ccomp
 CCOMP4PREFIX?=
 
 # List of outfiles, updated by gen_rules
@@ -92,7 +95,7 @@ obj/%.o: asm/%.s
 
 out/%.out: bin/%.bin
 	@mkdir -p $(@D)
-	$(EXECUTE_CYCLES) $< | tee $@
+	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) | tee $@
 
 ##
 # Generating the rules for all the compiler/flags..
@@ -132,7 +135,7 @@ endif
 
 measures.csv: $(OUTFILES)
 	@echo $(FIRSTLINE) > $@
-	@for i in $(MEASURES); do\
+	@for i in "$(MEASURES)"; do\
 		first=$$(grep "$$i cycles" $(firstword $(OUTFILES)));\
 		if test ! -z "$$first"; then\
 			if [ "$$i" != "time" ]; then\

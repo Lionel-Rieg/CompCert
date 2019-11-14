@@ -102,7 +102,11 @@ fannkuch( int n )
     int
 main( int argc, char* argv[] )
 {
+#ifdef __K1C__
     int		n = (argc>1) ? atoi(argv[1]) : 6;
+#else
+    int		n = (argc>1) ? atoi(argv[1]) : 10;
+#endif
 
     printf("Pfannkuchen(%d) = %ld\n", n, fannkuch(n));
     return 0;

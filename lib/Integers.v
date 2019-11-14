@@ -16,7 +16,7 @@
 (** Formalizations of machine integers modulo $2^N$ #2<sup>N</sup>#. *)
 
 Require Import Eqdep_dec Zquot Zwf.
-Require Import Coqlib Zbits.
+Require Import Coqlib Zbits Axioms.
 Require Archi.
 
 (** * Comparisons *)
@@ -28,6 +28,11 @@ Inductive comparison : Type :=
   | Cle : comparison               (**r less than or equal *)
   | Cgt : comparison               (**r greater than *)
   | Cge : comparison.              (**r greater than or equal *)
+
+Definition comparison_eq: forall (x y: comparison), {x = y} + {x <> y}.
+Proof.
+  decide equality.
+Defined.
 
 Definition negate_comparison (c: comparison): comparison :=
   match c with
@@ -4535,7 +4540,25 @@ End Int64.
 
 Strategy 0 [Wordsize_64.wordsize].
 
+Definition int_eq: forall (i1 i2: int), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
+
 Notation int64 := Int64.int.
+
+Definition int64_eq: forall (i1 i2: int64), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Int.repr Int64.repr Byte.repr.
 
@@ -4812,6 +4835,15 @@ End Ptrofs.
 Strategy 0 [Wordsize_Ptrofs.wordsize].
 
 Notation ptrofs := Ptrofs.int.
+
+Definition ptrofs_eq: forall (i1 i2: ptrofs), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Ptrofs.repr.
 

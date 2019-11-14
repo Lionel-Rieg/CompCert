@@ -17,12 +17,20 @@ int main (int argc, char **argv)
 {
     int w, h, bit_num = 0;
     char byte_acc = 0;
+#ifdef __K1C__
     int i, iter = 30;
+#else
+    int i, iter = 50;
+#endif
     double x, y, limit = 2.0;
     double Zr, Zi, Cr, Ci, Tr, Ti;
 
     if (argc < 2) {
-      w = h = 50;
+#ifdef __K1C__
+      w = h = 40;
+#else
+      w = h = 1000;
+#endif
     } else {
       w = h = atoi(argv[1]);
     }

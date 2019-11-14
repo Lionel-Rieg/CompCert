@@ -8,7 +8,9 @@ EXECUTE:=timeout --signal=SIGTERM 20s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
-TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
+TIME=time >/dev/null
+# FIXME - maybe this is better? From v3.6
+# TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
 
 PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
   lists binarytrees fannkuch mandelbrot nbody \
@@ -23,6 +25,10 @@ PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
 # * also removed bisect, who is exhibiting different float values on the Kalray
 #   architecture than using x86 GCC (for both CompCert and GCC ports) (tested with n=10)
 ##
+ifeq ($(ARCH),mppa_k1c)
+	PROGS:=$(filter-out knucleotide,$(PROGS))
+	PROGS:=$(filter-out bisect,$(PROGS))
+endif
 
 all: $(PROGS:%=%.compcert)
 
@@ -41,20 +47,12 @@ all_gcc: $(PROGS:%=%.gcc)
 
 test: all
 	@for i in $(PROGS); do \
-	   $(EXECUTE) ./$$i.compcert > $$i.compcert.out;\
-	   if cmp -s $$i.compcert.out Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2; \
-	   fi; \
+		 SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.compcert;\
          done
 
 test_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   $(EXECUTE) ./$$i.gcc > $$i.gcc.out;\
-	   if cmp -s $$i.gcc.out Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2;\
-	   fi; \
+	   SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.gcc;\
          done
 
 bench_gcc: all_gcc

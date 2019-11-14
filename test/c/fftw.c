@@ -74,7 +74,11 @@ const E KP1_847759065 = ((E) +1.847759065022573512256366378793576573644833252);
 
 /* Test harness */
 
+#ifdef __K1C__
 #define NRUNS (10 * 10)
+#else
+#define NRUNS (100 * 1000)
+#endif
 
 int main()
 {

@@ -115,15 +115,27 @@ void printf_compat(const char * fmt, ...)
 }
 
 /* The test harness */
-
 int main()
 {
   miniprintf("An int: %d\n", 42);
   miniprintf("A long long: %l\n", 123456789012345LL);
   miniprintf("A string: %s\n", "Hello world");
   miniprintf("A double: %e\n", 3.141592654);
+
+#ifndef __K1C__
   miniprintf("A small struct: %y\n", (struct Y) { 'x', 12 });
   miniprintf("A bigger struct: %z\n", (struct Z) { 123, 456, 789 });
+#endif
+
+#ifdef __K1C__
+  miniprintf("A mixture: %c & %s & %d & %l & %e & %f\n",
+             'x',
+             "Hello, world!",
+             42,
+             123456789012345LL,
+             3.141592654,
+             2.71828182);
+#else
   miniprintf("A mixture: %c & %s & %y & %d & %l & %e & %f\n",
              'x',
              "Hello, world!",
@@ -132,6 +144,8 @@ int main()
              123456789012345LL,
              3.141592654,
              2.71828182);
+#endif
+
   miniprintf2("Twice: %d %e\n", -1, 1.23);
   miniprintf3("With va_copy: %d %e\n", -1, 1.23);
   miniprintf_extra(0, 1, 2, 3, 4, 5, 6, 7,

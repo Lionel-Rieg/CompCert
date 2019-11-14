@@ -61,8 +61,13 @@ int main(int argc, char ** argv)
   int n, niter, i;
   struct list * l;
 
+#ifdef __K1C__
   if (argc >= 2) n = atoi(argv[1]); else n = 500;
   if (argc >= 3) niter = atoi(argv[1]); else niter = 100;
+#else
+  if (argc >= 2) n = atoi(argv[1]); else n = 1000;
+  if (argc >= 3) niter = atoi(argv[1]); else niter = 20000;
+#endif
   l = buildlist(n);
   if (checklist(n, reverselist(l))) {
     printf("OK\n");

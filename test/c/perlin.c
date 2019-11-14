@@ -63,9 +63,15 @@ static void init(void) {
     p[256+i] = p[i] = permutation[i];
 }
 
+#ifdef __K1C__
 #define INCREMENT 0.5
 #define MIN -3.0
 #define MAX 3.0
+#else
+#define INCREMENT 0.1
+#define MIN -5.0
+#define MAX 5.0
+#endif
 int main(int argc, char ** argv) {
   init();
   

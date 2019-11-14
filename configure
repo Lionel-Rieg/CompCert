@@ -470,6 +470,7 @@ if test "$arch" = "mppa_k1c"; then
   system="linux"
 fi
 
+#
 # AArch64 (ARMv8 64 bits) Target Configuration
 #
 if test "$arch" = "aarch64"; then
@@ -567,14 +568,14 @@ missingtools=false
 echo "Testing Coq... " | tr -d '\n'
 coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
 case "$coq_ver" in
-  8.7.0|8.7.1|8.7.2|8.8.0|8.8.1|8.8.2|8.9.0|8.9.1|8.10)
+  8.8.0|8.8.1|8.8.2|8.9.0|8.9.1|8.10)
         echo "version $coq_ver -- good!";;
   ?*)
         echo "version $coq_ver -- UNSUPPORTED"
         if $ignore_coq_version; then
             echo "Warning: this version of Coq is unsupported, proceed at your own risks."
         else
-            echo "Error: CompCert requires one of the following Coq versions: 8.10, 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0, 8.7.2, 8.7.1, 8.7.0"
+            echo "Error: CompCert requires one of the following Coq versions: 8.10, 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0"
             missingtools=true
         fi;;
   "")
@@ -847,6 +848,7 @@ cat >> Makefile.config <<EOF
 ARCHDIRS=$arch $arch/lib $arch/abstractbb $arch/abstractbb/Impure
 EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 CFLAGS= -D __K1C_COS__
+SIMU=k1-cluster -- 
 BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
     Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\
@@ -909,6 +911,4 @@ cat <<EOF
     Coq development will not be installed
 EOF
 fi
-
 fi
-
