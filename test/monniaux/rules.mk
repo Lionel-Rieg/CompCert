@@ -95,7 +95,8 @@ obj/%.o: asm/%.s
 
 out/%.out: bin/%.bin
 	@mkdir -p $(@D)
-	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) | tee $@
+	@rm -f $@
+	$(EXECUTE_CYCLES) $< $(subst __BASE__,$(patsubst %.out,%,$@),$(EXECUTE_ARGS)) | tee -a $@
 
 ##
 # Generating the rules for all the compiler/flags..
