@@ -28,6 +28,7 @@ K1C_CC?=k1-cos-gcc
 K1C_CCOMP?=ccomp
 
 # Command to execute
+#EXECUTE_CYCLES?=timeout --signal=SIGTERM 3m k1-cluster --syscall=libstd_scalls.so --cycle-based --
 EXECUTE_CYCLES?=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS

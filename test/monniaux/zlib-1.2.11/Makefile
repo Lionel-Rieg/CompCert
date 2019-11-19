@@ -2,6 +2,7 @@ TARGET=zlib
 
 ALL_CCOMPFLAGS=-faddx
 ALL_CFLAGS=  -D_POSIX_C_SOURCE=2 -D_LARGEFILE64_SOURCE=1 -U__STRICT_ANSI__
+EXECUTE_ARGS=< zlib_small.txt > /dev/null 2> __BASE__.out
 
 include ../rules.mk
 
