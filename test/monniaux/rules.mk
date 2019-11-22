@@ -158,5 +158,5 @@ run: measures.csv
 
 clean:
 	rm -f *.o *.s *.bin *.out
-	rm -f asm/*.s bin/*.bin obj/*.o out/*.out
+	rm -rf asm/ bin/ obj/ out/
 
