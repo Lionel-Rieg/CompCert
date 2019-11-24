@@ -28,6 +28,7 @@ K1C_CC?=k1-cos-gcc
 K1C_CCOMP?=ccomp
 
 # Command to execute
+#EXECUTE_CYCLES?=timeout --signal=SIGTERM 3m k1-cluster --syscall=libstd_scalls.so --cycle-based --
 EXECUTE_CYCLES?=k1-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
@@ -95,7 +96,8 @@ obj/%.o: asm/%.s
 
 out/%.out: bin/%.bin
 	@mkdir -p $(@D)
-	$(EXECUTE_CYCLES) $< $(EXECUTE_ARGS) | tee $@
+	@rm -f $@
+	$(EXECUTE_CYCLES) $< $(subst __BASE__,$(patsubst %.out,%,$@),$(EXECUTE_ARGS)) | tee -a $@
 
 ##
 # Generating the rules for all the compiler/flags..
@@ -156,5 +158,5 @@ run: measures.csv
 
 clean:
 	rm -f *.o *.s *.bin *.out
-	rm -f asm/*.s bin/*.bin obj/*.o out/*.out
+	rm -rf asm/ bin/ obj/ out/
 
