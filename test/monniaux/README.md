@@ -1,13 +1,18 @@
-# Benchmarking CompCert and GCC
+# Benchmarking `CompCert` and GCC
 
-rules.mk contains generic rules to compile with gcc and ccomp, with different
-optimizations, and producing different binaries. It also produces a
-measures.csv file containing the different timings given by the bench.
+## Compiling `CompCert`
 
-Up to 5 different optimizations can be used.
+The first step to benchmark `CompCert` is to compile it - the `INSTALL.md` instructions of the project root folder should guide you on installing it.
 
-To use this rule.mk, create a folder, put inside all the .c/.h source files,
-and write a Makefile ressembling:
+For the benchmarks to work, the compiler `ccomp` should be on your `$PATH`, with the runtime libraries installed correctly (with a successful `make install` on the project root directory).
+
+## Using the harness
+
+`rules.mk` contains generic rules to compile with `gcc` and `ccomp`, with different optimizations, and producing different binaries. It also produces a `measures.csv` file containing the different timings given by the bench.
+
+Up to 5 different sets of optimizations per compiler can be used.
+
+To use this `rules.mk`, create a folder, put inside all the .c/.h source files, and write a Makefile resembling:
 ```make
 TARGET=float_mat
 MEASURES="c1 c2 c3 c4 c5 c6 c7 c8"
@@ -15,30 +20,24 @@ MEASURES="c1 c2 c3 c4 c5 c6 c7 c8"
 include ../rules.mk
 ```
 
-This is all that is required to write, the rules.mk handles everything.
+This is all that is required to write, the `rules.mk` handles everything.
 
-There is the possibility to define some variables to finetune what you want.
-For instance, `ALL_CFILES` describes the .c source files whose objects are
-to be linked.
+There is the possibility to define some variables to fine tune what you want. For instance, `ALL_CFILES` describes the .c source files whose objects are to be linked.
 
 Here is an exhaustive list of the variables:
 - `TARGET`: name of the binary to produce
 - `MEASURES`: list of the different timings. This supposes that the program
-prints something of the form "c3 cycles: 44131" for instance. In the above
-example, the Makefile would generate such a line:
-```
-float_mat c3,  1504675,  751514,  553235, 1929369,  1372441 
-```
+prints something of the form `c3 cycles: 44131`.
 - `ALL_CFILES`: list of .c files to compile. By default, `$(wildcard *.c)`
-- `CLOCK`: basename of the clock file to compile. Default `../clock`
-- `ALL_CFLAGS`: cflags that are to be included for all compilers
+- `CLOCK`: `basename` of the clock file to compile. Default `../clock`
+- `ALL_CFLAGS`: `cflags` that are to be included for all compilers
 - `ALL_GCCFLAGS`: same, but GCC specific
-- `ALL_CCOMPFLAGS`: same, but ccomp specific
-- `K1C_CC`: GCC compiler (default k1-cos-gcc)
-- `K1C_CCOMP`: compcert compiler (default ccomp)
-- `EXECUTE_CYCLES`: running command (default `k1-cluster` with some options)
-- `EXECUTE_ARGS`: execution arguments
-- `GCCiFLAGS` with i from 0 to 4: the wanted optimizations. If one of these flags is empty, nothing is done. Same for `CCOMPiFLAGS`. For now, the default values:
+- `ALL_CCOMPFLAGS`: same, but `ccomp` specific
+- `K1C_CC`: GCC compiler (default `k1-cos-gcc`)
+- `K1C_CCOMP`: `CompCert` compiler (default `ccomp`)
+- `EXECUTE_CYCLES`: running command (default is `k1-cluster --syscall=libstd_scalls.so --cycle-based --`)
+- `EXECUTE_ARGS`: execution arguments. You can use a macro `__BASE__` which expands to the name of the binary being executed.
+- `GCCiFLAGS` with `i` from 0 to 4: the wanted optimizations. If one of these flags is empty, nothing is done. Same for `CCOMPiFLAGS`. Look at `rules.mk` to see the default values. You might find something like this:
 ```
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
 GCC0FLAGS?=
@@ -65,14 +64,26 @@ CCOMP3PREFIX?=
 CCOMP4PREFIX?= 
 ```
 
-The `PREFIX` are the prefixes to add to the .s, .o, etc.. You should be careful that if a FLAGS is set, then the according PREFIX should be set as well.
+The `PREFIX` are the prefixes to add to the secondary produced files (assembly, object, executable, ..). You should be careful that if a `FLAGS` is set, then the according `PREFIX` should be set as well.
 
-Assembly files will be generated in `asm/`, objects in `obj/`, binaries in `bin/` and outputs in `out/`.
+Assembly files are generated in `asm/`, objects in `obj/`, binaries in `bin/` and outputs in `out/`.
 
-To compile and execute all the benches : `make` while in the `monniaux` directory (without any `-j` flag).
+To compile and execute all the benches : `make` while in the `monniaux` directory (without any `-j` flag). Doing so will compile CompCert, install it, and then proceed to execute each bench.
 
 To compile and/or execute a single bench, `cd` to the bench directory, then:
 - `make` for compiling the bench
 - `make run` for running it
 
-You can use `-j` flag when in a single bench directory
+You can use `-j` flag when in a single bench directory.
+
+## Individual scripts
+
+If you want to run the building and running scripts individually without having to use the `Makefile` from `test/monniaux`, you can run the `build_benches.sh` script which builds each bench using all the available cores on your machine.
+
+Once the benches are built, you can then run `run_benches.sh file.csv` where `file.csv` is where you want to store the timings of the benchmarks. `run_benches.sh` also uses all the available cores of your machine.
+
+## Adding timings to a benchmark
+
+If you just add a benchmark without any timing function, the resulting `measures.csv` file will be empty for lack of timing output.
+
+TODO - how to add timings
