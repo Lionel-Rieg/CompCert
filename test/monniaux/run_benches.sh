@@ -1,13 +1,16 @@
 
 source benches.sh
 
+cores=$(grep -c ^processor /proc/cpuinfo)
+processes=$((cores/4))
+
 rm -f commands.txt
 for bench in $benches; do
   echo "(cd $bench && echo \"Running $bench..\" &&\
     make -j4 run > /dev/null && echo \"$bench DONE\")" >> commands.txt
 done
 
-cat commands.txt | xargs -n1 -I{} -P6 bash -c '{}'
+cat commands.txt | xargs -n1 -I{} -P$processes bash -c '{}'
 
 ##
 # Gather all the CSV files
