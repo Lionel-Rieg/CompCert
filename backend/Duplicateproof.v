@@ -344,15 +344,16 @@ Proof.
   intros. inv H.
   exploit function_ptr_translated; eauto. intros (tf & FIND & TRANSF).
   eexists. split.
-  - econstructor.
+  - econstructor; eauto.
     + eapply (Genv.init_mem_transf_partial TRANSL); eauto.
     + replace (prog_main tprog) with (prog_main prog). rewrite symbols_preserved. eauto.
       symmetry. eapply match_program_main. eauto.
-    + exploit function_ptr_translated; eauto.
     + destruct f.
       * monadInv TRANSF. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
       * monadInv TRANSF. assumption.
-  - constructor; eauto. constructor. apply transf_fundef_correct; auto.
+  - constructor; eauto.
+    + constructor. 
+    + apply transf_fundef_correct; auto.
 Qed.
 
 Theorem transf_final_states:
