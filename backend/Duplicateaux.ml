@@ -74,21 +74,24 @@ let bfs code entrypoint =
       in node_bfs @ (bfs_list code ln)
   in bfs_list code [entrypoint]
 
+let ptree_get_some n ptree = get_some @@ PTree.get n ptree
+
 let rec select_unvisited_node is_visited = function
 | [] -> failwith "Empty list"
-| n :: ln -> if (get_some @@ PTree.get n is_visited) then n else select_unvisited_node is_visited ln
+| n :: ln -> if not (ptree_get_some n is_visited) then n else select_unvisited_node is_visited ln
 
-let best_successor_of node code =
+let best_successor_of node code is_visited =
   match (PTree.get node code) with
   | None -> failwith "No such node in the code"
   | Some ti -> match ti with
       | Tleaf _ -> None
-      | Tnext (n,_) -> Some n
+      | Tnext (n,_) -> if not (ptree_get_some n is_visited) then Some n
+                       else None
 
-let best_predecessor_of node predecessors order =
+let best_predecessor_of node predecessors order is_visited =
   match (PTree.get node predecessors) with
   | None -> failwith "No predecessor list found"
-  | Some lp -> try Some (List.find (fun n -> List.mem n lp) order)
+  | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
                with Not_found -> None
 
 let get_predecessors code =
@@ -107,24 +110,25 @@ let get_predecessors code =
     !preds
   end
 
-(* Algorithm from Chang and Hwu 1988
+(* Algorithm mostly inspired from Chang and Hwu 1988
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
-let select_trace code entrypoint =
+let select_traces code entrypoint =
   let order = bfs code entrypoint in
   let predecessors = get_predecessors code in
-  let trace = ref [] in
+  let traces = ref [] in
   let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
     while exists_false !is_visited do (* while (there are unvisited nodes) *)
       let seed = select_unvisited_node !is_visited order in
+      let trace = ref [seed] in
       let current = ref seed in begin
         is_visited := PTree.set seed true !is_visited; (* mark seed visited *)
         let quit_loop = ref false in begin
           while not !quit_loop do
-            let s = best_successor_of !current code in
+            let s = best_successor_of !current code !is_visited in
             match s with
             | None -> quit_loop := true (* if (s==0) exit loop *)
             | Some succ -> begin
-                trace := succ :: !trace; (* FIXME - reverse append *)
+                trace := !trace @ [succ];
                 is_visited := PTree.set succ true !is_visited; (* mark s visited *)
                 current := succ
                 end
@@ -132,7 +136,7 @@ let select_trace code entrypoint =
           current := seed;
           quit_loop := false;
           while not !quit_loop do
-            let s = best_predecessor_of !current predecessors order in
+            let s = best_predecessor_of !current predecessors order !is_visited in
             match s with
             | None -> quit_loop := true (* if (s==0) exit loop *)
             | Some pred -> begin
@@ -140,11 +144,12 @@ let select_trace code entrypoint =
                 is_visited := PTree.set pred true !is_visited; (* mark s visited *)
                 current := pred
                 end
-          done
+          done;
+          traces := !trace :: !traces;
         end
       end
     done;
-    !trace
+    !traces
   end
 
 (* for debugging *)
@@ -153,9 +158,19 @@ let print_trace trace =
   | [] -> ()
   | n::ln -> (Printf.printf "%d " (P.to_int n); f ln)
   in begin
-    Printf.printf "Trace: [";
+    Printf.printf "[";
     f trace;
-    Printf.printf "]\n"
+    Printf.printf "]"
+  end
+
+let print_traces traces =
+  let rec f = function
+  | [] -> ()
+  | t::lt -> Printf.printf "\n\t"; print_trace t; Printf.printf ",\n"; f lt
+  in begin
+    Printf.printf "Traces: {";
+    f traces;
+    Printf.printf "}\n";
   end
 
 let rec make_identity_ptree_rec = function
@@ -167,8 +182,8 @@ let make_identity_ptree f = make_identity_ptree_rec (PTree.elements (fn_code f))
 (* For now, identity function *)
 let duplicate_aux f =
   let pTreeId = make_identity_ptree f in
-  let trace = select_trace (to_ttl_code @@ fn_code f) (fn_entrypoint f)
+  let traces = select_traces (to_ttl_code @@ fn_code f) (fn_entrypoint f)
   in begin
-    print_trace trace;
+    print_traces traces;
     (((fn_code f), (fn_entrypoint f)), pTreeId)
   end
