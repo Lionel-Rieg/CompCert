@@ -38,31 +38,30 @@ prints something of the form `c3 cycles: 44131`.
 - `EXECUTE_CYCLES`: running command (default is `k1-cluster --syscall=libstd_scalls.so --cycle-based --`)
 - `EXECUTE_ARGS`: execution arguments. You can use a macro `__BASE__` which expands to the name of the binary being executed.
 - `GCCiFLAGS` with `i` from 0 to 4: the wanted optimizations. If one of these flags is empty, nothing is done. Same for `CCOMPiFLAGS`. Look at `rules.mk` to see the default values. You might find something like this:
-```
-# You can define up to GCC4FLAGS and CCOMP4FLAGS
-GCC0FLAGS?=
-GCC1FLAGS?=$(ALL_GCCFLAGS) -O1
-GCC2FLAGS?=$(ALL_GCCFLAGS) -O2
-GCC3FLAGS?=$(ALL_GCCFLAGS) -O3
-GCC4FLAGS?=
-CCOMP0FLAGS?=
-CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -fno-postpass
-CCOMP2FLAGS?=$(ALL_CCOMPFLAGS)
-CCOMP3FLAGS?=
-CCOMP4FLAGS?=
 
-# Prefix names
-GCC0PREFIX?=
-GCC1PREFIX?=.gcc.o1
-GCC2PREFIX?=.gcc.o2
-GCC3PREFIX?=.gcc.o3
-GCC4PREFIX?=
-CCOMP0PREFIX?=
-CCOMP1PREFIX?=.ccomp.o1
-CCOMP2PREFIX?=.ccomp.o2
-CCOMP3PREFIX?=
-CCOMP4PREFIX?= 
-```
+    # You can define up to GCC4FLAGS and CCOMP4FLAGS
+    GCC0FLAGS?=
+    GCC1FLAGS?=$(ALL_GCCFLAGS) -O1
+    GCC2FLAGS?=$(ALL_GCCFLAGS) -O2
+    GCC3FLAGS?=$(ALL_GCCFLAGS) -O3
+    GCC4FLAGS?=
+    CCOMP0FLAGS?=
+    CCOMP1FLAGS?=$(ALL_CCOMPFLAGS) -fno-postpass
+    CCOMP2FLAGS?=$(ALL_CCOMPFLAGS)
+    CCOMP3FLAGS?=
+    CCOMP4FLAGS?=
+
+    # Prefix names
+    GCC0PREFIX?=
+    GCC1PREFIX?=.gcc.o1
+    GCC2PREFIX?=.gcc.o2
+    GCC3PREFIX?=.gcc.o3
+    GCC4PREFIX?=
+    CCOMP0PREFIX?=
+    CCOMP1PREFIX?=.ccomp.o1
+    CCOMP2PREFIX?=.ccomp.o2
+    CCOMP3PREFIX?=
+    CCOMP4PREFIX?=
 
 The `PREFIX` are the prefixes to add to the secondary produced files (assembly, object, executable, ..). You should be careful that if a `FLAGS` is set, then the according `PREFIX` should be set as well.
 
@@ -86,4 +85,23 @@ Once the benches are built, you can then run `run_benches.sh file.csv` where `fi
 
 If you just add a benchmark without any timing function, the resulting `measures.csv` file will be empty for lack of timing output.
 
-TODO - how to add timings
+To add a timing, you must use the functions whose prototypes are in `clock.h`
+
+    #include "../clock.h"
+    /* ... */
+    clock_prepare();
+    /* ... */
+    clock_start();
+    /* .. computations .. */
+    clock_stop();
+    /* ... */
+    print_total_clock(); // print to stdout
+    printerr_total_clock(); // print to stderr
+
+If the benchmark doesn't use `stdout` in a binary way you can use `print_total_clock()`. However, some benchmarks like `jpeg-6b` print their binary content to `stdout`, which then messes up the `grep` command when attempting to use it to extract the cycles from `stdout`.
+
+The solution is then to use `printerr_total_clock()` which will print the cycles to `stderr`, and use `EXECUTE_ARGS` ressembling this:
+
+    EXECUTE_ARGS=-dct int -outfile __BASE__.jpg testimg.ppm 2> __BASE__.out
+
+`__BASE__` is a macro that gets expanded to the base name - that is, the `TARGET` concatenated with one of the `GCCiPREFIX` or `CCOMPiPREFIX`. For instance, in `jpeg-6b`, `__BASE__` could be `jpeg-6b.ccomp.o2`.
