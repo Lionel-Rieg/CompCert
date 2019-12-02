@@ -45,15 +45,12 @@
 /riscV/ConstpropOp.v
 /riscV/SelectOp.v
 /riscV/SelectLong.v
-<<<<<<< HEAD
 /mppa_k1c/ConstpropOp.v
 /mppa_k1c/SelectOp.v
 /mppa_k1c/SelectLong.v
-=======
 /aarch64/ConstpropOp.v
 /aarch64/SelectOp.v
 /aarch64/SelectLong.v
->>>>>>> e1725209b2b4401adc63ce5238fa5db7c134609c
 /backend/SelectDiv.v
 /backend/SplitLong.v
 /cparser/Parser.v

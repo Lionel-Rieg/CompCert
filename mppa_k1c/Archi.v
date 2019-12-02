@@ -17,7 +17,6 @@
 (** Architecture-dependent parameters for MPPA K1c. Mostly copied from the Risc-V backend *)
 
 Require Import ZArith List.
-(*From Flocq*)
 Require Import Binary Bits.
 
 Definition ptr64 := true.

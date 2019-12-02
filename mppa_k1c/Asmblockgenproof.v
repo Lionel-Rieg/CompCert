@@ -47,7 +47,6 @@ Lemma senv_preserved:
   Senv.equiv ge tge.
 Proof (Genv.senv_match TRANSF).
 
-
 Lemma functions_translated:
   forall b f,
   Genv.find_funct_ptr ge b = Some f ->
@@ -65,8 +64,6 @@ Proof.
   monadInv B. rewrite H0 in EQ; inv EQ; auto.
 Qed.
 
-(** * Properties of control flow *)
-
 Lemma transf_function_no_overflow:
   forall f tf,
   transf_function f = OK tf -> size_blocks tf.(fn_blocks) <= Ptrofs.max_unsigned.
@@ -75,23 +72,7 @@ Proof.
   omega.
 Qed.
 
-(** The following lemmas show that the translation from Mach to Asm
-  preserves labels, in the sense that the following diagram commutes:
-<<
-                          translation
-        Mach code ------------------------ Asm instr sequence
-            |                                          |
-            | Mach.find_label lbl       find_label lbl |
-            |                                          |
-            v                                          v
-        Mach code tail ------------------- Asm instr seq tail
-                          translation
->>
-  The proof demands many boring lemmas showing that Asm constructor
-  functions do not introduce new labels.
-*)
-
-Section TRANSL_LABEL.
+Section TRANSL_LABEL. (* Lemmas on translation of MB.is_label into AB.is_label *)
 
 Lemma gen_bblocks_label:
   forall hd bdy ex tbb tc,
@@ -113,7 +94,7 @@ Proof.
   all: inv GENB; simpl; auto.
 Qed.
 
-Lemma in_dec_transl:
+Remark in_dec_transl:
   forall lbl hd,
   (if in_dec lbl hd then true else false) = (if MB.in_dec lbl hd then true else false).
 Proof.
@@ -226,7 +207,7 @@ Proof.
   rewrite H. auto.
 Qed.
 
-Lemma transl_find_label:
+Theorem transl_find_label:
   forall lbl f tf,
   transf_function f = OK tf ->
   match MB.find_label lbl f.(MB.fn_code) with
@@ -241,8 +222,8 @@ Qed.
 
 End TRANSL_LABEL.
 
-(** A valid branch in a piece of Mach code translates to a valid ``go to''
-  transition in the generated Asm code. *)
+(** A valid branch in a piece of Machblock code translates to a valid ``go to''
+  transition in the generated Asmblock code. *)
 
 Lemma find_label_goto_label:
   forall f tf lbl rs m c' b ofs,
@@ -270,48 +251,47 @@ Qed.
 
 (** Existence of return addresses *)
 
-(* NB: the hypothesis in comment on [b] is not needed in the proof ! 
-*)
 Lemma return_address_exists:
-  forall b f (* sg ros *) c, (* b.(MB.exit) = Some (MBcall sg ros) -> *) is_tail (b :: c) f.(MB.fn_code) ->
+  forall b f c, is_tail (b :: c) f.(MB.fn_code) ->
   exists ra, return_address_offset f c ra.
 Proof.
   intros. eapply Asmblockgenproof0.return_address_exists; eauto.
 
 - intros. monadInv H0.
   destruct (zlt Ptrofs.max_unsigned (size_blocks x.(fn_blocks))); inv EQ0. monadInv EQ. simpl.
-(*   rewrite transl_code'_transl_code in EQ0. *)
-  exists x; exists true; split; auto. (*  unfold fn_code. *)
+  exists x; exists true; split; auto.
   repeat constructor.
-  - exact transf_function_no_overflow.
+- exact transf_function_no_overflow.
 Qed.
 
 (** * Proof of semantic preservation *)
 
-(** Semantic preservation is proved using simulation diagrams
+(** Semantic preservation is proved using a complex simulation diagram
   of the following form.
 <<
-           st1 --------------- st2
-            |                   |
-           t|                  *|t
-            |                   |
-            v                   v
-           st1'--------------- st2'
+                                     MB.step
+                      ---------------------------------------->
+                      header      body          exit
+                  st1 -----> st2 -----> st3 ------------------> st4
+                   |          |          |                       |
+                   |   (A)    |   (B)    |         (C)           |
+   match_codestate |          |          |                       |
+                   |  header  |   body1  |  body2                |  match_states
+                  cs1 -----> cs2 -----> cs3 ------> cs4          |
+                   |                  /                \  exit   |
+   match_asmstate  |   ---------------                  --->---  |
+                   |  /   match_asmstate                       \ |
+                  st'1 ---------------------------------------> st'2
+                                     AB.step                  *
 >>
-  The invariant is the [match_states] predicate below, which includes:
-- The Asm code pointed by the PC register is the translation of
-  the current Mach code sequence.
-- Mach register values and Asm register values agree.
+  The invariant between each MB.step/AB.step is the [match_states] predicate below.
+  However, we also need to introduce an intermediary state [Codestate] which allows
+  us to reason on a finer grain, executing header, body and exit separately.
+
+  This [Codestate] consists in a state like [Asmblock.State], except that the
+  code is directly stored in the state, much like [Machblock.State]. It also features
+  additional useful elements to keep track of while executing a bblock.
 *)
-
-(** We need to show that, in the simulation diagram, we cannot
-  take infinitely many Mach transitions that correspond to zero
-  transitions on the Asm side.  Actually, all Mach transitions
-  correspond to at least one Asm transition, except the
-  transition from [Machsem.Returnstate] to [Machsem.State].
-  So, the following integer measure will suffice to rule out
-  the unwanted behaviour. *)
-
 
 Remark preg_of_not_FP: forall r, negb (mreg_eq r MFP) = true -> IR FP <> preg_of r.
 Proof.
@@ -349,17 +329,18 @@ Inductive match_states: Machblock.state -> Asmvliw.state -> Prop :=
                    (Asmvliw.State rs m').
 
 Record codestate :=
-  Codestate {     pstate: state;
+  Codestate {     pstate: state;        (**r projection to Asmblock.state *)
                   pheader: list label;
-                  pbody1: list basic;
-                  pbody2: list basic;
-                  pctl: option control;
-                  fpok: bool;
-                  rem: list AB.bblock;
-                  cur: option bblock }.
+                  pbody1: list basic;   (**r list of basic instructions coming from the translation of the Machblock body *)
+                  pbody2: list basic;   (**r list of basic instructions coming from the translation of the Machblock exit *)
+                  pctl: option control; (**r exit instruction, coming from the translation of the Machblock exit *)
+                  ep: bool;             (**r reflects the [ep] variable used in the translation *)
+                  rem: list AB.bblock;  (**r remaining bblocks to execute *)
+                  cur: bblock           (**r current bblock to execute - to keep track of its size when incrementing PC *)
+            }.
 
-(*   | Codestate: state -> list AB.bblock -> option bblock -> codestate. *)
-
+(* The part that deals with Machblock <-> Codestate agreement
+ * Note about DXP: the property of [ep] only matters if the current block doesn't have a header, hence the condition *)
 Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
   | match_codestate_intro:
       forall s sp ms m rs0 m0 f tc ep c bb tbb tbc tbi
@@ -369,7 +350,6 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         (TBC: transl_basic_code f (MB.body bb) (if MB.header bb then ep else false) = OK tbc)
         (TIC: transl_instr_control f (MB.exit bb) = OK tbi)
         (TBLS: transl_blocks f c false = OK tc)
-(*         (TRANS: transl_blocks f (bb::c) ep = OK (tbb::tc)) *)
         (AG: agree ms sp rs0)
         (DXP: (if MB.header bb then ep else false) = true -> rs0#FP = parent_sp s)
         ,
@@ -377,14 +357,15 @@ Inductive match_codestate fb: Machblock.state -> codestate -> Prop :=
         {|  pstate := (Asmvliw.State rs0 m0);
             pheader := (MB.header bb);
             pbody1 := tbc;
-            pbody2 := (extract_basic tbi);
+            pbody2 := extract_basic tbi;
             pctl := extract_ctl tbi;
-            fpok := ep;
+            ep := ep;
             rem := tc;
-            cur := Some tbb
+            cur := tbb
         |}
 .
 
+(* The part ensuring that the code in Codestate actually resides at [rs PC] *)
 Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
   | match_asmstate_some:
       forall rs f tf tc m tbb ofs ep tbdy tex lhd
@@ -392,7 +373,6 @@ Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
         (TRANSF: transf_function f = OK tf)
         (PCeq: rs PC = Vptr fb ofs)
         (TAIL: code_tail (Ptrofs.unsigned ofs) (fn_blocks tf) (tbb::tc))
-(*         (HDROK: header tbb = lhd) *)
         ,
       match_asmstate fb 
         {|  pstate := (Asmvliw.State rs m);
@@ -400,12 +380,13 @@ Inductive match_asmstate fb: codestate -> Asmvliw.state -> Prop :=
             pbody1 := tbdy;
             pbody2 := extract_basic tex;
             pctl := extract_ctl tex;
-            fpok := ep;
+            ep := ep;
             rem := tc;
-            cur := Some tbb |}
+            cur := tbb |}
         (Asmvliw.State rs m)
 .
 
+(* Useful for dealing with the many cases in some proofs *)
 Ltac exploreInst :=
   repeat match goal with
   | [ H : match ?var with | _ => _ end = _ |- _ ] => destruct var
@@ -417,12 +398,14 @@ Ltac exploreInst :=
   | [ H : Error _ = OK _ |- _ ] => inversion H
   end.
 
+(** Some translation properties *)
+
 Lemma transl_blocks_nonil:
   forall f bb c tc ep,
   transl_blocks f (bb::c) ep = OK tc ->
   exists tbb tc', tc = tbb :: tc'.
 Proof.
-  intros until ep. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
+  intros until ep0. intros TLBS. monadInv TLBS. monadInv EQ. unfold gen_bblocks.
   destruct (extract_ctl x2).
   - destruct c0; destruct i; simpl; eauto. destruct x1; simpl; eauto.
   - destruct x1; simpl; eauto.
@@ -469,7 +452,7 @@ Lemma transl_blocks_distrib:
   -> transl_block f bb (if MB.header bb then ep else false) = OK (tbb :: nil)
   /\ transl_blocks f c false = OK tc.
 Proof.
-  intros until ep. intros TLBS Hbuiltin.
+  intros until ep0. intros TLBS Hbuiltin.
   destruct bb as [hd bdy ex].
   monadInv TLBS. monadInv EQ.
   exploit no_builtin_preserved; eauto. intros Hectl. destruct Hectl.
@@ -584,6 +567,9 @@ Proof.
     * unfold transl_comp_notfloat32. exploreInst; try discriminate.
 Qed.
 
+(* Proving that one can decompose a [match_state] relation into a [match_codestate]
+   and a [match_asmstate], along with some helpful properties tying both relations together *)
+
 Theorem match_state_codestate:
   forall mbs abs s fb sp bb c ms m,
   (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
@@ -596,7 +582,7 @@ Theorem match_state_codestate:
     /\ transl_blocks f (bb::c) ep = OK (tbb::tc)
     /\ body tbb = pbody1 cs ++ pbody2 cs
     /\ exit tbb = pctl cs
-    /\ cur cs = Some tbb /\ rem cs = tc
+    /\ cur cs = tbb /\ rem cs = tc
     /\ pstate cs = abs.
 Proof.
   intros until m. intros Hnobuiltin Hnotempty Hmbs MS. subst. inv MS.
@@ -611,7 +597,7 @@ Proof.
     eapply transl_instr_control_nobuiltin; eauto.
   intros (Hth & Htbdy & Htexit).
   exists {| pstate := (State rs m'); pheader := (Machblock.header bb); pbody1 := x; pbody2 := extract_basic x0;
-            pctl := extract_ctl x0; fpok := ep; rem := tc'; cur := Some tbb |}, fb, f, tbb, tc', ep.
+            pctl := extract_ctl x0; ep := ep0; rem := tc'; cur := tbb |}, fb, f, tbb, tc', ep0.
   repeat split. 1-2: econstructor; eauto.
   { destruct (MB.header bb). eauto. discriminate. } eauto.
   unfold transl_blocks. fold transl_blocks. unfold transl_block. rewrite EQ. simpl. rewrite EQ1; simpl.
@@ -624,7 +610,7 @@ Definition mb_remove_body (bb: MB.bblock) :=
 
 Lemma exec_straight_pnil:
   forall c rs1 m1 rs2 m2,
-  exec_straight tge c rs1 m1 (Pnop::gnil) rs2 m2 ->
+  exec_straight tge c rs1 m1 (Pnop ::g nil) rs2 m2 ->
   exec_straight tge c rs1 m1 nil rs2 m2.
 Proof.
   intros. eapply exec_straight_trans. eapply H. econstructor; eauto.
@@ -656,10 +642,9 @@ Lemma nextblock_preserves:
 Proof.
   intros. destruct r; try discriminate.
   subst. Simpl.
-(*   - subst. Simpl. *)
 Qed.
 
-Lemma cons3_app {A: Type}:
+Remark cons3_app {A: Type}:
   forall a b c (l: list A),
   a :: b :: c :: l = (a :: b :: c :: nil) ++ l.
 Proof.
@@ -693,36 +678,20 @@ Proof.
   induction lb; intros; simpl; congruence.
 Qed.
 
-(* Lemma goto_label_inv:
-  forall fn tbb l rs m b ofs,
-  rs PC = Vptr b ofs ->
-  goto_label fn l rs m = goto_label fn l (nextblock tbb rs) m.
-Proof.
-  intros.
-  unfold goto_label. rewrite nextblock_pc. unfold Val.offset_ptr. rewrite H.
-  exploreInst; auto.
-  unfold nextblock. rewrite Pregmap.gss.
-  
-Qed.
-
-
-Lemma exec_control_goto_label_inv:
-  exec_control tge fn (Some ctl) rs m = goto_label fn l rs m ->
-  exec_control tge fn (Some ctl) (nextblock tbb rs) m = goto_label fn l (nextblock tbb rs) m.
-Proof.
-Qed. *)
-
+(* See (C) in the diagram. The proofs are mostly adapted from the previous Mach->Asm proofs, but are
+   unfortunately quite cumbersome. To reproduce them, it's best to have a Coq IDE with you and see by
+   yourself the steps *)
 Theorem step_simu_control:
-  forall bb' fb fn s sp c ms' m' rs2 m2 E0 S'' rs1 m1 tbb tbdy2 tex cs2,
+  forall bb' fb fn s sp c ms' m' rs2 m2 t S'' rs1 m1 tbb tbdy2 tex cs2,
   MB.body bb' = nil ->
   (forall ef args res, MB.exit bb' <> Some (MBbuiltin ef args res)) ->
   Genv.find_funct_ptr tge fb = Some (Internal fn) ->
   pstate cs2 = (Asmvliw.State rs2 m2) ->
   pbody1 cs2 = nil -> pbody2 cs2 = tbdy2 -> pctl cs2 = tex ->
-  cur cs2 = Some tbb ->
+  cur cs2 = tbb ->
   match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2 ->
   match_asmstate fb cs2 (Asmvliw.State rs1 m1) ->
-  exit_step return_address_offset ge (MB.exit bb') (MB.State s fb sp (bb'::c) ms' m') E0 S'' ->
+  exit_step return_address_offset ge (MB.exit bb') (MB.State s fb sp (bb'::c) ms' m') t S'' ->
   (exists rs3 m3 rs4 m4,
       exec_body tge tbdy2 rs2 m2 = Next rs3 m3
   /\  exec_control_rel tge fn tex tbb rs3 m3 rs4 m4
@@ -731,7 +700,7 @@ Proof.
   intros until cs2. intros Hbody Hbuiltin FIND Hpstate Hpbody1 Hpbody2 Hpctl Hcur MCS MAS ESTEP.
   inv ESTEP.
   - inv MCS. inv MAS. simpl in *.
-    inv Hcur. inv Hpstate.
+    inv Hpstate.
     destruct ctl.
     + (* MBcall *)
       destruct bb' as [mhd' mbdy' mex']; simpl in *. subst.
@@ -834,7 +803,6 @@ Proof.
 
       assert (f0 = f) by congruence. subst f0. assert (f1 = f) by congruence. subst f1. clear H11.
       remember (nextblock tbb rs2) as rs2'.
-      (* inv AT. monadInv H4. *)
       exploit functions_transl. eapply FIND0. eapply TRANSF0. intros FIND'.
       assert (tf = fn) by congruence. subst tf.
       exploit find_label_goto_label.
@@ -853,7 +821,6 @@ Proof.
         assert (forall r : preg, r <> PC -> rs' r = rs2 r).
         { intros. destruct r.
           - destruct g. all: rewrite INV; Simpl; auto.
-(*           - destruct g. all: rewrite INV; Simpl; auto. *)
           - rewrite INV; Simpl; auto.
           - contradiction. }
         eauto with asmgen.
@@ -962,11 +929,8 @@ Proof.
       econstructor; eauto.
         unfold nextblock, incrPC. repeat apply agree_set_other; auto with asmgen.
 
-  - inv MCS. inv MAS. simpl in *. subst. inv Hpstate. inv Hcur.
-(*     exploit transl_blocks_distrib; eauto. (* rewrite <- H2. discriminate. *)
-    intros (TLB & TLBS).
- *) destruct bb' as [hd' bdy' ex']; simpl in *. subst.
-(*     unfold transl_block in TLB. simpl in TLB. unfold gen_bblocks in TLB; simpl in TLB. inv TLB. *)
+  - inv MCS. inv MAS. simpl in *. subst. inv Hpstate.
+    destruct bb' as [hd' bdy' ex']; simpl in *. subst.
     monadInv TBC. monadInv TIC. simpl in *. rewrite H5. rewrite H6.
     simpl. repeat eexists.
     econstructor. 4: instantiate (3 := false). all:eauto.
@@ -1023,7 +987,8 @@ Proof.
   all: eauto.
 Qed.
 
-Lemma step_simu_basic:
+(* Handling the individual instructions of theorem (B) in the above diagram. A bit less cumbersome, but still tough *)
+Theorem step_simu_basic:
   forall bb bb' s fb sp c ms m rs1 m1 ms' m' bi cs1 tbdy bdy,
   MB.header bb = nil -> MB.body bb = bi::(bdy) -> (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
   bb' = {| MB.header := nil; MB.body := bdy; MB.exit := MB.exit bb |} ->
@@ -1032,7 +997,7 @@ Lemma step_simu_basic:
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 l cs2 tbdy',
        cs2 = {| pstate := (State rs2 m2); pheader := nil; pbody1 := tbdy'; pbody2 := pbody2 cs1;
-                pctl := pctl cs1; fpok := fp_is_parent (fpok cs1) bi; rem := rem cs1; cur := cur cs1 |}
+                pctl := pctl cs1; ep := fp_is_parent (ep cs1) bi; rem := rem cs1; cur := cur cs1 |}
     /\ tbdy = l ++ tbdy'
     /\ exec_body tge l rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp (bb'::c) ms' m') cs2).
@@ -1041,6 +1006,7 @@ Proof.
   simpl in *. inv Hpstate.
   rewrite Hbody in TBC. monadInv TBC.
   inv BSTEP.
+
   - (* MBgetstack *)
     simpl in EQ0.
     unfold Mach.load_stack in H.
@@ -1056,12 +1022,17 @@ Proof.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. simpl. auto. }
-    rewrite <- Hheadereq. *) subst.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. simpl. auto. }
+    subst. simpl in Hheadereq.
 
-    eapply match_codestate_intro; eauto. simpl. simpl in EQ. (*  { destruct (MB.header bb); auto. } *)
+    eapply match_codestate_intro; eauto.
+      { simpl. simpl in EQ. rewrite <- Hheadereq in EQ. assumption. }
     eapply agree_set_mreg; eauto with asmgen.
-    intro Hep. simpl in Hep. inv Hep.
+    intro Hep. simpl in Hep. 
+    destruct (andb_prop _ _ Hep). clear Hep.
+    rewrite <- Hheadereq in DXP. subst. rewrite <- DXP. rewrite Hrs'2. reflexivity.
+    discriminate. apply preg_of_not_FP; assumption. reflexivity.
+
   - (* MBsetstack *)
     simpl in EQ0.
     unfold Mach.store_stack in H.
@@ -1078,8 +1049,7 @@ Proof.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
+    subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ. rewrite Hheader in EQ. auto.
 
     eapply agree_undef_regs; eauto with asmgen.
@@ -1095,10 +1065,9 @@ Proof.
     exploit Mem.loadv_extends. eauto. eexact H1. auto.
     intros [v' [C D]].
 
-  (* Opaque loadind. *)
-(*     left; eapply exec_straight_steps; eauto; intros. monadInv TR. *)
     monadInv EQ0. rewrite Hheader. rewrite Hheader in DXP.
-    destruct ep eqn:EPeq.
+    destruct ep0 eqn:EPeq.
+
   (* RTMP contains parent *)
     + exploit loadind_correct. eexact EQ1.
       instantiate (2 := rs1). rewrite DXP; eauto.
@@ -1113,14 +1082,14 @@ Proof.
       { eapply basics_to_code_app; eauto. }
       remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
       assert (Hheadereq: MB.header bb' = MB.header bb). { subst. simpl. auto. }
-      (* rewrite <- Hheadereq.  *)subst.
+      subst.
       eapply match_codestate_intro; eauto.
 
       eapply agree_set_mreg. eapply agree_set_mreg; eauto. congruence. auto with asmgen.
       simpl; intros. rewrite R; auto with asmgen.
       apply preg_of_not_FP; auto.
 
-  (* GPR11 does not contain parent *)
+  (* RTMP does not contain parent *)
     + rewrite chunk_of_Tptr in A. 
       exploit loadind_ptr_correct. eexact A. intros [rs2 [P [Q R]]].
       exploit loadind_correct. eexact EQ1. instantiate (2 := rs2). rewrite Q. eauto.
@@ -1169,8 +1138,7 @@ Proof.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
+    subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ. rewrite Hheader in EQ. auto.
     apply agree_set_undef_mreg with rs1; auto. 
     apply Val.lessdef_trans with v'; auto.
@@ -1197,12 +1165,15 @@ Local Transparent destroyed_by_op.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ.
-
-    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
-    simpl; congruence.
+    rewrite <- Hheadereq in EQ. assumption.
+    eapply agree_set_mreg; eauto with asmgen.
+    intro Hep. simpl in Hep. 
+    destruct (andb_prop _ _ Hep). clear Hep.
+    subst. rewrite <- DXP. rewrite R; try discriminate. reflexivity.
+    apply preg_of_not_FP; assumption. reflexivity.
 
   - (* notrap1 cannot happen *)
     simpl in EQ0. unfold transl_load in EQ0.
@@ -1279,11 +1250,13 @@ Local Transparent destroyed_by_op.
     repeat (split; auto).
       eapply basics_to_code_app; eauto.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+    assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     subst.
     eapply match_codestate_intro; eauto. simpl. simpl in EQ.
-
+    rewrite <- Hheadereq in EQ. assumption.
     eapply agree_undef_regs; eauto with asmgen.
-    simpl; congruence.
+    intro Hep. simpl in Hep.
+    subst. rewrite <- DXP. rewrite Q; try discriminate. reflexivity. reflexivity.
 Qed.
 
 Lemma exec_body_trans:
@@ -1309,13 +1282,12 @@ Qed.
 Inductive exec_header: codestate -> codestate -> Prop :=
   | exec_header_cons: forall cs1,
       exec_header cs1 {| pstate := pstate cs1; pheader := nil; pbody1 := pbody1 cs1; pbody2 := pbody2 cs1;
-                          pctl := pctl cs1; fpok := (if pheader cs1 then fpok cs1 else false); rem := rem cs1;
-                          (* cur := match cur cs1 with None => None | Some bcur => Some (remove_header bcur) end *)
+                          pctl := pctl cs1; ep := (if pheader cs1 then ep cs1 else false); rem := rem cs1;
                           cur := cur cs1 |}.
 
-Lemma step_simu_header:
+(* Theorem (A) in the diagram, the easiest of all *)
+Theorem step_simu_header:
   forall bb s fb sp c ms m rs1 m1 cs1,
-(*   (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) -> *)
   pstate cs1 = (State rs1 m1) ->
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists cs1',
@@ -1340,7 +1312,8 @@ Proof.
   simpl. econstructor; eauto.
 Qed.
 
-Lemma step_simu_body:
+(* Theorem (B) in the diagram, using step_simu_basic + induction on the Machblock body *)
+Theorem step_simu_body:
   forall bb s fb sp c ms m rs1 m1 ms' cs1 m',
   MB.header bb = nil ->
   (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
@@ -1349,14 +1322,14 @@ Lemma step_simu_body:
   match_codestate fb (MB.State s fb sp (bb::c) ms m) cs1 ->
   (exists rs2 m2 cs2 ep,
        cs2 = {| pstate := (State rs2 m2); pheader := nil; pbody1 := nil; pbody2 := pbody2 cs1;
-                pctl := pctl cs1; fpok := ep; rem := rem cs1; cur := cur cs1 |}
+                pctl := pctl cs1; ep := ep; rem := rem cs1; cur := cur cs1 |}
     /\ exec_body tge (pbody1 cs1) rs1 m1 = Next rs2 m2
     /\ match_codestate fb (MB.State s fb sp ({| MB.header := nil; MB.body := nil; MB.exit := MB.exit bb |}::c) ms' m') cs2).
 Proof.
   intros bb. destruct bb as [hd bdy ex]; simpl; auto. induction bdy as [|bi bdy].
   - intros until m'. intros Hheader Hnobuiltin BSTEP Hpstate MCS.
     inv BSTEP.
-    exists rs1, m1, cs1, (fpok cs1).
+    exists rs1, m1, cs1, (ep cs1).
     inv MCS. inv Hpstate. simpl in *. monadInv TBC. repeat (split; simpl; auto).
     econstructor; eauto.
   - intros until m'. intros Hheader Hnobuiltin BSTEP Hpstate MCS. inv BSTEP.
@@ -1370,23 +1343,6 @@ Proof.
     repeat (split; simpl; auto). subst. simpl in *. auto.
     rewrite Happ. eapply exec_body_trans; eauto. rewrite Hcs2 in EXEB'; simpl in EXEB'. auto.
 Qed.
-
-(* Lemma exec_body_straight:
-  forall l rs0 m0 rs1 m1,
-  l <> nil ->
-  exec_body tge l rs0 m0 = Next rs1 m1 ->
-  exec_straight tge l rs0 m0 nil rs1 m1.
-Proof.
-  induction l as [|i1 l].
-    intros. contradict H; auto.
-  destruct l as [|i2 l].
-  - intros until m1. intros _ EXEB. simpl in EXEB.
-    destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
-    inv EXEB. econstructor; eauto.
-  - intros until m1. intros _ EXEB. simpl in EXEB. simpl in IHl.
-    destruct (exec_basic_instr tge i1 rs0 m0) eqn:EBI; try discriminate.
-    econstructor; eauto. eapply IHl; eauto. discriminate.
-Qed. *)
 
 Lemma exec_body_pc:
   forall l rs1 m1 rs2 m2,
@@ -1432,7 +1388,8 @@ Proof.
   contradict H. unfold mbsize. simpl. auto.
 Qed.
 
-(* Alternative form of step_simulation_bblock, easier to prove *)
+(* Bringing theorems (A), (B) and (C) together, for the case of the absence of builtin instruction *)
+(* This more general form is easier to prove, but the actual theorem is step_simulation_bblock further below *)
 Lemma step_simulation_bblock':
   forall sf f sp bb bb' bb'' rs m rs' m' s'' c S1,
   bb' = mb_remove_header bb ->
@@ -1481,8 +1438,6 @@ Proof.
     intros (cs1' & EXEH & MCS2).
 
     (* step_simu_body part *)
-(*     assert (MB.body bb = MB.body (mb_remove_header bb)). { destruct bb; simpl; auto. }
-    rewrite H in BSTEP. clear H. *)
     assert (Hpstate': pstate cs1' = pstate cs1). { inv EXEH; auto. }
     exploit step_simu_body.
       3: eapply BSTEP.
@@ -1502,8 +1457,8 @@ Proof.
       9: eapply MCS'. all: simpl.
       10: eapply ESTEP.
       all: simpl; eauto.
-      rewrite Hpbody2. rewrite Hpctl. rewrite Hcur.
-      { inv MAS; simpl in *. inv Hcur. inv Hpstate2. eapply match_asmstate_some; eauto.
+      rewrite Hpbody2. rewrite Hpctl.
+      { inv MAS; simpl in *. inv Hpstate2. eapply match_asmstate_some; eauto.
         erewrite exec_body_pc; eauto. }
     intros (rs3 & m3 & rs4 & m4 & EXEB' & EXECTL' & MS').
 
@@ -1528,11 +1483,11 @@ Proof.
     assert (f1 = f0) by congruence. subst f0.
     rewrite PCeq in Hrs1pc. inv Hrs1pc.
     exploit functions_translated; eauto. intros (tf1 & FIND'' & TRANS''). rewrite FIND' in FIND''.
-    inv FIND''. monadInv TRANS''. rewrite TRANSF0 in EQ. inv EQ. inv Hcur.
+    inv FIND''. monadInv TRANS''. rewrite TRANSF0 in EQ. inv EQ.
     eapply find_bblock_tail; eauto.
 Qed.
 
-Lemma step_simulation_bblock:
+Theorem step_simulation_bblock:
   forall sf f sp bb ms m ms' m' S2 c,
   body_step ge sf f sp (Machblock.body bb) ms m ms' m' ->
   (forall ef args res, MB.exit bb <> Some (MBbuiltin ef args res)) ->
@@ -1548,12 +1503,7 @@ Proof.
   - econstructor.
 Qed.
 
-Definition measure (s: MB.state) : nat :=
-  match s with
-  | MB.State _ _ _ _ _ _ => 0%nat
-  | MB.Callstate _ _ _ _ => 0%nat
-  | MB.Returnstate _ _ _ => 1%nat
-  end.
+(** Dealing now with the builtin case *)
 
 Definition split (c: MB.code) :=
   match c with
@@ -1609,7 +1559,7 @@ Proof.
   eapply transl_code_at_pc_split_builtin; eauto.
 Qed.
 
-Lemma step_simulation_builtin:
+Theorem step_simulation_builtin:
   forall ef args res bb sf f sp c ms m t S2,
   MB.body bb = nil -> MB.exit bb = Some (MBbuiltin ef args res) ->
   exit_step return_address_offset ge (MB.exit bb) (Machblock.State sf f sp (bb :: c) ms m) t S2 ->
@@ -1656,6 +1606,16 @@ Proof.
   congruence.
 Qed.
 
+(* Measure to prove finite stuttering, see the other backends *)
+Definition measure (s: MB.state) : nat :=
+  match s with
+  | MB.State _ _ _ _ _ _ => 0%nat
+  | MB.Callstate _ _ _ _ => 0%nat
+  | MB.Returnstate _ _ _ => 1%nat
+  end.
+
+(* The actual MB.step/AB.step simulation, using the above theorems, plus extra proofs
+   for the internal and external function cases *)
 Theorem step_simulation:
   forall S1 t S2, MB.step return_address_offset ge S1 t S2 ->
   forall S1' (MS: match_states S1 S1'),
@@ -1710,25 +1670,20 @@ Proof.
   exploit Mem.storev_extends. eexact G. eexact H2. eauto. eauto.
   intros [m3' [P Q]].
   (* Execution of function prologue *)
-  monadInv EQ0. (* rewrite transl_code'_transl_code in EQ1. *)
+  monadInv EQ0.
   set (tfbody := make_prologue f x0) in *.
   set (tf := {| fn_sig := MB.fn_sig f; fn_blocks := tfbody |}) in *.
   set (rs2 := rs0#FP <- (parent_sp s) #SP <- sp #RTMP <- Vundef).
   exploit (Pget_correct tge GPRA RA nil rs2 m2'); auto.
   intros (rs' & U' & V').
-(*   exploit (exec_straight_through_singleinst); eauto.
-  intro W'. remember (nextblock _ rs') as rs''. *)
   exploit (storeind_ptr_correct tge SP (fn_retaddr_ofs f) GPRA nil rs' m2').
-    rewrite chunk_of_Tptr in P.
+  { rewrite chunk_of_Tptr in P.
     assert (rs' GPRA = rs0 RA). { apply V'. }
     assert (rs' SP = rs2 SP). { apply V'; discriminate. }
     rewrite H4. rewrite H3.
-    (* change (rs' GPRA) with (rs0 RA). *)
     rewrite ATLR.
-    change (rs2 SP) with sp. eexact P.
+    change (rs2 SP) with sp. eexact P. }
   intros (rs3 & U & V).
-(*   exploit (exec_straight_through_singleinst); eauto.
-  intro W. *)
   assert (EXEC_PROLOGUE: exists rs3',
             exec_straight_blocks tge tf
               tf.(fn_blocks) rs0 m'
@@ -1774,7 +1729,6 @@ Local Transparent destroyed_at_function_entry.
   rewrite Heqrs3'. Simpl. rewrite V. inversion V'. rewrite H6. auto.
   assert (r <> GPRA). { contradict H3; rewrite H3; unfold data_preg; auto. }
   assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
-  (* rewrite H8; auto. *)
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
   contradict H3; rewrite H3; unfold data_preg; auto.
@@ -1782,6 +1736,7 @@ Local Transparent destroyed_at_function_entry.
   intros. rewrite Heqrs3'. rewrite V by auto with asmgen.
   assert (forall r : preg, r <> PC -> r <> GPRA -> rs' r = rs2 r). { apply V'. }
   rewrite H4 by auto with asmgen. reflexivity. discriminate.
+
 - (* external function *)
   inv MS.
   exploit functions_translated; eauto.

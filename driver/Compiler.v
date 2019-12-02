@@ -38,6 +38,7 @@ Require RTLgen.
 Require Tailcall.
 Require Inlining.
 Require Renumber.
+Require Duplicate.
 Require Constprop.
 Require CSE.
 Require Deadcode.
@@ -60,6 +61,7 @@ Require RTLgenproof.
 Require Tailcallproof.
 Require Inliningproof.
 Require Renumberproof.
+Require Duplicateproof.
 Require Constpropproof.
 Require CSEproof.
 Require Deadcodeproof.
@@ -128,17 +130,18 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 2)
    @@ time "Renumbering" Renumber.transf_program
    @@ print (print_RTL 3)
-   @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
+  @@@ time "Duplicating" Duplicate.transf_program
    @@ print (print_RTL 4)
-   @@ total_if Compopts.optim_constprop (time "Renumbering" Renumber.transf_program)
+   @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
    @@ print (print_RTL 5)
-  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
+   @@ total_if Compopts.optim_constprop (time "Renumbering" Renumber.transf_program)
    @@ print (print_RTL 6)
-  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
+  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
    @@ print (print_RTL 7)
-  @@@ time "Unused globals" Unusedglob.transform_program
+  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
    @@ print (print_RTL 8)
    @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
+  @@@ time "Unused globals" Unusedglob.transform_program
    @@ print (print_RTL 9)
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
@@ -242,6 +245,7 @@ Definition CompCert's_passes :=
   ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
   ::: mkpass Inliningproof.match_prog
   ::: mkpass Renumberproof.match_prog
+  ::: mkpass Duplicateproof.match_prog
   ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Renumberproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
@@ -308,6 +312,7 @@ Proof.
   exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
   exists p8; split. apply Inliningproof.transf_program_match; auto.
   exists p9; split. apply Renumberproof.transf_program_match; auto.
+<<<<<<< HEAD
   exists p10; split. apply total_if_match. apply Constpropproof.transf_program_match.
   exists p11; split. apply total_if_match. apply Renumberproof.transf_program_match.
   exists p12; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
@@ -320,6 +325,20 @@ Proof.
   exists p18; split. apply CleanupLabelsproof.transf_program_match; auto.
   exists p19; split. eapply partial_if_match; eauto. apply Debugvarproof.transf_program_match.
   exists p20; split. apply Stackingproof.transf_program_match; auto.
+=======
+  exists p10; split. apply Duplicateproof.transf_program_match; auto.
+  exists p11; split. apply total_if_match. apply Constpropproof.transf_program_match.
+  exists p12; split. apply total_if_match. apply Renumberproof.transf_program_match.
+  exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
+  exists p14; split. eapply partial_if_match; eauto. apply Deadcodeproof.transf_program_match.
+  exists p15; split. apply Unusedglobproof.transf_program_match; auto.
+  exists p16; split. apply Allocproof.transf_program_match; auto.
+  exists p17; split. apply Tunnelingproof.transf_program_match.
+  exists p18; split. apply Linearizeproof.transf_program_match; auto.
+  exists p19; split. apply CleanupLabelsproof.transf_program_match; auto.
+  exists p20; split. eapply partial_if_match; eauto. apply Debugvarproof.transf_program_match.
+  exists p21; split. apply Stackingproof.transf_program_match; auto.
+>>>>>>> origin/mppa-work
   exists tp; split. apply Asmgenproof.transf_program_match; auto.
   reflexivity.
 Qed.
@@ -390,6 +409,7 @@ Ltac DestructM :=
   eapply compose_forward_simulations.
     eapply Inliningproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
+  eapply compose_forward_simulations. eapply Duplicateproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
   eapply compose_forward_simulations.

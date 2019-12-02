@@ -1112,10 +1112,12 @@ Definition transl_instr_control (f: Machblock.function) (oi: option Machblock.co
 
 Definition fp_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
   match i with
+  | MBgetstack ofs ty dst => before && negb (mreg_eq dst MFP)
   | MBsetstack src ofs ty => before
   | MBgetparam ofs ty dst => negb (mreg_eq dst MFP)
   | MBop op args res => before && negb (mreg_eq res MFP)
-  | _ => false
+  | MBload chunk addr args dst => before && negb (mreg_eq dst MFP)
+  | MBstore chunk addr args res => before
   end.
 
 (** This is the naive definition, which is not tail-recursive unlike the other backends *)

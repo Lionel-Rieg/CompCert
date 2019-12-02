@@ -8,7 +8,9 @@ EXECUTE:=timeout --signal=SIGTERM 20s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
-TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
+TIME=time >/dev/null
+# FIXME - maybe this is better? From v3.6
+# TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
 
 PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
   lists binarytrees fannkuch mandelbrot nbody \

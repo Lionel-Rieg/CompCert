@@ -27,7 +27,7 @@ int main (int argc, char **argv)
 
     if (argc < 2) {
 #ifdef __K1C__
-      w = h = 50;
+      w = h = 40;
 #else
       w = h = 1000;
 #endif
