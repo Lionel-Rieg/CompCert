@@ -1116,7 +1116,7 @@ Definition fp_is_parent (before: bool) (i: Machblock.basic_inst) : bool :=
   | MBsetstack src ofs ty => before
   | MBgetparam ofs ty dst => negb (mreg_eq dst MFP)
   | MBop op args res => before && negb (mreg_eq res MFP)
-  | MBload chunk addr args dst => before && negb (mreg_eq dst MFP)
+  | MBload trapping_mode chunk addr args dst => before && negb (mreg_eq dst MFP)
   | MBstore chunk addr args res => before
   end.
 

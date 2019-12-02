@@ -328,7 +328,7 @@ Local Opaque mreg_type.
     change ty_res with (snd (ty_args, ty_res)). rewrite <- TYOP. eapply type_of_operation_sound; eauto.
     red; intros; subst op. simpl in ISMOVE.
     destruct args; try discriminate. destruct args; discriminate.
-    apply wt_undef_regs; auto.
+    (* no longer needed apply wt_undef_regs; auto. *)
 - (* load *)
   simpl in *; InvBooleans.
   econstructor; eauto.

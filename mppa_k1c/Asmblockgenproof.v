@@ -1203,14 +1203,18 @@ Local Transparent destroyed_by_op.
     exists rs2, m1, ll.
     eexists. eexists. split. instantiate (1 := x). eauto.
     repeat (split; auto).
-      eapply basics_to_code_app; eauto.
-    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
-(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
-    rewrite <- Hheadereq. *) subst.
-    eapply match_codestate_intro; eauto. simpl. simpl in EQ.
+    eapply basics_to_code_app; eauto.
+    eapply match_codestate_intro; eauto. simpl. rewrite Hheader in *.
+    simpl in EQ. assumption.
 
     eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
-    simpl; congruence.
+
+    simpl. intro.
+    rewrite R; try congruence.
+    apply DXP.
+    destruct ep0; simpl in *; congruence.
+    apply preg_of_not_FP.
+    destruct ep0; simpl in *; congruence.
     }
     { 
     exploit transl_load_correct_notrap2; eauto.
@@ -1226,10 +1230,15 @@ Local Transparent destroyed_by_op.
     remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
 (*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
     rewrite <- Hheadereq. *) subst.
-    eapply match_codestate_intro; eauto. simpl. simpl in EQ.
+    eapply match_codestate_intro; eauto. simpl. rewrite Hheader in *. simpl in EQ. assumption.
 
     eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
-    simpl; congruence.
+    simpl. intro.
+    rewrite R; try congruence.
+    apply DXP.
+    destruct ep0; simpl in *; congruence.
+    apply preg_of_not_FP.
+    destruct ep0; simpl in *; congruence.
     }
   - (* MBstore *)
     simpl in EQ0. rewrite Hheader in DXP.
