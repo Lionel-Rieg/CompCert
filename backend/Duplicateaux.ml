@@ -25,11 +25,11 @@ let to_ttl_inst = function
 | Iop (op, lr, r, n) -> Tnext (n, Iop(op, lr, r, n))
 | Iload (m, a, lr, r, n) -> Tnext (n, Iload(m, a, lr, r, n))
 | Istore (m, a, lr, r, n) -> Tnext (n, Istore(m, a, lr, r, n))
-| Icall (s, ri, lr, r, n) -> Tnext (n, Icall(s, ri, lr, r, n))
+| Icall (s, ri, lr, r, n) -> Tleaf (Icall(s, ri, lr, r, n))
 | Itailcall (s, ri, lr) -> Tleaf (Itailcall(s, ri, lr))
-| Ibuiltin (ef, lbr, br, n) -> Tnext (n, Ibuiltin(ef, lbr, br, n))
+| Ibuiltin (ef, lbr, br, n) -> Tleaf (Ibuiltin(ef, lbr, br, n))
 | Icond (cond, lr, n, n') -> Tnext (select_one n n', Icond(cond, lr, n, n'))
-| Ijumptable (r, ln) -> Tnext (List.hd ln, Ijumptable(r, ln))
+| Ijumptable (r, ln) -> Tleaf (Ijumptable(r, ln))
 
 let rec to_ttl_code_rec = function
 | [] -> PTree.empty
@@ -64,11 +64,16 @@ let bfs code entrypoint =
           match PTree.get node code with
           | None -> failwith "No such node"
           | Some ti -> [node] @ match ti with
-              | Tleaf i -> []
+              | Tleaf i -> (match i with
+                  | Icall(_, _, _, _, n) -> bfs_list code [n]
+                  | Ibuiltin(_, _, _, n) -> bfs_list code [n]
+                  | Ijumptable(_, ln) -> bfs_list code ln
+                  | Itailcall _ | Ireturn _ -> [] 
+                  | _ -> failwith "Tleaf case not handled in bfs" )
               | Tnext (n,i) -> (bfs_list code [n]) @ match i with
                   | Icond (_, _, n1, n2) -> bfs_list code [n1; n2]
-                  | Ijumptable (_, ln) -> bfs_list code ln
-                  | _ -> []
+                  | Inop _ | Iop _ | Iload _ | Istore _ -> []
+                  | _ -> failwith "Tnext case not handled in bfs"
           end
         else []
       in node_bfs @ (bfs_list code ln)
