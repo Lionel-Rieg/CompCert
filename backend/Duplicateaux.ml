@@ -52,32 +52,31 @@ let get_some = function
 | None -> failwith "Did not get some"
 | Some thing -> thing
 
-(* FIXME - heuristic : starting from entrypoint, then going downward *)
-let bfs code entrypoint =
+let dfs code entrypoint =
   let visited = ref (PTree.map (fun n i -> false) code) in
-  let rec bfs_list code = function
+  let rec dfs_list code = function
   | [] -> []
   | node :: ln ->
-      let node_bfs =
+      let node_dfs =
         if not (get_some @@ PTree.get node !visited) then begin
           visited := PTree.set node true !visited;
           match PTree.get node code with
           | None -> failwith "No such node"
           | Some ti -> [node] @ match ti with
               | Tleaf i -> (match i with
-                  | Icall(_, _, _, _, n) -> bfs_list code [n]
-                  | Ibuiltin(_, _, _, n) -> bfs_list code [n]
-                  | Ijumptable(_, ln) -> bfs_list code ln
+                  | Icall(_, _, _, _, n) -> dfs_list code [n]
+                  | Ibuiltin(_, _, _, n) -> dfs_list code [n]
+                  | Ijumptable(_, ln) -> dfs_list code ln
                   | Itailcall _ | Ireturn _ -> [] 
-                  | _ -> failwith "Tleaf case not handled in bfs" )
-              | Tnext (n,i) -> (bfs_list code [n]) @ match i with
-                  | Icond (_, _, n1, n2) -> bfs_list code [n1; n2]
+                  | _ -> failwith "Tleaf case not handled in dfs" )
+              | Tnext (n,i) -> (dfs_list code [n]) @ match i with
+                  | Icond (_, _, n1, n2) -> dfs_list code [n1; n2]
                   | Inop _ | Iop _ | Iload _ | Istore _ -> []
-                  | _ -> failwith "Tnext case not handled in bfs"
+                  | _ -> failwith "Tnext case not handled in dfs"
           end
         else []
-      in node_bfs @ (bfs_list code ln)
-  in bfs_list code [entrypoint]
+      in node_dfs @ (dfs_list code ln)
+  in dfs_list code [entrypoint]
 
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
 
@@ -115,10 +114,21 @@ let get_predecessors code =
     !preds
   end
 
+(* for debugging *)
+let print_intlist l =
+  let rec f = function
+  | [] -> ()
+  | n::ln -> (Printf.printf "%d " (P.to_int n); f ln)
+  in begin
+    Printf.printf "[";
+    f l;
+    Printf.printf "]"
+  end
+
 (* Algorithm mostly inspired from Chang and Hwu 1988
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
 let select_traces code entrypoint =
-  let order = bfs code entrypoint in
+  let order = dfs code entrypoint in
   let predecessors = get_predecessors code in
   let traces = ref [] in
   let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
@@ -154,19 +164,11 @@ let select_traces code entrypoint =
         end
       end
     done;
+    Printf.printf "DFS: \n"; print_intlist order;
     !traces
   end
 
-(* for debugging *)
-let print_trace trace =
-  let rec f = function
-  | [] -> ()
-  | n::ln -> (Printf.printf "%d " (P.to_int n); f ln)
-  in begin
-    Printf.printf "[";
-    f trace;
-    Printf.printf "]"
-  end
+let print_trace t = print_intlist t
 
 let print_traces traces =
   let rec f = function
