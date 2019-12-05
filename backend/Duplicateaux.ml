@@ -78,6 +78,36 @@ let dfs code entrypoint =
       in node_dfs @ (dfs_list code ln)
   in dfs_list code [entrypoint]
 
+let bfs code entrypoint =
+  in let visited = ref (PTree.map (fun n i -> false) code)
+  and bfs_list = ref []
+  and to_visit = Queue.create ()
+  and node = ref entrypoint
+  in begin
+    Queue.add entrypoint to_visit;
+    while not Queue.is_empty to_visit do
+      node := Queue.pop to_visit;
+      if not (get_some @@ PTree.get !node !visited) then begin
+        visited := PTree.set !node true !visited;
+        match PTree.get !node code with
+        | None -> failwith "No such node"
+        | Some ti ->
+            bfs_list := ti :: !bfs_list;
+            match ti with
+            | Tleaf i -> ( match i with
+                | Icall(_, _, _, _, n) -> Queue.add n to_visit
+                | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
+                | Ijumptable(_, ln) -> List.iter (fun n -> Queue.add n to_visit) ln
+                | Itailcall _ | Ireturn _ -> ()
+                | _ -> failwith "Tleaf case not handled in bfs" )
+            | Tnext (_, i) -> ( match i with
+                | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
+                | Inop n | Iop n | Iload n | Istore n -> Queue.add n to_visit
+                | _ -> failwith "Tnext case not handled in bfs" )
+      end
+    done
+  end
+
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
 
 let rec select_unvisited_node is_visited = function
