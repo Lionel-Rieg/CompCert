@@ -79,13 +79,13 @@ let dfs code entrypoint =
   in dfs_list code [entrypoint]
 
 let bfs code entrypoint =
-  in let visited = ref (PTree.map (fun n i -> false) code)
+  let visited = ref (PTree.map (fun n i -> false) code)
   and bfs_list = ref []
   and to_visit = Queue.create ()
   and node = ref entrypoint
   in begin
     Queue.add entrypoint to_visit;
-    while not Queue.is_empty to_visit do
+    while not (Queue.is_empty to_visit) do
       node := Queue.pop to_visit;
       if not (get_some @@ PTree.get !node !visited) then begin
         visited := PTree.set !node true !visited;
@@ -102,7 +102,7 @@ let bfs code entrypoint =
                 | _ -> failwith "Tleaf case not handled in bfs" )
             | Tnext (_, i) -> ( match i with
                 | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
-                | Inop n | Iop n | Iload n | Istore n -> Queue.add n to_visit
+                | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
                 | _ -> failwith "Tnext case not handled in bfs" )
       end
     done
