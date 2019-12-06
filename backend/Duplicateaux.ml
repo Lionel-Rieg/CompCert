@@ -92,7 +92,7 @@ let bfs code entrypoint =
         match PTree.get !node code with
         | None -> failwith "No such node"
         | Some ti ->
-            bfs_list := ti :: !bfs_list;
+            bfs_list := !bfs_list @ [!node];
             match ti with
             | Tleaf i -> ( match i with
                 | Icall(_, _, _, _, n) -> Queue.add n to_visit
@@ -105,7 +105,8 @@ let bfs code entrypoint =
                 | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
                 | _ -> failwith "Tnext case not handled in bfs" )
       end
-    done
+    done;
+    !bfs_list
   end
 
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
@@ -159,6 +160,7 @@ let print_intlist l =
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
 let select_traces code entrypoint =
   let order = dfs code entrypoint in
+  let bfs_order = bfs code entrypoint in
   let predecessors = get_predecessors code in
   let traces = ref [] in
   let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
@@ -194,7 +196,8 @@ let select_traces code entrypoint =
         end
       end
     done;
-    Printf.printf "DFS: \n"; print_intlist order;
+    Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n";
+    Printf.printf "BFS: \t"; print_intlist bfs_order; Printf.printf "\n";
     !traces
   end
 
