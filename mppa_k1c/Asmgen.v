@@ -19,10 +19,11 @@ Require Import Integers.
 Require Import Mach Asm Asmblock Asmblockgen Machblockgen.
 Require Import PostpassScheduling.
 Require Import Errors String.
+Require Compopts.
 
 Local Open Scope error_monad_scope.
 
-Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := Compopts.time name f.
 
 Definition transf_program (p: Mach.program) : res Asm.program :=
   let mbp := (time "Machblock generation" Machblockgen.transf_program) p in

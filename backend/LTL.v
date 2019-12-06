@@ -29,7 +29,7 @@ Definition node := positive.
 
 Inductive instruction: Type :=
   | Lop (op: operation) (args: list mreg) (res: mreg)
-  | Lload (chunk: memory_chunk) (addr: addressing) (args: list mreg) (dst: mreg)
+  | Lload (trap : trapping_mode) (chunk: memory_chunk) (addr: addressing) (args: list mreg) (dst: mreg)
   | Lgetstack (sl: slot) (ofs: Z) (ty: typ) (dst: mreg)
   | Lsetstack (src: mreg) (sl: slot) (ofs: Z) (ty: typ)
   | Lstore (chunk: memory_chunk) (addr: addressing) (args: list mreg) (src: mreg)
@@ -209,11 +209,24 @@ Inductive step: state -> trace -> state -> Prop :=
       rs' = Locmap.set (R res) v (undef_regs (destroyed_by_op op) rs) ->
       step (Block s f sp (Lop op args res :: bb) rs m)
         E0 (Block s f sp bb rs' m)
-  | exec_Lload: forall s f sp chunk addr args dst bb rs m a v rs',
+  | exec_Lload: forall s f sp trap chunk addr args dst bb rs m a v rs',
       eval_addressing ge sp addr (reglist rs args) = Some a ->
       Mem.loadv chunk m a = Some v ->
       rs' = Locmap.set (R dst) v (undef_regs (destroyed_by_load chunk addr) rs) ->
-      step (Block s f sp (Lload chunk addr args dst :: bb) rs m)
+      step (Block s f sp (Lload trap chunk addr args dst :: bb) rs m)
+        E0 (Block s f sp bb rs' m)
+  | exec_Lload_notrap1: forall s f sp chunk addr args dst bb rs m rs',
+      eval_addressing ge sp addr (reglist rs args) = None ->
+      rs' = Locmap.set (R dst)  (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (Block s f sp (Lload NOTRAP chunk addr args dst :: bb) rs m)
+        E0 (Block s f sp bb rs' m)
+  | exec_Lload_notrap2: forall s f sp chunk addr args dst bb rs m a rs',
+      eval_addressing ge sp addr (reglist rs args) = Some a ->
+      Mem.loadv chunk m a = None ->
+      rs' = Locmap.set (R dst) (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (Block s f sp (Lload NOTRAP chunk addr args dst :: bb) rs m)
         E0 (Block s f sp bb rs' m)
   | exec_Lgetstack: forall s f sp sl ofs ty dst bb rs m rs',
       rs' = Locmap.set (R dst) (rs (S sl ofs ty)) (undef_regs (destroyed_by_getstack sl) rs) ->

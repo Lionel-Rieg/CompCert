@@ -8792,7 +8792,7 @@ FREECONTEXTS;
 #endif
 
   clock_stop();
-  print_total_clock();
+  printerr_total_clock();
   
 return yield;
 }

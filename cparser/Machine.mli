@@ -17,6 +17,7 @@
 type struct_passing_style =
   | SP_ref_callee                       (* by reference, callee takes copy *)
   | SP_ref_caller                       (* by reference, caller takes copy *)
+  | SP_value32_ref_callee               (* by value if <= 32 bits, by ref_callee otherwise *)
   | SP_split_args                       (* by value, as a sequence of ints *)
 
 type struct_return_style =
@@ -87,6 +88,7 @@ val arm_bigendian : t
 val rv32 : t
 val rv64 : t
 val mppa_k1c : t
+val aarch64 : t
 
 val gcc_extensions : t -> t
 val compcert_interpreter : t -> t

@@ -133,8 +133,8 @@ Definition transl_instr
       end
   | Lop op args res =>
       Mop (transl_op fe op) args res :: k
-  | Lload chunk addr args dst =>
-      Mload chunk (transl_addr fe addr) args dst :: k
+  | Lload trap chunk addr args dst =>
+      Mload trap chunk (transl_addr fe addr) args dst :: k
   | Lstore chunk addr args src =>
       Mstore chunk (transl_addr fe addr) args src :: k
   | Lcall sig ros =>

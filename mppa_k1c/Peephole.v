@@ -2,6 +2,7 @@ Require Import Coqlib.
 Require Import Asmvliw.
 Require Import Values.
 Require Import Integers.
+Require Import AST.
 Require Compopts.
 
 Definition gpreg_q_list : list gpreg_q :=
@@ -89,8 +90,8 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
           | None => h0 :: (coalesce_mem t0)
           end
             
-        | (PLoadRRO Pld_a rd0 ra0 ofs0),
-          (PLoadRRO Pld_a rd1 ra1 ofs1) =>
+        | (PLoad (PLoadRRO TRAP Pld_a rd0 ra0 ofs0)),
+          (PLoad (PLoadRRO TRAP Pld_a rd1 ra1 ofs1)) =>
           match gpreg_q_search rd0 rd1 with
           | Some rd0rd1 =>
             let zofs0 := Ptrofs.signed ofs0 in
@@ -100,8 +101,8 @@ Fixpoint coalesce_mem (insns : list basic) : list basic :=
               if coalesce_octuples
               then
                 match t1 with
-                | (PLoadRRO Pld_a rd2 ra2 ofs2) :: 
-                  (PLoadRRO Pld_a rd3 ra3 ofs3) :: t3 =>
+                | (PLoad (PLoadRRO TRAP Pld_a rd2 ra2 ofs2)) :: 
+                  (PLoad (PLoadRRO TRAP Pld_a rd3 ra3 ofs3)) :: t3 =>
                   match gpreg_o_search rd0 rd1 rd2 rd3 with
                   | Some octuple =>
                     let zofs2 := Ptrofs.signed ofs2 in

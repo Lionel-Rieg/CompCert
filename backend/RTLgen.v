@@ -436,7 +436,7 @@ Fixpoint transl_expr (map: mapping) (a: expr) (rd: reg) (nd: node)
       transl_exprlist map al rl no
   | Eload chunk addr al =>
       do rl <- alloc_regs map al;
-      do no <- add_instr (Iload chunk addr rl rd nd);
+      do no <- add_instr (Iload TRAP chunk addr rl rd nd);
          transl_exprlist map al rl no
   | Econdition a b c =>
       do nfalse <- transl_expr map c rd nd;

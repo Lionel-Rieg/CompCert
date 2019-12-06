@@ -1204,7 +1204,8 @@ Qed.
 Theorem eval_cast8unsigned: unary_constructor_sound cast8unsigned (Val.zero_ext 8).
 Proof.
   red; intros until x. unfold cast8unsigned.
-  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto.
+
+  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto. discriminate.
 Qed.
 
 Theorem eval_cast16signed: unary_constructor_sound cast16signed (Val.sign_ext 16).
@@ -1217,7 +1218,7 @@ Qed.
 Theorem eval_cast16unsigned: unary_constructor_sound cast16unsigned (Val.zero_ext 16).
 Proof.
   red; intros until x. unfold cast8unsigned.
-  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto.
+  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto. discriminate.
 Qed.
 
 Theorem eval_intoffloat:

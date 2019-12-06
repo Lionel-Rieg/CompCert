@@ -270,10 +270,10 @@ Inductive tr_instr: context -> node -> instruction -> code -> Prop :=
       Ple res ctx.(mreg) ->
       c!(spc ctx pc) = Some (Iop (sop ctx op) (sregs ctx args) (sreg ctx res) (spc ctx s)) ->
       tr_instr ctx pc (Iop op args res s) c
-  | tr_load: forall ctx pc c chunk addr args res s,
+  | tr_load: forall ctx pc c trap chunk addr args res s,
       Ple res ctx.(mreg) ->
-      c!(spc ctx pc) = Some (Iload chunk (saddr ctx addr) (sregs ctx args) (sreg ctx res) (spc ctx s)) ->
-      tr_instr ctx pc (Iload chunk addr args res s) c
+      c!(spc ctx pc) = Some (Iload trap chunk (saddr ctx addr) (sregs ctx args) (sreg ctx res) (spc ctx s)) ->
+      tr_instr ctx pc (Iload trap chunk addr args res s) c
   | tr_store: forall ctx pc c chunk addr args src s,
       c!(spc ctx pc) = Some (Istore chunk (saddr ctx addr) (sregs ctx args) (sreg ctx src) (spc ctx s)) ->
       tr_instr ctx pc (Istore chunk addr args src s) c

@@ -383,20 +383,6 @@ Proof.
   rewrite modarith_idem.
   apply mul_sound;
   rewrite modarith_idem; trivial.
-  (* maddl *)
-- apply addl_sound; trivial.
-  apply mull_sound; trivial.
-  rewrite default_idem; trivial.
-  rewrite default_idem; trivial.
-  (* msubl *)
-- apply subl_sound; trivial.
-  apply mull_sound; trivial.
-  rewrite default_idem; trivial.
-  rewrite default_idem; trivial.
-- apply vagree_triple_op_float; assumption.
-- apply vagree_triple_op_float; assumption.
-- apply vagree_triple_op_single; assumption.
-- apply vagree_triple_op_single; assumption.
 - destruct (eval_condition0 _ _ _) as [b|] eqn:EC.
   erewrite needs_of_condition0_sound by eauto.
   apply select_sound; auto.

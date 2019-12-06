@@ -139,9 +139,14 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
   | Some(Iop op args res s) =>
       let a := eval_static_operation op (aregs ae args) in
       VA.State (AE.set res a ae) am
-  | Some(Iload chunk addr args dst s) =>
+  | Some(Iload TRAP chunk addr args dst s) =>
       let a := loadv chunk rm am (eval_static_addressing addr (aregs ae args)) in
       VA.State (AE.set dst a ae) am
+
+  (* TODO: maybe a case analysis on the results of loadv? *)
+               
+  | Some(Iload NOTRAP chunk addr args dst s) =>
+      VA.State (AE.set dst Vtop ae) am
   | Some(Istore chunk addr args src s) =>
       let am' := storev chunk am (eval_static_addressing addr (aregs ae args)) (areg ae src) in
       VA.State ae am'
@@ -1268,11 +1273,29 @@ Proof.
   apply ematch_update; auto. eapply eval_static_operation_sound; eauto with va.
 
 - (* load *)
+  destruct trap.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto. eapply loadv_sound; eauto with va.
+    eapply eval_static_addressing_sound; eauto with va.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto.
+    eapply vmatch_top.
+    eapply loadv_sound; try eassumption.
+    eapply eval_static_addressing_sound; eauto with va.
+- (* load notrap1 *)
   eapply sound_succ_state; eauto. simpl; auto.
   unfold transfer; rewrite H. eauto.
-  apply ematch_update; auto. eapply loadv_sound; eauto with va.
-  eapply eval_static_addressing_sound; eauto with va.
-
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
+- (* load notrap2 *)
+  eapply sound_succ_state; eauto. simpl; auto.
+  unfold transfer; rewrite H. eauto.
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
 - (* store *)
   exploit eval_static_addressing_sound; eauto with va. intros VMADDR.
   eapply sound_succ_state; eauto. simpl; auto.

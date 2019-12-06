@@ -96,36 +96,42 @@ Proof.
 Qed.
 
 Lemma exec_load_offset_pc_var:
-  forall t rs m rd ra ofs rs' m' v,
-  exec_load_offset t rs m rd ra ofs = Next rs' m' ->
-  exec_load_offset t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+  forall trap t rs m rd ra ofs rs' m' v,
+  exec_load_offset trap t rs m rd ra ofs = Next rs' m' ->
+  exec_load_offset trap t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
 Proof.
   intros. unfold exec_load_offset in *. unfold parexec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ofs); try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
-  - discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
 Qed.
 
 Lemma exec_load_reg_pc_var:
-  forall t rs m rd ra ro rs' m' v,
-  exec_load_reg t rs m rd ra ro = Next rs' m' ->
-  exec_load_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+  forall trap t rs m rd ra ro rs' m' v,
+    exec_load_reg trap t rs m rd ra ro = Next rs' m' ->
+    exec_load_reg trap t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
   intros. unfold exec_load_reg in *. unfold parexec_load_reg in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
-  - discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
 Qed.
 
 Lemma exec_load_regxs_pc_var:
-  forall t rs m rd ra ro rs' m' v,
-  exec_load_regxs t rs m rd ra ro = Next rs' m' ->
-  exec_load_regxs t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+  forall trap t rs m rd ra ro rs' m' v,
+  exec_load_regxs trap t rs m rd ra ro = Next rs' m' ->
+  exec_load_regxs trap t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
 Proof.
   intros. unfold exec_load_regxs in *. unfold parexec_load_regxs in *. rewrite Pregmap.gso; try discriminate.
   destruct (Mem.loadv _ _ _).
   - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
-  - discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
 Qed.
 
 Lemma exec_load_offset_q_pc_var:

@@ -76,7 +76,7 @@ Definition wt_instr (i: instruction) : bool :=
           let (targs, tres) := type_of_operation op in
           subtype tres (mreg_type res)
       end
-  | Lload chunk addr args dst =>
+  | Lload trap chunk addr args dst =>
       subtype (type_of_chunk chunk) (mreg_type dst)
   | Ltailcall sg ros =>
       zeq (size_arguments sg) 0
@@ -321,16 +321,33 @@ Local Opaque mreg_type.
   + (* other ops *)
     destruct (type_of_operation op) as [ty_args ty_res] eqn:TYOP. InvBooleans.
     econstructor; eauto.
+ 
     apply wt_setreg; auto; try (apply wt_undef_regs; auto).
     eapply Val.has_subtype; eauto.
+    
     change ty_res with (snd (ty_args, ty_res)). rewrite <- TYOP. eapply type_of_operation_sound; eauto.
     red; intros; subst op. simpl in ISMOVE.
-    destruct args; try discriminate. destruct args; discriminate. 
+    destruct args; try discriminate. destruct args; discriminate.
+    (* no longer needed apply wt_undef_regs; auto. *)
 - (* load *)
   simpl in *; InvBooleans.
   econstructor; eauto.
   apply wt_setreg. eapply Val.has_subtype; eauto.
   destruct a; simpl in H0; try discriminate. eapply Mem.load_type; eauto.
+  apply wt_undef_regs; auto.
+- (* load notrap1 *)
+  simpl in *; InvBooleans.
+  econstructor; eauto.
+  apply wt_setreg. eapply Val.has_subtype; eauto.
+  unfold default_notrap_load_value.
+  constructor.
+  apply wt_undef_regs; auto.
+- (* load notrap2 *)
+  simpl in *; InvBooleans.
+  econstructor; eauto.
+  apply wt_setreg. eapply Val.has_subtype; eauto.
+  unfold default_notrap_load_value.
+  constructor.
   apply wt_undef_regs; auto.
 - (* store *)
   simpl in *; InvBooleans.

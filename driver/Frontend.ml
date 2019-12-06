@@ -117,6 +117,7 @@ let init () =
                    then Machine.rv64
                    else Machine.rv32
     | "mppa_k1c" -> Machine.mppa_k1c
+    | "aarch64" -> Machine.aarch64
     | _         -> assert false
   end;
   Env.set_builtins C2C.builtins;

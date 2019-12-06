@@ -104,11 +104,11 @@ Inductive wt_instr : instruction -> Prop :=
       valid_successor s ->
       wt_instr (Iop op args res s)
   | wt_Iload:
-      forall chunk addr args dst s,
+      forall trap chunk addr args dst s,
       map env args = type_of_addressing addr ->
       env dst = type_of_chunk chunk ->
       valid_successor s ->
-      wt_instr (Iload chunk addr args dst s)
+      wt_instr (Iload trap chunk addr args dst s)
   | wt_Istore:
       forall chunk addr args src s,
       map env args = type_of_addressing addr ->
@@ -282,7 +282,7 @@ Definition type_instr (e: S.typenv) (i: instruction) : res S.typenv :=
       else
        (let (targs, tres) := type_of_operation op in
         do e1 <- S.set_list e args targs; S.set e1 res tres)
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       do x <- check_successor s;
       do e1 <- S.set_list e args (type_of_addressing addr);
       S.set e1 dst (type_of_chunk chunk)
@@ -841,14 +841,24 @@ Proof.
 Qed.
 
 Lemma wt_exec_Iload:
-  forall env f chunk addr args dst s m a v rs,
-  wt_instr f env (Iload chunk addr args dst s) ->
+  forall env f trap chunk addr args dst s m a v rs,
+  wt_instr f env (Iload trap chunk addr args dst s) ->
   Mem.loadv chunk m a = Some v ->
   wt_regset env rs ->
   wt_regset env (rs#dst <- v).
 Proof.
   intros. destruct a; simpl in H0; try discriminate. inv H.
-  eapply wt_regset_assign; eauto. rewrite H8; eapply Mem.load_type; eauto.
+  eapply wt_regset_assign; eauto. rewrite H9; eapply Mem.load_type; eauto.
+Qed.
+
+Lemma wt_exec_Iload_notrap:
+  forall env f chunk addr args dst s rs,
+  wt_instr f env (Iload NOTRAP chunk addr args dst s) ->
+  wt_regset env rs ->
+  wt_regset env (rs#dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros. 
+  eapply wt_regset_assign; eauto. simpl. trivial.
 Qed.
 
 Lemma wt_exec_Ibuiltin:
@@ -930,6 +940,10 @@ Proof.
   econstructor; eauto. eapply wt_exec_Iop; eauto.
   (* Iload *)
   econstructor; eauto. eapply wt_exec_Iload; eauto.
+  (* Iload notrap1*)
+  econstructor; eauto. eapply wt_exec_Iload_notrap; eauto.
+  (* Iload notrap2*)
+  econstructor; eauto. eapply wt_exec_Iload_notrap; eauto.
   (* Istore *)
   econstructor; eauto.
   (* Icall *)

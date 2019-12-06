@@ -163,8 +163,8 @@ Fixpoint linearize_block (b: LTL.bblock) (k: code) : code :=
   | nil => k
   | LTL.Lop op args res :: b' =>
       Lop op args res :: linearize_block b' k
-  | LTL.Lload chunk addr args dst :: b' =>
-      Lload chunk addr args dst :: linearize_block b' k
+  | LTL.Lload trap chunk addr args dst :: b' =>
+      Lload trap chunk addr args dst :: linearize_block b' k
   | LTL.Lgetstack sl ofs ty dst :: b' =>
       Lgetstack sl ofs ty dst :: linearize_block b' k
   | LTL.Lsetstack src sl ofs ty :: b' =>

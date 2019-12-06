@@ -83,9 +83,9 @@ Coercion OArithRRI32: arith_name_rri32 >-> Funclass.
 Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 
 Inductive load_op :=
-  | OLoadRRO (n: load_name) (ofs: offset)
-  | OLoadRRR (n: load_name)
-  | OLoadRRRXS (n: load_name)
+  | OLoadRRO (n: load_name) (trap: trapping_mode) (ofs: offset)
+  | OLoadRRR (n: load_name) (trap: trapping_mode) 
+  | OLoadRRRXS (n: load_name) (trap: trapping_mode)
 .
 
 Coercion OLoadRRO: load_name >-> Funclass.
@@ -142,33 +142,39 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | _, _ => None
   end.
 
-Definition exec_load_deps_offset (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
+Definition exec_incorrect_load trap chunk :=
+  match trap with
+  | TRAP => None
+  | NOTRAP => Some (Val (concrete_default_notrap_load_value chunk))
+  end.
+
+Definition exec_load_deps_offset (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
   let (ge, fn) := Ge in
   match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk m (Val.offset_ptr v ptr) with 
-              | None => None
+              | None => exec_incorrect_load trap chunk
               | Some vl => Some (Val vl)
               end
   | _ => None
   end.
 
-Definition exec_load_deps_reg (chunk: memory_chunk) (m: mem) (v vo: val) :=
+Definition exec_load_deps_reg (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v vo: val) :=
   match Mem.loadv chunk m (Val.addl v vo) with
-  | None => None
+  | None => exec_incorrect_load trap chunk
   | Some vl => Some (Val vl)
   end.
 
-Definition exec_load_deps_regxs (chunk: memory_chunk) (m: mem) (v vo: val) :=
+Definition exec_load_deps_regxs (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v vo: val) :=
   match Mem.loadv chunk m (Val.addl v (Val.shll vo (scale_of_chunk chunk))) with
-  | None => None
+  | None => exec_incorrect_load trap chunk
   | Some vl => Some (Val vl)
   end.
 
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
-  | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps_offset (load_chunk n) m v ofs
-  | OLoadRRR n, [Val v; Val vo; Memstate m] => exec_load_deps_reg (load_chunk n) m v vo
-  | OLoadRRRXS n, [Val v; Val vo; Memstate m] => exec_load_deps_regxs (load_chunk n) m v vo
+  | OLoadRRO n trap ofs, [Val v; Memstate m] => exec_load_deps_offset trap (load_chunk n) m v ofs
+  | OLoadRRR n trap, [Val v; Val vo; Memstate m] => exec_load_deps_reg trap (load_chunk n) m v vo
+  | OLoadRRRXS n trap, [Val v; Val vo; Memstate m] => exec_load_deps_regxs trap (load_chunk n) m v vo
   | _, _ => None
   end.
 
@@ -364,24 +370,47 @@ Proof.
 Qed.
 Hint Resolve offset_eq_correct: wlp.
 
+Definition trapping_mode_eq trap1 trap2 :=
+  RET (match trap1, trap2 with
+       | TRAP, TRAP | NOTRAP, NOTRAP => true
+       | TRAP, NOTRAP | NOTRAP, TRAP => false
+      end).
+Lemma trapping_mode_eq_correct t1 t2:
+  WHEN trapping_mode_eq t1 t2 ~> b THEN b = true -> t1 = t2.
+Proof.
+  wlp_simplify.
+  destruct t1; destruct t2; trivial; discriminate.
+Qed.
+Hint Resolve trapping_mode_eq_correct: wlp.
+
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
   match o1 with
-  | OLoadRRO n1 ofs1 =>
-     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
-  | OLoadRRR n1 =>
-     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
-  | OLoadRRRXS n1 =>
-     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRO n1 trap ofs1 =>
+    match o2 with
+    | OLoadRRO n2 trap2 ofs2 => iandb (phys_eq n1 n2) (iandb (offset_eq ofs1 ofs2) (trapping_mode_eq trap trap2))
+    | _ => RET false
+    end
+  | OLoadRRR n1 trap =>
+    match o2 with
+    | OLoadRRR n2 trap2 => iandb (phys_eq n1 n2) (trapping_mode_eq trap trap2) 
+    | _ => RET false
+    end
+  | OLoadRRRXS n1 trap =>
+    match o2 with
+    | OLoadRRRXS n2 trap2 => iandb (phys_eq n1 n2) (trapping_mode_eq trap trap2)
+    | _ => RET false
+    end
   end.
 
 Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
-    rewrite H in *. trivial.
-  - congruence.
-  - congruence.
+  { f_equal.
+    destruct trap, trap0; simpl in *; trivial; discriminate.
+    pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial. }
+  all: destruct trap, trap0; simpl in *; trivial; discriminate.
 Qed.
 Hint Resolve load_op_eq_correct: wlp.
 Opaque load_op_eq_correct.
@@ -617,21 +646,21 @@ Definition trans_arith (ai: ar_instruction) : inst :=
 Definition trans_basic (b: basic) : inst :=
   match b with
   | PArith ai => trans_arith ai
-  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg (#a) @ PReg pmem @ Enil))]
-  | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
-  | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRO trap n d a ofs => [(#d, Op (Load (OLoadRRO n trap ofs)) (PReg (#a) @ PReg pmem @ Enil))]
+  | PLoadRRR trap n d a ro =>  [(#d, Op (Load (OLoadRRR n trap)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRRXS trap n d a ro =>  [(#d, Op (Load (OLoadRRRXS n trap)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PLoadQRRO qd a ofs =>
     let (d0, d1) := gpreg_q_expand qd in
-      [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-       (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
+      [(#d0, Op (Load (OLoadRRO Pld_a TRAP ofs)) (PReg (#a) @ PReg pmem @ Enil));
+       (#d1, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
   | PLoadORRO od a ofs =>
     match gpreg_o_expand od with
     | (d0, d1, d2, d3) =>
-        [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-         (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
-         (#d2, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 16)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
-         (#d3, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 24)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
+        [(#d0, Op (Load (OLoadRRO Pld_a TRAP ofs)) (PReg (#a) @ PReg pmem @ Enil));
+         (#d1, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d2, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 16)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d3, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 24)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
     end
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
@@ -861,21 +890,21 @@ Local Ltac preg_eq_discr r rd :=
       unfold parexec_load_offset; simpl; unfold exec_load_deps_offset; erewrite GENV, H, H0;
       unfold eval_offset;
       simpl; auto;
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
     (* Load Reg *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_reg; simpl; unfold exec_load_deps_reg; rewrite H, H0; rewrite (H0 rofs);
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
     (* Load Reg XS *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_regxs; simpl; unfold exec_load_deps_regxs; rewrite H, H0; rewrite (H0 rofs);
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
@@ -1537,9 +1566,9 @@ Definition string_of_load_name (n: load_name) : pstring :=
 
 Definition string_of_load (op: load_op): pstring :=
   match op with
-  | OLoadRRO n _ => string_of_load_name n
-  | OLoadRRR n => string_of_load_name n
-  | OLoadRRRXS n => string_of_load_name n
+  | OLoadRRO n _ _ => string_of_load_name n
+  | OLoadRRR n _ => string_of_load_name n
+  | OLoadRRRXS n _ => string_of_load_name n
   end.
 
 Definition string_of_store_name (n: store_name) : pstring :=
@@ -1636,11 +1665,17 @@ Hint Resolve bblock_simu_test_correct: wlp.
 
 Import UnsafeImpure.
 
-Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
+Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := 
+  match unsafe_coerce (bblock_simu_test verb p1 p2) with
+  | Some b => b
+  | None => false
+  end.
 
 Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
 Proof.
-   intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
+   unfold pure_bblock_simu_test. 
+   destruct (unsafe_coerce (bblock_simu_test verb p1 p2)) eqn: UNSAFE; try discriminate.
+   intros; subst. eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
 Qed.
 

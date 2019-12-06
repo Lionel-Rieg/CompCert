@@ -43,7 +43,7 @@ Definition renum_instr (i: instruction) : instruction :=
   match i with
   | Inop s => Inop (renum_pc s)
   | Iop op args res s => Iop op args res (renum_pc s)
-  | Iload chunk addr args res s => Iload chunk addr args res (renum_pc s)
+  | Iload trap chunk addr args res s => Iload trap chunk addr args res (renum_pc s)
   | Istore chunk addr args src s => Istore chunk addr args src (renum_pc s)
   | Icall sg ros args res s => Icall sg ros args res (renum_pc s)
   | Itailcall sg ros args => i

@@ -585,45 +585,61 @@ Proof.
   intros; eapply reachable_successors; eauto.
   eapply is_tail_lin_block; eauto. eapply is_tail_find_label; eauto.
 
-  (* Lop *)
+- (* Lop *)
   left; econstructor; split. simpl.
   apply plus_one. econstructor; eauto.
   instantiate (1 := v); rewrite <- H; apply eval_operation_preserved.
   exact symbols_preserved.
   econstructor; eauto.
 
-  (* Lload *)
+- (* Lload *)
+  left; econstructor; split. simpl.
+  apply plus_one. eapply exec_Lload.
+  instantiate (1 := a). rewrite <- H; apply eval_addressing_preserved.
+  exact symbols_preserved. eauto. eauto.
+  econstructor; eauto.
+
+- (* Lload notrap1 *)
+  left; econstructor; split. simpl.
+  apply plus_one. eapply exec_Lload_notrap1.
+  rewrite <- H.
+  apply eval_addressing_preserved.
+  exact symbols_preserved. eauto.
+  econstructor; eauto.
+  
+- (* Lload notrap2 *)
+  left; econstructor; split. simpl.
+  apply plus_one. eapply exec_Lload_notrap2.
+  rewrite <- H.
+  apply eval_addressing_preserved.
+  exact symbols_preserved. eauto. eauto.
+  econstructor; eauto.
+
+- (* Lgetstack *)
+  left; econstructor; split. simpl.
+  apply plus_one. econstructor; eauto.
+  econstructor; eauto.
+
+- (* Lsetstack *)
+  left; econstructor; split. simpl.
+  apply plus_one. econstructor; eauto.
+  econstructor; eauto.
+
+- (* Lstore *)
   left; econstructor; split. simpl.
   apply plus_one. econstructor.
   instantiate (1 := a). rewrite <- H; apply eval_addressing_preserved.
   exact symbols_preserved. eauto. eauto.
   econstructor; eauto.
 
-  (* Lgetstack *)
-  left; econstructor; split. simpl.
-  apply plus_one. econstructor; eauto.
-  econstructor; eauto.
-
-  (* Lsetstack *)
-  left; econstructor; split. simpl.
-  apply plus_one. econstructor; eauto.
-  econstructor; eauto.
-
-  (* Lstore *)
-  left; econstructor; split. simpl.
-  apply plus_one. econstructor.
-  instantiate (1 := a). rewrite <- H; apply eval_addressing_preserved.
-  exact symbols_preserved. eauto. eauto.
-  econstructor; eauto.
-
-  (* Lcall *)
+- (* Lcall *)
   exploit find_function_translated; eauto. intros [tfd [A B]].
   left; econstructor; split. simpl.
   apply plus_one. econstructor; eauto.
   symmetry; eapply sig_preserved; eauto.
   econstructor; eauto. constructor; auto. econstructor; eauto.
 
-  (* Ltailcall *)
+- (* Ltailcall *)
   exploit find_function_translated; eauto. intros [tfd [A B]].
   left; econstructor; split. simpl.
   apply plus_one. econstructor; eauto.
@@ -633,18 +649,18 @@ Proof.
   rewrite (match_parent_locset _ _ STACKS).
   econstructor; eauto.
 
-  (* Lbuiltin *)
+- (* Lbuiltin *)
   left; econstructor; split. simpl.
   apply plus_one. eapply exec_Lbuiltin; eauto.
   eapply eval_builtin_args_preserved with (ge1 := ge); eauto. exact symbols_preserved.
   eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   econstructor; eauto.
 
-  (* Lbranch *)
+- (* Lbranch *)
   assert ((reachable f)!!pc = true). apply REACH; simpl; auto.
   right; split. simpl; omega. split. auto. simpl. econstructor; eauto.
 
-  (* Lcond *)
+- (* Lcond *)
   assert (REACH1: (reachable f)!!pc1 = true) by (apply REACH; simpl; auto).
   assert (REACH2: (reachable f)!!pc2 = true) by (apply REACH; simpl; auto).
   simpl linearize_block.
@@ -670,18 +686,18 @@ Proof.
   apply plus_one. eapply exec_Lcond_false. eauto. eauto.
   econstructor; eauto.
 
-  (* Ljumptable *)
+- (* Ljumptable *)
   assert (REACH': (reachable f)!!pc = true).
     apply REACH. simpl. eapply list_nth_z_in; eauto.
   right; split. simpl; omega. split. auto. econstructor; eauto.
 
-  (* Lreturn *)
+- (* Lreturn *)
   left; econstructor; split.
   simpl. apply plus_one. econstructor; eauto.
   rewrite (stacksize_preserved _ _ TRF). eauto.
   rewrite (match_parent_locset _ _ STACKS). econstructor; eauto.
 
-  (* internal functions *)
+- (* internal functions *)
   assert (REACH: (reachable f)!!(LTL.fn_entrypoint f) = true).
     apply reachable_entrypoint.
   monadInv H7.
@@ -691,13 +707,13 @@ Proof.
   generalize EQ; intro EQ'; monadInv EQ'. simpl.
   econstructor; eauto. simpl. eapply is_tail_add_branch. constructor.
 
-  (* external function *)
+- (* external function *)
   monadInv H8. left; econstructor; split.
   apply plus_one. eapply exec_function_external; eauto.
   eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   econstructor; eauto.
 
-  (* return *)
+- (* return *)
   inv H3. inv H1.
   left; econstructor; split.
   apply plus_one. econstructor.

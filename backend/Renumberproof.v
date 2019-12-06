@@ -175,6 +175,18 @@ Proof.
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload; eauto.
   constructor; auto. eapply reach_succ; eauto. simpl; auto.
+  (* load notrap1 *)
+  econstructor; split.
+  assert (eval_addressing tge sp addr rs ## args = None).
+  rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
+  eapply exec_Iload_notrap1; eauto.
+  constructor; auto. eapply reach_succ; eauto. simpl; auto.
+  (* load notrap2 *)
+  econstructor; split.
+  assert (eval_addressing tge sp addr rs ## args = Some a).
+  rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
+  eapply exec_Iload_notrap2; eauto.
+  constructor; auto. eapply reach_succ; eauto. simpl; auto.
 (* store *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
