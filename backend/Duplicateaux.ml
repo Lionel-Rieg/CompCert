@@ -23,7 +23,7 @@ let to_ttl_inst = function
 | Ireturn o -> Tleaf (Ireturn o)
 | Inop n -> Tnext (n, Inop n)
 | Iop (op, lr, r, n) -> Tnext (n, Iop(op, lr, r, n))
-| Iload (m, a, lr, r, n) -> Tnext (n, Iload(m, a, lr, r, n))
+| Iload (tm, m, a, lr, r, n) -> Tnext (n, Iload(tm, m, a, lr, r, n))
 | Istore (m, a, lr, r, n) -> Tnext (n, Istore(m, a, lr, r, n))
 | Icall (s, ri, lr, r, n) -> Tleaf (Icall(s, ri, lr, r, n))
 | Itailcall (s, ri, lr) -> Tleaf (Itailcall(s, ri, lr))
@@ -102,7 +102,7 @@ let bfs code entrypoint =
                 | _ -> failwith "Tleaf case not handled in bfs" )
             | Tnext (_, i) -> ( match i with
                 | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
-                | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
+                | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
                 | _ -> failwith "Tnext case not handled in bfs" )
       end
     done;
@@ -134,7 +134,7 @@ let get_predecessors code =
   let process_inst (node, ti) = match ti with
   | Tleaf _ -> ()
   | Tnext (_, i) -> let succ = match i with
-      | Inop n | Iop (_,_,_,n) | Iload (_,_,_,_,n) | Istore (_,_,_,_,n)
+      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
       | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
       | Icond (_,_,n1,n2) -> [n1;n2]
       | Ijumptable (_,ln) -> ln
