@@ -392,21 +392,21 @@ Proof.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Iload; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Iload; eauto; (* is the follow still needed?*) erewrite eval_addressing_preserved; eauto.
     + econstructor; eauto.
 (* Iload notrap1 *)
   - eapply dupmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Iload_notrap1; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Iload_notrap1; eauto; erewrite eval_addressing_preserved; eauto. 
     + econstructor; eauto.
 (* Iload notrap2 *)
   - eapply dupmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Iload_notrap2; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Iload_notrap2; eauto; erewrite eval_addressing_preserved; eauto.
     + econstructor; eauto.
       
 (* Istore *)
@@ -414,7 +414,7 @@ Proof.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Istore; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Istore; eauto; erewrite eval_addressing_preserved; eauto.
     + econstructor; eauto.
 (* Icall *)
   - eapply dupmap_correct in DUPLIC; eauto.
