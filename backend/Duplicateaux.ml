@@ -111,6 +111,49 @@ let bfs code entrypoint =
 
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
 
+let get_predecessors code =
+  let preds = ref (PTree.map (fun n i -> []) code) in
+  let process_inst (node, ti) = match ti with
+  | Tleaf _ -> ()
+  | Tnext (_, i) -> let succ = match i with
+      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
+      | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
+      | Icond (_,_,n1,n2) -> [n1;n2]
+      | Ijumptable (_,ln) -> ln
+      | _ -> []
+      in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
+  in begin
+    List.iter process_inst (PTree.elements code);
+    !preds
+  end
+
+module PInt = struct
+  type t = P.t
+  let compare x y = compare (P.to_int x) (P.to_int y)
+end
+
+module PSet = Set.Make(PInt)
+
+let dominators code entrypoint =
+  let bfs_order = bfs code entrypoint
+  and predecessors = get_predecessors code
+  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
+  in begin
+    List.iter (fun n ->
+      let preds = get_some @@ PTree.get n predecessors
+      and single = PSet.singleton n
+      in match preds with
+      | [] -> doms := PTree.set n single !doms
+      | p::lp ->
+          let set_p = get_some @@ PTree.get p !doms
+          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
+          in let inter = List.fold_left PSet.inter set_p set_lp
+          in let union = PSet.union inter single
+          in doms := PTree.set n union !doms
+    ) bfs_order;
+    !doms
+  end
+
 let rec select_unvisited_node is_visited = function
 | [] -> failwith "Empty list"
 | n :: ln -> if not (ptree_get_some n is_visited) then n else select_unvisited_node is_visited ln
@@ -128,22 +171,6 @@ let best_predecessor_of node predecessors order is_visited =
   | None -> failwith "No predecessor list found"
   | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
                with Not_found -> None
-
-let get_predecessors code =
-  let preds = ref (PTree.map (fun n i -> []) code) in
-  let process_inst (node, ti) = match ti with
-  | Tleaf _ -> ()
-  | Tnext (_, i) -> let succ = match i with
-      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
-      | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
-      | Icond (_,_,n1,n2) -> [n1;n2]
-      | Ijumptable (_,ln) -> ln
-      | _ -> []
-      in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
-  in begin
-    List.iter process_inst (PTree.elements code);
-    !preds
-  end
 
 (* for debugging *)
 let print_intlist l =
