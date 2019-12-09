@@ -1,21 +1,10 @@
-(* *********************************************************************)
-(*                                                                     *)
-(*              The Compcert verified compiler                         *)
-(*                                                                     *)
-(*          Xavier Leroy, INRIA Paris-Rocquencourt                     *)
-(*                                                                     *)
-(*  Copyright Institut National de Recherche en Informatique et en     *)
-(*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
-(*                                                                     *)
-(* *********************************************************************)
-
-(** Postorder renumbering of RTL control-flow graphs. *)
-
-Require Import Coqlib Maps Postorder.
+Require Import FunInd.
+Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Values Memory Globalenvs Events Smallstep.
-Require Import Op Registers RTL Renumber.
+Require Import Registers Op RTL.
+Require Import Allnontrap.
+
 
 Definition match_prog (p tp: RTL.program) :=
   match_program (fun ctx f tf => tf = transf_fundef f) eq p tp.
@@ -71,81 +60,36 @@ Proof.
   eapply function_ptr_translated; eauto.
 Qed.
 
-(** Effect of an injective renaming of nodes on a CFG. *)
-
-Section RENUMBER.
-
-Variable f: PTree.t positive.
-
-Hypothesis f_inj: forall x1 x2 y, f!x1 = Some y -> f!x2 = Some y -> x1 = x2.
-
-Lemma renum_cfg_nodes:
-  forall c x y i,
-  c!x = Some i -> f!x = Some y -> (renum_cfg f c)!y = Some(renum_instr f i).
-Proof.
-  set (P := fun (c c': code) =>
-              forall x y i, c!x = Some i -> f!x = Some y -> c'!y = Some(renum_instr f i)).
-  intros c0. change (P c0 (renum_cfg f c0)). unfold renum_cfg.
-  apply PTree_Properties.fold_rec; unfold P; intros.
-  (* extensionality *)
-  eapply H0; eauto. rewrite H; auto.
-  (* base *)
-  rewrite PTree.gempty in H; congruence.
-  (* induction *)
-  rewrite PTree.gsspec in H2. unfold renum_node. destruct (peq x k).
-  inv H2. rewrite H3. apply PTree.gss.
-  destruct f!k as [y'|] eqn:?.
-  rewrite PTree.gso. eauto. red; intros; subst y'. elim n. eapply f_inj; eauto.
-  eauto.
-Qed.
-
-End RENUMBER.
-
-Definition pnum (f: function) := postorder (successors_map f) f.(fn_entrypoint).
-
-Definition reach (f: function) (pc: node) := reachable (successors_map f) f.(fn_entrypoint) pc.
-
 Lemma transf_function_at:
   forall f pc i,
   f.(fn_code)!pc = Some i ->
-  reach f pc ->
-  (transf_function f).(fn_code)!(renum_pc (pnum f) pc) = Some(renum_instr (pnum f) i).
+  (transf_function f).(fn_code)!pc = Some(transf_instr pc i).
 Proof.
-  intros.
-  destruct (postorder_correct (successors_map f) f.(fn_entrypoint)) as [A B].
-  fold (pnum f) in *.
-  unfold renum_pc. destruct (pnum f)! pc as [pc'|] eqn:?.
-  simpl. eapply renum_cfg_nodes; eauto.
-  elim (B pc); auto. unfold successors_map. rewrite PTree.gmap1. rewrite H. simpl. congruence.
+  intros until i. intro Hcode.
+  unfold transf_function; simpl.
+  rewrite PTree.gmap.
+  unfold option_map.
+  rewrite Hcode.
+  reflexivity.
 Qed.
 
 Ltac TR_AT :=
   match goal with
-  | [ A: (fn_code _)!_ = Some _ , B: reach _ _ |- _ ] =>
-        generalize (transf_function_at _ _ _ A B); simpl renum_instr; intros
+  | [ A: (fn_code _)!_ = Some _ |- _ ] =>
+        generalize (transf_function_at _ _ _ A); intros
   end.
 
-Lemma reach_succ:
-  forall f pc i s,
-  f.(fn_code)!pc = Some i -> In s (successors_instr i) ->
-  reach f pc -> reach f s.
-Proof.
-  unfold reach; intros. econstructor; eauto.
-  unfold successors_map. rewrite PTree.gmap1. rewrite H. auto.
-Qed.
 
 Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
-  | match_frames_intro: forall res f sp pc rs
-        (REACH: reach f pc),
+  | match_frames_intro: forall res f sp pc rs,
       match_frames (Stackframe res f sp pc rs)
-                   (Stackframe res (transf_function f) sp (renum_pc (pnum f) pc) rs).
+                   (Stackframe res (transf_function f) sp pc rs).
 
 Inductive match_states: RTL.state -> RTL.state -> Prop :=
   | match_regular_states: forall stk f sp pc rs m stk'
-        (STACKS: list_forall2 match_frames stk stk')
-        (REACH: reach f pc),
+        (STACKS: list_forall2 match_frames stk stk'),
       match_states (State stk f sp pc rs m)
-                   (State stk' (transf_function f) sp (renum_pc (pnum f) pc) rs m)
+                   (State stk' (transf_function f) sp pc rs m)
   | match_callstates: forall stk f args m stk'
         (STACKS: list_forall2 match_frames stk stk'),
       match_states (Callstate stk f args m)
@@ -161,82 +105,79 @@ Lemma step_simulation:
   exists S2', RTL.step tge S1' t S2' /\ match_states S2 S2'.
 Proof.
   induction 1; intros S1' MS; inv MS; try TR_AT.
-(* nop *)
+- (* nop *)
   econstructor; split. eapply exec_Inop; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
-(* op *)
+  constructor; auto.
+- (* op *)
   econstructor; split.
-  eapply exec_Iop; eauto.
-  instantiate (1 := v). rewrite <- H0. apply eval_operation_preserved. exact symbols_preserved.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
+  eapply exec_Iop with (v := v); eauto.
+  rewrite <- H0. apply eval_operation_preserved. exact symbols_preserved.
+  constructor; auto.
 (* load *)
-  econstructor; split.
+- econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
-  (* load notrap1 *)
+  constructor; auto.
+- (* load notrap1 *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = None).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload_notrap1; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
-  (* load notrap2 *)
+  constructor; auto.
+- (* load notrap2 *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload_notrap2; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
-(* store *)
+  constructor; auto. 
+- (* store *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Istore; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
+  constructor; auto. 
 (* call *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_Icall with (fd := transf_fundef fd); eauto.
     eapply find_function_translated; eauto.
     apply sig_preserved.
-  constructor. constructor; auto. constructor. eapply reach_succ; eauto. simpl; auto.
+  constructor. constructor; auto. constructor.
 (* tailcall *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_Itailcall with (fd := transf_fundef fd); eauto.
     eapply find_function_translated; eauto.
     apply sig_preserved.
   constructor. auto.
 (* builtin *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_Ibuiltin; eauto.
     eapply eval_builtin_args_preserved with (ge1 := ge); eauto. exact symbols_preserved.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
-  constructor; auto. eapply reach_succ; eauto. simpl; auto.
+  constructor; auto.
 (* cond *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_Icond; eauto.
-  replace (if b then renum_pc (pnum f) ifso else renum_pc (pnum f) ifnot)
-     with (renum_pc (pnum f) (if b then ifso else ifnot)).
-  constructor; auto. eapply reach_succ; eauto. simpl. destruct b; auto.
-  destruct b; auto.
+  constructor; auto.
 (* jumptbl *)
-  econstructor; split.
-  eapply exec_Ijumptable; eauto. rewrite list_nth_z_map. rewrite H1. simpl; eauto.
-  constructor; auto. eapply reach_succ; eauto. simpl. eapply list_nth_z_in; eauto.
+- econstructor; split.
+  eapply exec_Ijumptable; eauto.
+  constructor; auto.
 (* return *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_Ireturn; eauto.
   constructor; auto.
 (* internal function *)
-  simpl. econstructor; split.
+-  simpl. econstructor; split.
   eapply exec_function_internal; eauto.
-  constructor; auto. unfold reach. constructor.
+  constructor; auto.
 (* external function *)
-  econstructor; split.
+- econstructor; split.
   eapply exec_function_external; eauto.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   constructor; auto.
 (* return *)
-  inv STACKS. inv H1.
+- inv STACKS. inv H1.
   econstructor; split.
   eapply exec_return; eauto.
   constructor; auto.
@@ -272,10 +213,3 @@ Proof.
 Qed.
 
 End PRESERVATION.
-
-
-
-
-
-
-

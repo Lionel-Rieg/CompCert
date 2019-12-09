@@ -39,6 +39,9 @@ Require Import Values.
 Require Export Memdata.
 Require Export Memtype.
 
+Definition default_notrap_load_value (chunk : memory_chunk) := Vundef.
+
+
 (* To avoid useless definitions of inductors in extracted code. *)
 Local Unset Elimination Schemes.
 Local Unset Case Analysis Schemes.

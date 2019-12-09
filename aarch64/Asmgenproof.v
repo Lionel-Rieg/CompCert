@@ -283,10 +283,10 @@ Proof.
 Qed.
 
 Remark transl_load_label:
-  forall chunk addr args dst k c,
-  transl_load chunk addr args dst k = OK c -> tail_nolabel k c.
+  forall trap chunk addr args dst k c,
+  transl_load trap chunk addr args dst k = OK c -> tail_nolabel k c.
 Proof.
-  unfold transl_load; intros; destruct chunk; TailNoLabel; eapply transl_addressing_label; eauto; unfold nolabel; auto.
+  unfold transl_load; intros; destruct trap; try discriminate; destruct chunk; TailNoLabel; eapply transl_addressing_label; eauto; unfold nolabel; auto.
 Qed.
 
 Remark transl_store_label:
@@ -709,6 +709,8 @@ Local Transparent destroyed_by_op.
   destruct op; try exact I; simpl; congruence.
 
 - (* Mload *)
+  destruct trap.
+  {
   assert (Op.eval_addressing tge sp addr (map rs args) = Some a).
   { rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved. }
   exploit eval_addressing_lessdef. eapply preg_vals; eauto. eexact H1.
@@ -719,6 +721,16 @@ Local Transparent destroyed_by_op.
   exists rs2; split. eauto.
   split. eapply agree_set_undef_mreg; eauto. congruence.
   simpl; congruence.
+  }
+  
+  (* Mload notrap1 *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
 
 - (* Mstore *)
   assert (Op.eval_addressing tge sp addr (map rs args) = Some a).

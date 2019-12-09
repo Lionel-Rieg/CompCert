@@ -636,9 +636,14 @@ Definition transl_op
 
 (** Translation of memory loads and stores *)
 
-Definition transl_load (chunk: memory_chunk)
+Definition transl_load
+           (trap : trapping_mode)
+           (chunk: memory_chunk)
                        (addr: addressing) (args: list mreg) (dest: mreg)
                        (k: code) : res code :=
+  match trap with
+  | NOTRAP => Error (msg "Asmgen.transl_load x86 does not support non trapping loads")
+  | TRAP =>
   do am <- transl_addressing addr args;
   match chunk with
   | Mint8unsigned =>
@@ -659,6 +664,7 @@ Definition transl_load (chunk: memory_chunk)
       do r <- freg_of dest; OK(Pmovsd_fm r am :: k)
   | _ =>
       Error (msg "Asmgen.transl_load")
+  end
   end.
 
 Definition transl_store (chunk: memory_chunk)
@@ -699,8 +705,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
          loadind RSP f.(fn_link_ofs) Tptr AX k1)
   | Mop op args res =>
       transl_op op args res k
-  | Mload chunk addr args dst =>
-      transl_load chunk addr args dst k
+  | Mload trap chunk addr args dst =>
+      transl_load trap chunk addr args dst k
   | Mstore chunk addr args src =>
       transl_store chunk addr args src k
   | Mcall sig (inl reg) =>

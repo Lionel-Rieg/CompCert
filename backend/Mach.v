@@ -56,7 +56,7 @@ Inductive instruction: Type :=
   | Msetstack: mreg -> ptrofs -> typ -> instruction
   | Mgetparam: ptrofs -> typ -> mreg -> instruction
   | Mop: operation -> list mreg -> mreg -> instruction
-  | Mload: memory_chunk -> addressing -> list mreg -> mreg -> instruction
+  | Mload: trapping_mode -> memory_chunk -> addressing -> list mreg -> mreg -> instruction
   | Mstore: memory_chunk -> addressing -> list mreg -> mreg -> instruction
   | Mcall: signature -> mreg + ident -> instruction
   | Mtailcall: signature -> mreg + ident -> instruction
@@ -321,11 +321,24 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State s f sp (Mop op args res :: c) rs m)
         E0 (State s f sp c rs' m)
   | exec_Mload:
-      forall s f sp chunk addr args dst c rs m a v rs',
+      forall s f sp trap chunk addr args dst c rs m a v rs',
       eval_addressing ge sp addr rs##args = Some a ->
       Mem.loadv chunk m a = Some v ->
       rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- v) ->
-      step (State s f sp (Mload chunk addr args dst :: c) rs m)
+      step (State s f sp (Mload trap chunk addr args dst :: c) rs m)
+        E0 (State s f sp c rs' m)
+  | exec_Mload_notrap1:
+      forall s f sp chunk addr args dst c rs m rs',
+      eval_addressing ge sp addr rs##args = None ->
+      rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- (default_notrap_load_value chunk)) ->
+      step (State s f sp (Mload NOTRAP chunk addr args dst :: c) rs m)
+        E0 (State s f sp c rs' m)
+  | exec_Mload_notrap2:
+      forall s f sp chunk addr args dst c rs m a rs',
+      eval_addressing ge sp addr rs##args = Some a ->
+      Mem.loadv chunk m a = None ->
+      rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- (default_notrap_load_value chunk)) ->
+      step (State s f sp (Mload NOTRAP chunk addr args dst :: c) rs m)
         E0 (State s f sp c rs' m)
   | exec_Mstore:
       forall s f sp chunk addr args src c rs m m' a rs',

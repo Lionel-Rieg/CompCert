@@ -72,17 +72,19 @@ Definition verify_match_inst dupmap inst tinst :=
           else Error(msg "Different operations in Iop")
       | _ => Error(msg "verify_match_inst Inop") end
 
-  | Iload m a lr r n => match tinst with
-      | Iload m' a' lr' r' n' =>
+  | Iload tm m a lr r n => match tinst with
+      | Iload tm' m' a' lr' r' n' =>
           do u <- verify_is_copy dupmap n n';
-          if (chunk_eq m m') then
-            if (eq_addressing a a') then
-              if (list_eq_dec Pos.eq_dec lr lr') then
-                if (Pos.eq_dec r r') then OK tt
-                else Error (msg "Different r in Iload")
-              else Error (msg "Different lr in Iload")
-            else Error (msg "Different addressing in Iload")
-          else Error (msg "Different mchunk in Iload")
+          if (trapping_mode_eq tm tm') then
+            if (chunk_eq m m') then
+              if (eq_addressing a a') then
+                if (list_eq_dec Pos.eq_dec lr lr') then
+                  if (Pos.eq_dec r r') then OK tt
+                  else Error (msg "Different r in Iload")
+                else Error (msg "Different lr in Iload")
+              else Error (msg "Different addressing in Iload")
+            else Error (msg "Different mchunk in Iload")
+          else Error (msg "Different trapping_mode in Iload")
       | _ => Error (msg "verify_match_inst Iload") end
 
   | Istore m a lr r n => match tinst with

@@ -233,7 +233,7 @@ Definition transfer (lm: labelmap) (before: option avail) (i: instruction):
           (lm, Some (kill (S sl ofs ty) s))
       | Lop op args dst =>
           (lm, Some (kill (R dst) s))
-      | Lload chunk addr args dst =>
+      | Lload trap chunk addr args dst =>
           (lm, Some (kill (R dst) s))
       | Lstore chunk addr args src =>
           (lm, before)

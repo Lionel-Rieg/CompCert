@@ -13,8 +13,8 @@ Inductive match_inst (dupmap: PTree.t node): instruction -> instruction -> Prop 
       dupmap!n' = (Some n) -> match_inst dupmap (Inop n) (Inop n')
   | match_inst_op: forall n n' op lr r,
       dupmap!n' = (Some n) -> match_inst dupmap (Iop op lr r n) (Iop op lr r n')
-  | match_inst_load: forall n n' m a lr r,
-      dupmap!n' = (Some n) -> match_inst dupmap (Iload m a lr r n) (Iload m a lr r n')
+  | match_inst_load: forall n n' tm m a lr r,
+      dupmap!n' = (Some n) -> match_inst dupmap (Iload tm m a lr r n) (Iload tm m a lr r n')
   | match_inst_store: forall n n' m a lr r,
       dupmap!n' = (Some n) -> match_inst dupmap (Istore m a lr r n) (Istore m a lr r n')
   | match_inst_call: forall n n' s ri lr r,
@@ -137,6 +137,7 @@ Proof.
 (* Iload *)
   - destruct i'; try (inversion H; fail). monadInv H.
     destruct x. eapply verify_is_copy_correct in EQ.
+    destruct (trapping_mode_eq _ _); try discriminate.
     destruct (chunk_eq _ _); try discriminate.
     destruct (eq_addressing _ _); try discriminate.
     destruct (list_eq_dec _ _ _); try discriminate.
@@ -344,15 +345,16 @@ Proof.
   intros. inv H.
   exploit function_ptr_translated; eauto. intros (tf & FIND & TRANSF).
   eexists. split.
-  - econstructor.
+  - econstructor; eauto.
     + eapply (Genv.init_mem_transf_partial TRANSL); eauto.
     + replace (prog_main tprog) with (prog_main prog). rewrite symbols_preserved. eauto.
       symmetry. eapply match_program_main. eauto.
-    + exploit function_ptr_translated; eauto.
     + destruct f.
       * monadInv TRANSF. rewrite <- H3. symmetry; eapply transf_function_preserves. assumption.
       * monadInv TRANSF. assumption.
-  - constructor; eauto. constructor. apply transf_fundef_correct; auto.
+  - constructor; eauto.
+    + constructor. 
+    + apply transf_fundef_correct; auto.
 Qed.
 
 Theorem transf_final_states:
@@ -390,14 +392,29 @@ Proof.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Iload; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Iload; eauto; (* is the follow still needed?*) erewrite eval_addressing_preserved; eauto.
     + econstructor; eauto.
+(* Iload notrap1 *)
+  - eapply dupmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Iload_notrap1; eauto; erewrite eval_addressing_preserved; eauto. 
+    + econstructor; eauto.
+(* Iload notrap2 *)
+  - eapply dupmap_correct in DUPLIC; eauto.
+    destruct DUPLIC as (i' & H2 & H3). inv H3.
+    pose symbols_preserved as SYMPRES.
+    eexists. split.
+    + eapply exec_Iload_notrap2; eauto; erewrite eval_addressing_preserved; eauto.
+    + econstructor; eauto.
+      
 (* Istore *)
   - eapply dupmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
     pose symbols_preserved as SYMPRES.
     eexists. split.
-    + eapply exec_Istore; eauto. erewrite eval_addressing_preserved; eauto.
+    + eapply exec_Istore; eauto; erewrite eval_addressing_preserved; eauto.
     + econstructor; eauto.
 (* Icall *)
   - eapply dupmap_correct in DUPLIC; eauto.

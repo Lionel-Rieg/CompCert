@@ -915,7 +915,7 @@ Proof.
             /\ Val.inject j a ta).
   { apply eval_addressing_inj with (ge1 := ge) (sp1 := Vptr sp0 Ptrofs.zero) (vl1 := rs##args).
     intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
-    apply KEPT. red. exists pc, (Iload chunk addr args dst pc'); auto.
+    apply KEPT. red. exists pc, (Iload trap chunk addr args dst pc'); auto.
     econstructor; eauto.
     apply regs_inject; auto.
     assumption. }
@@ -924,6 +924,36 @@ Proof.
   econstructor; split. eapply exec_Iload; eauto.
   econstructor; eauto. apply set_reg_inject; auto.
 
+- (* load notrap1 *)
+  assert (eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = None).
+  { eapply eval_addressing_inj_none.
+    intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
+    apply KEPT. red. exists pc, (Iload NOTRAP chunk addr args dst pc'); auto.
+    econstructor; eauto.
+    rewrite Ptrofs.add_zero; reflexivity.
+    apply regs_inject; auto.
+    eassumption.
+    assumption. }
+ 
+  econstructor; split. eapply exec_Iload_notrap1; eauto.
+  econstructor; eauto. apply set_reg_inject; auto.
+
+- (* load notrap2 *)
+  assert (A: exists ta,
+               eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = Some ta
+            /\ Val.inject j a ta).
+  { apply eval_addressing_inj with (ge1 := ge) (sp1 := Vptr sp0 Ptrofs.zero) (vl1 := rs##args).
+    intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
+    apply KEPT. red. exists pc, (Iload NOTRAP chunk addr args dst pc'); auto.
+    econstructor; eauto.
+    apply regs_inject; auto.
+    assumption. }
+  destruct A as (ta & B & C).
+  destruct (Mem.loadv chunk tm ta) eqn:Echunk2.
+  + econstructor; split. eapply exec_Iload; eauto.
+    econstructor; eauto. apply set_reg_inject; auto.
+  + econstructor; split. eapply exec_Iload_notrap2; eauto.
+    econstructor; eauto. apply set_reg_inject; auto.
 - (* store *)
   assert (A: exists ta,
                eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = Some ta

@@ -364,9 +364,9 @@ Definition expand_instr (ctx: context) (pc: node) (i: instruction): mon unit :=
   | Iop op args res s =>
       set_instr (spc ctx pc)
                 (Iop (sop ctx op) (sregs ctx args) (sreg ctx res) (spc ctx s))
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       set_instr (spc ctx pc)
-                (Iload chunk (saddr ctx addr) (sregs ctx args) (sreg ctx dst) (spc ctx s))
+                (Iload trap chunk (saddr ctx addr) (sregs ctx args) (sreg ctx dst) (spc ctx s))
   | Istore chunk addr args src s =>
       set_instr (spc ctx pc)
                 (Istore chunk (saddr ctx addr) (sregs ctx args) (sreg ctx src) (spc ctx s))

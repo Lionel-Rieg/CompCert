@@ -28,7 +28,7 @@ Inductive instruction: Type :=
   | Lgetstack: slot -> Z -> typ -> mreg -> instruction
   | Lsetstack: mreg -> slot -> Z -> typ -> instruction
   | Lop: operation -> list mreg -> mreg -> instruction
-  | Lload: memory_chunk -> addressing -> list mreg -> mreg -> instruction
+  | Lload: trapping_mode -> memory_chunk -> addressing -> list mreg -> mreg -> instruction
   | Lstore: memory_chunk -> addressing -> list mreg -> mreg -> instruction
   | Lcall: signature -> mreg + ident -> instruction
   | Ltailcall: signature -> mreg + ident -> instruction
@@ -160,11 +160,28 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State s f sp (Lop op args res :: b) rs m)
         E0 (State s f sp b rs' m)
   | exec_Lload:
-      forall s f sp chunk addr args dst b rs m a v rs',
+      forall s f sp trap chunk addr args dst b rs m a v rs',
       eval_addressing ge sp addr (reglist rs args) = Some a ->
       Mem.loadv chunk m a = Some v ->
       rs' = Locmap.set (R dst) v (undef_regs (destroyed_by_load chunk addr) rs) ->
-      step (State s f sp (Lload chunk addr args dst :: b) rs m)
+      step (State s f sp (Lload trap chunk addr args dst :: b) rs m)
+        E0 (State s f sp b rs' m)
+  | exec_Lload_notrap1:
+      forall s f sp chunk addr args dst b rs m rs',
+      eval_addressing ge sp addr (reglist rs args) = None ->
+      rs' = Locmap.set (R dst)
+                       (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (State s f sp (Lload NOTRAP chunk addr args dst :: b) rs m)
+        E0 (State s f sp b rs' m)
+  | exec_Lload_notrap2:
+      forall s f sp chunk addr args dst b rs m a rs',
+      eval_addressing ge sp addr (reglist rs args) = Some a ->
+      Mem.loadv chunk m a = None ->
+      rs' = Locmap.set (R dst)
+                       (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (State s f sp (Lload NOTRAP chunk addr args dst :: b) rs m)
         E0 (State s f sp b rs' m)
   | exec_Lstore:
       forall s f sp chunk addr args src b rs m m' a rs',

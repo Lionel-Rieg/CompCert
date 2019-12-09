@@ -472,6 +472,24 @@ Proof.
   rewrite Ptrofs.add_zero_l; eauto with va.
 Qed.
 
+Theorem eval_static_addressing_sound_none:
+  forall addr vargs aargs,
+  eval_addressing ge (Vptr sp Ptrofs.zero) addr vargs = None ->
+  list_forall2 (vmatch bc) vargs aargs ->
+  (eval_static_addressing addr aargs) = Vbot.
+Proof.
+  unfold eval_addressing, eval_static_addressing.
+  intros until aargs. intros Heval_none Hlist.
+  inv Hlist.
+  destruct addr; trivial; discriminate.
+  inv H0.
+  destruct addr; trivial; discriminate.
+  inv H2.
+  destruct addr; trivial; discriminate.
+  inv H3;
+  destruct addr; trivial; discriminate.
+Qed.
+
 Theorem eval_static_operation_sound:
   forall op vargs m vres aargs,
   eval_operation ge (Vptr sp Ptrofs.zero) op vargs m = Some vres ->

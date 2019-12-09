@@ -1620,7 +1620,7 @@ Qed.
 
 Lemma transl_load_correct:
   forall chunk addr args dst k c (rs: regset) m vaddr v,
-  transl_load chunk addr args dst k = OK c ->
+  transl_load TRAP chunk addr args dst k = OK c ->
   Op.eval_addressing ge (rs#SP) addr (map rs (map preg_of args)) = Some vaddr ->
   Mem.loadv chunk m vaddr = Some v ->
   exists rs',

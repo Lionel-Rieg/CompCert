@@ -57,7 +57,7 @@ let used_in_globvar io gv =
 let fun_inline_analysis id io fn =
   let inst io nid = function
     | Iop (op, args, dest, succ) -> used_id io (globals_operation op)
-    | Iload (chunk, addr, args, dest, succ)
+    | Iload (_, chunk, addr, args, dest, succ)
     | Istore (chunk, addr, args, dest, succ) -> used_id io (globals_addressing addr)
     | Ibuiltin (ef, args, dest, succ) -> used_id io (globals_of_builtin_args args)
     | Icall (_, Coq_inr cid, _, _, _)

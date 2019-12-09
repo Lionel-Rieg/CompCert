@@ -899,7 +899,7 @@ Proof.
 
       intros [tc' [rs' [A [B C]]]].
       exploit ireg_val; eauto. rewrite H13. intros LD; inv LD.
-
+      
       repeat eexists.
         rewrite H6. simpl extract_basic. simpl. eauto.
         rewrite H7. simpl extract_ctl. simpl. Simpl. rewrite <- H1. unfold Mach.label in H14. unfold label. rewrite H14. eapply A.
@@ -922,7 +922,7 @@ Proof.
         simpl. eauto.
       intros EXEB.
       assert (f1 = f) by congruence. subst f1.
-
+      
       repeat eexists.
         rewrite H6. simpl extract_basic. eauto.
         rewrite H7. simpl extract_ctl. simpl. reflexivity.
@@ -1120,7 +1120,7 @@ Proof.
       apply preg_of_not_FP; auto.
   - (* MBop *)
     simpl in EQ0. rewrite Hheader in DXP.
-
+    
     assert (eval_operation tge sp op (map ms args) m' = Some v).
       rewrite <- H. apply eval_operation_preserved. exact symbols_preserved.
     exploit eval_operation_lessdef.
@@ -1175,6 +1175,71 @@ Local Transparent destroyed_by_op.
     subst. rewrite <- DXP. rewrite R; try discriminate. reflexivity.
     apply preg_of_not_FP; assumption. reflexivity.
 
+  - (* notrap1 cannot happen *)
+    simpl in EQ0. unfold transl_load in EQ0.
+    destruct addr; simpl in H.
+    all: unfold transl_load_rrrXS, transl_load_rrr, transl_load_rro in EQ0;
+    monadInv EQ0; unfold transl_memory_access2XS, transl_memory_access2, transl_memory_access in EQ2;
+    destruct args as [|h0 t0]; try discriminate;
+    destruct t0 as [|h1 t1]; try discriminate;
+    destruct t1 as [|h2 t2]; try discriminate.
+    
+  - (* MBload notrap2 TODO *)
+    simpl in EQ0. rewrite Hheader in DXP.
+
+    assert (eval_addressing tge sp addr (map ms args) = Some a).
+      rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
+    exploit eval_addressing_lessdef. eapply preg_vals; eauto. eexact H1.
+    intros [a' [A B]]. rewrite (sp_val _ _ _ AG) in A.
+
+    destruct (Mem.loadv chunk m1 a') as [v' | ] eqn:Hload.
+    {
+    exploit transl_load_correct; eauto.
+    intros [rs2 [P [Q R]]].
+
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs2, m1, ll.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto).
+    eapply basics_to_code_app; eauto.
+    eapply match_codestate_intro; eauto. simpl. rewrite Hheader in *.
+    simpl in EQ. assumption.
+
+    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
+
+    simpl. intro.
+    rewrite R; try congruence.
+    apply DXP.
+    destruct ep0; simpl in *; congruence.
+    apply preg_of_not_FP.
+    destruct ep0; simpl in *; congruence.
+    }
+    { 
+    exploit transl_load_correct_notrap2; eauto.
+    intros [rs2 [P [Q R]]].
+
+    eapply exec_straight_body in P.
+      2: eapply code_to_basics_id; eauto.
+    destruct P as (l & ll & TBC & CTB & EXECB).
+    exists rs2, m1, ll.
+    eexists. eexists. split. instantiate (1 := x). eauto.
+    repeat (split; auto).
+      eapply basics_to_code_app; eauto.
+    remember {| MB.header := _; MB.body := _; MB.exit := _ |} as bb'.
+(*     assert (Hheadereq: MB.header bb' = MB.header bb). { subst. auto. }
+    rewrite <- Hheadereq. *) subst.
+    eapply match_codestate_intro; eauto. simpl. rewrite Hheader in *. simpl in EQ. assumption.
+
+    eapply agree_set_undef_mreg; eauto. intros; auto with asmgen.
+    simpl. intro.
+    rewrite R; try congruence.
+    apply DXP.
+    destruct ep0; simpl in *; congruence.
+    apply preg_of_not_FP.
+    destruct ep0; simpl in *; congruence.
+    }
   - (* MBstore *)
     simpl in EQ0. rewrite Hheader in DXP.
 
@@ -1652,7 +1717,7 @@ Proof.
   } destruct EXEC_PROLOGUE as (rs3' & EXEC_PROLOGUE & Heqrs3').
   exploit exec_straight_steps_2; eauto using functions_transl.
   simpl fn_blocks. simpl fn_blocks in g. omega. constructor.
-  intros (ofs' & X & Y).
+  intros (ofs' & X & Y).                    
   left; exists (State rs3' m3'); split.
   eapply exec_straight_steps_1; eauto.
   simpl fn_blocks. simpl fn_blocks in g. omega.

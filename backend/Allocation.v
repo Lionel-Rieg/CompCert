@@ -58,7 +58,7 @@ Inductive block_shape: Type :=
          (mv2: moves) (s: node)
   | BSopdead (op: operation) (args: list reg) (res: reg)
          (mv: moves) (s: node)
-  | BSload (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
+  | BSload (trap : trapping_mode) (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
          (mv1: moves) (args': list mreg) (dst': mreg)
          (mv2: moves) (s: node)
   | BSloaddead (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
@@ -226,15 +226,19 @@ Definition pair_instr_block
       | operation_other _ _ =>
           pair_Iop_block op args res s b
       end
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       let (mv1, b1) := extract_moves nil b in
       match b1 with
-      | Lload chunk' addr' args' dst' :: b2 =>
+      | Lload trap' chunk' addr' args' dst' :: b2 =>
+        assertion (trapping_mode_eq trap' trap);
           if chunk_eq chunk Mint64 && Archi.splitlong then
+            (* TODO: do not support non trapping split loads *)
+            assertion (trapping_mode_eq trap TRAP);
             assertion (chunk_eq chunk' Mint32);
             let (mv2, b3) := extract_moves nil b2 in
             match b3 with
-            | Lload chunk'' addr'' args'' dst'' :: b4 =>
+            | Lload trap'' chunk'' addr'' args'' dst'' :: b4 =>
+              assertion (trapping_mode_eq trap'' TRAP);
                 let (mv3, b5) := extract_moves nil b4 in
                 assertion (chunk_eq chunk'' Mint32);
                 assertion (eq_addressing addr addr');
@@ -254,7 +258,7 @@ Definition pair_instr_block
             assertion (chunk_eq chunk chunk');
             assertion (eq_addressing addr addr');
             assertion (check_succ s b3);
-            Some(BSload chunk addr args dst mv1 args' dst' mv2 s))
+            Some(BSload trap chunk addr args dst mv1 args' dst' mv2 s))
       | _ =>
           assertion (check_succ s b1);
           Some(BSloaddead chunk addr args dst mv1 s)
@@ -1023,7 +1027,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
   | BSopdead op args res mv s =>
       assertion (reg_unconstrained res e);
       track_moves env mv e
-  | BSload chunk addr args dst mv1 args' dst' mv2 s =>
+  | BSload trap chunk addr args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       do e2 <- transfer_use_def args dst args' dst' (destroyed_by_load chunk addr) e1;
       track_moves env mv1 e2
@@ -1263,7 +1267,7 @@ Definition successors_block_shape (bsh: block_shape) : list node :=
   | BShighlong src dst mv s => s :: nil
   | BSop op args res mv1 args' res' mv2 s => s :: nil
   | BSopdead op args res mv s => s :: nil
-  | BSload chunk addr args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload trap chunk addr args dst mv1 args' dst' mv2 s => s :: nil
   | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
   | BSload2_1 addr args dst mv1 args' dst' mv2 s => s :: nil
   | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s => s :: nil

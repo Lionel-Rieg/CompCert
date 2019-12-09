@@ -957,8 +957,12 @@ Definition transl_addressing (sz: Z) (addr: Op.addressing) (args: list mreg)
 
 (** Translation of loads and stores *)
 
-Definition transl_load (chunk: memory_chunk) (addr: Op.addressing)
+Definition transl_load (trap: trapping_mode)
+                       (chunk: memory_chunk) (addr: Op.addressing)
                        (args: list mreg) (dst: mreg) (k: code) : res code :=
+  match trap with
+  | NOTRAP => Error (msg "Asmgen.transl_load non-trapping loads unsupported on aarch64")
+  | TRAP =>
   match chunk with
   | Mint8unsigned =>
       do rd <- ireg_of dst; transl_addressing 1 addr args (Pldrb W rd) k
@@ -980,6 +984,7 @@ Definition transl_load (chunk: memory_chunk) (addr: Op.addressing)
       do rd <- ireg_of dst; transl_addressing 4 addr args (Pldrw_a rd) k
   | Many64 =>
       do rd <- ireg_of dst; transl_addressing 8 addr args (Pldrx_a rd) k
+  end
   end.
 
 Definition transl_store (chunk: memory_chunk) (addr: Op.addressing)
@@ -1063,8 +1068,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
       OK (if r29_is_parent then c else loadptr XSP f.(fn_link_ofs) X29 c)
   | Mop op args res =>
       transl_op op args res k
-  | Mload chunk addr args dst =>
-      transl_load chunk addr args dst k
+  | Mload trap chunk addr args dst =>
+      transl_load trap chunk addr args dst k
   | Mstore chunk addr args src =>
       transl_store chunk addr args src k
   | Mcall sig (inl r) =>

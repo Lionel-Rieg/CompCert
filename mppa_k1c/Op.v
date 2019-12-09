@@ -1030,6 +1030,34 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
     + constructor.
 Qed.
 
+Definition is_trapping_op (op : operation) :=
+  match op with
+  | Odiv | Odivl | Odivu | Odivlu
+  | Omod | Omodl | Omodu | Omodlu
+  | Oshrximm _ | Oshrxlimm _
+  | Ointoffloat | Ointuoffloat
+  | Ointofsingle | Ointuofsingle
+  | Olongoffloat | Olonguoffloat
+  | Olongofsingle | Olonguofsingle
+  | Osingleofint | Osingleofintu
+  | Osingleoflong | Osingleoflongu
+  | Ofloatoflong | Ofloatoflongu => true
+  | _ => false
+  end.
+
+Lemma is_trapping_op_sound:
+  forall op vl sp m,
+    op <> Omove ->
+    is_trapping_op op = false ->
+    (List.length vl) = (List.length (fst (type_of_operation op))) ->
+    eval_operation genv sp op vl m <> None.
+Proof.
+  destruct op; intros; simpl in *; try congruence.
+  all: try (destruct vl as [ | vh1 vl1]; try discriminate).
+  all: try (destruct vl1 as [ | vh2 vl2]; try discriminate).
+  all: try (destruct vl2 as [ | vh3 vl3]; try discriminate).
+  all: try (destruct vl3 as [ | vh4 vl4]; try discriminate).
+Qed.
 End SOUNDNESS.
 
 (** * Manipulating and transforming operations *)
@@ -1706,6 +1734,27 @@ Proof.
   - apply Val.offset_ptr_inject; auto. 
 Qed.
 
+Lemma eval_addressing_inj_none:
+  forall addr sp1 vl1 sp2 vl2,
+  (forall id ofs,
+      In id (globals_addressing addr) ->
+      Val.inject f (Genv.symbol_address ge1 id ofs) (Genv.symbol_address ge2 id ofs)) ->
+  Val.inject f sp1 sp2 ->
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing ge1 sp1 addr vl1 = None ->
+  eval_addressing ge2 sp2 addr vl2 = None.
+Proof.
+  intros until vl2. intros Hglobal Hinjsp Hinjvl.
+  destruct addr; simpl in *.
+  1,2: inv Hinjvl; trivial;
+       inv H0; trivial;
+       inv H2; trivial;
+       discriminate.
+  2,3: inv Hinjvl; trivial; discriminate.
+  inv Hinjvl; trivial; inv H0; trivial;
+    inv H; trivial; discriminate.
+Qed.
+  
 End EVAL_COMPAT.
 
 (** Compatibility of the evaluation functions with the ``is less defined'' relation over values. *)
@@ -1812,6 +1861,24 @@ Proof.
   destruct H1 as [v2 [A B]]. exists v2; split; auto. rewrite val_inject_lessdef; auto.
 Qed.
 
+
+Lemma eval_addressing_lessdef_none:
+  forall sp addr vl1 vl2,
+  Val.lessdef_list vl1 vl2 ->
+  eval_addressing genv sp addr vl1 = None ->
+  eval_addressing genv sp addr vl2 = None.
+Proof.
+  intros until vl2. intros Hlessdef Heval1.
+  destruct addr; simpl in *.
+  1, 2, 4, 5: inv Hlessdef; trivial;
+  inv H0; trivial;
+  inv H2; trivial;
+    discriminate.
+  inv Hlessdef; trivial.
+  inv H0; trivial.
+  discriminate.
+Qed.
+  
 End EVAL_LESSDEF.
 
 (** Compatibility of the evaluation functions with memory injections. *)
@@ -1864,6 +1931,19 @@ Proof.
   econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
 Qed.
 
+Lemma eval_addressing_inject_none:
+  forall addr vl1 vl2,
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing genv (Vptr sp1 Ptrofs.zero) addr vl1 = None ->
+  eval_addressing genv (Vptr sp2 Ptrofs.zero) (shift_stack_addressing delta addr) vl2 = None.
+Proof.
+  intros.
+  rewrite eval_shift_stack_addressing.
+  eapply eval_addressing_inj_none with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
+  intros. apply symbol_address_inject.
+  econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
+Qed.
+  
 Lemma eval_operation_inject:
   forall op vl1 vl2 v1 m1 m2,
   Val.inject_list f vl1 vl2 ->
