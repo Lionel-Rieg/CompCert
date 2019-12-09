@@ -1153,10 +1153,10 @@ Proof.
 - constructor.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_public_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_private_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
   apply bmatch_ext with m; auto. intros. apply INV. xomega. auto. auto. auto.
 Qed.
 
@@ -1385,7 +1385,7 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
 * (* public builtin call *)
   exploit anonymize_stack; eauto.
@@ -1404,7 +1404,7 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
   }
   unfold transfer_builtin in TR.
