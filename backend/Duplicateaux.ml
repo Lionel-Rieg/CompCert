@@ -68,26 +68,6 @@ end
 
 module PSet = Set.Make(PInt)
 
-let get_dominators code entrypoint =
-  let bfs_order = bfs code entrypoint
-  and predecessors = get_predecessors_rtl code
-  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
-  in begin
-    List.iter (fun n ->
-      let preds = get_some @@ PTree.get n predecessors
-      and single = PSet.singleton n
-      in match preds with
-      | [] -> doms := PTree.set n single !doms
-      | p::lp ->
-          let set_p = get_some @@ PTree.get p !doms
-          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
-          in let inter = List.fold_left PSet.inter set_p set_lp
-          in let union = PSet.union inter single
-          in doms := PTree.set n union !doms
-    ) bfs_order;
-    !doms
-  end
-
 let print_intlist l =
   let rec f = function
   | [] -> ()
@@ -108,6 +88,40 @@ let print_intset s =
     Printf.printf "}"
   end
 
+(* FIXME - dominators not working well because the order of dataflow update isn't right *)
+  (*
+let get_dominators code entrypoint =
+  let bfs_order = bfs code entrypoint
+  and predecessors = get_predecessors_rtl code
+  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
+  in begin
+    Printf.printf "BFS: ";
+    print_intlist bfs_order;
+    Printf.printf "\n";
+    List.iter (fun n ->
+      let preds = get_some @@ PTree.get n predecessors
+      and single = PSet.singleton n
+      in match preds with
+      | [] -> doms := PTree.set n single !doms
+      | p::lp ->
+          let set_p = get_some @@ PTree.get p !doms
+          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
+          in let inter = List.fold_left PSet.inter set_p set_lp
+          in let union = PSet.union inter single
+          in begin
+            Printf.printf "----------------------------------------\n";
+            Printf.printf "n = %d\n" (P.to_int n);
+            Printf.printf "set_p = "; print_intset set_p; Printf.printf "\n";
+            Printf.printf "set_lp = ["; List.iter (fun s -> print_intset s; Printf.printf ", ") set_lp; Printf.printf "]\n";
+            Printf.printf "=> inter = "; print_intset inter; Printf.printf "\n";
+            Printf.printf "=> union = "; print_intset union; Printf.printf "\n";
+            doms := PTree.set n union !doms
+          end
+    ) bfs_order;
+    !doms
+  end
+*)
+
 let print_dominators dominators =
   let domlist = PTree.elements dominators
   in begin
@@ -120,13 +134,49 @@ let print_dominators dominators =
     ) domlist
   end
 
+type vstate = Unvisited | Processed | Visited
+
+(** Getting loop branches with a DFS visit :
+  * Each node is either Unvisited, Visited, or Processed
+  * pre-order: node becomes Processed
+  * post-order: node becomes Visited
+  *
+  * If we come accross an edge to a Processed node, it's a loop!
+  *)
+let get_loop_headers code entrypoint =
+  let visited = ref (PTree.map (fun n i -> Unvisited) code)
+  and is_loop_header = ref (PTree.map (fun n i -> false) code)
+  in let rec dfs_visit code = function
+  | [] -> ()
+  | node :: ln ->
+      match (get_some @@ PTree.get node !visited) with
+      | Visited -> ()
+      | Processed -> begin
+          is_loop_header := PTree.set node true !is_loop_header;
+          visited := PTree.set node Visited !visited
+        end
+      | Unvisited -> begin
+          visited := PTree.set node Processed !visited;
+          match PTree.get node code with
+          | None -> failwith "No such node"
+          | Some i -> let next_visits = (match i with
+            | Icall (_, _, _, _, n) | Ibuiltin (_, _, _, n) | Inop n | Iop (_, _, _, n)
+            | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> [n]
+            | Icond (_, _, n1, n2) -> [n1; n2]
+            | Itailcall _ | Ireturn _ -> []
+            | Ijumptable (_, ln) -> ln
+            ) in dfs_visit code (next_visits @ ln)
+        end
+  in begin
+    dfs_visit code [entrypoint];
+    !is_loop_header
+  end
+
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
+  (* and is_loop_header = get_loop_headers code entrypoint *)
   and directions = ref (PTree.map (fun n i -> false) code) (* false <=> fallthru *)
-  and dominators = get_dominators code entrypoint
   in begin
-    Printf.printf "Dominators: ";
-    print_dominators dominators;
     List.iter (fun n ->
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, n, n') -> directions := PTree.set n (Random.bool ()) !directions
