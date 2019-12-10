@@ -15,11 +15,128 @@ open TTL
 
 (** RTL to TTL *)
 
-(* FIXME - for now, random choice *)
+let get_some = function
+| None -> failwith "Did not get some"
+| Some thing -> thing
 
-let select_one n n' = if Random.bool () then n else n'
+let bfs code entrypoint =
+  let visited = ref (PTree.map (fun n i -> false) code)
+  and bfs_list = ref []
+  and to_visit = Queue.create ()
+  and node = ref entrypoint
+  in begin
+    Queue.add entrypoint to_visit;
+    while not (Queue.is_empty to_visit) do
+      node := Queue.pop to_visit;
+      if not (get_some @@ PTree.get !node !visited) then begin
+        visited := PTree.set !node true !visited;
+        match PTree.get !node code with
+        | None -> failwith "No such node"
+        | Some i ->
+            bfs_list := !bfs_list @ [!node];
+            match i with
+            | Icall(_, _, _, _, n) -> Queue.add n to_visit
+            | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
+            | Ijumptable(_, ln) -> List.iter (fun n -> Queue.add n to_visit) ln
+            | Itailcall _ | Ireturn _ -> ()
+            | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
+            | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
+      end
+    done;
+    !bfs_list
+  end
 
-let to_ttl_inst = function
+let get_predecessors_rtl code =
+  let preds = ref (PTree.map (fun n i -> []) code) in
+  let process_inst (node, i) =
+    let succ = match i with
+      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
+      | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
+      | Icond (_,_,n1,n2) -> [n1;n2]
+      | Ijumptable (_,ln) -> ln
+      | Itailcall _ | Ireturn _ -> []
+    in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
+  in begin
+    List.iter process_inst (PTree.elements code);
+    !preds
+  end
+
+module PInt = struct
+  type t = P.t
+  let compare x y = compare (P.to_int x) (P.to_int y)
+end
+
+module PSet = Set.Make(PInt)
+
+let get_dominators code entrypoint =
+  let bfs_order = bfs code entrypoint
+  and predecessors = get_predecessors_rtl code
+  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
+  in begin
+    List.iter (fun n ->
+      let preds = get_some @@ PTree.get n predecessors
+      and single = PSet.singleton n
+      in match preds with
+      | [] -> doms := PTree.set n single !doms
+      | p::lp ->
+          let set_p = get_some @@ PTree.get p !doms
+          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
+          in let inter = List.fold_left PSet.inter set_p set_lp
+          in let union = PSet.union inter single
+          in doms := PTree.set n union !doms
+    ) bfs_order;
+    !doms
+  end
+
+let print_intlist l =
+  let rec f = function
+  | [] -> ()
+  | n::ln -> (Printf.printf "%d " (P.to_int n); f ln)
+  in begin
+    Printf.printf "[";
+    f l;
+    Printf.printf "]"
+  end
+
+let print_intset s =
+  let seq = PSet.to_seq s
+  in begin
+    Printf.printf "{";
+    Seq.iter (fun n ->
+      Printf.printf "%d " (P.to_int n)
+    ) seq;
+    Printf.printf "}"
+  end
+
+let print_dominators dominators =
+  let domlist = PTree.elements dominators
+  in begin
+    Printf.printf "{\n";
+    List.iter (fun (n, doms) ->
+      Printf.printf "\t";
+      Printf.printf "%d:" (P.to_int n);
+      print_intset doms;
+      Printf.printf "\n"
+    ) domlist
+  end
+
+let get_directions code entrypoint =
+  let bfs_order = bfs code entrypoint
+  and directions = ref (PTree.map (fun n i -> false) code) (* false <=> fallthru *)
+  and dominators = get_dominators code entrypoint
+  in begin
+    Printf.printf "Dominators: ";
+    print_dominators dominators;
+    List.iter (fun n ->
+      match (get_some @@ PTree.get n code) with
+      | Icond (cond, lr, n, n') -> directions := PTree.set n (Random.bool ()) !directions
+      | _ -> ()
+    ) bfs_order;
+    !directions
+  end
+
+
+let to_ttl_inst direction = function
 | Ireturn o -> Tleaf (Ireturn o)
 | Inop n -> Tnext (n, Inop n)
 | Iop (op, lr, r, n) -> Tnext (n, Iop(op, lr, r, n))
@@ -28,17 +145,23 @@ let to_ttl_inst = function
 | Icall (s, ri, lr, r, n) -> Tleaf (Icall(s, ri, lr, r, n))
 | Itailcall (s, ri, lr) -> Tleaf (Itailcall(s, ri, lr))
 | Ibuiltin (ef, lbr, br, n) -> Tleaf (Ibuiltin(ef, lbr, br, n))
-| Icond (cond, lr, n, n') -> Tnext (select_one n n', Icond(cond, lr, n, n'))
+| Icond (cond, lr, n, n') -> (match direction with
+    | false -> Tnext (n', Icond(cond, lr, n, n'))
+    | true -> Tnext (n, Icond(cond, lr, n, n')))
 | Ijumptable (r, ln) -> Tleaf (Ijumptable(r, ln))
 
-let rec to_ttl_code_rec = function
+let rec to_ttl_code_rec directions = function
 | [] -> PTree.empty
-| m::lm -> let (n, i) = m in PTree.set n (to_ttl_inst i) (to_ttl_code_rec lm)
+| m::lm -> let (n, i) = m
+    in let direction = get_some @@ PTree.get n directions
+    in PTree.set n (to_ttl_inst direction i) (to_ttl_code_rec directions lm)
 
-let to_ttl_code code = begin
-  Random.init(0); (* using same seed to make it deterministic *)
-  to_ttl_code_rec (PTree.elements code)
-end
+let to_ttl_code code entrypoint =
+  let directions = get_directions code entrypoint
+  in begin
+    Random.init(0); (* using same seed to make it deterministic *)
+    to_ttl_code_rec directions (PTree.elements code)
+  end
 
 (** Trace selection on TTL *)
 
@@ -48,10 +171,7 @@ let rec exists_false_rec = function
 
 let exists_false boolmap = exists_false_rec (PTree.elements boolmap)
 
-let get_some = function
-| None -> failwith "Did not get some"
-| Some thing -> thing
-
+(* DFS on TTL to guide the exploration *)
 let dfs code entrypoint =
   let visited = ref (PTree.map (fun n i -> false) code) in
   let rec dfs_list code = function
@@ -78,40 +198,9 @@ let dfs code entrypoint =
       in node_dfs @ (dfs_list code ln)
   in dfs_list code [entrypoint]
 
-let bfs code entrypoint =
-  let visited = ref (PTree.map (fun n i -> false) code)
-  and bfs_list = ref []
-  and to_visit = Queue.create ()
-  and node = ref entrypoint
-  in begin
-    Queue.add entrypoint to_visit;
-    while not (Queue.is_empty to_visit) do
-      node := Queue.pop to_visit;
-      if not (get_some @@ PTree.get !node !visited) then begin
-        visited := PTree.set !node true !visited;
-        match PTree.get !node code with
-        | None -> failwith "No such node"
-        | Some ti ->
-            bfs_list := !bfs_list @ [!node];
-            match ti with
-            | Tleaf i -> ( match i with
-                | Icall(_, _, _, _, n) -> Queue.add n to_visit
-                | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
-                | Ijumptable(_, ln) -> List.iter (fun n -> Queue.add n to_visit) ln
-                | Itailcall _ | Ireturn _ -> ()
-                | _ -> failwith "Tleaf case not handled in bfs" )
-            | Tnext (_, i) -> ( match i with
-                | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
-                | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
-                | _ -> failwith "Tnext case not handled in bfs" )
-      end
-    done;
-    !bfs_list
-  end
-
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
 
-let get_predecessors code =
+let get_predecessors_ttl code =
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, ti) = match ti with
   | Tleaf _ -> ()
@@ -127,32 +216,7 @@ let get_predecessors code =
     !preds
   end
 
-module PInt = struct
-  type t = P.t
-  let compare x y = compare (P.to_int x) (P.to_int y)
-end
-
-module PSet = Set.Make(PInt)
-
-let dominators code entrypoint =
-  let bfs_order = bfs code entrypoint
-  and predecessors = get_predecessors code
-  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
-  in begin
-    List.iter (fun n ->
-      let preds = get_some @@ PTree.get n predecessors
-      and single = PSet.singleton n
-      in match preds with
-      | [] -> doms := PTree.set n single !doms
-      | p::lp ->
-          let set_p = get_some @@ PTree.get p !doms
-          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
-          in let inter = List.fold_left PSet.inter set_p set_lp
-          in let union = PSet.union inter single
-          in doms := PTree.set n union !doms
-    ) bfs_order;
-    !doms
-  end
+let rtl_proj code = PTree.map (fun n ti -> match ti with Tleaf i | Tnext(_, i) -> i) code
 
 let rec select_unvisited_node is_visited = function
 | [] -> failwith "Empty list"
@@ -172,23 +236,11 @@ let best_predecessor_of node predecessors order is_visited =
   | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
                with Not_found -> None
 
-(* for debugging *)
-let print_intlist l =
-  let rec f = function
-  | [] -> ()
-  | n::ln -> (Printf.printf "%d " (P.to_int n); f ln)
-  in begin
-    Printf.printf "[";
-    f l;
-    Printf.printf "]"
-  end
-
 (* Algorithm mostly inspired from Chang and Hwu 1988
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
 let select_traces code entrypoint =
   let order = dfs code entrypoint in
-  let bfs_order = bfs code entrypoint in
-  let predecessors = get_predecessors code in
+  let predecessors = get_predecessors_ttl code in
   let traces = ref [] in
   let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
     while exists_false !is_visited do (* while (there are unvisited nodes) *)
@@ -224,7 +276,6 @@ let select_traces code entrypoint =
       end
     done;
     Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n";
-    Printf.printf "BFS: \t"; print_intlist bfs_order; Printf.printf "\n";
     !traces
   end
 
@@ -248,5 +299,10 @@ let make_identity_ptree f = make_identity_ptree_rec (PTree.elements f.fn_code)
 
 (* For now, identity function *)
 let duplicate_aux f =
-  let pTreeId = make_identity_ptree f
-  in ((f.fn_code, f.fn_entrypoint), pTreeId)
+  let pTreeId = make_identity_ptree f in
+  let entrypoint = fn_entrypoint f in
+  let traces = select_traces (to_ttl_code (fn_code f) entrypoint) entrypoint
+  in begin
+    print_traces traces;
+    (((fn_code f), (fn_entrypoint f)), pTreeId)
+  end
