@@ -22,6 +22,8 @@ Require Import Parallelizability.
 Require Import Asmvliw Permutation.
 Require Import Chunks.
 
+Require Import Lia.
+
 Open Scope impure.
 
 (** Definition of L *)
@@ -207,6 +209,47 @@ Definition store_eval (so: store_op) (l: list value) :=
   | OStoreRRRXS n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_regxs (store_chunk n) m vs va vo
   | _, _ => None
   end.
+
+Local Open Scope Z.
+
+Definition no_overlap_segments l1 h1 l2 h2 :=
+  (h1 <=? l2) || (h2 <=? l1).
+
+Definition in_segment l h x :=
+  (l <=? x) && (x <? h).
+
+Lemma no_overlap_segments_correct:
+  forall l1 h1 l2 h2 x,
+    (in_segment l1 h1 x) = true ->
+    (in_segment l2 h2 x) = true ->
+    (no_overlap_segments l1 h1 l2 h2) = false.
+Proof.
+  unfold in_segment, no_overlap_segments.
+  intros until x.
+  intros H1 H2.
+  destruct (andb_true_iff (l1 <=? x) (x <? h1)) as [H1a H1b].
+  destruct (H1a H1) as [H1l H1h].
+  clear H1a H1b H1.
+  destruct (andb_true_iff (l2 <=? x) (x <? h2)) as [H2a H2b].
+  destruct (H2a H2) as [H2l H2h].
+  clear H2a H2b H2.
+  rewrite (Z.leb_le l1 x) in H1l.
+  rewrite (Z.ltb_lt x h1) in H1h.
+  rewrite (Z.leb_le l2 x) in H2l.
+  rewrite (Z.ltb_lt x h2) in H2h.
+  rewrite orb_false_iff.
+  rewrite <- not_true_iff_false.
+  rewrite <- not_true_iff_false.
+  rewrite Z.leb_le.
+  rewrite Z.leb_le.
+  lia.
+Qed.  
+  
+Lemma store_swap : forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m1 m2 m1',
+  store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
+  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
+  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m0] = Some (Memstate m1') ->
+  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1'] = Some (Memstate m2).
 
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
