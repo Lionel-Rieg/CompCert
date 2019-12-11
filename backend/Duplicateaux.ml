@@ -187,21 +187,24 @@ let ptree_printbool pt =
 (* Looks ahead (until a branch) to see if a node further down verifies
  * the given predicate *)
 let rec look_ahead code node is_loop_header predicate =
-  if (predicate @@ get_some @@ PTree.get node code) then true
+  if (predicate node) then true
   else match (get_some @@ PTree.get node code) with
     | Ireturn _ | Itailcall _ | Icond _ | Ijumptable _ -> false
     | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n)
     | Istore (_, _, _, _, n) | Icall (_, _, _, _, n)
     | Ibuiltin (_, _, _, n) ->
-      if (get_some @@ PTree.get n is_loop_header) then false
-      else look_ahead code n is_loop_header predicate
+      if (predicate n) then true
+      else (
+        if (get_some @@ PTree.get n is_loop_header) then false
+        else look_ahead code n is_loop_header predicate
+      )
 
 exception HeuristicSucceeded
 
 let do_call_heuristic code ifso ifnot is_loop_header preferred =
-  let predicate = function
+  let predicate n = (function
   | Icall _ -> true
-  | _ -> false
+  | _ -> false) @@ get_some @@ PTree.get n code
   in if (look_ahead code ifso is_loop_header predicate) then
     (preferred := false; raise HeuristicSucceeded)
   else if (look_ahead code ifnot is_loop_header predicate) then
@@ -213,9 +216,9 @@ let do_opcode_heuristic code cond ifso ifnot is_loop_header preferred = ()
   have a heuristic function in its folder *)
 
 let do_return_heuristic code ifso ifnot is_loop_header preferred =
-  let predicate = function
+  let predicate n = (function
   | Ireturn _ -> true
-  | _ -> false
+  | _ -> false) @@ get_some @@ PTree.get n code
   in if (look_ahead code ifso is_loop_header predicate) then
     (preferred := false; raise HeuristicSucceeded)
   else if (look_ahead code ifnot is_loop_header predicate) then
@@ -223,9 +226,9 @@ let do_return_heuristic code ifso ifnot is_loop_header preferred =
   else ()
 
 let do_store_heuristic code ifso ifnot is_loop_header preferred =
-  let predicate = function
+  let predicate n = (function
   | Istore _ -> true
-  | _ -> false
+  | _ -> false) @@ get_some @@ PTree.get n code
   in if (look_ahead code ifso is_loop_header predicate) then
     (preferred := false; raise HeuristicSucceeded)
   else if (look_ahead code ifnot is_loop_header predicate) then
@@ -233,9 +236,10 @@ let do_store_heuristic code ifso ifnot is_loop_header preferred =
   else ()
 
 let do_loop_heuristic code ifso ifnot is_loop_header preferred =
-  if (get_some @@ PTree.get ifso is_loop_header) then
+  let predicate n = get_some @@ PTree.get n is_loop_header
+  in if (look_ahead code ifso is_loop_header predicate) then
     (preferred := true; raise HeuristicSucceeded)
-  else if (get_some @@ PTree.get ifnot is_loop_header) then
+  else if (look_ahead code ifnot is_loop_header predicate) then
     (preferred := false; raise HeuristicSucceeded)
   else ()
 
@@ -257,6 +261,7 @@ let get_directions code entrypoint =
             do_return_heuristic code ifso ifnot is_loop_header preferred;
             do_store_heuristic code ifso ifnot is_loop_header preferred;
             do_loop_heuristic code ifso ifnot is_loop_header preferred;
+            Printf.printf "Random choice for %d\n" (P.to_int n);
             preferred := Random.bool ()
             with HeuristicSucceeded -> ()
           ); directions := PTree.set n !preferred !directions
@@ -288,6 +293,9 @@ let rec to_ttl_code_rec directions = function
 let to_ttl_code code entrypoint =
   let directions = get_directions code entrypoint
   in begin
+    Printf.printf "Non-ifso directions: ";
+    ptree_printbool directions;
+    Printf.printf "\n";
     Random.init(0); (* using same seed to make it deterministic *)
     to_ttl_code_rec directions (PTree.elements code)
   end
