@@ -165,18 +165,33 @@ let get_loop_headers code entrypoint =
             | Icond (_, _, n1, n2) -> [n1; n2]
             | Itailcall _ | Ireturn _ -> []
             | Ijumptable (_, ln) -> ln
-            ) in dfs_visit code (next_visits @ ln)
+            ) in dfs_visit code next_visits;
+          visited := PTree.set node Visited !visited;
+          dfs_visit code ln
         end
   in begin
     dfs_visit code [entrypoint];
     !is_loop_header
   end
 
+let ptree_printbool pt =
+  let elements = PTree.elements pt
+  in begin
+    Printf.printf "[";
+    List.iter (fun (n, b) ->
+      if b then Printf.printf "%d, " (P.to_int n) else ()
+    ) elements;
+    Printf.printf "]"
+  end
+
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
-  (* and is_loop_header = get_loop_headers code entrypoint *)
+  and is_loop_header = get_loop_headers code entrypoint
   and directions = ref (PTree.map (fun n i -> false) code) (* false <=> fallthru *)
   in begin
+    Printf.printf "Loop headers: ";
+    ptree_printbool is_loop_header;
+    Printf.printf "\n";
     List.iter (fun n ->
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, n, n') -> directions := PTree.set n (Random.bool ()) !directions
@@ -184,7 +199,6 @@ let get_directions code entrypoint =
     ) bfs_order;
     !directions
   end
-
 
 let to_ttl_inst direction = function
 | Ireturn o -> Tleaf (Ireturn o)
