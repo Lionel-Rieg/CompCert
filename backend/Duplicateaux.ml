@@ -184,6 +184,18 @@ let ptree_printbool pt =
     Printf.printf "]"
   end
 
+(* Looks ahead (until a branch) to see if a node further down verifies
+ * the given predicate *)
+let rec look_ahead code node is_loop_header predicate =
+  if (predicate node) then true
+  else match (get_some @@ PTree.get node code) with
+    | Ireturn _ | Itailcall _ | Icond _ | Ijumptable _ -> false
+    | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n)
+    | Istore (_, _, _, _, n) | Icall (_, _, _, _, n)
+    | Ibuiltin (_, _, _, n) ->
+      if (get_some @@ PTree.get n is_loop_header) then false
+      else look_ahead code n is_loop_header predicate
+
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
   and is_loop_header = get_loop_headers code entrypoint
