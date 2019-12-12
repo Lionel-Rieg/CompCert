@@ -244,13 +244,68 @@ Proof.
   rewrite Z.leb_le.
   lia.
 Qed.  
-  
-Lemma store_swap : forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m1 m2 m1',
-  store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
-  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
-  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m0] = Some (Memstate m1') ->
-  store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1'] = Some (Memstate m2).
 
+Definition no_overlap_chunks
+           (ofs1 : offset) (chunk1 : memory_chunk)
+           (ofs2 : offset) (chunk2 : memory_chunk) :=
+  no_overlap_segments (Ptrofs.unsigned ofs1)
+                      ((Ptrofs.unsigned ofs1) + (size_chunk chunk1))
+                      (Ptrofs.unsigned ofs2)
+                      ((Ptrofs.unsigned ofs2) + (size_chunk chunk2)).
+
+Definition same_memory (m m' : mem) :=
+  forall chunk block ofs,
+    (Mem.load chunk m block ofs) = (Mem.load chunk m' block ofs).
+
+(* use something like load_store_other *)
+Lemma store_swap : forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m0' m1 m2 m1' m2',
+    (no_overlap_chunks ofs1 (store_chunk n1) ofs2 (store_chunk n2))=true ->
+    same_memory m0 m0' ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m0'] = Some (Memstate m1') ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m1'] = Some (Memstate m2') ->
+    same_memory m2 m2'.
+Proof.
+  intros until m2'.
+  intros NO_OVERLAP SAME STORE0 STORE1 STORE0' STORE1'.
+  unfold same_memory.
+  intros rchunk rblock rofs.
+  unfold no_overlap_chunks in NO_OVERLAP.
+  unfold no_overlap_segments in NO_OVERLAP.
+  rewrite orb_true_iff in NO_OVERLAP.
+  rewrite Z.leb_le in NO_OVERLAP.
+  rewrite Z.leb_le in NO_OVERLAP.
+  destruct vs1 as [v1 | ]; simpl in STORE0, STORE1'; try congruence.
+  destruct vs2 as [v2 | ]; simpl in STORE1, STORE0'; try congruence.
+  destruct va as [base | ]; try congruence.
+  unfold exec_store_deps_offset in *.
+  destruct Ge.
+  destruct (eval_offset ofs1) as [ i1 |]; try congruence.
+  destruct (eval_offset ofs2) as [ i2 |]; try congruence.
+  unfold Mem.storev in *.
+  unfold Val.offset_ptr in *.
+  destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
+  destruct (Mem.store (store_chunk n1) m0 _ _ _) eqn:HS0; try congruence.
+  inv STORE0.
+  destruct (Mem.store (store_chunk n2) m1 _ _ _) eqn:HS1; try congruence.
+  inv STORE1.
+  destruct (Mem.store (store_chunk n2) m0' _ _ _) eqn:HS0'; try congruence.
+  inv STORE0'.
+  destruct (Mem.store (store_chunk n1) m1' _ _ _) eqn:HS1'; try congruence.
+  inv STORE1'.
+  destruct (eq_block rblock wblock) as [SAME_BLOCK | DIF_BLOCKS].
+  { admit.
+  }
+  { (* read from different base block *)
+  rewrite (Mem.load_store_other (store_chunk n2) m1 wblock (Ptrofs.unsigned (Ptrofs.add wpofs i2)) v2 m2 HS1) by tauto.
+  rewrite (Mem.load_store_other (store_chunk n1) m0 wblock (Ptrofs.unsigned (Ptrofs.add wpofs i1)) v1 m1 HS0) by tauto.
+  rewrite (Mem.load_store_other (store_chunk n1) m1' wblock (Ptrofs.unsigned (Ptrofs.add wpofs i1)) v1 m2' HS1') by tauto.
+  rewrite (Mem.load_store_other (store_chunk n2) m0' wblock (Ptrofs.unsigned (Ptrofs.add wpofs i2)) v2 m1' HS0') by tauto.
+  apply SAME.
+  }
+Admitted.
+  
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => None
