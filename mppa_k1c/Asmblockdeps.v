@@ -212,46 +212,13 @@ Definition store_eval (so: store_op) (l: list value) :=
 
 Local Open Scope Z.
 
-Definition no_overlap_segments l1 h1 l2 h2 :=
-  (h1 <=? l2) || (h2 <=? l1).
-
-Definition in_segment l h x :=
-  (l <=? x) && (x <? h).
-
-Lemma no_overlap_segments_correct:
-  forall l1 h1 l2 h2 x,
-    (in_segment l1 h1 x) = true ->
-    (in_segment l2 h2 x) = true ->
-    (no_overlap_segments l1 h1 l2 h2) = false.
-Proof.
-  unfold in_segment, no_overlap_segments.
-  intros until x.
-  intros H1 H2.
-  destruct (andb_true_iff (l1 <=? x) (x <? h1)) as [H1a H1b].
-  destruct (H1a H1) as [H1l H1h].
-  clear H1a H1b H1.
-  destruct (andb_true_iff (l2 <=? x) (x <? h2)) as [H2a H2b].
-  destruct (H2a H2) as [H2l H2h].
-  clear H2a H2b H2.
-  rewrite (Z.leb_le l1 x) in H1l.
-  rewrite (Z.ltb_lt x h1) in H1h.
-  rewrite (Z.leb_le l2 x) in H2l.
-  rewrite (Z.ltb_lt x h2) in H2h.
-  rewrite orb_false_iff.
-  rewrite <- not_true_iff_false.
-  rewrite <- not_true_iff_false.
-  rewrite Z.leb_le.
-  rewrite Z.leb_le.
-  lia.
-Qed.  
-
-Definition no_overlap_chunks
+Definition disjoint_chunks
            (ofs1 : offset) (chunk1 : memory_chunk)
            (ofs2 : offset) (chunk2 : memory_chunk) :=
-  no_overlap_segments (Ptrofs.unsigned ofs1)
-                      ((Ptrofs.unsigned ofs1) + (size_chunk chunk1))
-                      (Ptrofs.unsigned ofs2)
-                      ((Ptrofs.unsigned ofs2) + (size_chunk chunk2)).
+  Intv.disjoint ((Ptrofs.unsigned ofs1),
+                 ((Ptrofs.unsigned ofs1) + (size_chunk chunk1)))
+                ((Ptrofs.unsigned ofs2),
+                 ((Ptrofs.unsigned ofs2) + (size_chunk chunk2))).
 
 Definition same_memory (m m' : mem) :=
   forall chunk block ofs,
@@ -259,7 +226,7 @@ Definition same_memory (m m' : mem) :=
 
 (* use something like load_store_other *)
 Lemma store_swap : forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m0' m1 m2 m1' m2',
-    (no_overlap_chunks ofs1 (store_chunk n1) ofs2 (store_chunk n2))=true ->
+    (disjoint_chunks ofs1 (store_chunk n1) ofs2 (store_chunk n2)) ->
     same_memory m0 m0' ->
     store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
     store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
@@ -271,11 +238,7 @@ Proof.
   intros NO_OVERLAP SAME STORE0 STORE1 STORE0' STORE1'.
   unfold same_memory.
   intros rchunk rblock rofs.
-  unfold no_overlap_chunks in NO_OVERLAP.
-  unfold no_overlap_segments in NO_OVERLAP.
-  rewrite orb_true_iff in NO_OVERLAP.
-  rewrite Z.leb_le in NO_OVERLAP.
-  rewrite Z.leb_le in NO_OVERLAP.
+  unfold disjoint_chunks in NO_OVERLAP.
   destruct vs1 as [v1 | ]; simpl in STORE0, STORE1'; try congruence.
   destruct vs2 as [v2 | ]; simpl in STORE1, STORE0'; try congruence.
   destruct va as [base | ]; try congruence.
@@ -295,7 +258,8 @@ Proof.
   destruct (Mem.store (store_chunk n1) m1' _ _ _) eqn:HS1'; try congruence.
   inv STORE1'.
   destruct (eq_block rblock wblock) as [SAME_BLOCK | DIF_BLOCKS].
-  { admit.
+  { subst rblock.
+    admit.
   }
   { (* read from different base block *)
   rewrite (Mem.load_store_other (store_chunk n2) m1 wblock (Ptrofs.unsigned (Ptrofs.add wpofs i2)) v2 m2 HS1) by tauto.
