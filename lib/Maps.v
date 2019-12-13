@@ -958,6 +958,36 @@ Module PTree <: TREE.
     intros. apply fold1_xelements with (l := @nil (positive * A)).
   Qed.
 
+  Local Open Scope positive.
+  Lemma set_disjoint1:
+    forall (A: Type)(i d : elt) (m: t A)  (x y: A),
+      set (i + d) y (set i x m) = set i x (set (i + d) y m).
+  Proof.
+    induction i; destruct d; destruct m; intro; simpl; trivial;
+      intro; congruence.
+  Qed.
+  
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type)(i j : elt) (m: t A)  (x y: A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros.
+    destruct (Pos.compare_spec i j) as [Heq | Hlt | Hlt].
+    { congruence. }
+    {
+      rewrite (Pos.lt_iff_add i j) in Hlt.
+      destruct Hlt as [d Hd].
+      subst j.
+      apply set_disjoint1.
+    }
+      rewrite (Pos.lt_iff_add j i) in Hlt.
+      destruct Hlt as [d Hd].
+      subst i.
+      symmetry.
+      apply set_disjoint1.
+  Qed.
 End PTree.
 
 (** * An implementation of maps over type [positive] *)
@@ -1035,6 +1065,15 @@ Module PMap <: MAP.
     intros. unfold set. simpl. decEq. apply PTree.set2.
   Qed.
 
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. decEq. apply PTree.set_disjoint. assumption.
+  Qed.
+
 End PMap.
 
 (** * An implementation of maps over any type that injects into type [positive] *)
@@ -1102,6 +1141,16 @@ Module IMap(X: INDEXED_TYPE).
     intros. unfold set. apply PMap.set2.
   Qed.
 
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. apply PMap.set_disjoint.
+    intro INEQ.
+    assert (i = j) by (apply X.index_inj; auto).
+    auto.
+  Qed.
 End IMap.
 
 Module ZIndexed.
