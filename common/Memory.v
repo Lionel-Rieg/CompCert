@@ -38,6 +38,7 @@ Require Import Floats.
 Require Import Values.
 Require Export Memdata.
 Require Export Memtype.
+Require Import Lia.
 
 Definition default_notrap_load_value (chunk : memory_chunk) := Vundef.
 
@@ -541,6 +542,48 @@ Proof.
   induction vl; simpl; intros. auto. rewrite IHvl. auto.
 Qed.
 
+Remark set_setN_swap_disjoint:
+  forall vl: list memval,
+  forall v: memval,
+  forall m : ZMap.t memval,
+  forall p pl: Z,
+    ~ (Intv.In p (pl, pl + Z.of_nat (length vl))) ->
+    (setN vl pl (ZMap.set p v m)) = (ZMap.set p v (setN vl pl m)).
+Proof.
+  induction vl; simpl; trivial.
+  intros.
+  unfold Intv.In in *; simpl in *.
+  rewrite ZMap.set_disjoint by lia.
+  apply IHvl.
+  lia.
+Qed.
+
+Lemma set_swap_disjoint:
+  forall vl1 vl2: list memval,
+  forall m : ZMap.t memval,
+  forall p1 p2: Z,
+    Intv.disjoint (p1, p1 + Z.of_nat (length vl1))
+                  (p2, p2 + Z.of_nat (length vl2)) ->
+    (setN vl1 p1 (setN vl2 p2 m)) = (setN vl2 p2 (setN vl1 p1 m)).
+Proof.
+  induction vl1; simpl; trivial.
+  intros until p2. intro DISJOINT.
+  rewrite <- set_setN_swap_disjoint.
+  { rewrite IHvl1.
+    reflexivity.
+    unfold Intv.disjoint, Intv.In in *.
+    simpl in *.
+    intro.
+    intro BOUNDS.
+    apply DISJOINT.
+    lia.
+  }
+  unfold Intv.disjoint, Intv.In in *.
+  simpl in *.
+  apply DISJOINT.
+  lia.
+Qed.
+    
 (** [store chunk m b ofs v] perform a write in memory state [m].
   Value [v] is stored at address [b] and offset [ofs].
   Return the updated memory store, or [None] if the accessed bytes
