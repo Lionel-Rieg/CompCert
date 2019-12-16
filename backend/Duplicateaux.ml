@@ -211,9 +211,7 @@ let do_call_heuristic code ifso ifnot is_loop_header preferred =
     (preferred := true; raise HeuristicSucceeded)
   else ()
 
-let do_opcode_heuristic code cond ifso ifnot is_loop_header preferred = ()
-  (* TODO - the condition is architecture dependent, so each archi should
-  have a heuristic function in its folder *)
+let do_opcode_heuristic code cond ifso ifnot preferred = DuplicateOpcodeHeuristic.opcode_heuristic code cond ifso ifnot preferred
 
 let do_return_heuristic code ifso ifnot is_loop_header preferred =
   let predicate n = (function
@@ -257,7 +255,7 @@ let get_directions code entrypoint =
           let preferred = ref false
           in (try
             do_call_heuristic code ifso ifnot is_loop_header preferred;
-            do_opcode_heuristic code cond ifso ifnot is_loop_header preferred;
+            do_opcode_heuristic code cond ifso ifnot preferred;
             do_return_heuristic code ifso ifnot is_loop_header preferred;
             do_store_heuristic code ifso ifnot is_loop_header preferred;
             do_loop_heuristic code ifso ifnot is_loop_header preferred;
