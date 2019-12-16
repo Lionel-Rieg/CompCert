@@ -3,6 +3,8 @@
  * when selecting a trace.
  *)
 
+exception HeuristicSucceeded
+
 (* The bool reference should be updated to [true] if the condition is supposed
  * to hold, [false] if it is supposed to not hold
  * The function should raise HeuristicSucceeded if it succeeded to predict a branch,

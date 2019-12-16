@@ -261,7 +261,7 @@ let get_directions code entrypoint =
             do_loop_heuristic code ifso ifnot is_loop_header preferred;
             Printf.printf "Random choice for %d\n" (P.to_int n);
             preferred := Random.bool ()
-            with HeuristicSucceeded -> ()
+            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded -> ()
           ); directions := PTree.set n !preferred !directions
       | _ -> ()
     ) bfs_order;
