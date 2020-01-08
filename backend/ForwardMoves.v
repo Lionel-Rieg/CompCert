@@ -45,13 +45,71 @@ Proof.
   destruct (Pos.eq_dec R1x R2x) in *; congruence.
 Qed.
 
+Definition ge (r1 r2 : t) :=
+  forall x,
+    match PTree.get x r1 with
+    | None => True
+    | Some v => (PTree.get x r2) = Some v
+    end.
+
+Lemma ge_refl: forall r1 r2, eq r1 r2 -> ge r1 r2.
+Proof.
+  unfold eq, ge.
+  intros r1 r2 EQ x.
+  pose proof (EQ x) as EQx.
+  clear EQ.
+  destruct (r1 ! x).
+  - congruence.
+  - trivial.
+Qed.
+
+Lemma ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
+Proof.
+  unfold ge.
+  intros r1 r2 r3 GE12 GE23 x.
+  pose proof (GE12 x) as GE12x; clear GE12.
+  pose proof (GE23 x) as GE23x; clear GE23.
+  destruct (r1 ! x); trivial.
+  destruct (r2 ! x); congruence.
+Qed.
+
+Definition lub (r1 r2 : t) :=
+  PTree.combine
+    (fun ov1 ov2 =>
+       match ov1, ov2 with
+       | (Some v1), (Some v2) =>
+         if Pos.eq_dec v1 v2
+         then ov1
+         else None
+       | None, _
+       | _, None => None
+       end)
+    r1 r2.
+
+Lemma ge_lub_left: forall x y, ge (lub x y) x.
+Proof.
+  unfold ge, lub.
+  intros r1 r2 x.
+  rewrite PTree.gcombine by reflexivity.
+  destruct (_ ! _); trivial.
+  destruct (_ ! _); trivial.
+  destruct (Pos.eq_dec _ _); trivial.
+Qed.
+
+Lemma ge_lub_right: forall x y, ge (lub x y) y.
+Proof.
+  unfold ge, lub.
+  intros r1 r2 x.
+  rewrite PTree.gcombine by reflexivity.
+  destruct (_ ! _); trivial.
+  destruct (_ ! _); trivial.
+  destruct (Pos.eq_dec _ _); trivial.
+  congruence.
+Qed.
+
+End RELATION.
+
 (*
-  Parameter ge: t -> t -> Prop.
-  Axiom ge_refl: forall x y, eq x y -> ge x y.
-  Axiom ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
   Parameter bot: t.
   Axiom ge_bot: forall x, ge x bot.
-  Parameter lub: t -> t -> t.
-  Axiom ge_lub_left: forall x y, ge (lub x y) x.
-  Axiom ge_lub_right: forall x y, ge (lub x y) y.
-*)
+ *)
