@@ -156,12 +156,29 @@ Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 ->
   forall S1', match_states S1 S1' ->
               exists S2', RTL.step tge S1' t S2' /\ match_states S2 S2'.
-Admitted.
-(*
+Proof.
   induction 1; intros S1' MS; inv MS; try TR_AT.
 - (* nop *)
   econstructor; split. eapply exec_Inop; eauto.
   constructor; auto.
+  
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  apply get_rb_sem_ge with (rb2 := map # pc); trivial.
+  replace (map # pc) with (apply_instr' (fn_code f) pc (map # pc)).
+  {
+    eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+    2: apply apply_instr'_bot.
+    simpl. tauto.
+  }
+  unfold apply_instr'.
+  unfold get_rb_sem in *.
+  destruct (map # pc) in *; try contradiction.
+  rewrite H.
+  reflexivity.
+Admitted.
+(*
 - (* op *)
   econstructor; split.
   eapply exec_Iop with (v := v); eauto.
