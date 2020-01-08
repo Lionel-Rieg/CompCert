@@ -300,6 +300,8 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     Iop op (subst_args fmap pc args) dst s
   | Iload trap chunk addr args dst s =>
     Iload trap chunk addr (subst_args fmap pc args) dst s
+  | Istore chunk addr args src s =>
+    Istore chunk addr (subst_args fmap pc args) src s
   | Icall sig ros args dst s =>
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>

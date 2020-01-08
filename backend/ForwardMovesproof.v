@@ -125,6 +125,40 @@ Definition fmap_sem (fmap : option (PMap.t RB.t))
   | Some m => get_rb_sem (PMap.get pc m) rs
   end.
 
+Lemma subst_arg_ok:
+  forall f,
+  forall pc,
+  forall rs,
+  forall arg,
+    fmap_sem (forward_map f) pc rs ->
+    rs # (subst_arg (forward_map f) pc arg) = rs # arg.
+Proof.
+  intros until arg.
+  intro SEM.
+  unfold fmap_sem in SEM.
+  destruct (forward_map f) as [map |]in *; trivial.
+  simpl.
+  unfold get_rb_sem in *.
+  destruct (map # pc).
+  2: contradiction.
+  apply SEM.
+Qed.
+
+Lemma subst_args_ok:
+  forall f,
+  forall pc,
+  forall rs,
+  fmap_sem (forward_map f) pc rs ->
+  forall args,
+    rs ## (subst_args (forward_map f) pc args) = rs ## args.
+Proof.
+  induction args; trivial.
+  simpl.
+  f_equal.
+  apply subst_arg_ok; assumption.
+  assumption.
+Qed.
+
 Ltac TR_AT :=
   match goal with
   | [ A: (fn_code _)!_ = Some _ |- _ ] =>
@@ -177,83 +211,136 @@ Proof.
   destruct (map # pc) in *; try contradiction.
   rewrite H.
   reflexivity.
-Admitted.
-(*
 - (* op *)
   econstructor; split.
   eapply exec_Iop with (v := v); eauto.
-  rewrite <- H0. apply eval_operation_preserved. exact symbols_preserved.
+  rewrite <- H0.
+  rewrite subst_args_ok by assumption.
+  apply eval_operation_preserved. exact symbols_preserved.
   constructor; auto.
+  
+  admit.
+  
 (* load *)
 - econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
-  rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
+  rewrite <- H0.
+  apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload; eauto.
+  rewrite subst_args_ok; assumption.
   constructor; auto.
+
+  admit.
+  
 - (* load notrap1 *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = None).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload_notrap1; eauto.
+  rewrite subst_args_ok; assumption.
   constructor; auto.
+
+  admit.
+  
 - (* load notrap2 *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload_notrap2; eauto.
-  constructor; auto. 
+  rewrite subst_args_ok; assumption.
+  constructor; auto.
+
+  admit.
+  
 - (* store *)
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
   rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Istore; eauto.
-  constructor; auto. 
+  rewrite subst_args_ok; assumption.
+  constructor; auto.
+
+  admit.
+  
 (* call *)
 - econstructor; split.
   eapply exec_Icall with (fd := transf_fundef fd); eauto.
     eapply find_function_translated; eauto.
     apply sig_preserved.
+  rewrite subst_args_ok by assumption.
   constructor. constructor; auto. constructor.
+
+  admit.
+  
 (* tailcall *)
 - econstructor; split.
   eapply exec_Itailcall with (fd := transf_fundef fd); eauto.
     eapply find_function_translated; eauto.
     apply sig_preserved.
+  rewrite subst_args_ok by assumption.
   constructor. auto.
+  
 (* builtin *)
 - econstructor; split.
   eapply exec_Ibuiltin; eauto.
     eapply eval_builtin_args_preserved with (ge1 := ge); eauto. exact symbols_preserved.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   constructor; auto.
+
+  admit.
+  
 (* cond *)
 - econstructor; split.
   eapply exec_Icond; eauto.
+  rewrite subst_args_ok; eassumption.
   constructor; auto.
+
+  admit.
+  
 (* jumptbl *)
 - econstructor; split.
   eapply exec_Ijumptable; eauto.
+  rewrite subst_arg_ok; eassumption.
   constructor; auto.
+
+  admit.
+  
 (* return *)
-- econstructor; split.
-  eapply exec_Ireturn; eauto.
-  constructor; auto.
+- destruct or as [arg | ].
+  {
+    econstructor; split.
+    eapply exec_Ireturn; eauto.
+    unfold regmap_optget.
+    rewrite subst_arg_ok by eassumption.
+    constructor; auto.
+  }
+    econstructor; split.
+    eapply exec_Ireturn; eauto.
+    constructor; auto.
+  
+  
 (* internal function *)
 -  simpl. econstructor; split.
   eapply exec_function_internal; eauto.
   constructor; auto.
+
+  admit.
+  
 (* external function *)
 - econstructor; split.
   eapply exec_function_external; eauto.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
-  constructor; auto.
+    constructor; auto.
+
 (* return *)
 - inv STACKS. inv H1.
   econstructor; split.
   eapply exec_return; eauto.
   constructor; auto.
-Qed.
- *)
+
+  admit.
+Admitted.
+
 
 Lemma transf_initial_states:
   forall S1, RTL.initial_state prog S1 ->
