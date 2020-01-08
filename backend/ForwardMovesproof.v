@@ -74,9 +74,11 @@ Proof.
   reflexivity.
 Qed.
 
+(*
 Definition fmap_sem (fmap : option (PMap.t RB.t)) (pc : node) (rs : regset) :=
   forall x : reg,
     (rs # (subst_arg fmap pc x)) = (rs # x).
+ *)
 
 Lemma apply_instr'_bot :
   forall code,
@@ -86,15 +88,42 @@ Proof.
   reflexivity.
 Qed.
 
-(*Lemma fmap_sem_step :
-  forall f : function,
-  forall pc pc' : node,
-  forall instr,
-    (f.fn_code ! pc) = Some instr ->
-    In pc' (successors_instr instr) ->
-    (fmap_sem (forward_map f) pc rs) ->
-    (fmap_sem (forward_map f) pc' rs').
- *)
+Definition get_rb_sem (rb : RB.t) (rs : regset) :=
+  match rb with
+  | None => False
+  | Some rel =>
+    forall x : reg,
+      (rs # (get_r rel x)) = (rs # x)
+  end.
+
+Lemma get_rb_sem_ge:
+  forall rb1 rb2 : RB.t,
+    (RB.ge rb1 rb2) ->
+    forall rs : regset,
+      (get_rb_sem rb2 rs) -> (get_rb_sem rb1 rs).
+Proof.
+  destruct rb1 as [r1 | ];
+    destruct rb2 as [r2 | ];
+    unfold get_rb_sem;
+    simpl;
+    intros GE rs RB2RS;
+    try contradiction.
+  unfold RELATION.ge in GE.
+  unfold get_r in *.
+  intro x.
+  pose proof (GE x) as GEx.
+  pose proof (RB2RS x) as RB2RSx.
+  destruct (r1 ! x) as [r1x | ] in *;
+    destruct (r2 ! x) as [r2x | ] in *;
+    congruence.
+Qed.
+
+Definition fmap_sem (fmap : option (PMap.t RB.t))
+  (pc : node) (rs : regset) :=
+  match fmap with
+  | None => True
+  | Some m => get_rb_sem (PMap.get pc m) rs
+  end.
 
 Ltac TR_AT :=
   match goal with

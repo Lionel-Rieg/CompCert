@@ -272,14 +272,16 @@ Definition forward_map (f : RTL.function) := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
   (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
 
+Definition get_r (rel : RELATION.t) (x : reg) :=
+  match PTree.get x rel with
+  | None => x
+  | Some src => src
+  end.
+
 Definition get_rb (rb : RB.t) (x : reg) :=
   match rb with
   | None => x
-  | Some rel =>
-    match PTree.get x rel with
-    | None => x
-    | Some src => src
-    end
+  | Some rel => get_r rel x
   end.
 
 Definition subst_arg (fmap : option (PMap.t RB.t)) (pc : node) (x : reg) : reg :=
