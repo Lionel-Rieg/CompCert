@@ -392,6 +392,7 @@ let cmdline_actions =
   @ f_opt "addx" option_faddx
   @ f_opt "coalesce-mem" option_fcoalesce_mem
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
+  @ f_opt "forward-moves" option_fforward_moves
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
