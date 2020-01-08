@@ -272,48 +272,51 @@ Definition forward_map (f : RTL.function) := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
   (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
 
-Definition subst_arg (rel : RELATION.t) (x : reg) : reg :=
-  match PTree.get x rel with
+Definition get_rb (rb : RB.t) (x : reg) :=
+  match rb with
   | None => x
-  | Some src => src
-  end.
-
-Definition subst_args rel := List.map (subst_arg rel).
-
-(* Transform *)
-Definition transf_instr (fmap : PMap.t RB.t) (pc: node) (instr: instruction) :=
-  match fmap !! pc with
-  | None => instr
   | Some rel =>
-    match instr with
-    | Iop op args dst s =>
-      Iop op (subst_args rel args) dst s
-    | Iload trap chunk addr args dst s =>
-      Iload trap chunk addr (subst_args rel args) dst s
-    | Icall sig ros args dst s =>
-      Icall sig ros (subst_args rel args) dst s
-    | Itailcall sig ros args =>
-      Itailcall sig ros (subst_args rel args)
-    | Icond cond args s1 s2 =>
-      Icond cond (subst_args rel args) s1 s2
-    | Ijumptable arg tbl =>
-      Ijumptable (subst_arg rel arg) tbl
-    | Ireturn (Some arg) =>
-      Ireturn (Some (subst_arg rel arg))
-    | _ => instr
+    match PTree.get x rel with
+    | None => x
+    | Some src => src
     end
   end.
 
-Definition transf_function (f: function) : function :=
-  match forward_map f with
-  | None => f (* can't analyze due to errors ?! *)
-  | Some fmap =>
-    {| fn_sig := f.(fn_sig);
-       fn_params := f.(fn_params);
-       fn_stacksize := f.(fn_stacksize);
-       fn_code := PTree.map (transf_instr fmap) f.(fn_code);
-       fn_entrypoint := f.(fn_entrypoint) |}
+Definition subst_arg (fmap : option (PMap.t RB.t)) (pc : node) (x : reg) : reg :=
+  match fmap with
+  | None => x
+  | Some inv => get_rb (PMap.get pc inv) x
   end.
+
+Definition subst_args fmap pc := List.map (subst_arg fmap pc).
+
+(* Transform *)
+Definition transf_instr (fmap : option (PMap.t RB.t))
+           (pc: node) (instr: instruction) :=
+  match instr with
+  | Iop op args dst s =>
+    Iop op (subst_args fmap pc args) dst s
+  | Iload trap chunk addr args dst s =>
+    Iload trap chunk addr (subst_args fmap pc args) dst s
+  | Icall sig ros args dst s =>
+    Icall sig ros (subst_args fmap pc args) dst s
+  | Itailcall sig ros args =>
+    Itailcall sig ros (subst_args fmap pc args)
+  | Icond cond args s1 s2 =>
+    Icond cond (subst_args fmap pc args) s1 s2
+  | Ijumptable arg tbl =>
+    Ijumptable (subst_arg fmap pc arg) tbl
+  | Ireturn (Some arg) =>
+    Ireturn (Some (subst_arg fmap pc arg))
+  | _ => instr
+  end.
+
+Definition transf_function (f: function) : function :=
+  {| fn_sig := f.(fn_sig);
+     fn_params := f.(fn_params);
+     fn_stacksize := f.(fn_stacksize);
+     fn_code := PTree.map (transf_instr (forward_map f)) f.(fn_code);
+     fn_entrypoint := f.(fn_entrypoint) |}.
 
 
 Definition transf_fundef (fd: fundef) : fundef :=
