@@ -8,6 +8,8 @@ Definition t := (PTree.t reg).
 Definition eq (r1 r2 : t) :=
   forall x, (PTree.get x r1) = (PTree.get x r2).
 
+Definition top : t := PTree.empty reg.
+
 Lemma eq_refl: forall x, eq x x.
 Proof.
   unfold eq.
@@ -127,7 +129,7 @@ Module Type SEMILATTICE_WITHOUT_BOTTOM.
 
 End SEMILATTICE_WITHOUT_BOTTOM.
 
-Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM) : SEMILATTICE.
+Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM).
   Definition t := option L.t.
   Definition eq (a b : t) :=
     match a, b with
@@ -223,3 +225,44 @@ Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM) : SEMILATTICE.
   Qed.
 End ADD_BOTTOM.
 
+Module RB := ADD_BOTTOM(RELATION).
+Module DS := Dataflow_Solver(RB)(NodeSetForward).
+
+Definition kill (dst : reg) (rel : RELATION.t) :=
+  PTree.remove dst rel.
+
+Definition move (src dst : reg) (rel : RELATION.t) :=
+  PTree.set dst src rel.
+
+Fixpoint kill_builtin_res (res : builtin_res reg) (rel : RELATION.t) :=
+  match res with
+  | BR z => kill z rel
+  | BR_none => rel
+  | BR_splitlong hi lo => kill_builtin_res hi (kill_builtin_res lo rel)
+  end.
+
+Definition apply_instr instr x :=
+  match instr with
+  | Inop _
+  | Istore _ _ _ _ _ => Some x
+  | Iop Omove (src :: nil) dst _ => Some (move src dst x)
+  | Iop _ _ dst _
+  | Iload _ _ _ _ dst _
+  | Icall _ _ _ dst _ => Some (kill dst x)
+  | Ibuiltin _ _ res _ => Some (kill_builtin_res res x)
+  | Icond _ _ _ _ | Itailcall _ _ _ | Ijumptable _ _ | Ireturn _ => RB.bot
+  end.
+
+Definition apply_instr' code (pc : node) (ro : RB.t) : RB.t :=
+  match ro with
+  | None => None
+  | Some x =>
+    match code ! pc with
+    | None => RB.bot
+    | Some instr => apply_instr instr x
+    end
+  end.
+
+Definition forward_map (f : RTL.function) := DS.fixpoint
+  (RTL.fn_code f) RTL.successors_instr
+  (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
