@@ -2,6 +2,8 @@ Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Memory Registers Op RTL Maps.
 
+(* Static analysis *)
+
 Module RELATION.
   
 Definition t := (PTree.t reg).
@@ -232,7 +234,10 @@ Definition kill (dst : reg) (rel : RELATION.t) :=
   PTree.remove dst rel.
 
 Definition move (src dst : reg) (rel : RELATION.t) :=
-  PTree.set dst src rel.
+  PTree.set dst (match PTree.get src rel with
+                 | Some src' => src'
+                 | None => src
+                 end) rel.
 
 Fixpoint kill_builtin_res (res : builtin_res reg) (rel : RELATION.t) :=
   match res with
@@ -266,3 +271,53 @@ Definition apply_instr' code (pc : node) (ro : RB.t) : RB.t :=
 Definition forward_map (f : RTL.function) := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
   (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
+
+Definition subst_arg (rel : RELATION.t) (x : reg) : reg :=
+  match PTree.get x rel with
+  | None => x
+  | Some src => src
+  end.
+
+Definition subst_args rel := List.map (subst_arg rel).
+
+(* Transform *)
+Definition transf_instr (fmap : PMap.t RB.t) (pc: node) (instr: instruction) :=
+  match fmap !! pc with
+  | None => instr
+  | Some rel =>
+    match instr with
+    | Iop op args dst s =>
+      Iop op (subst_args rel args) dst s
+    | Iload trap chunk addr args dst s =>
+      Iload trap chunk addr (subst_args rel args) dst s
+    | Icall sig ros args dst s =>
+      Icall sig ros (subst_args rel args) dst s
+    | Itailcall sig ros args =>
+      Itailcall sig ros (subst_args rel args)
+    | Icond cond args s1 s2 =>
+      Icond cond (subst_args rel args) s1 s2
+    | Ijumptable arg tbl =>
+      Ijumptable (subst_arg rel arg) tbl
+    | Ireturn (Some arg) =>
+      Ireturn (Some (subst_arg rel arg))
+    | _ => instr
+    end
+  end.
+
+Definition transf_function (f: function) : function :=
+  match forward_map f with
+  | None => f (* can't analyze due to errors ?! *)
+  | Some fmap =>
+    {| fn_sig := f.(fn_sig);
+       fn_params := f.(fn_params);
+       fn_stacksize := f.(fn_stacksize);
+       fn_code := PTree.map (transf_instr fmap) f.(fn_code);
+       fn_entrypoint := f.(fn_entrypoint) |}
+  end.
+
+
+Definition transf_fundef (fd: fundef) : fundef :=
+  AST.transf_fundef transf_function fd.
+
+Definition transf_program (p: program) : program :=
+  transform_program transf_fundef p.
