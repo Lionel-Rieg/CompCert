@@ -238,7 +238,7 @@ Definition move (src dst : reg) (rel : RELATION.t) :=
   PTree.set dst (match PTree.get src rel with
                  | Some src' => src'
                  | None => src
-                 end) rel.
+                 end) (kill dst rel).
 
 Fixpoint kill_builtin_res (res : builtin_res reg) (rel : RELATION.t) :=
   match res with
@@ -257,7 +257,7 @@ Definition apply_instr instr x :=
   | Iop _ _ dst _
   | Iload _ _ _ _ dst _
   | Icall _ _ _ dst _ => Some (kill dst x)
-  | Ibuiltin _ _ res _ => Some (kill_builtin_res res x)
+  | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
 

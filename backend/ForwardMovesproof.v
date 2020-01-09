@@ -242,6 +242,64 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma move_ok:
+  forall mpc : RELATION.t,
+  forall src res : reg,
+  forall rs : regset,
+    get_rb_sem (Some mpc) rs ->
+    get_rb_sem (Some (move src res mpc)) (rs # res <- (rs # src)).
+Proof.
+  unfold get_rb_sem, move.
+  intros until rs.
+  intros SEM x.
+  unfold get_r in *.
+  destruct (Pos.eq_dec res x).
+  {
+    subst res.
+    rewrite PTree.gss.
+    rewrite Regmap.gss.
+    pose proof (SEM src) as SEMsrc.
+    destruct (mpc ! src) as [mpcsrc | ] in *.
+    {
+      destruct (Pos.eq_dec x mpcsrc).
+      {
+        subst mpcsrc.
+        rewrite Regmap.gss.
+        reflexivity.
+      }
+      rewrite Regmap.gso by congruence.
+      assumption.
+    }
+    destruct (Pos.eq_dec x src).
+    {
+      subst src.
+      rewrite Regmap.gss.
+      reflexivity.
+    }
+    rewrite Regmap.gso by congruence.
+    reflexivity.
+  }
+  rewrite PTree.gso by congruence.
+  rewrite Regmap.gso with (i := x) by congruence.
+  unfold kill.
+  rewrite PTree.gfilter1.
+  rewrite PTree.gro by congruence.
+  pose proof (SEM x) as SEMx.
+  destruct (mpc ! x) as [ r |].
+  {
+    destruct (Pos.eq_dec res r).
+    {
+      subst r.
+      rewrite Regmap.gso by congruence.
+      trivial.
+    }
+    rewrite Regmap.gso by congruence.
+    assumption.
+  }
+  rewrite Regmap.gso by congruence.
+  reflexivity.
+Qed.
+  
 Ltac TR_AT :=
   match goal with
   | [ A: (fn_code _)!_ = Some _ |- _ ] =>
@@ -340,6 +398,24 @@ Inductive match_states: RTL.state -> RTL.state -> Prop :=
       match_states (Returnstate stk v m)
                    (Returnstate stk' v m).
 
+Lemma op_cases:
+  forall op,
+  forall args,
+  forall dst,
+  forall s,
+  forall x,
+    (exists src, op=Omove /\ args = src :: nil /\
+                 (apply_instr (Iop op args dst s) x) = Some (move src dst x))
+    \/
+    (apply_instr (Iop op args dst s) x) = Some (kill dst x).
+Proof.
+  destruct op; try (right; simpl; reflexivity).
+  destruct args as [| arg0 args0t]; try (right; simpl; reflexivity).
+  destruct args0t as [| arg1 args1t]; try (right; simpl; reflexivity).
+  left.
+  eauto.
+Qed.
+
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 ->
   forall S1', match_states S1 S1' ->
@@ -373,7 +449,29 @@ Proof.
   apply eval_operation_preserved. exact symbols_preserved.
   constructor; auto.
 
-  admit.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  assert (RB.ge (map # pc') (apply_instr' (fn_code f) pc (map # pc))) as GE.
+  {
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
+  }
+  unfold apply_instr' in GE.
+  rewrite MPC in GE.
+  rewrite H in GE.
+  
+  destruct (op_cases op args res pc' mpc) as [[src [OP [ARGS MOVE]]] | KILL].
+  {
+    subst op.
+    subst args.
+    rewrite MOVE in GE.
+    simpl in H0.
+    destruct (map # pc') as [mpc' | ] in *; try discriminate.
+    simpl in GE.
+    unfold move in GE.
+  }
   
 (* load *)
 - econstructor; split.
@@ -545,7 +643,25 @@ Proof.
     eapply external_call_symbols_preserved; eauto. apply senv_preserved.
   constructor; auto.
 
-  admit.
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  
+  apply get_rb_sem_ge with (rb2 := Some RELATION.top).
+  {
+    replace (Some RELATION.top) with (apply_instr' (fn_code f) pc (map # pc)).
+    {
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
+    }
+    unfold apply_instr'.
+    rewrite H.
+    rewrite MPC.
+    reflexivity.
+  }
+  apply top_ok.
   
 (* cond *)
 - econstructor; split.
