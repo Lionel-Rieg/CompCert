@@ -248,10 +248,48 @@ Ltac TR_AT :=
         generalize (transf_function_at _ _ _ A); intros
   end.
 
+Definition is_killed_in_map (map : PMap.t RB.t) pc res :=
+  match PMap.get pc map with
+  | None => True
+  | Some rel => exists rel', rel = (kill res rel')
+  end.
+
+Definition is_killed_in_fmap fmap pc res :=
+  match fmap with
+  | None => True
+  | Some map => is_killed_in_map map pc res
+  end.
+
+Definition killed_twice:
+  forall rel : RELATION.t,
+  forall res,
+    RELATION.eq (kill res rel) (kill res (kill res rel)).
+Proof.
+  unfold kill, RELATION.eq.
+  intros.
+  rewrite PTree.gfilter1.
+  rewrite PTree.gfilter1.
+  destruct (Pos.eq_dec res x).
+  {
+    subst res.
+    rewrite PTree.grs.
+    rewrite PTree.grs.
+    reflexivity.
+  }
+  rewrite PTree.gro by congruence. 
+  rewrite PTree.gro by congruence. 
+  rewrite PTree.gfilter1.
+  rewrite PTree.gro by congruence.
+  destruct (rel ! x) as [relx | ]; trivial.
+  destruct (Pos.eq_dec res relx); trivial.
+  destruct (Pos.eq_dec res relx); congruence.
+Qed.
+
 Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
 | match_frames_intro: forall res f sp pc rs,
     (fmap_sem (forward_map f) pc rs) ->
-    match_frames (Stackframe res f sp pc rs)
+    (is_killed_in_fmap (forward_map f) pc res) ->
+      match_frames (Stackframe res f sp pc rs)
                  (Stackframe res (transf_function f) sp pc rs).
 
 Inductive match_states: RTL.state -> RTL.state -> Prop :=
@@ -421,6 +459,7 @@ Proof.
   rewrite subst_args_ok by assumption.
   constructor. constructor; auto. constructor.
 
+  {
   simpl in *.
   unfold fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
@@ -440,6 +479,8 @@ Proof.
   }
   apply kill_weaken.
   assumption.
+  }
+  admit.
   
 (* tailcall *)
 - econstructor; split.
@@ -545,6 +586,23 @@ Proof.
   eapply exec_return; eauto.
   constructor; auto.
 
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  unfold is_killed_in_fmap in H8.
+   unfold is_killed_in_map in H8.
+  destruct (map # pc) as [mpc |] in *; try contradiction.
+  apply get_rb_sem_ge with (rb2 := Some (kill res mpc)).
+  {
+    destruct H8 as [rel' REL].
+    subst mpc.
+    apply RB.ge_refl.
+    simpl.
+    apply killed_twice.
+  }
+  apply kill_ok.
+  assumption.
+  
 Admitted.
 
 
