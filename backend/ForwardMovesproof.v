@@ -468,10 +468,12 @@ Proof.
     subst args.
     rewrite MOVE in GE.
     simpl in H0.
-    destruct (map # pc') as [mpc' | ] in *; try discriminate.
     simpl in GE.
-    admit.
-    admit.
+    apply get_rb_sem_ge with (rb2 := Some (move src res mpc)).
+    assumption.
+    replace v with (rs # src) by congruence.
+    apply move_ok.
+    assumption.
   }
   admit.
   
