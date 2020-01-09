@@ -436,7 +436,23 @@ Proof.
   rewrite subst_arg_ok; eassumption.
   constructor; auto.
 
-  admit.
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  apply get_rb_sem_ge with (rb2 := map # pc); trivial.
+  replace (map # pc) with (apply_instr' (fn_code f) pc (map # pc)).
+  {
+    eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+    2: apply apply_instr'_bot.
+    simpl.
+    apply list_nth_z_in with (n := Int.unsigned n).
+    assumption.
+  }
+  unfold apply_instr'.
+  unfold get_rb_sem in *.
+  destruct (map # pc) in *; try contradiction.
+  rewrite H.
+  reflexivity.
   
 (* return *)
 - destruct or as [arg | ].
