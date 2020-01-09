@@ -251,7 +251,7 @@ Ltac TR_AT :=
 Definition is_killed_in_map (map : PMap.t RB.t) pc res :=
   match PMap.get pc map with
   | None => True
-  | Some rel => exists rel', rel = (kill res rel')
+  | Some rel => exists rel', RELATION.ge rel (kill res rel')
   end.
 
 Definition is_killed_in_fmap fmap pc res :=
@@ -285,6 +285,39 @@ Proof.
   destruct (Pos.eq_dec res relx); congruence.
 Qed.
 
+Lemma get_rb_killed:
+  forall mpc,
+  forall rs,
+  forall rel,
+  forall res,
+  forall vres,
+    (get_rb_sem (Some mpc) rs) ->
+    (RELATION.ge mpc (kill res rel)) ->
+    (get_rb_sem (Some mpc) rs # res <- vres).
+Proof.
+  simpl.
+  intros until vres.
+  intros SEM GE x.
+  pose proof (GE x) as GEx.
+  pose proof (SEM x) as SEMx.
+  unfold get_r in *.
+  destruct (mpc ! x) as [mpcx | ] in *; trivial.
+  unfold kill in GEx.
+  rewrite PTree.gfilter1 in GEx.
+  destruct (Pos.eq_dec res x) as [ | res_NE_x].
+  {
+    subst res.
+    rewrite PTree.grs in GEx.
+    discriminate.
+  }
+  rewrite PTree.gro in GEx by congruence.
+  rewrite Regmap.gso with (i := x) by congruence.
+  destruct (rel ! x) as [relx | ]; try discriminate.
+  destruct (Pos.eq_dec res relx) as [ res_EQ_relx | res_NE_relx] in *; try discriminate.
+  rewrite Regmap.gso by congruence.
+  congruence.
+Qed.
+  
 Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
 | match_frames_intro: forall res f sp pc rs,
     (fmap_sem (forward_map f) pc rs) ->
@@ -480,7 +513,22 @@ Proof.
   apply kill_weaken.
   assumption.
   }
-  admit.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  assert (RB.ge (map # pc') (apply_instr' (fn_code f) pc (map # pc))) as GE.
+  {
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
+  }
+  unfold apply_instr' in GE.
+  unfold fmap_sem in *.
+  destruct (map # pc) as [mpc |] in *; try contradiction.
+  rewrite H in GE.
+  simpl in GE.
+  unfold is_killed_in_fmap, is_killed_in_map.
+  unfold RB.ge in GE.
+  destruct (map # pc') as [mpc'|] eqn:MPC' in *; trivial.
+  eauto.
   
 (* tailcall *)
 - econstructor; split.
@@ -590,19 +638,10 @@ Proof.
   unfold fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   unfold is_killed_in_fmap in H8.
-   unfold is_killed_in_map in H8.
+  unfold is_killed_in_map in H8.
   destruct (map # pc) as [mpc |] in *; try contradiction.
-  apply get_rb_sem_ge with (rb2 := Some (kill res mpc)).
-  {
-    destruct H8 as [rel' REL].
-    subst mpc.
-    apply RB.ge_refl.
-    simpl.
-    apply killed_twice.
-  }
-  apply kill_ok.
-  assumption.
-  
+  destruct H8 as [rel' RGE].
+  eapply get_rb_killed; eauto.
 Admitted.
 
 
