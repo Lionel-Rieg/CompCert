@@ -199,6 +199,16 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma top_ok :
+  forall rs, get_rb_sem (Some RELATION.top) rs.
+Proof.
+  unfold get_rb_sem, RELATION.top.
+  intros.
+  unfold get_r.
+  rewrite PTree.gempty.
+  reflexivity.
+Qed.
+
 Ltac TR_AT :=
   match goal with
   | [ A: (fn_code _)!_ = Some _ |- _ ] =>
@@ -447,7 +457,14 @@ Proof.
   eapply exec_function_internal; eauto.
   constructor; auto.
 
-  admit.
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  apply get_rb_sem_ge with (rb2 := Some RELATION.top).
+  {
+    eapply DS.fixpoint_entry with (code := fn_code f) (successors := successors_instr); try eassumption.
+  }
+  apply top_ok.
   
 (* external function *)
 - econstructor; split.
