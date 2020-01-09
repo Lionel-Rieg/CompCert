@@ -199,6 +199,39 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma kill_weaken:
+  forall dst,
+  forall mpc,
+  forall rs,
+    get_rb_sem (Some mpc) rs ->
+    get_rb_sem (Some (kill dst mpc)) rs.
+Proof.
+  unfold get_rb_sem.
+  intros until rs.
+  intros SEM x.
+  destruct (Pos.eq_dec x dst) as [EQ | NEQ].
+  {
+    subst dst.
+    unfold kill, get_r.
+    rewrite PTree.gfilter1.
+    rewrite PTree.grs.
+    reflexivity.
+  }
+  unfold kill, get_r in *.
+  rewrite PTree.gfilter1.
+  rewrite PTree.gro by assumption.
+  pose proof (SEM x) as SEMx.
+  destruct (mpc ! x).
+  {
+    destruct (Pos.eq_dec dst r).
+    {
+      reflexivity.
+    }
+    assumption.
+  }
+  reflexivity.
+Qed.
+
 Lemma top_ok :
   forall rs, get_rb_sem (Some RELATION.top) rs.
 Proof.
@@ -268,7 +301,7 @@ Proof.
   rewrite subst_args_ok by assumption.
   apply eval_operation_preserved. exact symbols_preserved.
   constructor; auto.
-  
+
   admit.
   
 (* load *)
@@ -391,18 +424,22 @@ Proof.
   simpl in *.
   unfold fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
-  apply get_rb_sem_ge with (rb2 := map # pc); trivial.
-  replace (map # pc) with (apply_instr' (fn_code f) pc (map # pc)).
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  apply get_rb_sem_ge with (rb2 := Some (kill res mpc)).
   {
-    eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
-    2: apply apply_instr'_bot.
-    simpl. tauto.
+    replace (Some (kill res mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+    {
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
+    }
+    unfold apply_instr'.
+    rewrite H.
+    rewrite MPC.
+    reflexivity.
   }
-  unfold apply_instr'.
-  unfold get_rb_sem in *.
-  destruct (map # pc) in *; try contradiction.
-  rewrite H.
-  reflexivity.
+  apply kill_weaken.
+  assumption.
   
 (* tailcall *)
 - econstructor; split.
@@ -508,7 +545,6 @@ Proof.
   eapply exec_return; eauto.
   constructor; auto.
 
-  admit.
 Admitted.
 
 

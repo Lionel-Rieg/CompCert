@@ -252,11 +252,11 @@ Definition apply_instr instr x :=
   | Inop _
   | Icond _ _ _ _
   | Ijumptable _ _
-  | Istore _ _ _ _ _
-  | Icall _ _ _ _ _ => Some x
+  | Istore _ _ _ _ _ => Some x
   | Iop Omove (src :: nil) dst _ => Some (move src dst x)
   | Iop _ _ dst _
-  | Iload _ _ _ _ dst _=> Some (kill dst x)
+  | Iload _ _ _ _ dst _
+  | Icall _ _ _ dst _ => Some (kill dst x)
   | Ibuiltin _ _ res _ => Some (kill_builtin_res res x)
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
