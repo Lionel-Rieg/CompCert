@@ -470,8 +470,10 @@ Proof.
     simpl in H0.
     destruct (map # pc') as [mpc' | ] in *; try discriminate.
     simpl in GE.
-    unfold move in GE.
+    admit.
+    admit.
   }
+  admit.
   
 (* load *)
 - econstructor; split.
