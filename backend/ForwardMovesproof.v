@@ -475,7 +475,11 @@ Proof.
     apply move_ok.
     assumption.
   }
-  admit.
+  rewrite KILL in GE.
+  apply get_rb_sem_ge with (rb2 := Some (kill res mpc)).
+  assumption.
+  apply kill_ok.
+  assumption.
   
 (* load *)
 - econstructor; split.
@@ -762,7 +766,7 @@ Proof.
   destruct (map # pc) as [mpc |] in *; try contradiction.
   destruct H8 as [rel' RGE].
   eapply get_rb_killed; eauto.
-Admitted.
+Qed.
 
 
 Lemma transf_initial_states:
