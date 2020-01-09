@@ -231,7 +231,8 @@ Module RB := ADD_BOTTOM(RELATION).
 Module DS := Dataflow_Solver(RB)(NodeSetForward).
 
 Definition kill (dst : reg) (rel : RELATION.t) :=
-  PTree.remove dst rel.
+  PTree.filter1 (fun x => if Pos.eq_dec dst x then false else true)
+                (PTree.remove dst rel).
 
 Definition move (src dst : reg) (rel : RELATION.t) :=
   PTree.set dst (match PTree.get src rel with
