@@ -257,13 +257,13 @@ Proof.
   unfold Mem.storev in *.
   unfold Val.offset_ptr in *.
   destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
-  destruct (Mem.store _ _ _ _) eqn:E0 in STORE0; try congruence.
+  destruct (Mem.store _ _ _ _ _) eqn:E0; try congruence.
   inv STORE0.
-  destruct (Mem.store _ _ _ _) eqn:E1 in STORE1; try congruence.
+  destruct (Mem.store (store_chunk n2) _ _ _ _) eqn:E1; try congruence.
   inv STORE1.
-  destruct (Mem.store _ _ _ _) eqn:E0' in STORE0'; try congruence.
+  destruct (Mem.store (store_chunk n2) m0 _ _ _) eqn:E0'; try congruence.
   inv STORE0'.
-  destruct (Mem.store _ _ _ _) eqn:E1' in STORE1'; try congruence.
+  destruct (Mem.store _ m1' _ _ _) eqn:E1'; try congruence.
   inv STORE1'.
   assert (Some m2 = Some m2').
   2: congruence.
@@ -310,7 +310,7 @@ Proof.
   unfold eval_offset in *.
   unfold Val.offset_ptr in *.
   destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
-  destruct (Mem.store _ _ _ _) eqn:E0 in STORE0; try congruence.
+  destruct (Mem.store _ _ _ _) eqn:E0; try congruence.
   inv STORE0.
   assert (
     (Mem.load (load_chunk n2) m1 wblock
