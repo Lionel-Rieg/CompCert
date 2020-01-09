@@ -159,6 +159,46 @@ Proof.
   assumption.
 Qed.
 
+Lemma kill_ok:
+  forall dst,
+  forall mpc,
+  forall rs,
+  forall v,
+    get_rb_sem (Some mpc) rs ->
+    get_rb_sem (Some (kill dst mpc)) rs # dst <- v.
+Proof.
+  unfold get_rb_sem.
+  intros until v.
+  intros SEM x.
+  destruct (Pos.eq_dec x dst) as [EQ | NEQ].
+  {
+    subst dst.
+    rewrite Regmap.gss.
+    unfold kill, get_r.
+    rewrite PTree.gfilter1.
+    rewrite PTree.grs.
+    apply Regmap.gss.
+  }
+  rewrite (Regmap.gso v rs NEQ).
+  unfold kill, get_r in *.
+  rewrite PTree.gfilter1.
+  rewrite PTree.gro by assumption.
+  pose proof (SEM x) as SEMx.
+  destruct (mpc ! x).
+  {
+    destruct (Pos.eq_dec dst r).
+    {
+      subst dst.
+      rewrite Regmap.gso by assumption.
+      reflexivity.
+    }
+    rewrite Regmap.gso by congruence.
+    assumption.
+  }
+  rewrite Regmap.gso by assumption.
+  reflexivity.
+Qed.
+
 Ltac TR_AT :=
   match goal with
   | [ A: (fn_code _)!_ = Some _ |- _ ] =>
@@ -230,7 +270,25 @@ Proof.
   rewrite subst_args_ok; assumption.
   constructor; auto.
 
-  admit.
+  simpl in *.
+  unfold fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  apply get_rb_sem_ge with (rb2 := Some (kill dst mpc)).
+  {
+    replace (Some (kill dst mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+    {
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
+    }
+    unfold apply_instr'.
+    rewrite H.
+    rewrite MPC.
+    reflexivity.
+  }
+  apply kill_ok.
+  assumption.
   
 - (* load notrap1 *)
   econstructor; split.
