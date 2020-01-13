@@ -291,7 +291,7 @@ let rec to_ttl_code_rec directions = function
 let to_ttl_code code entrypoint =
   let directions = get_directions code entrypoint
   in begin
-    Printf.printf "Non-ifso directions: ";
+    Printf.printf "Ifso directions: ";
     ptree_printbool directions;
     Printf.printf "\n";
     Random.init(0); (* using same seed to make it deterministic *)
