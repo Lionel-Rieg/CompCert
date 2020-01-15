@@ -252,16 +252,24 @@ let get_directions code entrypoint =
     List.iter (fun n ->
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, ifso, ifnot) ->
+          Printf.printf "Analyzing %d.." (P.to_int n);
           let preferred = ref false
           in (try
+            Printf.printf " call..";
             do_call_heuristic code ifso ifnot is_loop_header preferred;
+            Printf.printf " opcode..";
             do_opcode_heuristic code cond ifso ifnot preferred;
+            Printf.printf " return..";
             do_return_heuristic code ifso ifnot is_loop_header preferred;
+            Printf.printf " store..";
             do_store_heuristic code ifso ifnot is_loop_header preferred;
+            Printf.printf " loop..";
             do_loop_heuristic code ifso ifnot is_loop_header preferred;
             Printf.printf "Random choice for %d\n" (P.to_int n);
             preferred := Random.bool ()
-            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded -> ()
+            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded
+              -> Printf.printf " %s\n" (match !preferred with true -> "BRANCH"
+                                        | false -> "FALLTHROUGH")
           ); directions := PTree.set n !preferred !directions
       | _ -> ()
     ) bfs_order;
