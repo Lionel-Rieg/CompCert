@@ -505,11 +505,16 @@ Definition transl_op
       OK (Psrliw rd rs n :: k)
   | Oshrximm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs :: k else
-          Psraiw X31 rs (Int.repr 31) ::
-          Psrliw X31 X31 (Int.sub Int.iwordsize n) ::
-          Paddw X31 rs X31 ::
-          Psraiw rd X31 n :: k)  
+        OK (if Int.eq n Int.zero
+            then Pmv rd rs :: k
+            else if Int.eq n Int.one
+                 then Psrliw X31 rs (Int.repr 31) ::
+                      Paddw X31 rs X31 ::
+                      Psraiw rd X31 Int.one :: k
+                 else Psraiw X31 rs (Int.repr 31) ::
+                      Psrliw X31 X31 (Int.sub Int.iwordsize n) ::
+                      Paddw X31 rs X31 ::
+                      Psraiw rd X31 n :: k)  
 
   (* [Omakelong], [Ohighlong]  should not occur *)
   | Olowlong, a1 :: nil =>
@@ -594,11 +599,16 @@ Definition transl_op
       OK (Psrlil rd rs n :: k)
   | Oshrxlimm n, a1 :: nil =>
       do rd <- ireg_of res; do rs <- ireg_of a1;
-      OK (if Int.eq n Int.zero then Pmv rd rs :: k else
-          Psrail X31 rs (Int.repr 63) ::
-          Psrlil X31 X31 (Int.sub Int64.iwordsize' n) ::
-          Paddl X31 rs X31 ::
-          Psrail rd X31 n :: k)  
+        OK (if Int.eq n Int.zero
+            then Pmv rd rs :: k
+            else if Int.eq n Int.one
+                 then Psrlil X31 rs (Int.repr 63) ::
+                      Paddl X31 rs X31 ::
+                      Psrail rd X31 Int.one :: k
+                 else Psrail X31 rs (Int.repr 63) ::
+                      Psrlil X31 X31 (Int.sub Int64.iwordsize' n) ::
+                      Paddl X31 rs X31 ::
+                      Psrail rd X31 n :: k)  
 
   | Onegf, a1 :: nil =>
       do rd <- freg_of res; do rs <- freg_of a1;
