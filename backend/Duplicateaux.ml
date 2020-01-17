@@ -440,12 +440,22 @@ let rec make_identity_ptree_rec = function
 
 let make_identity_ptree f = make_identity_ptree_rec (PTree.elements f.fn_code)
 
+(* FIXME - For now, identity *)
+let tail_duplicate code ptree trace = (code, ptree)
+
+let rec superblockify_traces code ptree = function
+  | [] -> (code, ptree)
+  | trace :: traces ->
+      let new_code, new_ptree = tail_duplicate code ptree trace
+      in superblockify_traces new_code new_ptree traces
+
 (* For now, identity function *)
 let duplicate_aux f =
-  let pTreeId = make_identity_ptree f in
   let entrypoint = fn_entrypoint f in
-  let traces = select_traces (to_ttl_code (fn_code f) entrypoint) entrypoint
-  in begin
+  let traces = select_traces (to_ttl_code (fn_code f) entrypoint) entrypoint in
+  let pTreeId = make_identity_ptree f in
+  let (new_code, pTreeId) = superblockify_traces (fn_code f) pTreeId traces in
+  begin
     print_traces traces;
-    (((fn_code f), (fn_entrypoint f)), pTreeId)
+    ((new_code, (fn_entrypoint f)), pTreeId)
   end
