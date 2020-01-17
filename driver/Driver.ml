@@ -199,6 +199,7 @@ Processing options:
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
+  -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
