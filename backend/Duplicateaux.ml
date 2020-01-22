@@ -438,23 +438,105 @@ let rec make_identity_ptree_rec = function
 | [] -> PTree.empty
 | m::lm -> let (n, _) = m in PTree.set n n (make_identity_ptree_rec lm)
 
-let make_identity_ptree f = make_identity_ptree_rec (PTree.elements f.fn_code)
+let make_identity_ptree code = make_identity_ptree_rec (PTree.elements code)
 
-(* FIXME - For now, identity *)
-let tail_duplicate code ptree trace = (code, ptree)
+let optbool o = match o with Some _ -> true | None -> false
 
-let rec superblockify_traces code ptree = function
-  | [] -> (code, ptree)
-  | trace :: traces ->
-      let new_code, new_ptree = tail_duplicate code ptree trace
-      in superblockify_traces new_code new_ptree traces
+(* Change the pointers of preds nodes to point to n' instead of n *)
+let rec change_pointers code n n' = function
+  | [] -> code
+  | pred :: preds ->
+      let new_pred_inst = match ptree_get_some pred code with
+        | Icall(a, b, c, d, n0) -> assert (n0 == n); Icall(a, b, c, d, n')
+        | Ibuiltin(a, b, c, n0) -> assert (n0 == n); Ibuiltin(a, b, c, n')
+        | Ijumptable(a, ln) -> assert (optbool @@ List.find_opt (fun e -> e == n) ln);
+                               Ijumptable(a, List.map (fun e -> if (e == n) then n' else e) ln)
+        | Icond(a, b, n1, n2) -> assert (n1 == n || n2 == n);
+                                 let n1' = if (n1 == n) then n' else n1
+                                 in let n2' = if (n2 == n) then n' else n2
+                                 in Icond(a, b, n1', n2')
+        | Inop n0 -> assert (n0 == n); Inop n'
+        | Iop (a, b, c, n0) -> assert (n0 == n); Iop (a, b, c, n')
+        | Iload (a, b, c, d, e, n0) -> assert (n0 == n); Iload (a, b, c, d, e, n')
+        | Istore (a, b, c, d, n0) -> assert (n0 == n); Istore (a, b, c, d, n')
+        | Itailcall _ | Ireturn _ -> failwith "That instruction cannot be a predecessor"
+      in let new_code = PTree.set pred new_pred_inst code
+      in change_pointers new_code n n' preds
+
+(* parent: parent of n to keep as parent
+ * preds: all the other parents of n
+ * n': the integer which should contain the duplicate of n
+ * returns: new code, new ptree *)
+let duplicate code ptree parent n preds n' =
+  match PTree.get n' code with
+  | Some _ -> failwith "The PTree already has a node n'"
+  | None ->
+      let c' = change_pointers code n n' preds
+      in let new_code = PTree.set n' (ptree_get_some n code) c'
+      and new_ptree = PTree.set n' n ptree
+      in (new_code, new_ptree)
+
+let rec maxint = function
+  | [] -> 0
+  | i :: l -> assert (i >= 0); let m = maxint l in if i > m then i else m
+
+let is_empty = function
+  | [] -> false
+  | _ -> true
+
+(* code: RTL code
+ * preds: mapping node -> predecessors
+ * ptree: the revmap
+ * trace: the trace to follow tail duplication on *)
+let tail_duplicate code preds ptree trace =
+  (* next_int: unused integer that can be used for the next duplication *)
+  let next_int = ref (maxint (List.map (fun e -> let (n, _) = e in P.to_int n) (PTree.elements code)) + 1)
+  (* last_node and last_duplicate store resp. the last processed node of the trace, and its duplication *)
+  in let last_node = ref None
+  in let last_duplicate = ref None
+  (* recursive function on a trace *)
+  in let rec f code ptree is_first = function
+    | [] -> (code, ptree)
+    | n :: t ->
+        let (new_code, new_ptree) =
+          if is_first then (code, ptree) (* first node is never duplicated regardless of its inputs *)
+          else
+            let node_preds = ptree_get_some n preds
+            in let node_preds_nolast = List.filter (fun e -> e != get_some !last_node) node_preds
+            in let final_node_preds = match !last_duplicate with
+              | None -> node_preds_nolast
+              | Some n' -> n' :: node_preds_nolast
+            in if is_empty final_node_preds then
+              let n' = !next_int
+              in let (newc, newp) = duplicate code ptree !last_node n final_node_preds (P.of_int n')
+              in begin
+                next_int := !next_int + 1;
+                last_duplicate := Some (P.of_int n');
+                (newc, newp)
+              end
+            else (code, ptree)
+        in begin
+          last_node := Some n;
+          f new_code new_ptree false t
+        end
+  in f code ptree true trace
+
+let superblockify_traces code preds traces =
+  let ptree = make_identity_ptree code
+  in let rec f code ptree = function
+    | [] -> (code, ptree)
+    | trace :: traces ->
+        let new_code, new_ptree = tail_duplicate code preds ptree trace
+        in f new_code new_ptree traces
+  in f code ptree traces
 
 (* For now, identity function *)
 let duplicate_aux f =
   let entrypoint = fn_entrypoint f in
-  let traces = select_traces (to_ttl_code (fn_code f) entrypoint) entrypoint in
-  let pTreeId = make_identity_ptree f in
-  let (new_code, pTreeId) = superblockify_traces (fn_code f) pTreeId traces in
+  let code = fn_code f in
+  let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
+  let preds = get_predecessors_rtl code in
+  let (new_code, pTreeId) = superblockify_traces code preds traces in
   begin
     print_traces traces;
     ((new_code, (fn_entrypoint f)), pTreeId)
