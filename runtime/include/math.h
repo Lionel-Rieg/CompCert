@@ -3,6 +3,8 @@
 
 #define isfinite(__y) (fpclassify((__y)) >= FP_ZERO)
 
+#include_next <math.h>
+
 #ifndef COMPCERT_NO_FP_MACROS
 #define fmin(x, y) __builtin_fmin((x),(y))
 #define fmax(x, y) __builtin_fmax((x),(y))
@@ -14,5 +16,4 @@
 #define fmaf(x, y, z) __builtin_fmaf((x),(y),(z))
 #endif
 
-#include_next <math.h>
 #endif

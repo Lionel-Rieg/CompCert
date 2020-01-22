@@ -22,6 +22,8 @@ Require Import Parallelizability.
 Require Import Asmvliw Permutation.
 Require Import Chunks.
 
+Require Import Lia.
+
 Open Scope impure.
 
 (** Definition of L *)
@@ -208,6 +210,136 @@ Definition store_eval (so: store_op) (l: list value) :=
   | _, _ => None
   end.
 
+Local Open Scope Z.
+
+Remark size_chunk_positive: forall chunk,
+    (size_chunk chunk) > 0.
+Proof.
+  destruct chunk; simpl; lia.
+Qed.
+
+Remark size_chunk_small: forall chunk,
+    (size_chunk chunk) <= 8.
+Proof.
+  destruct chunk; simpl; lia.
+Qed.
+
+Definition disjoint_chunks
+           (ofs1 : offset) (chunk1 : memory_chunk)
+           (ofs2 : offset) (chunk2 : memory_chunk) :=
+  Intv.disjoint ((Ptrofs.unsigned ofs1),
+                 ((Ptrofs.unsigned ofs1) + (size_chunk chunk1)))
+                ((Ptrofs.unsigned ofs2),
+                 ((Ptrofs.unsigned ofs2) + (size_chunk chunk2))).
+
+Definition small_offset_threshold := 18446744073709551608.
+
+Lemma store_store_disjoint_offsets :
+  forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m1 m2 m1' m2',
+    (disjoint_chunks ofs1 (store_chunk n1) ofs2 (store_chunk n2)) ->
+    (Ptrofs.unsigned ofs1) < small_offset_threshold ->
+    (Ptrofs.unsigned ofs2) < small_offset_threshold ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m0] = Some (Memstate m1') ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m1'] = Some (Memstate m2') ->
+    m2 = m2'.
+Proof.
+  intros until m2'.
+  intros DISJOINT SMALL1 SMALL2 STORE0 STORE1 STORE0' STORE1'.
+  unfold disjoint_chunks in DISJOINT.
+  destruct vs1 as [v1 | ]; simpl in STORE0, STORE1'; try congruence.
+  destruct vs2 as [v2 | ]; simpl in STORE1, STORE0'; try congruence.
+  destruct va as [base | ]; try congruence.
+  unfold exec_store_deps_offset in *.
+  destruct Ge.
+  unfold eval_offset in *; simpl in *.
+  unfold Mem.storev in *.
+  unfold Val.offset_ptr in *.
+  destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
+  destruct (Mem.store _ _ _ _ _) eqn:E0; try congruence.
+  inv STORE0.
+  destruct (Mem.store (store_chunk n2) _ _ _ _) eqn:E1; try congruence.
+  inv STORE1.
+  destruct (Mem.store (store_chunk n2) m0 _ _ _) eqn:E0'; try congruence.
+  inv STORE0'.
+  destruct (Mem.store _ m1' _ _ _) eqn:E1'; try congruence.
+  inv STORE1'.
+  assert (Some m2 = Some m2').
+  2: congruence.
+  rewrite <- E1.
+  rewrite <- E1'.
+  eapply Mem.store_store_other.
+  2, 3: eassumption.
+
+  right.
+  pose proof (size_chunk_positive (store_chunk n1)).
+  pose proof (size_chunk_positive (store_chunk n2)).
+  pose proof (size_chunk_small (store_chunk n1)).
+  pose proof (size_chunk_small (store_chunk n2)).
+  destruct (Intv.range_disjoint _ _ DISJOINT) as [DIS | [DIS | DIS]];
+    unfold Intv.empty in DIS; simpl in DIS.
+  1, 2: lia.
+  pose proof (Ptrofs.unsigned_range ofs1).
+  pose proof (Ptrofs.unsigned_range ofs2).
+  unfold small_offset_threshold in *.
+  destruct (Ptrofs.unsigned_add_either wpofs ofs1) as [R1 | R1]; rewrite R1;
+    destruct (Ptrofs.unsigned_add_either wpofs ofs2) as [R2 | R2]; rewrite R2;
+      change Ptrofs.modulus with 18446744073709551616 in *; 
+      lia.
+Qed.
+
+Lemma load_store_disjoint_offsets :
+  forall n1 n2 tm ofs1 ofs2 vs va m0 m1,
+    (disjoint_chunks ofs1 (store_chunk n1) ofs2 (load_chunk n2)) ->
+    (Ptrofs.unsigned ofs1) < small_offset_threshold ->
+    (Ptrofs.unsigned ofs2) < small_offset_threshold ->
+    store_eval (OStoreRRO n1 ofs1) [vs; va; Memstate m0] = Some (Memstate m1) ->
+    load_eval (OLoadRRO n2 tm ofs2) [va; Memstate m1] =
+    load_eval (OLoadRRO n2 tm ofs2) [va; Memstate m0].
+Proof.
+  intros until m1.
+  intros DISJOINT SMALL1 SMALL2 STORE0.
+  destruct vs as [v | ]; simpl in STORE0; try congruence.
+  destruct va as [base | ]; try congruence.
+  unfold exec_store_deps_offset in *.
+  unfold eval_offset in *; simpl in *.
+  unfold exec_load_deps_offset.
+  unfold Mem.storev, Mem.loadv in *.
+  destruct Ge in *.
+  unfold eval_offset in *.
+  unfold Val.offset_ptr in *.
+  destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
+  destruct (Mem.store _ _ _ _) eqn:E0; try congruence.
+  inv STORE0.
+  assert (
+    (Mem.load (load_chunk n2) m1 wblock
+      (Ptrofs.unsigned (Ptrofs.add wpofs ofs2))) =
+    (Mem.load (load_chunk n2) m0 wblock
+              (Ptrofs.unsigned (Ptrofs.add wpofs ofs2))) ) as LOADS.
+  {
+    eapply Mem.load_store_other.
+    eassumption.
+    right.
+    pose proof (size_chunk_positive (store_chunk n1)).
+    pose proof (size_chunk_positive (load_chunk n2)).
+    pose proof (size_chunk_small (store_chunk n1)).
+    pose proof (size_chunk_small (load_chunk n2)).
+    destruct (Intv.range_disjoint _ _ DISJOINT) as [DIS | [DIS | DIS]];
+      unfold Intv.empty in DIS; simpl in DIS.
+    1,2: lia.
+    
+    pose proof (Ptrofs.unsigned_range ofs1).
+    pose proof (Ptrofs.unsigned_range ofs2).
+    unfold small_offset_threshold in *.
+    destruct (Ptrofs.unsigned_add_either wpofs ofs1) as [R1 | R1]; rewrite R1;
+      destruct (Ptrofs.unsigned_add_either wpofs ofs2) as [R2 | R2]; rewrite R2;
+        change Ptrofs.modulus with 18446744073709551616 in *; 
+        lia.
+  }
+  destruct (Mem.load _ m1 _ _) in *; destruct (Mem.load _ m0 _ _) in *; congruence.
+Qed.
+             
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => None

@@ -127,6 +127,8 @@ Extract Constant Compopts.optim_addx =>
   "fun _ -> !Clflags.option_faddx".
 Extract Constant Compopts.optim_coalesce_mem =>
   "fun _ -> !Clflags.option_fcoalesce_mem".
+Extract Constant Compopts.optim_forward_moves =>
+  "fun _ -> !Clflags.option_fforward_moves".
 Extract Constant Compopts.va_strict =>
   "fun _ -> false".
 Extract Constant Compopts.all_loads_nontrap =>

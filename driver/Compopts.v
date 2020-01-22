@@ -66,6 +66,9 @@ Parameter debug: unit -> bool.
 (** Flag -fall-loads-nontrap. Turn user loads into non trapping. *)
 Parameter all_loads_nontrap: unit -> bool.
 
+(** Flag -fforward-moves. Forward moves after CSE. *)
+Parameter optim_forward_moves: unit -> bool.
+
 (* TODO is there a more appropriate place? *)
 Require Import Coqlib.
 Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.
