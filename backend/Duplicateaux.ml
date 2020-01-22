@@ -468,6 +468,7 @@ let rec change_pointers code n n' = function
  * n': the integer which should contain the duplicate of n
  * returns: new code, new ptree *)
 let duplicate code ptree parent n preds n' =
+  Printf.printf "Duplicating node %d into %d..\n" (P.to_int n) (P.to_int n');
   match PTree.get n' code with
   | Some _ -> failwith "The PTree already has a node n'"
   | None ->
@@ -502,7 +503,7 @@ let tail_duplicate code preds ptree trace =
           if is_first then (code, ptree) (* first node is never duplicated regardless of its inputs *)
           else
             let node_preds = ptree_get_some n preds
-            in let node_preds_nolast = List.filter (fun e -> e != get_some !last_node) node_preds
+            in let node_preds_nolast = List.filter (fun e -> e <> get_some !last_node) node_preds
             in let final_node_preds = match !last_duplicate with
               | None -> node_preds_nolast
               | Some n' -> n' :: node_preds_nolast
