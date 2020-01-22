@@ -481,8 +481,8 @@ let rec maxint = function
   | i :: l -> assert (i >= 0); let m = maxint l in if i > m then i else m
 
 let is_empty = function
-  | [] -> false
-  | _ -> true
+  | [] -> true
+  | _ -> false
 
 (* code: RTL code
  * preds: mapping node -> predecessors
@@ -506,7 +506,7 @@ let tail_duplicate code preds ptree trace =
             in let final_node_preds = match !last_duplicate with
               | None -> node_preds_nolast
               | Some n' -> n' :: node_preds_nolast
-            in if is_empty final_node_preds then
+            in if not (is_empty final_node_preds) then
               let n' = !next_int
               in let (newc, newp) = duplicate code ptree !last_node n final_node_preds (P.of_int n')
               in begin
