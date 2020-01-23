@@ -76,7 +76,8 @@ Theorem transf_function_preserves:
   transf_function f = OK f' ->
      fn_sig f = fn_sig f' /\ fn_params f = fn_params f' /\ fn_stacksize f = fn_stacksize f'.
 Proof.
-  intros. unfold transf_function in H. destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te). monadInv H.
+  intros. unfold transf_function in H. destruct (duplicate_aux _) as (tctemp & invl). destruct tctemp as (tcte & mp). destruct tcte as (tc & te).
+  monadInv H.
   repeat (split; try reflexivity).
 Qed.
 
@@ -227,7 +228,7 @@ Theorem transf_function_correct f f':
 Proof.
   unfold transf_function.
   intros TRANSF.
-  destruct (duplicate_aux _) as (tcte & mp). destruct tcte as (tc & te).
+  destruct (duplicate_aux _) as (tctemp & invl). destruct tctemp as (tcte & mp). destruct tcte as (tc & te).
   monadInv TRANSF.
   unfold verify_mapping in EQ. monadInv EQ.
   exists mp; constructor 1; simpl; auto.
