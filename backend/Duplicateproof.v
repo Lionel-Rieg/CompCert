@@ -177,12 +177,16 @@ Proof.
     destruct (builtin_res_eq_pos _ _); try discriminate. subst.
     constructor. assumption.
 (* Icond *)
-  - destruct i'; try (inversion H; fail). monadInv H.
-    destruct x. eapply verify_is_copy_correct in EQ.
-    destruct x0. eapply verify_is_copy_correct in EQ1.
-    destruct (eq_condition _ _); try discriminate.
+  - destruct i'; try (inversion H; fail).
     destruct (list_eq_dec _ _ _); try discriminate. subst.
-    constructor; assumption.
+    destruct (eq_condition _ _); try discriminate.
+    + monadInv H. destruct x. eapply verify_is_copy_correct in EQ.
+      destruct x0. eapply verify_is_copy_correct in EQ1.
+      constructor; assumption.
+    + destruct (eq_condition _ _); try discriminate.
+      monadInv H. destruct x. eapply verify_is_copy_correct in EQ.
+      destruct x0. eapply verify_is_copy_correct in EQ1.
+      constructor; assumption.
 (* Ijumptable *)
   - destruct i'; try (inversion H; fail). monadInv H.
     destruct x. eapply verify_is_copy_list_correct in EQ.
