@@ -1,6 +1,5 @@
 (** RTL node duplication using external oracle. Used to form superblock
-  structures. Also swaps the ifso and ifnot of the Icond based on the
-  traces identified by the oracle *)
+  structures *)
 
 Require Import AST RTL Maps Globalenvs.
 Require Import Coqlib Errors Op.
@@ -8,10 +7,9 @@ Require Import Coqlib Errors Op.
 Local Open Scope error_monad_scope.
 Local Open Scope positive_scope.
 
-(** External oracle returning the new RTL code,
-    along with the new entrypoint, a mapping of new nodes to old nodes,
-    and a list of nodes to invert the condition on *)
-Axiom duplicate_aux: function -> code * node * (PTree.t node) * (list node).
+(** External oracle returning the new RTL code (entry point unchanged),
+    along with the new entrypoint, and a mapping of new nodes to old nodes *)
+Axiom duplicate_aux: function -> code * node * (PTree.t node).
 
 Extract Constant duplicate_aux => "Duplicateaux.duplicate_aux".
 
@@ -192,8 +190,7 @@ Definition verify_mapping dupmap (f f': function) : res unit :=
 (** * Entry points *)
 
 Definition transf_function (f: function) : res function :=
-  let (tctedupmap, invertlist) := duplicate_aux f in
-  let (tcte, dupmap) := tctedupmap in
+  let (tcte, dupmap) := duplicate_aux f in
   let (tc, te) := tcte in
   let f' := mkfunction (fn_sig f) (fn_params f) (fn_stacksize f) tc te in
   do u <- verify_mapping dupmap f f';
