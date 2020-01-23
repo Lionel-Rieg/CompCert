@@ -537,8 +537,5 @@ let duplicate_aux f =
   let code = fn_code f in
   let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
   let preds = get_predecessors_rtl code in
-  let (new_code, pTreeId) = superblockify_traces code preds traces in
-  begin
-    print_traces traces;
-    ((new_code, (fn_entrypoint f)), pTreeId)
-  end
+  let (new_code, pTreeId) = (print_traces traces; superblockify_traces code preds traces) in
+  ((new_code, (fn_entrypoint f)), pTreeId)
