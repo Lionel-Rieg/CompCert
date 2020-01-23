@@ -46,6 +46,10 @@ let bfs code entrypoint =
     !bfs_list
   end
 
+let optbool o = match o with Some _ -> true | None -> false
+
+let ptree_get_some n ptree = get_some @@ PTree.get n ptree
+
 let get_predecessors_rtl code =
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, i) =
@@ -55,7 +59,10 @@ let get_predecessors_rtl code =
       | Icond (_,_,n1,n2) -> [n1;n2]
       | Ijumptable (_,ln) -> ln
       | Itailcall _ | Ireturn _ -> []
-    in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
+    in List.iter (fun s ->
+      let previous_preds = ptree_get_some s !preds in
+      if optbool @@ List.find_opt (fun e -> e == node) previous_preds then ()
+      else preds := PTree.set s (node::previous_preds) !preds) succ
   in begin
     List.iter process_inst (PTree.elements code);
     !preds
@@ -341,8 +348,6 @@ let dfs code entrypoint =
       in node_dfs @ (dfs_list code ln)
   in dfs_list code [entrypoint]
 
-let ptree_get_some n ptree = get_some @@ PTree.get n ptree
-
 let get_predecessors_ttl code =
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, ti) = match ti with
@@ -439,8 +444,6 @@ let rec make_identity_ptree_rec = function
 | m::lm -> let (n, _) = m in PTree.set n n (make_identity_ptree_rec lm)
 
 let make_identity_ptree code = make_identity_ptree_rec (PTree.elements code)
-
-let optbool o = match o with Some _ -> true | None -> false
 
 (* Change the pointers of preds nodes to point to n' instead of n *)
 let rec change_pointers code n n' = function
