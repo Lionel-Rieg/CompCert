@@ -534,11 +534,30 @@ let superblockify_traces code preds traces =
         in f new_code new_ptree traces
   in f code ptree traces
 
+let rec invert_iconds_trace code = function
+  | [] -> code
+  | n::[] -> code
+  | n :: n' :: t ->
+      let code' = match ptree_get_some n code with
+        | Icond (c, lr, ifso, ifnot) ->
+            assert (n' == ifso || n' == ifnot);
+            if (n' == ifso) then PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso)) code
+            else code
+        | _ -> code
+      in invert_iconds_trace code' (n'::t)
+
+let rec invert_iconds code = function
+  | [] -> code
+  | t :: ts ->
+      let code' = invert_iconds_trace code t
+      in invert_iconds code' ts
+
 (* For now, identity function *)
 let duplicate_aux f =
   let entrypoint = fn_entrypoint f in
   let code = fn_code f in
   let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
-  let preds = get_predecessors_rtl code in
-  let (new_code, pTreeId) = (print_traces traces; superblockify_traces code preds traces) in
+  let icond_code = invert_iconds code traces in
+  let preds = get_predecessors_rtl icond_code in
+  let (new_code, pTreeId) = (print_traces traces; superblockify_traces icond_code preds traces) in
   ((new_code, (fn_entrypoint f)), pTreeId)
