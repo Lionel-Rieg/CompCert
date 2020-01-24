@@ -541,7 +541,9 @@ let rec invert_iconds_trace code = function
       let code' = match ptree_get_some n code with
         | Icond (c, lr, ifso, ifnot) ->
             assert (n' == ifso || n' == ifnot);
-            if (n' == ifso) then PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso)) code
+            if (n' == ifso) then (
+              Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n);
+              PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso)) code )
             else code
         | _ -> code
       in invert_iconds_trace code' (n'::t)
