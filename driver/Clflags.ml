@@ -24,6 +24,7 @@ let option_fpacked_structs = ref false
 let option_ffpu = ref true
 let option_ffloatconstprop = ref 2
 let option_ftailcalls = ref true
+let option_fduplicate = ref true
 let option_fconstprop = ref true
 let option_fcse = ref true
 let option_fredundancy = ref true

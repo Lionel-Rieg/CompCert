@@ -199,6 +199,7 @@ Processing options:
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
+  -fduplicate    Perform tail duplication to form superblocks on predicted traces
   -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
@@ -260,6 +261,7 @@ let dump_mnemonics destfile =
 let optimization_options = [
   option_ftailcalls; option_fifconversion; option_fconstprop; option_fcse;
   option_fpostpass; option_fredundancy; option_finline_functions_called_once;
+  option_fduplicate
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -310,7 +312,7 @@ let cmdline_actions =
  [
   Exact "-O0", Unit (unset_all optimization_options);
   Exact "-O", Unit (set_all optimization_options);
-  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
+  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false; option_fduplicate := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
@@ -384,6 +386,7 @@ let cmdline_actions =
   @ f_opt "cse" option_fcse
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
+  @ f_opt "duplicate" option_fduplicate
   @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
