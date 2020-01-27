@@ -261,7 +261,6 @@ let dump_mnemonics destfile =
 let optimization_options = [
   option_ftailcalls; option_fifconversion; option_fconstprop; option_fcse;
   option_fpostpass; option_fredundancy; option_finline_functions_called_once;
-  option_fduplicate
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
