@@ -498,6 +498,7 @@ let tail_duplicate code preds ptree trace =
   (* last_node and last_duplicate store resp. the last processed node of the trace, and its duplication *)
   in let last_node = ref None
   in let last_duplicate = ref None
+  in let nb_duplicated = ref 0
   (* recursive function on a trace *)
   in let rec f code ptree is_first = function
     | [] -> (code, ptree)
@@ -515,6 +516,7 @@ let tail_duplicate code preds ptree trace =
               in let (newc, newp) = duplicate code ptree !last_node n final_node_preds (P.of_int n')
               in begin
                 next_int := !next_int + 1;
+                nb_duplicated := !nb_duplicated + 1;
                 last_duplicate := Some (P.of_int n');
                 (newc, newp)
               end
@@ -523,16 +525,20 @@ let tail_duplicate code preds ptree trace =
           last_node := Some n;
           f new_code new_ptree false t
         end
-  in f code ptree true trace
+  in let new_code, new_ptree = f code ptree true trace
+  in (new_code, new_ptree, !nb_duplicated)
 
 let superblockify_traces code preds traces =
-  let ptree = make_identity_ptree code
+  let max_nb_duplicated = 2 (* FIXME - should be architecture dependent *)
+  in let ptree = make_identity_ptree code
   in let rec f code ptree = function
-    | [] -> (code, ptree)
+    | [] -> (code, ptree, 0)
     | trace :: traces ->
-        let new_code, new_ptree = tail_duplicate code preds ptree trace
-        in f new_code new_ptree traces
-  in f code ptree traces
+        let new_code, new_ptree, nb_duplicated = tail_duplicate code preds ptree trace
+        in if (nb_duplicated < max_nb_duplicated) then f new_code new_ptree traces
+           else (Printf.printf "Too many duplicated nodes, aborting tail duplication\n"; (code, ptree, 0))
+  in let new_code, new_ptree, _ = f code ptree traces
+  in (new_code, new_ptree)
 
 let rec invert_iconds_trace code = function
   | [] -> code
