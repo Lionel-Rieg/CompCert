@@ -557,7 +557,8 @@ let rec invert_iconds_trace code = function
 let rec invert_iconds code = function
   | [] -> code
   | t :: ts ->
-      let code' = invert_iconds_trace code t
+      let code' = if !Clflags.option_finvertcond then invert_iconds_trace code t
+                  else code
       in invert_iconds code' ts
 
 (* For now, identity function *)

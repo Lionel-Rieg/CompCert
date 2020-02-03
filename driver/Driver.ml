@@ -200,6 +200,8 @@ Processing options:
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
   -fduplicate    Perform tail duplication to form superblocks on predicted traces
+    -finvertcond    Invert conditions based on predicted paths (to prefer fallthrough).
+                    Requires -fduplicate to be also activated [on]
   -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
@@ -386,6 +388,7 @@ let cmdline_actions =
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ f_opt "duplicate" option_fduplicate
+  @ f_opt "invertcond" option_finvertcond
   @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
