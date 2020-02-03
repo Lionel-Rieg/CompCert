@@ -52,8 +52,11 @@ Definition sem_sym_val sym rs (v : option val) : Prop :=
     v = (eval_operation genv sp op (rs ## args) m)
   | SLoad chunk addr args =>
     match eval_addressing genv sp addr rs##args with
-    | Some a => v = (Mem.loadv chunk m a)
-    | None   => v = None \/ v = Some Vundef
+    | Some a => match Mem.loadv chunk m a with
+                | Some dat => v = Some dat
+                | None => v = None \/ v = Some (default_notrap_load_value chunk)
+                end
+    | None   => v = None \/ v = Some (default_notrap_load_value chunk)
     end
   end.
     
@@ -397,8 +400,11 @@ Lemma find_load_sound :
     sem_rel rel rs ->
     find_load rel chunk addr args = Some src ->
     match eval_addressing genv sp addr rs##args with
-    | Some a => (Mem.loadv chunk m a) = Some (rs # src)
-    | None => True
+    | Some a => match Mem.loadv chunk m a with
+                | Some dat => rs#src = dat
+                | None => rs#src = default_notrap_load_value chunk
+                end
+    | None   => rs#src = default_notrap_load_value chunk
     end.
 Proof.
   intros until rs.
@@ -411,18 +417,24 @@ Proof.
              | None => True
              | Some src =>
                match eval_addressing genv sp addr rs##args with
-               | Some a => (Mem.loadv chunk m a) = Some (rs # src)
-               | None => True
-               end               
+               | Some a => match Mem.loadv chunk m a with
+                           | Some dat => rs#src = dat
+                           | None => rs#src = default_notrap_load_value chunk
+                           end
+               | None   => rs#src = default_notrap_load_value chunk
+               end
              end ->
     fold_left
     (fun (a : option reg) (p : positive * sym_val) =>
      find_load_fold chunk addr args a (fst p) (snd p)) (PTree.elements rel) start =
     Some src ->
     match eval_addressing genv sp addr rs##args with
-               | Some a => (Mem.loadv chunk m a) = Some (rs # src)
-               | None => True
-               end ) as REC.
+               | Some a => match Mem.loadv chunk m a with
+                           | Some dat => rs#src = dat
+                           | None => rs#src = default_notrap_load_value chunk
+                           end
+               | None   => rs#src = default_notrap_load_value chunk
+               end) as REC.
   
   {
     unfold sem_rel, sem_reg in REL.
@@ -463,10 +475,17 @@ Proof.
     pose proof (REL r) as RELr.
     rewrite RELatr in RELr.
     simpl in RELr.
-    destruct eval_addressing; congruence.
+    Show.
+    destruct eval_addressing.
+    { destruct Mem.loadv.
+      congruence.
+      destruct RELr; congruence.
+    }
+    destruct RELr; congruence.
   }
   apply REC; auto.
 Qed.
+
 
 Lemma find_load_sound' :
   forall rel : RELATION.t,
@@ -476,14 +495,21 @@ Lemma find_load_sound' :
   forall args: list reg,
   forall rs : regset,
   forall a,
+  forall v,
     sem_rel rel rs ->
     find_load rel chunk addr args = Some src ->
     eval_addressing genv sp addr rs##args = Some a ->
-    (Mem.loadv chunk m a) = Some (rs # src).
+    Mem.loadv chunk m a = Some v ->
+    v = rs # src.
 Proof.
-  intros until a. intros REL LOAD ADDR.
-  pose proof (find_load_sound rel chunk addr src args rs REL LOAD) as Z.
-  destruct eval_addressing in *; congruence.
+  intros until v. intros REL FINDLOAD ADDR LOAD.
+  pose proof (find_load_sound rel chunk addr src args rs REL FINDLOAD) as Z.
+  destruct eval_addressing in *.
+  {
+    replace a with v0 in * by congruence.
+    destruct Mem.loadv in * ; congruence.
+  }
+  discriminate.
 Qed.
 
 Lemma forward_move_map:
@@ -584,7 +610,84 @@ Proof.
     rewrite Regmap.gss.
     simpl.
     rewrite args_replace_dst by auto.
-    destruct eval_addressing; congruence.
+    destruct eval_addressing.
+    {
+      replace a with v0 in * by congruence.
+      destruct Mem.loadv; congruence.
+    }
+    discriminate.
+  }
+  rewrite Regmap.gso by congruence.
+  unfold sem_reg.
+  rewrite PTree.gso by congruence.
+  rewrite Regmap.gso in KILL by congruence.
+  exact KILL.
+Qed.
+
+Lemma load2_notrap1_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+    sem_rel rel rs ->
+    not (In dst args) ->
+    eval_addressing genv sp addr (rs ## args) = None ->
+    sem_rel (load2 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until rs.
+  intros REL NOT_IN ADDR x.
+  pose proof (kill_reg_sound rel dst rs (default_notrap_load_value chunk) REL x) as KILL.
+  unfold load2.
+  destruct (peq x dst).
+  {
+    subst x.
+    unfold sem_reg.
+    rewrite PTree.gss.
+    rewrite Regmap.gss.
+    simpl.
+    rewrite args_replace_dst by auto.
+    rewrite ADDR.
+    right.
+    trivial.
+  }
+  rewrite Regmap.gso by congruence.
+  unfold sem_reg.
+  rewrite PTree.gso by congruence.
+  rewrite Regmap.gso in KILL by congruence.
+  exact KILL.
+Qed.
+
+Lemma load2_notrap2_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+  forall a,
+    sem_rel rel rs ->
+    not (In dst args) ->
+    eval_addressing genv sp addr (rs ## args) = Some a ->
+    Mem.loadv chunk m a = None ->
+    sem_rel (load2 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until a.
+  intros REL NOT_IN ADDR LOAD x.
+  pose proof (kill_reg_sound rel dst rs  (default_notrap_load_value chunk) REL x) as KILL.
+  unfold load2.
+  destruct (peq x dst).
+  {
+    subst x.
+    unfold sem_reg.
+    rewrite PTree.gss.
+    rewrite Regmap.gss.
+    simpl.
+    rewrite args_replace_dst by auto.
+    rewrite ADDR.
+    rewrite LOAD.
+    right; trivial.
   }
   rewrite Regmap.gso by congruence.
   unfold sem_reg.
@@ -617,6 +720,50 @@ Proof.
   apply load2_sound with (a := a); auto.
 Qed.
 
+Lemma load1_notrap1_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+    sem_rel rel rs ->
+    eval_addressing genv sp addr (rs ## args) = None ->
+    sem_rel (load1 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until rs.
+  intros REL ADDR LOAD.
+  unfold load1.
+  destruct in_dec.
+  {
+    apply kill_reg_sound; auto. 
+  }
+  apply load2_notrap1_sound; auto.
+Qed.
+
+Lemma load1_notrap2_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+  forall a,
+    sem_rel rel rs ->
+    eval_addressing genv sp addr (rs ## args) = Some a ->
+    Mem.loadv chunk m a = None ->
+    sem_rel (load1 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until a.
+  intros REL ADDR LOAD.
+  unfold load1.
+  destruct in_dec.
+  {
+    apply kill_reg_sound; auto. 
+  }
+  apply load2_notrap2_sound with (a := a); auto.
+Qed.
+
 Lemma load_sound :
   forall rel : RELATION.t,
   forall chunk : memory_chunk,
@@ -634,11 +781,14 @@ Proof.
   intros until v.
   intros REL ADDR LOAD.
   unfold load.
-  destruct find_load eqn:FIND.
+  destruct find_load as [src | ] eqn:FIND.
   {
-    assert (match eval_addressing genv sp addr rs##(map (forward_move rel) args) with
-    | Some a => (Mem.loadv chunk m a) = Some (rs # r)
-    | None => True
+    assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
+    | Some a => match Mem.loadv chunk m a with
+                | Some dat => rs#src = dat
+                | None => rs#src = default_notrap_load_value chunk
+                end
+    | None   => rs#src = default_notrap_load_value chunk
     end) as FIND_LOAD.
     {
       apply (find_load_sound rel); trivial.
@@ -646,10 +796,86 @@ Proof.
     rewrite forward_move_map in FIND_LOAD by assumption.
     destruct eval_addressing in *.
     2: discriminate.
-    replace v with (rs # r) by congruence.
+    replace v0 with a in * by congruence.
+    destruct Mem.loadv in *.
+    2: discriminate.
+    replace v with (rs # src) by congruence.
     apply move_sound; auto.
   }
   apply load1_sound with (a := a); trivial.
+Qed.
+
+Lemma load_notrap1_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+    sem_rel rel rs ->
+    eval_addressing genv sp addr (rs ## args) = None ->
+    sem_rel (load chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until rs.
+  intros REL ADDR.
+  unfold load.
+  destruct find_load as [src | ] eqn:FIND.
+  {
+    assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
+    | Some a => match Mem.loadv chunk m a with
+                | Some dat => rs#src = dat
+                | None => rs#src = default_notrap_load_value chunk
+                end
+    | None   => rs#src = default_notrap_load_value chunk
+    end) as FIND_LOAD.
+    {
+      apply (find_load_sound rel); trivial.
+    }
+    rewrite forward_move_map in FIND_LOAD by assumption.
+    destruct eval_addressing in *.
+    discriminate.
+    rewrite <- FIND_LOAD.
+    apply move_sound; auto.
+  }
+  apply load1_notrap1_sound; trivial.
+Qed.
+
+Lemma load_notrap2_sound :
+  forall rel : RELATION.t,
+  forall chunk : memory_chunk,
+  forall addr : addressing,
+  forall dst : reg,
+  forall args: list reg,
+  forall rs : regset,
+  forall a,
+    sem_rel rel rs ->
+    eval_addressing genv sp addr (rs ## args) = Some a ->
+    Mem.loadv chunk m a = None ->
+    sem_rel (load chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+Proof.
+  intros until a.
+  intros REL ADDR.
+  unfold load.
+  destruct find_load as [src | ] eqn:FIND.
+  {
+    assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
+    | Some a => match Mem.loadv chunk m a with
+                | Some dat => rs#src = dat
+                | None => rs#src = default_notrap_load_value chunk
+                end
+    | None   => rs#src = default_notrap_load_value chunk
+    end) as FIND_LOAD.
+    {
+      apply (find_load_sound rel); trivial.
+    }
+    rewrite forward_move_map in FIND_LOAD by assumption.
+    rewrite ADDR in FIND_LOAD.
+    destruct Mem.loadv; intro.
+    discriminate.
+    rewrite <- FIND_LOAD.
+    apply move_sound; auto.
+  }
+  apply load1_notrap2_sound; trivial.
 Qed.
 
 Lemma kill_reg_weaken:
@@ -976,7 +1202,9 @@ Proof.
         simpl.
         rewrite <- subst_args_ok with (genv := ge) (f := f) (pc := pc) (sp := sp) (m := m) in H0.
         {
-          rewrite find_load_sound' with (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs) in H1; trivial.
+          f_equal.
+          symmetry.
+          apply find_load_sound' with (chunk := chunk) (m := m) (a := a) (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs); trivial.
           rewrite MAP in H0.
           assumption.
         }
@@ -1046,9 +1274,9 @@ Proof.
     unfold fmap_sem', fmap_sem in *.
     destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
     destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-    apply sem_rel_b_ge with (rb2 := Some (kill_reg dst mpc)).
+    apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
     {
-      replace (Some (kill_reg dst mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+      replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
       {
         eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
         2: apply apply_instr'_bot.
@@ -1060,7 +1288,7 @@ Proof.
       simpl.
       reflexivity.
     }
-    apply kill_reg_sound; assumption.
+    apply load_sound with (a := a); assumption.
   }
   
 - (* load notrap1 *)
@@ -1075,9 +1303,9 @@ Proof.
   unfold fmap_sem', fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-  apply sem_rel_b_ge with (rb2 := Some (kill_reg dst mpc)).
+  apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
   {
-    replace (Some (kill_reg dst mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+    replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
     {
       eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
       2: apply apply_instr'_bot.
@@ -1089,7 +1317,7 @@ Proof.
     simpl.
     reflexivity.
   }
-  apply kill_reg_sound; assumption.
+  apply load_notrap1_sound; trivial.
   
 - (* load notrap2 *)
   econstructor; split.
@@ -1103,9 +1331,9 @@ Proof.
   unfold fmap_sem', fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-  apply sem_rel_b_ge with (rb2 := Some (kill_reg dst mpc)).
+  apply sem_rel_b_ge with (rb2 := Some  (load chunk addr dst args mpc)).
   {
-    replace (Some (kill_reg dst mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+    replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
     {
       eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
       2: apply apply_instr'_bot.
@@ -1117,7 +1345,7 @@ Proof.
     simpl.
     reflexivity.
   }
-  apply kill_reg_sound; assumption.
+  apply load_notrap2_sound with (a := a); assumption.
   
 - (* store *)
   econstructor. split.
