@@ -461,14 +461,12 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     | None => Iop op args' dst s
     | Some src => Iop Omove (src::nil) dst s
     end
-  | Iload TRAP chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
     let args' := subst_args fmap pc args in
     match find_load_in_fmap fmap pc chunk addr args' with
-    | None => Iload TRAP chunk addr args' dst s
+    | None => Iload trap chunk addr args' dst s
     | Some src => Iop Omove (src::nil) dst s
     end
-  | Iload NOTRAP chunk addr args dst s =>
-    Iload NOTRAP chunk addr (subst_args fmap pc args) dst s
   | Istore chunk addr args src s =>
     Istore chunk addr (subst_args fmap pc args) src s
   | Icall sig ros args dst s =>
