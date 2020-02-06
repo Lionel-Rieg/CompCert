@@ -26,6 +26,9 @@ Inductive match_inst (dupmap: PTree.t node): instruction -> instruction -> Prop 
   | match_inst_cond: forall ifso ifso' ifnot ifnot' c lr,
       dupmap!ifso' = (Some ifso) -> dupmap!ifnot' = (Some ifnot) ->
       match_inst dupmap (Icond c lr ifso ifnot) (Icond c lr ifso' ifnot')
+  | match_inst_revcond: forall ifso ifso' ifnot ifnot' c lr,
+      dupmap!ifso' = (Some ifso) -> dupmap!ifnot' = (Some ifnot) ->
+      match_inst dupmap (Icond c lr ifso ifnot) (Icond (negate_condition c) lr ifnot' ifso')
   | match_inst_jumptable: forall ln ln' r,
       list_forall2 (fun n n' => (dupmap!n' = (Some n))) ln ln' ->
       match_inst dupmap (Ijumptable r ln) (Ijumptable r ln')
@@ -173,12 +176,16 @@ Proof.
     destruct (builtin_res_eq_pos _ _); try discriminate. subst.
     constructor. assumption.
 (* Icond *)
-  - destruct i'; try (inversion H; fail). monadInv H.
-    destruct x. eapply verify_is_copy_correct in EQ.
-    destruct x0. eapply verify_is_copy_correct in EQ1.
-    destruct (eq_condition _ _); try discriminate.
+  - destruct i'; try (inversion H; fail).
     destruct (list_eq_dec _ _ _); try discriminate. subst.
-    constructor; assumption.
+    destruct (eq_condition _ _); try discriminate.
+    + monadInv H. destruct x. eapply verify_is_copy_correct in EQ.
+      destruct x0. eapply verify_is_copy_correct in EQ1.
+      constructor; assumption.
+    + destruct (eq_condition _ _); try discriminate.
+      monadInv H. destruct x. eapply verify_is_copy_correct in EQ.
+      destruct x0. eapply verify_is_copy_correct in EQ1.
+      constructor; assumption.
 (* Ijumptable *)
   - destruct i'; try (inversion H; fail). monadInv H.
     destruct x. eapply verify_is_copy_list_correct in EQ.
@@ -463,10 +470,16 @@ Proof.
 (* Icond *)
   - eapply dupmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.
-    pose symbols_preserved as SYMPRES.
-    eexists. split.
-    + eapply exec_Icond; eauto.
-    + econstructor; eauto. destruct b; auto.
+    * (* match_inst_cond *)
+      pose symbols_preserved as SYMPRES.
+      eexists. split.
+      + eapply exec_Icond; eauto.
+      + econstructor; eauto. destruct b; auto.
+    * (* match_inst_revcond *)
+      pose symbols_preserved as SYMPRES.
+      eexists. split.
+      + eapply exec_Icond; eauto. rewrite eval_negate_condition. rewrite H0. simpl. eauto.
+      + econstructor; eauto. destruct b; auto.
 (* Ijumptable *)
   - eapply dupmap_correct in DUPLIC; eauto.
     destruct DUPLIC as (i' & H2 & H3). inv H3.

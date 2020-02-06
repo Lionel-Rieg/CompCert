@@ -136,12 +136,15 @@ Definition verify_match_inst dupmap inst tinst :=
 
   | Icond cond lr n1 n2 => match tinst with
       | Icond cond' lr' n1' n2' =>
-          do u1 <- verify_is_copy dupmap n1 n1';
-          do u2 <- verify_is_copy dupmap n2 n2';
-          if (eq_condition cond cond') then
-            if (list_eq_dec Pos.eq_dec lr lr') then OK tt
-            else Error (msg "Different lr in Icond")
-          else Error (msg "Different cond in Icond")
+          if (list_eq_dec Pos.eq_dec lr lr') then
+            if (eq_condition cond cond') then
+              do u1 <- verify_is_copy dupmap n1 n1';
+              do u2 <- verify_is_copy dupmap n2 n2'; OK tt
+            else if (eq_condition (negate_condition cond) cond') then
+              do u1 <- verify_is_copy dupmap n1 n2';
+              do u2 <- verify_is_copy dupmap n2 n1'; OK tt
+            else Error (msg "Incompatible conditions in Icond")
+          else Error (msg "Different lr in Icond")
       | _ => Error (msg "verify_match_inst Icond") end
 
   | Ijumptable r ln => match tinst with
