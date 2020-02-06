@@ -457,8 +457,8 @@ if test "$arch" = "mppa_k1c"; then
   fi
   osupper=`echo $os|tr a-z A-Z`
   k1base="k1-$os"
-  casm="$k1base-gcc"
-  casm_options="$model_options -c"
+  casm="k1-elf-as"
+  casm_options="$model_options"
   cc="$k1base-gcc $model_options"
   clinker="$k1base-gcc"
   bindir="$HOME/.usr/bin"
