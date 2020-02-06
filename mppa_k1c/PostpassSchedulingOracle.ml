@@ -550,6 +550,17 @@ let mau_y : int array = let resmap = fun r -> match r with
   | Rissue -> 3 | Rtiny -> 1 | Rmau -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
+let mau_auxr : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_auxr_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_auxr_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
 
 (** Real instructions *)
 
@@ -602,10 +613,16 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw| Maddw | Msbfw -> (match encoding with None -> mau
+  | Maddw -> (match encoding with None -> mau_auxr
+                | Some U6 | Some S10 | Some U27L5 -> mau_auxr_x
+                | _ -> raise InvalidEncoding)
+  | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau_auxr
+                | Some U27L5 | Some U27L10 -> mau_auxr_x
+                | Some E27U27L10 -> mau_auxr_y)
+  | Mulw| Msbfw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld | Maddd | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
