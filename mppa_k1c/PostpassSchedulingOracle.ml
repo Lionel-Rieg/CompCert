@@ -442,7 +442,9 @@ let encode_imm (imm:int64) =
     else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
 
 (** Resources *)
-let resource_names = ["ISSUE"; "TINY"; "LITE"; "FULL"; "LSU"; "MAU"; "BCU"; "TCA"; "AUXR"; "AUXW"; "CRRP"; "CRWL"; "CRWH"; "NOP"]
+type rname = Rissue | Rtiny | Rlite | Rfull | Rlsu | Rmau | Rbcu | Rtca | Rauxr | Rauxw | Rcrrp | Rcrwl | Rcrwh | Rnop
+
+let resource_names = [Rissue; Rtiny; Rlite; Rfull; Rlsu; Rmau; Rbcu; Rtca; Rauxr; Rauxw; Rcrrp; Rcrwl; Rcrwh; Rnop]
 
 let rec find_index elt l =
   match l with
@@ -454,99 +456,98 @@ let resource_id resource : int = find_index resource resource_names
 
 let resource_bound resource : int =
   match resource with
-  | "ISSUE" -> 8
-  | "TINY" -> 4
-  | "LITE" -> 2
-  | "FULL" -> 1
-  | "LSU" -> 1
-  | "MAU" -> 1
-  | "BCU" -> 1
-  | "TCA" -> 1
-  | "AUXR" -> 1
-  | "AUXW" -> 1
-  | "CRRP" -> 1
-  | "CRWL" -> 1
-  | "CRWH" -> 1
-  | "NOP" -> 4
-  | _ -> raise Not_found
+  | Rissue -> 8
+  | Rtiny -> 4
+  | Rlite -> 2
+  | Rfull -> 1
+  | Rlsu -> 1
+  | Rmau -> 1
+  | Rbcu -> 1
+  | Rtca -> 1
+  | Rauxr -> 1
+  | Rauxw -> 1
+  | Rcrrp -> 1
+  | Rcrwl -> 1
+  | Rcrwh -> 1
+  | Rnop -> 4
 
 let resource_bounds : int array = Array.of_list (List.map resource_bound resource_names)
 
 (** Reservation tables *)
 let alu_full : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
+  | Rissue -> 1 | Rtiny -> 1 | Rlite -> 1 | Rfull -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  | Rissue -> 1 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite_x : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  | Rissue -> 2 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite_y : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  | Rissue -> 3 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_nop : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "NOP" -> 1 | _ -> 0 
+  | Rissue -> 1 | Rnop -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_tiny : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | _ -> 0 
+  | Rissue -> 1 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_tiny_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | _ -> 0 
+  | Rissue -> 2 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_tiny_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | _ -> 0 
+  | Rissue -> 3 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let bcu : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "BCU" -> 1 | _ -> 0 
+  | Rissue -> 1 | Rbcu -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let bcu_tiny_tiny_mau_xnop : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 2 | "MAU" -> 1 | "BCU" -> 1 | "NOP" -> 4 | _ -> 0 
+  | Rissue -> 1 | Rtiny -> 2 | Rmau -> 1 | Rbcu -> 1 | Rnop -> 4 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxr : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "AUXR" -> 1 | _ -> 0
+  | Rissue -> 1 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxr_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "AUXR" -> 1 | _ -> 0
+  | Rissue -> 2 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxr_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "AUXR" -> 1 | _ -> 0
+  | Rissue -> 3 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxw : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "AUXW" -> 1 | _ -> 0
+  | Rissue -> 1 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxw_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "AUXW" -> 1 | _ -> 0
+  | Rissue -> 2 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let lsu_auxw_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "AUXW" -> 1 | _ -> 0
+  | Rissue -> 3 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let mau : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "MAU" -> 1 |  _ -> 0 
+  | Rissue -> 1 | Rtiny -> 1 | Rmau -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let mau_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+  | Rissue -> 2 | Rtiny -> 1 | Rmau -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let mau_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+  | Rissue -> 3 | Rtiny -> 1 | Rmau -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 
