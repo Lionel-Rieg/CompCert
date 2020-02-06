@@ -563,10 +563,10 @@ let rec invert_iconds code = function
 
 (* For now, identity function *)
 let duplicate_aux f =
-  let entrypoint = fn_entrypoint f in
-  let code = fn_code f in
+  let entrypoint = f.fn_entrypoint in
+  let code = f.fn_code in
   let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
   let icond_code = invert_iconds code traces in
   let preds = get_predecessors_rtl icond_code in
   let (new_code, pTreeId) = (print_traces traces; superblockify_traces icond_code preds traces) in
-  ((new_code, (fn_entrypoint f)), pTreeId)
+  ((new_code, f.fn_entrypoint), pTreeId)
