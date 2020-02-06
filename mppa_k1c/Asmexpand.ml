@@ -514,8 +514,8 @@ let expand_instruction instr =
       end else begin
         let below = Integers.Ptrofs.repr (Z.neg sz) in
         expand_addptrofs stack_pointer stack_pointer below;
+        emit Psemi; (* Psemi required to fit in resource constraints *)
         expand_storeind_ptr stack_pointer stack_pointer (Integers.Ptrofs.add ofs below);
-        (* DM we don't need it emit Psemi; *)
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->
