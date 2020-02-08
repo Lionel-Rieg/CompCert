@@ -5,6 +5,8 @@
 **.out
 **.tok
 *.vo
+*.vok
+*.vos
 *.glob
 *.o
 *.a
