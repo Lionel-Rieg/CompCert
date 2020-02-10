@@ -14,7 +14,7 @@ Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
-Require Import Asmblockgenproof0.
+Require Import Asmblockgenproof0 Asmblockprops.
 Require Import PostpassScheduling.
 Require Import Asmblockgenproof.
 Require Import Axioms.

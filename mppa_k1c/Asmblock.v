@@ -33,6 +33,19 @@ Require Import Conventions.
 Require Import Errors.
 Require Export Asmvliw.
 
+(* Notations necessary to hook Asmvliw definitions *)
+Notation undef_caller_save_regs := Asmvliw.undef_caller_save_regs.
+Notation regset := Asmvliw.regset.
+Notation extcall_arg := Asmvliw.extcall_arg.
+Notation extcall_arg_pair := Asmvliw.extcall_arg_pair.
+Notation extcall_arguments := Asmvliw.extcall_arguments.
+Notation set_res := Asmvliw.set_res.
+Notation function := Asmvliw.function.
+Notation bblocks := Asmvliw.bblocks.
+Notation header := Asmvliw.header.
+Notation body := Asmvliw.body.
+Notation exit := Asmvliw.exit.
+Notation correct := Asmvliw.correct.
 
 (** * Auxiliary utilies on basic blocks *)
 

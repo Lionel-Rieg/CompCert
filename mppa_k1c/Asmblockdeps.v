@@ -7,7 +7,7 @@
 
 Require Import AST.
 Require Import Asmblock.
-Require Import Asmblockgenproof0.
+Require Import Asmblockgenproof0 Asmblockprops.
 Require Import Values.
 Require Import Globalenvs.
 Require Import Memory.
@@ -1429,7 +1429,7 @@ Lemma bblock_simu_reduce:
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
   L.bblock_simu Ge (trans_block p1) (trans_block p2) ->
-  Asmblockgenproof0.bblock_simu ge fn p1 p2.
+  Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
   unfold bblock_simu, res_eq; intros p1 p2 ge fn H1 H2 rs m DONTSTUCK.
   generalize (H2 (trans_state (State rs m))); clear H2.
@@ -1787,7 +1787,7 @@ Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
 Local Hint Resolve IST.bblock_simu_test_correct bblock_simu_reduce IST.verb_bblock_simu_test_correct: wlp.
 
 Theorem bblock_simu_test_correct verb p1 p2 :
-  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Asmblockgenproof0.bblock_simu ge fn p1 p2.
+  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
   wlp_simplify.
 Qed.
@@ -1803,7 +1803,7 @@ Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool :=
   | None => false
   end.
 
-Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
    unfold pure_bblock_simu_test. 
    destruct (unsafe_coerce (bblock_simu_test verb p1 p2)) eqn: UNSAFE; try discriminate.
@@ -1813,7 +1813,7 @@ Qed.
 
 Definition bblock_simub: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_simu_test true.
 
-Lemma bblock_simub_correct p1 p2 ge fn: bblock_simub p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Lemma bblock_simub_correct p1 p2 ge fn: bblock_simub p1 p2 = true -> Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
  eapply (pure_bblock_simu_test_correct true).
 Qed.
