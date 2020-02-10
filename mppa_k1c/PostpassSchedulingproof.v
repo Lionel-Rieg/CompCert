@@ -30,43 +30,6 @@ Proof.
   intros. eapply match_transform_partial_program; eauto.
 Qed.
 
-Remark builtin_body_nil:
-  forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
-Proof.
-  intros. destruct bb as [hd bdy ex WF]. simpl in *.
-  apply wf_bblock_refl in WF. inv WF. unfold builtin_alone in H1.
-  eapply H1; eauto.
-Qed.
-
-Lemma exec_body_app:
-  forall l l' ge rs m rs'' m'',
-  exec_body ge (l ++ l') rs m = Next rs'' m'' ->
-  exists rs' m',
-       exec_body ge l rs m = Next rs' m'
-    /\ exec_body ge l' rs' m' = Next rs'' m''.
-Proof.
-  induction l.
-  - intros. simpl in H. repeat eexists. auto.
-  - intros. rewrite <- app_comm_cons in H. simpl in H.
-    destruct (exec_basic_instr ge a rs m) eqn:EXEBI.
-    + apply IHl in H. destruct H as (rs1 & m1 & EXEB1 & EXEB2).
-      repeat eexists. simpl. rewrite EXEBI. eauto. auto.
-    + discriminate.
-Qed.
-
-Lemma exec_body_pc:
-  forall l ge rs1 m1 rs2 m2,
-  exec_body ge l rs1 m1 = Next rs2 m2 ->
-  rs2 PC = rs1 PC.
-Proof.
-  induction l.
-  - intros. inv H. auto.
-  - intros until m2. intro EXEB.
-    inv EXEB. destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
-    eapply IHl in H0. rewrite H0.
-    erewrite exec_basic_instr_pc; eauto.
-Qed.
-
 Lemma next_eq:
   forall (rs rs': regset) m m',
   rs = rs' -> m = m' -> Next rs m = Next rs' m'.

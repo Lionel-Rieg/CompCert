@@ -1353,19 +1353,6 @@ Proof.
     rewrite Happ. eapply exec_body_trans; eauto. rewrite Hcs2 in EXEB'; simpl in EXEB'. auto.
 Qed.
 
-Lemma exec_body_pc:
-  forall l rs1 m1 rs2 m2,
-  exec_body tge l rs1 m1 = Next rs2 m2 ->
-  rs2 PC = rs1 PC.
-Proof.
-  induction l.
-  - intros. inv H. auto.
-  - intros until m2. intro EXEB.
-    inv EXEB. destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
-    eapply IHl in H0. rewrite H0.
-    erewrite exec_basic_instr_pc; eauto.
-Qed.
-
 Lemma exec_body_control:
   forall b rs1 m1 rs2 m2 rs3 m3 fn,
   exec_body tge (body b) rs1 m1 = Next rs2 m2 ->
