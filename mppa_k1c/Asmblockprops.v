@@ -6,6 +6,7 @@ Require Import Memory.
 Require Import Globalenvs.
 Require Import Values.
 Require Import Asmblock.
+Require Import Axioms.
 
 Definition bblock_simu (ge: Genv.t fundef unit) (f: function) (bb bb': bblock) :=
   forall rs m,
@@ -72,6 +73,8 @@ Ltac Simplif :=
 
 Ltac Simpl := repeat Simplif.
 
+(* For Asmblockgenproof0 *)
+
 Theorem exec_basic_instr_pc:
   forall ge b rs1 m1 rs2 m2,
   exec_basic_instr ge b rs1 m1 = Next rs2 m2 ->
@@ -124,3 +127,217 @@ Proof.
   - destruct rd; try discriminate. inv H1; Simpl.
   - reflexivity.
 Qed.
+
+(* For PostpassSchedulingproof *)
+
+Lemma regset_double_set:
+  forall r1 r2 (rs: regset) v1 v2,
+  r1 <> r2 ->
+  (rs # r1 <- v1 # r2 <- v2) = (rs # r2 <- v2 # r1 <- v1).
+Proof.
+  intros. apply functional_extensionality. intros r. destruct (preg_eq r r1).
+  - subst. rewrite Pregmap.gso; auto. repeat (rewrite Pregmap.gss). auto.
+  - destruct (preg_eq r r2).
+    + subst. rewrite Pregmap.gss. rewrite Pregmap.gso; auto. rewrite Pregmap.gss. auto.
+    + repeat (rewrite Pregmap.gso; auto).
+Qed.
+
+Lemma next_eq:
+  forall (rs rs': regset) m m',
+  rs = rs' -> m = m' -> Next rs m = Next rs' m'.
+Proof.
+  intros; apply f_equal2; auto.
+Qed.
+
+Lemma exec_load_offset_pc_var:
+  forall trap t rs m rd ra ofs rs' m' v,
+  exec_load_offset trap t rs m rd ra ofs = Next rs' m' ->
+  exec_load_offset trap t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_offset in *. unfold parexec_load_offset in *. rewrite Pregmap.gso; try discriminate. destruct (eval_offset ofs); try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+Qed.
+
+Lemma exec_load_reg_pc_var:
+  forall trap t rs m rd ra ro rs' m' v,
+    exec_load_reg trap t rs m rd ra ro = Next rs' m' ->
+    exec_load_reg trap t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_reg in *. unfold parexec_load_reg in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+Qed.
+
+Lemma exec_load_regxs_pc_var:
+  forall trap t rs m rd ra ro rs' m' v,
+  exec_load_regxs trap t rs m rd ra ro = Next rs' m' ->
+  exec_load_regxs trap t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_regxs in *. unfold parexec_load_regxs in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _).
+  - inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+  - unfold parexec_incorrect_load in *.
+    destruct trap; try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros. rewrite regset_double_set; auto. discriminate.
+Qed.
+
+Lemma exec_load_offset_q_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_load_q_offset rs m rd ra ofs = Next rs' m' ->
+  exec_load_q_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_q_offset in *. unfold parexec_load_q_offset in *.
+  destruct (gpreg_q_expand rd) as [rd0 rd1].
+  (* destruct (ireg_eq rd0 ra); try discriminate. *)
+  rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  inv H.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  inv H1. f_equal.
+  rewrite (regset_double_set PC rd0) by discriminate.
+  rewrite (regset_double_set PC rd1) by discriminate.
+  reflexivity.
+Qed.
+
+Lemma exec_load_offset_o_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_load_o_offset rs m rd ra ofs = Next rs' m' ->
+  exec_load_o_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_load_o_offset in *. unfold parexec_load_o_offset in *.
+  destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3].
+(*
+  destruct (ireg_eq rd0 ra); try discriminate.
+  destruct (ireg_eq rd1 ra); try discriminate.
+  destruct (ireg_eq rd2 ra); try discriminate.
+*)
+  rewrite Pregmap.gso; try discriminate.
+  simpl in *.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  destruct (Mem.loadv _ _ _); try discriminate.
+  rewrite (regset_double_set PC rd0) by discriminate.
+  rewrite (regset_double_set PC rd1) by discriminate.
+  rewrite (regset_double_set PC rd2) by discriminate.
+  rewrite (regset_double_set PC rd3) by discriminate.
+  inv H.
+  trivial.
+Qed.
+
+Lemma exec_store_offset_pc_var:
+  forall t rs m rd ra ofs rs' m' v,
+  exec_store_offset t rs m rd ra ofs = Next rs' m' ->
+  exec_store_offset t rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_offset in *. unfold parexec_store_offset in *. rewrite Pregmap.gso; try discriminate.
+  destruct (eval_offset ofs); try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
+Lemma exec_store_q_offset_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_store_q_offset rs m rd ra ofs = Next rs' m' ->
+  exec_store_q_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_q_offset in *. unfold parexec_store_q_offset in *. rewrite Pregmap.gso; try discriminate.
+  simpl in *.
+  destruct (gpreg_q_expand _) as [s0 s1].
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  inv H. apply next_eq; auto.
+Qed.
+
+Lemma exec_store_o_offset_pc_var:
+  forall rs m rd ra ofs rs' m' v,
+  exec_store_o_offset rs m rd ra ofs = Next rs' m' ->
+  exec_store_o_offset rs # PC <- v m rd ra ofs = Next rs' # PC <- v m'.
+Proof.
+  intros.
+  unfold exec_store_o_offset in *. unfold parexec_store_o_offset in *.
+  destruct (gpreg_o_expand _) as [[[s0 s1] s2] s3].
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  destruct (Mem.storev _ _ _); try discriminate.
+  inv H.
+  trivial.
+Qed.
+  
+Lemma exec_store_reg_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_store_reg t rs m rd ra ro = Next rs' m' ->
+  exec_store_reg t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_reg in *. unfold parexec_store_reg in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
+Lemma exec_store_regxs_pc_var:
+  forall t rs m rd ra ro rs' m' v,
+  exec_store_regxs t rs m rd ra ro = Next rs' m' ->
+  exec_store_regxs t rs # PC <- v m rd ra ro = Next rs' # PC <- v m'.
+Proof.
+  intros. unfold exec_store_regxs in *. unfold parexec_store_regxs in *. rewrite Pregmap.gso; try discriminate.
+  destruct (Mem.storev _ _ _).
+  - inv H. apply next_eq; auto.
+  - discriminate.
+Qed.
+
+Theorem exec_basic_instr_pc_var:
+  forall ge i rs m rs' m' v,
+  exec_basic_instr ge i rs m = Next rs' m' ->
+  exec_basic_instr ge i (rs # PC <- v) m = Next (rs' # PC <- v) m'.
+Proof.
+  intros. unfold exec_basic_instr in *. unfold bstep in *. destruct i.
+  - unfold exec_arith_instr in *. destruct i; destruct i.
+      all: try (exploreInst; inv H; apply next_eq; auto;
+      apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate).
+(* 
+      (* Some cases treated seperately because exploreInst destructs too much *)
+      all: try (inv H; apply next_eq; auto; apply functional_extensionality; intros; rewrite regset_double_set; auto; discriminate). *)
+  - destruct i.
+    + exploreInst; apply exec_load_offset_pc_var; auto.
+    + exploreInst; apply exec_load_reg_pc_var; auto.
+    + exploreInst; apply exec_load_regxs_pc_var; auto.
+    + apply exec_load_offset_q_pc_var; auto.
+    + apply exec_load_offset_o_pc_var; auto.
+  - destruct i.
+    + exploreInst; apply exec_store_offset_pc_var; auto.
+    + exploreInst; apply exec_store_reg_pc_var; auto.
+    + exploreInst; apply exec_store_regxs_pc_var; auto.
+    + apply exec_store_q_offset_pc_var; auto.
+    + apply exec_store_o_offset_pc_var; auto.
+  - destruct (Mem.alloc _ _ _) as (m1 & stk). repeat (rewrite Pregmap.gso; try discriminate).
+    destruct (Mem.storev _ _ _ _); try discriminate.
+    inv H. apply next_eq; auto. apply functional_extensionality. intros.
+    rewrite (regset_double_set GPR32 PC); try discriminate.
+    rewrite (regset_double_set GPR12 PC); try discriminate.
+    rewrite (regset_double_set FP PC); try discriminate. reflexivity.
+  - repeat (rewrite Pregmap.gso; try discriminate).
+    destruct (Mem.loadv _ _ _); try discriminate.
+    destruct (rs GPR12); try discriminate.
+    destruct (Mem.free _ _ _ _); try discriminate.
+    inv H. apply next_eq; auto.
+    rewrite (regset_double_set GPR32 PC).
+    rewrite (regset_double_set GPR12 PC). reflexivity.
+    all: discriminate.
+  - destruct rs0; try discriminate. inv H. apply next_eq; auto.
+    repeat (rewrite Pregmap.gso; try discriminate). apply regset_double_set; discriminate.
+  - destruct rd; try discriminate. inv H. apply next_eq; auto.
+    repeat (rewrite Pregmap.gso; try discriminate). apply regset_double_set; discriminate.
+  - inv H. apply next_eq; auto.
+Qed.
+
+
