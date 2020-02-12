@@ -29,6 +29,7 @@ let option_fcse = ref true
 let option_fredundancy = ref true
 let option_fduplicate = ref false
 let option_finvertcond = ref true (* only active if option_fduplicate is also true *)
+let option_ftracelinearize = ref false
 let option_fpostpass = ref true
 let option_fpostpass_sched = ref "list"
 let option_fifconversion = ref true
