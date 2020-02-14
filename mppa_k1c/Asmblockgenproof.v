@@ -16,7 +16,7 @@ Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
 Require Import Values Memory Events Globalenvs Smallstep.
 Require Import Op Locations Machblock Conventions Asmblock.
-Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1.
+Require Import Asmblockgen Asmblockgenproof0 Asmblockgenproof1 Asmblockprops.
 Require Import Axioms.
 
 Module MB := Machblock.
@@ -1351,19 +1351,6 @@ Proof.
     exists rs3, m3, cs3, ep.
     repeat (split; simpl; auto). subst. simpl in *. auto.
     rewrite Happ. eapply exec_body_trans; eauto. rewrite Hcs2 in EXEB'; simpl in EXEB'. auto.
-Qed.
-
-Lemma exec_body_pc:
-  forall l rs1 m1 rs2 m2,
-  exec_body tge l rs1 m1 = Next rs2 m2 ->
-  rs2 PC = rs1 PC.
-Proof.
-  induction l.
-  - intros. inv H. auto.
-  - intros until m2. intro EXEB.
-    inv EXEB. destruct (exec_basic_instr _ _ _) eqn:EBI; try discriminate.
-    eapply IHl in H0. rewrite H0.
-    erewrite exec_basic_instr_pc; eauto.
 Qed.
 
 Lemma exec_body_control:

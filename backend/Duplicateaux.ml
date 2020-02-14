@@ -529,7 +529,7 @@ let tail_duplicate code preds ptree trace =
   in (new_code, new_ptree, !nb_duplicated)
 
 let superblockify_traces code preds traces =
-  let max_nb_duplicated = 2 (* FIXME - should be architecture dependent *)
+  let max_nb_duplicated = 1 (* FIXME - should be architecture dependent *)
   in let ptree = make_identity_ptree code
   in let rec f code ptree = function
     | [] -> (code, ptree, 0)

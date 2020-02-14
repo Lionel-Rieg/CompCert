@@ -20,7 +20,7 @@
 Require Import Coqlib Errors Maps.
 Require Import AST Integers Floats Values Memory Globalenvs.
 Require Import Op Locations Machblock Conventions.
-Require Import Asmblock Asmblockgen Asmblockgenproof0.
+Require Import Asmblock Asmblockgen Asmblockgenproof0 Asmblockprops.
 Require Import Chunks.
 
 (** Decomposition of integer constants. *)

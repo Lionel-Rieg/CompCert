@@ -1,4 +1,4 @@
-(* *********************************************************************)
+
 (*                                                                     *)
 (*              The Compcert verified compiler                         *)
 (*                                                                     *)
@@ -12,7 +12,6 @@
 
 open LTL
 open Maps
-open Camlcoq
 
 (* Trivial enumeration, in decreasing order of PC *)
 
@@ -28,6 +27,8 @@ let enumerate_aux f reach =
 ***)
 
 (* More clever enumeration that flattens basic blocks *)
+
+open Camlcoq
 
 module IntSet = Set.Make(struct type t = int let compare = compare end)
 
@@ -110,5 +111,55 @@ let flatten_blocks blks =
 
 (* Build the enumeration *)
 
-let enumerate_aux f reach =
+let enumerate_aux_flat f reach =
   flatten_blocks (basic_blocks f (join_points f))
+
+(**
+ * Enumeration based on traces as identified by Duplicate.v 
+ *
+ * The Duplicate phase heuristically identifies the most frequented paths. Each
+ * Icond is modified so that the preferred condition is a fallthrough (ifnot)
+ * rather than a branch (ifso).
+ *
+ * The enumeration below takes advantage of this - preferring to layout nodes
+ * following the fallthroughs of the Lcond branches
+ *)
+
+let get_some = function
+| None -> failwith "Did not get some"
+| Some thing -> thing
+
+exception EmptyList
+
+let rec last_element = function
+  | [] -> raise EmptyList
+  | e :: [] -> e
+  | e' :: e :: l -> last_element (e::l)
+
+let dfs code entrypoint =
+  let visited = ref (PTree.map (fun n i -> false) code) in
+  let rec dfs_list code = function
+  | [] -> []
+  | node :: ln ->
+      let node_dfs =
+        if not (get_some @@ PTree.get node !visited) then begin
+          visited := PTree.set node true !visited;
+          match PTree.get node code with
+          | None -> failwith "No such node"
+          | Some bb -> [node] @ match (last_element bb) with
+            | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
+            | Lbuiltin _ -> assert false
+            | Ltailcall _ | Lreturn -> []
+            | Lbranch n -> dfs_list code [n]
+            | Lcond (_, _, ifso, ifnot) -> dfs_list code [ifnot; ifso]
+            | Ljumptable(_, ln) -> dfs_list code ln
+          end
+        else []
+      in node_dfs @ (dfs_list code ln)
+  in dfs_list code [entrypoint]
+
+let enumerate_aux_trace f reach = dfs f.fn_code f.fn_entrypoint
+
+let enumerate_aux f reach =
+  if !Clflags.option_ftracelinearize then enumerate_aux_trace f reach
+  else enumerate_aux_flat f reach

@@ -33,6 +33,19 @@ Require Import Conventions.
 Require Import Errors.
 Require Export Asmvliw.
 
+(* Notations necessary to hook Asmvliw definitions *)
+Notation undef_caller_save_regs := Asmvliw.undef_caller_save_regs.
+Notation regset := Asmvliw.regset.
+Notation extcall_arg := Asmvliw.extcall_arg.
+Notation extcall_arg_pair := Asmvliw.extcall_arg_pair.
+Notation extcall_arguments := Asmvliw.extcall_arguments.
+Notation set_res := Asmvliw.set_res.
+Notation function := Asmvliw.function.
+Notation bblocks := Asmvliw.bblocks.
+Notation header := Asmvliw.header.
+Notation body := Asmvliw.body.
+Notation exit := Asmvliw.exit.
+Notation correct := Asmvliw.correct.
 
 (** * Auxiliary utilies on basic blocks *)
 
@@ -293,6 +306,31 @@ Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
      | Stuck => Stuck
      end
   end.
+
+
+Theorem builtin_body_nil:
+  forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
+Proof.
+  intros. destruct bb as [hd bdy ex WF]. simpl in *.
+  apply wf_bblock_refl in WF. inv WF. unfold builtin_alone in H1.
+  eapply H1; eauto.
+Qed.
+
+Theorem exec_body_app:
+  forall l l' rs m rs'' m'',
+  exec_body (l ++ l') rs m = Next rs'' m'' ->
+  exists rs' m',
+       exec_body l rs m = Next rs' m'
+    /\ exec_body l' rs' m' = Next rs'' m''.
+Proof.
+  induction l.
+  - intros. simpl in H. repeat eexists. auto.
+  - intros. rewrite <- app_comm_cons in H. simpl in H.
+    destruct (exec_basic_instr a rs m) eqn:EXEBI.
+    + apply IHl in H. destruct H as (rs1 & m1 & EXEB1 & EXEB2).
+      repeat eexists. simpl. rewrite EXEBI. eauto. auto.
+    + discriminate.
+Qed.
 
 (** Position corresponding to a label *)
 
