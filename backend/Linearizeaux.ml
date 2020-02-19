@@ -122,7 +122,11 @@ let enumerate_aux_flat f reach =
  * rather than a branch (ifso).
  *
  * The enumeration below takes advantage of this - preferring to layout nodes
- * following the fallthroughs of the Lcond branches
+ * following the fallthroughs of the Lcond branches.
+ *
+ * It is slightly adapted from the work of Petris and Hansen 90 on intraprocedural
+ * code positioning - only we do it on a broader grain, since we don't have the exact
+ * frequencies (we only know which branch is the preferred one)
  *)
 
 let get_some = function
@@ -136,6 +140,7 @@ let rec last_element = function
   | e :: [] -> e
   | e' :: e :: l -> last_element (e::l)
 
+(** old version
 let dfs code entrypoint =
   let visited = ref (PTree.map (fun n i -> false) code) in
   let rec dfs_list code = function
@@ -159,6 +164,43 @@ let dfs code entrypoint =
   in dfs_list code [entrypoint]
 
 let enumerate_aux_trace f reach = dfs f.fn_code f.fn_entrypoint
+*)
+
+
+let forward_sequences code entry =
+  let visited = ref (PTree.map (fun n i -> false) code) in
+  (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
+  let rec traverse_fallthrough code node =
+    if not (get_some @@ PTree.get node !visited) then begin
+      visited := PTree.set node true !visited;
+      match PTree.get node code with
+      | None -> failwith "No such node"
+      | Some bb ->
+          let ln, rem = match (last_element bb) with
+          | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
+          | Lbuiltin _ -> assert false
+          | Ltailcall _ | Lreturn -> ([], [])
+          | Lbranch n -> let ln, rem = traverse_fallthrough code n in (ln, rem)
+          | Lcond (_, _, ifso, ifnot) -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
+          | Ljumptable(_, ln) -> match ln with
+              | [] -> ([], [])
+              | n :: ln -> let lln, rem = traverse_fallthrough code n in (lln, ln @ rem)
+          in ([node] @ ln, rem)
+      end
+    else ([], [])
+  in let rec f code = function
+  | [] -> []
+  | node :: ln ->
+      let fs, rem = traverse_fallthrough code node
+      in [fs] @ (f code rem)
+  in (f code [entry])
+
+let order_sequences fs = fs
+
+let enumerate_aux_trace f reach =
+  let fs = forward_sequences f.fn_code f.fn_entrypoint
+  in let ofs = order_sequences fs
+  in List.flatten ofs
 
 let enumerate_aux f reach =
   if !Clflags.option_ftracelinearize then enumerate_aux_trace f reach
