@@ -195,6 +195,32 @@ let forward_sequences code entry =
       in [fs] @ (f code rem)
   in (f code [entry])
 
+let iter_set f s = Seq.iter f (Set.to_seq s)
+
+let try_merge code fs =
+  let seqs = ref (Set.of_list fs) in
+  let oldLength = ref (Set.cardinal !seqs) in
+  let continue = ref true in
+  while !continue do
+    iter_set (fun s ->
+      iter_set (fun s' ->
+        if (s == s') then ()
+        else if (can_be_merged s s') then
+          begin
+            seqs
+          end
+        else ()
+      ) !seqs
+    ) !seqs
+ (* FIXME - FIXME - continue *)
+
+
+    if !oldLength == List.length !seqs then
+      continue := false
+    else
+      oldLength := List.length !seqs
+  done
+
 let order_sequences fs = fs
 
 let enumerate_aux_trace f reach =
