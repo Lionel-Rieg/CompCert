@@ -201,25 +201,33 @@ let try_merge code fs =
   let seqs = ref (Set.of_list fs) in
   let oldLength = ref (Set.cardinal !seqs) in
   let continue = ref true in
+  let found = ref false in
   while !continue do
-    iter_set (fun s ->
-      iter_set (fun s' ->
-        if (s == s') then ()
-        else if (can_be_merged s s') then
-          begin
-            seqs
-          end
-        else ()
-      ) !seqs
-    ) !seqs
- (* FIXME - FIXME - continue *)
+    begin
+      found := false;
+      iter_set (fun s ->
+        if !found then ()
+        else iter_set (fun s' ->
+          if (!found || s == s') then ()
+          else if (can_be_merged s s') then
+            begin
+              seqs := Set.remove s !seqs;
+              seqs := Set.remove s' !seqs;
+              seqs := Set.add (get_some (merge s s')) !seqs;
+              found := true;
+            end
+          else ()
+        ) !seqs
+      ) !seqs;
+      if !oldLength == List.length !seqs then
+        continue := false
+      else
+        oldLength := List.length !seqs
+    end
+  done;
+  (* FIXME - continue *)
 
 
-    if !oldLength == List.length !seqs then
-      continue := false
-    else
-      oldLength := List.length !seqs
-  done
 
 let order_sequences fs = fs
 
