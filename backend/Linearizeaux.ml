@@ -195,11 +195,22 @@ let forward_sequences code entry =
       in [fs] @ (f code rem)
   in (f code [entry])
 
-let iter_set f s = Seq.iter f (Set.to_seq s)
+module PInt = struct
+  type t = P.t
+  let compare x y = compare (P.to_int x) (P.to_int y)
+end
+
+module PSet = Set.Make(PInt)
+
+let iter_set f s = Seq.iter f (PSet.to_seq s)
+
+let can_be_merged s s' = false
+
+let merge s s' = Some s
 
 let try_merge code fs =
-  let seqs = ref (Set.of_list fs) in
-  let oldLength = ref (Set.cardinal !seqs) in
+  let seqs = ref (PSet.of_list fs) in
+  let oldLength = ref (PSet.cardinal !seqs) in
   let continue = ref true in
   let found = ref false in
   while !continue do
@@ -211,23 +222,21 @@ let try_merge code fs =
           if (!found || s == s') then ()
           else if (can_be_merged s s') then
             begin
-              seqs := Set.remove s !seqs;
-              seqs := Set.remove s' !seqs;
-              seqs := Set.add (get_some (merge s s')) !seqs;
+              seqs := PSet.remove s !seqs;
+              seqs := PSet.remove s' !seqs;
+              seqs := PSet.add (get_some (merge s s')) !seqs;
               found := true;
             end
           else ()
         ) !seqs
       ) !seqs;
-      if !oldLength == List.length !seqs then
+      if !oldLength == PSet.cardinal !seqs then
         continue := false
       else
-        oldLength := List.length !seqs
+        oldLength := PSet.cardinal !seqs
     end
   done;
-  (* FIXME - continue *)
-
-
+  !seqs
 
 let order_sequences fs = fs
 
