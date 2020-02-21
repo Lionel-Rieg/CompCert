@@ -202,38 +202,73 @@ end
 
 module PSet = Set.Make(PInt)
 
-let iter_set f s = Seq.iter f (PSet.to_seq s)
+module LPInt = struct
+  type t = P.t list
+  let rec compare x y =
+    match x with
+    | [] -> ( match y with
+      | [] -> 0
+      | _ -> 1 )
+    | e :: l -> match y with
+      | [] -> -1
+      | e' :: l' ->
+          let e_cmp = PInt.compare e e' in
+          if e_cmp == 0 then compare l l' else e_cmp
+end
 
-let can_be_merged s s' = false
+module LPSet = Set.Make(LPInt)
+
+let iter_lpset f s = Seq.iter f (LPSet.to_seq s)
+
+let first_of = function
+  | [] -> None
+  | e :: l -> Some e
+
+let rec last_of = function
+  | [] -> None
+  | e :: l -> (match l with [] -> Some e | e :: l -> last_of l)
+
+let can_be_merged code s s' =
+  let last_s = get_some @@ last_of s in
+  let first_s' = get_some @@ first_of s' in
+  match get_some @@ PTree.get last_s code with
+  | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
+  | Lbuiltin _ | Ltailcall _ | Lreturn -> false
+  | Lbranch n -> n == first_s'
+  | Lcond (_, _, ifso, ifnot) -> ifnot == first_s'
+  | Ljumptable (_, ln) ->
+      match ln with
+      | [] -> false
+      | n :: ln -> n == first_s'
 
 let merge s s' = Some s
 
-let try_merge code fs =
-  let seqs = ref (PSet.of_list fs) in
-  let oldLength = ref (PSet.cardinal !seqs) in
+let try_merge code (fs: (BinNums.positive list) list) =
+  let seqs = ref (LPSet.of_list fs) in
+  let oldLength = ref (LPSet.cardinal !seqs) in
   let continue = ref true in
   let found = ref false in
   while !continue do
     begin
       found := false;
-      iter_set (fun s ->
+      iter_lpset (fun s ->
         if !found then ()
-        else iter_set (fun s' ->
+        else iter_lpset (fun s' ->
           if (!found || s == s') then ()
-          else if (can_be_merged s s') then
+          else if (can_be_merged code s s') then
             begin
-              seqs := PSet.remove s !seqs;
-              seqs := PSet.remove s' !seqs;
-              seqs := PSet.add (get_some (merge s s')) !seqs;
+              seqs := LPSet.remove s !seqs;
+              seqs := LPSet.remove s' !seqs;
+              seqs := LPSet.add (get_some (merge s s')) !seqs;
               found := true;
             end
           else ()
         ) !seqs
       ) !seqs;
-      if !oldLength == PSet.cardinal !seqs then
+      if !oldLength == LPSet.cardinal !seqs then
         continue := false
       else
-        oldLength := PSet.cardinal !seqs
+        oldLength := LPSet.cardinal !seqs
     end
   done;
   !seqs
