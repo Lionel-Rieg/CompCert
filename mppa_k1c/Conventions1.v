@@ -90,12 +90,17 @@ Definition is_float_reg (r: mreg) := false.
   returned value.  We treat a function without result as a function
   with one integer result. *)
 
+
 Definition loc_result (s: signature) : rpair mreg :=
-   match s.(sig_res) with
-   | None => One R0
-   | Some (Tint | Tany32) => One R0
-   | Some (Tfloat | Tsingle | Tany64) => One R0
-   | Some Tlong => if Archi.ptr64 then One R0 else One R0
+  match s.(sig_res) with
+   | Tvoid => One R0
+   | Tint8signed => One R0
+   | Tint8unsigned => One R0
+   | Tint16signed => One R0
+   | Tint16unsigned => One R0
+   | Tint | Tany32 => One R0
+   | Tfloat | Tsingle | Tany64 => One R0
+   | Tlong => if Archi.ptr64 then One R0 else One R0
    end.
 
 (** The result registers have types compatible with that given in the signature. *)
@@ -104,8 +109,8 @@ Lemma loc_result_type:
   forall sig,
   subtype (proj_sig_res sig) (typ_rpair mreg_type (loc_result sig)) = true.
 Proof.
-  intros. unfold proj_sig_res, loc_result, mreg_type;
-  destruct (sig_res sig) as [[]|]; auto; destruct Archi.ptr64; auto.
+  intros. unfold proj_sig_res, loc_result, mreg_type.
+  destruct (sig_res sig); try destruct Archi.ptr64; simpl; trivial; destruct t; trivial.
 Qed.
 
 (** The result locations are caller-save registers *)
