@@ -643,7 +643,6 @@ let rec elab_specifier ?(only = false) loc env specifier =
        - a set of attributes (const, volatile, restrict)
        - a list of type specifiers *)
   let sto = ref Storage_default
-  and thread_local = ref false
   and inline = ref false
   and noreturn = ref false
   and restrict = ref false
@@ -663,7 +662,18 @@ let rec elab_specifier ?(only = false) loc env specifier =
       | STATIC -> sto := Storage_static
       | EXTERN -> sto := Storage_extern
       | REGISTER -> sto := Storage_register
-      | THREAD_LOCAL -> thread_local := true
+      | THREAD_LOCAL ->
+         sto := (match !sto with
+                 | Storage_static | Storage_thread_local_static ->
+                    Storage_thread_local_static
+                 | Storage_extern | Storage_thread_local_extern ->
+                    Storage_thread_local_extern
+                 | Storage_default | Storage_thread_local ->
+                    Storage_thread_local
+                 | Storage_auto|Storage_register ->
+                    error loc "_Thread_local on auto or register variable";
+                    !sto
+                )
       | TYPEDEF ->
           if !typedef then
             error loc "multiple uses of 'typedef'";
