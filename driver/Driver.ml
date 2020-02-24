@@ -195,6 +195,7 @@ Processing options:
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
+  -fcse2         Perform inter-loop common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
@@ -263,8 +264,10 @@ let dump_mnemonics destfile =
   exit 0
 
 let optimization_options = [
-  option_ftailcalls; option_fifconversion; option_fconstprop; option_fcse;
-  option_fpostpass; option_fredundancy; option_finline_functions_called_once;
+    option_ftailcalls; option_fifconversion; option_fconstprop;
+    option_fcse; option_fcse2;
+    option_fpostpass;
+    option_fredundancy; option_finline; option_finline_functions_called_once;
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -387,6 +390,7 @@ let cmdline_actions =
   @ f_opt "if-conversion" option_fifconversion
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
+  @ f_opt "cse2" option_fcse2
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ f_opt "duplicate" option_fduplicate
