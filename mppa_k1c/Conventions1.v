@@ -415,3 +415,6 @@ Lemma loc_arguments_main:
 Proof.
   reflexivity.
 Qed.
+
+
+Definition return_value_needs_normalization (t: rettype) : bool := false.

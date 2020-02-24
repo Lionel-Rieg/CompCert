@@ -22,6 +22,7 @@ Require Import SelectOp.
 Local Open Scope cminorsel_scope.
 Local Open Scope string_scope.
 
+(*
 (** Some operations on 64-bit integers are transformed into calls to
   runtime library functions.  The following type class collects
   the names of these functions. *)
@@ -51,6 +52,7 @@ Definition sig_f_l := mksignature (Tfloat :: nil) Tlong cc_default.
 Definition sig_ll_l := mksignature (Tlong :: Tlong :: nil) Tlong cc_default.
 Definition sig_li_l := mksignature (Tlong :: Tint :: nil) Tlong cc_default.
 Definition sig_ii_l := mksignature (Tint :: Tint :: nil) Tlong cc_default.
+*)
 
 Section SELECT.
 
