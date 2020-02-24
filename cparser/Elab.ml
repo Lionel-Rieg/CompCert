@@ -655,7 +655,7 @@ let rec elab_specifier ?(only = false) loc env specifier =
       restrict := cv = CV_RESTRICT;
       attr := add_attributes (elab_cvspec env cv) !attr
   | SpecStorage st ->
-      if !sto <> Storage_default && st <> TYPEDEF then
+      if !sto <> Storage_default && st <> TYPEDEF && st <> THREAD_LOCAL then
         error loc "multiple storage classes in declaration specifier";
       begin match st with
       | AUTO -> sto := Storage_auto

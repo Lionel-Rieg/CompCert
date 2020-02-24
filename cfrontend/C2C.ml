@@ -59,6 +59,15 @@ let atom_is_extern a =
   with Not_found ->
     false
 
+let atom_is_thread_local a =
+  try
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_thread_local_extern| C.Storage_thread_local_static
+    | C.Storage_thread_local -> true
+    | _ -> false
+  with Not_found ->
+    false
+  
 let atom_alignof a =
   try
     (Hashtbl.find decl_atom a).a_alignment

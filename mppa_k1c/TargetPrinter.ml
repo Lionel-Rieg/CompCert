@@ -211,13 +211,17 @@ module Target (*: TARGET*) =
 
 (* Generate code to load the address of id + ofs in register r *)
 
-(* FIXME DMonniaux ugly ugly hack to get at standard __thread data *)
     let loadsymbol oc r id ofs =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
-        fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
-      end else begin
-        if (extern_atom id) = "_impure_thread_data" then begin
+        if C2C.atom_is_thread_local id then begin
+            fprintf oc "	addd	%a = $r13, @tprel(%s)\n" ireg r (extern_atom id)
+        end else begin
+            fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
+        end
+     end else
+     begin
+        if C2C.atom_is_thread_local id then begin
             fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs)         
         end else begin            
             fprintf oc "	make	%a = %a\n" ireg r symbol_offset (id, ofs)

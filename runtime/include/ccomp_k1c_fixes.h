@@ -6,7 +6,7 @@
 #endif
 
 #undef __GNUC__
-#define __thread
+#define __thread _Thread_local
 
 struct __int128_ccomp { long __int128_ccomp_low; long __int128_ccomp_high; };
 
