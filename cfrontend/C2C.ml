@@ -1347,7 +1347,11 @@ let convertGlobvar loc env (sto, id, ty, optinit) =
     | Some i ->
         convertInitializer env ty i in
   let (section, access) =
-    Sections.for_variable env id' ty (optinit <> None) in
+    Sections.for_variable env id' ty (optinit <> None)
+      (match sto with
+       | Storage_thread_local | Storage_thread_local_extern
+       | Storage_thread_local_static -> true
+       | _ -> false) in
   if Z.gt sz (Z.of_uint64 0xFFFF_FFFFL) then
     error "'%s' is too big (%s bytes)"
                    id.name (Z.to_string sz);

@@ -17,7 +17,8 @@
 
 type section_name =
   | Section_text
-  | Section_data of bool          (* true = init data, false = uninit data *)
+  | Section_data of bool (* true = init data, false = uninit data *)
+                  * bool (* thread local? *)
   | Section_small_data of bool
   | Section_const of bool
   | Section_small_const of bool
@@ -47,8 +48,8 @@ type section_info = {
 }
 
 let default_section_info = {
-  sec_name_init = Section_data true;
-  sec_name_uninit = Section_data false;
+  sec_name_init = Section_data (true, false);
+  sec_name_uninit = Section_data (false, false);
   sec_writable = true;
   sec_executable = false;
   sec_access = Access_default
@@ -63,8 +64,13 @@ let builtin_sections = [
       sec_writable = false; sec_executable = true;
       sec_access = Access_default};
   "DATA",
-     {sec_name_init = Section_data true;
-      sec_name_uninit = Section_data false;
+     {sec_name_init = Section_data (true, false);
+      sec_name_uninit = Section_data (false, false);
+      sec_writable = true; sec_executable = false;
+      sec_access = Access_default};
+  "TDATA",
+     {sec_name_init = Section_data (true, true);
+      sec_name_uninit = Section_data (false, true);
       sec_writable = true; sec_executable = false;
       sec_access = Access_default};
   "SDATA",
@@ -162,7 +168,7 @@ let gcc_section name readonly exec =
 
 (* Determine section for a variable definition *)
 
-let for_variable env id ty init =
+let for_variable env id ty init thrl =
   let attr = Cutil.attributes_of_type env ty in
   let readonly = List.mem C.AConst attr && not(List.mem C.AVolatile attr) in
   let si =
@@ -181,7 +187,8 @@ let for_variable env id ty init =
         let name =
           if readonly
           then if size <= !Clflags.option_small_const then "SCONST" else "CONST"
-          else if size <= !Clflags.option_small_data then "SDATA" else "DATA" in
+          else if size <= !Clflags.option_small_data then "SDATA" else
+            if thrl then "TDATA" else "DATA" in
         try
           Hashtbl.find current_section_table name
         with Not_found ->
