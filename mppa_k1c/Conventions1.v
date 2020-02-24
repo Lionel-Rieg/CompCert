@@ -120,7 +120,7 @@ Lemma loc_result_caller_save:
   forall_rpair (fun r => is_callee_save r = false) (loc_result s).
 Proof.
   intros. unfold loc_result, is_callee_save;
-  destruct (sig_res s) as [[]|]; simpl; auto; destruct Archi.ptr64; simpl; auto.
+            destruct (sig_res s); simpl; auto; try destruct Archi.ptr64; simpl; auto; try destruct t; simpl; auto.
 Qed.
 
 (** If the result is in a pair of registers, those registers are distinct and have type [Tint] at least. *)
@@ -130,14 +130,15 @@ Lemma loc_result_pair:
   match loc_result sg with
   | One _ => True
   | Twolong r1 r2 =>
-       r1 <> r2 /\ sg.(sig_res) = Some Tlong
+       r1 <> r2 /\ sg.(sig_res) = Tlong
     /\ subtype Tint (mreg_type r1) = true /\ subtype Tint (mreg_type r2) = true 
     /\ Archi.ptr64 = false
   end.
 Proof.
   intros.
-  unfold loc_result; destruct (sig_res sg) as [[]|]; auto.
-  unfold mreg_type; destruct Archi.ptr64; auto.
+  unfold loc_result; destruct (sig_res sg); auto;
+    unfold mreg_type; try destruct Archi.ptr64; auto;
+      destruct t; auto.
 Qed.
 
 (** The location of the result depends only on the result part of the signature *)
