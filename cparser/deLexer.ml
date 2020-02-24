@@ -30,6 +30,7 @@ let delex (symbol : string) : string =
   | "BUILTIN_VA_ARG" -> "__builtin_va_arg"
   | "CONST" -> "const"
   | "INLINE" -> "inline"
+  | "THREAD_LOCAL" -> "_Thread_local"
   | "PACKED" -> "__packed__"
   | "RESTRICT" -> "restrict"
   | "SIGNED" -> "signed"
