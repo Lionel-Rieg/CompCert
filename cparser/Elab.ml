@@ -674,6 +674,7 @@ let rec elab_specifier ?(only = false) loc env specifier =
                     error loc "_Thread_local on auto or register variable";
                     !sto
                 )
+
       | TYPEDEF ->
           if !typedef then
             error loc "multiple uses of 'typedef'";

@@ -45,13 +45,17 @@ let decl_atom : (AST.ident, atom_info) Hashtbl.t = Hashtbl.create 103
 
 let atom_is_static a =
   try
-    (Hashtbl.find decl_atom a).a_storage = C.Storage_static
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_static | C.Storage_thread_local_static -> true
+    | _ -> false
   with Not_found ->
     false
 
 let atom_is_extern a =
   try
-    (Hashtbl.find decl_atom a).a_storage = C.Storage_extern
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_extern| C.Storage_thread_local_extern -> true
+    | _ -> false
   with Not_found ->
     false
 
@@ -1226,7 +1230,8 @@ let convertFundef loc env fd =
   let vars =
     List.map
       (fun (sto, id, ty, init) ->
-        if sto = Storage_extern || sto = Storage_static then
+        if   sto = Storage_extern || sto = Storage_thread_local_extern
+          || sto = Storage_static || sto = Storage_thread_local_static then
           unsupported "'static' or 'extern' local variable";
         if init <> None then
           unsupported "initialized local variable";
@@ -1328,7 +1333,8 @@ let convertGlobvar loc env (sto, id, ty, optinit) =
   let init' =
     match optinit with
     | None ->
-        if sto = C.Storage_extern then [] else [AST.Init_space sz]
+       if sto = C.Storage_extern || sto = C.Storage_thread_local_extern
+       then [] else [AST.Init_space sz]
     | Some i ->
         convertInitializer env ty i in
   let (section, access) =
@@ -1336,7 +1342,8 @@ let convertGlobvar loc env (sto, id, ty, optinit) =
   if Z.gt sz (Z.of_uint64 0xFFFF_FFFFL) then
     error "'%s' is too big (%s bytes)"
                    id.name (Z.to_string sz);
-  if sto <> C.Storage_extern && Cutil.incomplete_type env ty then
+  if sto <> C.Storage_extern && sto <> C.Storage_thread_local_extern
+     && Cutil.incomplete_type env ty then
     error "'%s' has incomplete type" id.name;
   Hashtbl.add decl_atom id'
     { a_storage = sto;
@@ -1434,7 +1441,7 @@ let cleanupGlobals p =
         if IdentSet.mem fd.fd_name !strong then
           error "multiple definitions of %s" fd.fd_name.name;
         strong := IdentSet.add fd.fd_name !strong
-    | C.Gdecl(Storage_extern, id, ty, init) ->
+    | C.Gdecl((Storage_extern|Storage_thread_local_extern), id, ty, init) ->
         extern := IdentSet.add id !extern
     | C.Gdecl(sto, id, ty, Some i) ->
         if IdentSet.mem id !strong then
@@ -1453,7 +1460,7 @@ let cleanupGlobals p =
         match g.gdesc with
         | C.Gdecl(sto, id, ty, init) ->
             let better_def_exists =
-              if sto = Storage_extern then
+              if sto = Storage_extern || sto = Storage_thread_local_extern then
                 IdentSet.mem id !strong || IdentSet.mem id !weak
               else if init = None then
                 IdentSet.mem id !strong

@@ -126,7 +126,7 @@ let add_enum e =
 *)
 
 let visible_decl (sto, id, ty, init) =
-  sto = Storage_default &&
+  (sto = Storage_default || sto = Storage_thread_local) &&
   match ty with TFun _ -> false | _ -> true
 
 let visible_fundef f =
