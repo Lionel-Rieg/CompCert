@@ -130,7 +130,7 @@ Lemma loc_result_pair:
   match loc_result sg with
   | One _ => True
   | Twolong r1 r2 =>
-       r1 <> r2 /\ sg.(sig_res) = Tlong
+       r1 <> r2 /\ proj_sig_res sg = Tlong
     /\ subtype Tint (mreg_type r1) = true /\ subtype Tint (mreg_type r2) = true 
     /\ Archi.ptr64 = false
   end.
