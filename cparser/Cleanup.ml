@@ -131,9 +131,9 @@ let visible_decl (sto, id, ty, init) =
 
 let visible_fundef f =
   match f.fd_storage with
-  | Storage_default -> not f.fd_inline
-  | Storage_extern -> true
-  | Storage_static -> false
+  | Storage_default | Storage_thread_local -> not f.fd_inline
+  | Storage_extern | Storage_thread_local_extern -> true
+  | Storage_static | Storage_thread_local_static -> false
   | Storage_auto | Storage_register -> assert false
 
 let rec add_init_globdecls accu = function
