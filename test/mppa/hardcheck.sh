@@ -3,4 +3,4 @@
 
 source do_test.sh
 
-do_test hardcheck
+do_test hardcheck 1

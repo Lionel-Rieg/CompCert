@@ -43,18 +43,18 @@ Definition platform_builtin_table : list (string * platform_builtin) :=
 Definition platform_builtin_sig (b: platform_builtin) : signature :=
   match b with
   | BI_fmin | BI_fmax =>
-      mksignature (Tfloat :: Tfloat :: nil) (Some Tfloat) cc_default
+      mksignature (Tfloat :: Tfloat :: nil) Tfloat cc_default
   | BI_fminf | BI_fmaxf =>
-      mksignature (Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default
+      mksignature (Tsingle :: Tsingle :: nil) Tsingle cc_default
   | BI_fabsf =>
-      mksignature (Tsingle :: nil) (Some Tsingle) cc_default
+      mksignature (Tsingle :: nil) Tsingle cc_default
   | BI_fma =>
-      mksignature (Tfloat :: Tfloat :: Tfloat :: nil) (Some Tfloat) cc_default
+      mksignature (Tfloat :: Tfloat :: Tfloat :: nil) Tfloat cc_default
   | BI_fmaf =>
-      mksignature (Tsingle :: Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default
+      mksignature (Tsingle :: Tsingle :: Tsingle :: nil) Tsingle cc_default
   end.
 
-Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (proj_sig_res (platform_builtin_sig b)) :=
+Definition platform_builtin_sem (b: platform_builtin) : builtin_sem (sig_res (platform_builtin_sig b)) :=
   match b with
   | BI_fmin => mkbuiltin_n2t Tfloat Tfloat Tfloat ExtFloat.min
   | BI_fmax => mkbuiltin_n2t Tfloat Tfloat Tfloat ExtFloat.max
