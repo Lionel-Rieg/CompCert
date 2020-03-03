@@ -34,7 +34,7 @@ Section MEMORY_WRITE.
   Variable chunkw chunkr : memory_chunk.
   Variable base : val.
   
-  Variable addrw addrr valw valr : val.
+  Variable addrw addrr valw : val.
   Hypothesis STORE : Mem.storev chunkw m addrw valw = Some m2.
 
   Section INDEXED_AWAY.
