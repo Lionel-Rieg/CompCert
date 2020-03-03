@@ -24,6 +24,14 @@ Proof.
   destruct Archi.ptr64; reflexivity.
 Qed.
 
+Lemma ptrofs_max_unsigned :
+  Ptrofs.max_unsigned = if Archi.ptr64 then 18446744073709551615 else 4294967295.
+Proof.
+  unfold Ptrofs.max_unsigned.
+  rewrite ptrofs_modulus.
+  destruct Archi.ptr64; reflexivity.
+Qed.
+
 Section SOUNDNESS.
   Variable F V : Type.
   Variable genv: Genv.t F V.
@@ -38,17 +46,17 @@ Section MEMORY_WRITE.
   Hypothesis STORE : Mem.storev chunkw m addrw valw = Some m2.
 
   Section INDEXED_AWAY.
-  Variable ofsw ofsr : ptrofs.
+  Variable ofsw ofsr : int.
   Hypothesis ADDRW : eval_addressing genv sp
                        (Aindexed ofsw) (base :: nil) = Some addrw. 
   Hypothesis ADDRR : eval_addressing genv sp
                        (Aindexed ofsr) (base :: nil) = Some addrr.
 
   Lemma load_store_away1 :
-    forall RANGEW : 0 <= Ptrofs.unsigned ofsw <= Ptrofs.modulus - largest_size_chunk,
-    forall RANGER : 0 <= Ptrofs.unsigned ofsr <= Ptrofs.modulus - largest_size_chunk,
-    forall SWAPPABLE :    Ptrofs.unsigned ofsw + size_chunk chunkw <= Ptrofs.unsigned ofsr
-                       \/ Ptrofs.unsigned ofsr + size_chunk chunkr <= Ptrofs.unsigned ofsw,
+    forall RANGEW : 0 <= Int.unsigned ofsw <= Ptrofs.modulus - largest_size_chunk,
+    forall RANGER : 0 <= Int.unsigned ofsr <= Ptrofs.modulus - largest_size_chunk,
+    forall SWAPPABLE :    Int.unsigned ofsw + size_chunk chunkw <= Int.unsigned ofsr
+                       \/ Int.unsigned ofsr + size_chunk chunkr <= Int.unsigned ofsw,
     Mem.loadv chunkr m2 addrr = Mem.loadv chunkr m addrr.
   Proof.
     intros.
@@ -66,19 +74,19 @@ Section MEMORY_WRITE.
     exact STORE.
     right.
 
-    all: try (destruct (Ptrofs.unsigned_add_either i ofsr) as [OFSR | OFSR];
+    all: try (destruct (Ptrofs.unsigned_add_either i (Ptrofs.of_int ofsr)) as [OFSR | OFSR];
               rewrite OFSR).
-    all: try (destruct (Ptrofs.unsigned_add_either i ofsw) as [OFSW | OFSW];
+    all: try (destruct (Ptrofs.unsigned_add_either i (Ptrofs.of_int ofsw)) as [OFSW | OFSW];
               rewrite OFSW).
-    
-    all: try rewrite ptrofs_modulus in *.
-   
-    all: repeat rewrite Ptrofs.unsigned_repr by (change Ptrofs.max_unsigned with 4294967295; lia).
-    all: intuition lia.
+    all: unfold Ptrofs.of_int.
+
+    all: repeat rewrite Ptrofs.unsigned_repr by (unfold Ptrofs.max_unsigned; rewrite ptrofs_modulus; destruct Archi.ptr64; lia).
+    all: repeat rewrite ptrofs_modulus.
+    all: destruct Archi.ptr64; intuition lia.
   Qed.
   
   Theorem load_store_away :
-    can_swap_accesses_ofs (Ptrofs.unsigned ofsr) chunkr (Ptrofs.unsigned ofsw) chunkw = true ->
+    can_swap_accesses_ofs (Int.unsigned ofsr) chunkr (Int.unsigned ofsw) chunkw = true ->
     Mem.loadv chunkr m2 addrr = Mem.loadv chunkr m addrr.
   Proof.
     intro SWAP.
@@ -117,7 +125,7 @@ Proof.
   simpl in OVERLAP.
   destruct (peq base base'). 2: discriminate.
   subst base'.
-  destruct (can_swap_accesses_ofs (Ptrofs.unsigned i0) chunk' (Ptrofs.unsigned i) chunk) eqn:SWAP.
+  destruct (can_swap_accesses_ofs (Int.unsigned i0) chunk' (Int.unsigned i) chunk) eqn:SWAP.
   2: discriminate.
   simpl in *.
   eapply load_store_away with (F:=F) (V:=V) (genv:=genv) (sp:=sp); eassumption.
