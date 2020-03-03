@@ -13,7 +13,8 @@ Require Import Memory Registers Op RTL Maps.
 Require Import Globalenvs Values.
 Require Import Linking Values Memory Globalenvs Events Smallstep.
 Require Import Registers Op RTL.
-Require Import CSE2.
+Require Import CSE2 CSE2deps CSE2depsproof.
+Require Import Lia.
 
 Lemma args_unaffected:
   forall rs : regset,
@@ -36,515 +37,6 @@ Proof.
   apply IHargs.
   assumption.
 Qed.
-
-Lemma gpset_inter_none: forall a b i,
-    (pset_inter a b) ! i = None <->
-    (a ! i = None) \/ (b ! i = None).
-Proof.
-  intros. unfold pset_inter.
-  rewrite PTree.gcombine_null.
-  destruct (a ! i); destruct (b ! i); intuition discriminate.
-Qed.
-
-Lemma some_some:
-  forall x : option unit,
-    x <> None <-> x = Some tt.
-Proof.
-  destruct x as [[] | ]; split; congruence.
-Qed.  
-
-Lemma gpset_inter_some: forall a b i,
-    (pset_inter a b) ! i = Some tt <->
-    (a ! i = Some tt) /\ (b ! i = Some tt).
-Proof.
-  intros. unfold pset_inter.
-  rewrite PTree.gcombine_null.
-  destruct (a ! i) as [[] | ]; destruct (b ! i) as [[] | ]; intuition congruence.
-Qed.
-
-Definition wellformed_mem (rel : RELATION.t) : Prop :=
-  forall i sv,
-  (var_to_sym rel) ! i = Some sv ->
-  kill_sym_val_mem sv = true ->
-  (mem_used rel) ! i = Some tt.
-
-Definition wellformed_reg (rel : RELATION.t) : Prop :=
-  forall i j sv,
-  (var_to_sym rel) ! i = Some sv ->
-  kill_sym_val j sv = true ->
-  match (reg_used rel) ! j with
-  | Some uses => uses ! i = Some tt
-  | None => False
-  end.
-
-Lemma wellformed_mem_top : wellformed_mem RELATION.top.
-Proof.
-  unfold wellformed_mem, RELATION.top, pset_empty.
-  simpl.
-  intros.
-  rewrite PTree.gempty in *.
-  discriminate.
-Qed.
-Local Hint Resolve wellformed_mem_top : wellformed.
-
-Lemma wellformed_reg_top : wellformed_reg RELATION.top.
-Proof.
-  unfold wellformed_reg, RELATION.top, pset_empty.
-  simpl.
-  intros.
-  rewrite PTree.gempty in *.
-  discriminate.
-Qed.
-Local Hint Resolve wellformed_reg_top : wellformed.
-
-Lemma wellformed_mem_lub : forall a b,
-    (wellformed_mem a) -> (wellformed_mem b) -> (wellformed_mem (RELATION.lub a b)).
-Proof.
-  unfold wellformed_mem, RELATION.lub.
-  simpl.
-  intros a b Ha Hb.
-  intros i sv COMBINE KILLABLE.
-  rewrite PTree.gcombine in *.
-  2: reflexivity.
-  destruct (var_to_sym a) ! i as [syma | ] eqn:SYMA;
-    destruct (var_to_sym b) ! i as [symb | ] eqn:SYMB;
-    try discriminate.
-  destruct (eq_sym_val syma symb); try discriminate.
-  subst syma.
-  inv COMBINE.
-  apply gpset_inter_some.
-  split; eauto.
-Qed.
-Local Hint Resolve wellformed_mem_lub : wellformed.
-
-Lemma wellformed_reg_lub : forall a b,
-    (wellformed_reg a) -> (wellformed_reg b) -> (wellformed_reg (RELATION.lub a b)).
-Proof.
-  unfold wellformed_reg, RELATION.lub.
-  simpl.
-  intros a b Ha Hb.
-  intros i j sv COMBINE KILLABLE.
-  specialize Ha with (i := i) (j := j).
-  specialize Hb with (i := i) (j := j).
-  rewrite PTree.gcombine in *.
-  2: reflexivity.
-  destruct (var_to_sym a) ! i as [syma | ] eqn:SYMA;
-    destruct (var_to_sym b) ! i as [symb | ] eqn:SYMB;
-    try discriminate.
-  specialize Ha with (sv := syma).
-  specialize Hb with (sv := symb).
-  destruct (eq_sym_val syma symb); try discriminate.
-  subst syma.
-  inv COMBINE.
-  rewrite PTree.gcombine_null.
-  destruct ((reg_used a) ! j) as [uA| ]; destruct ((reg_used b) ! j) as [uB | ]; auto.
-  { pose proof (PTree.bempty_canon_correct (pset_inter uA uB) i) as EMPTY.
-    destruct PTree.bempty_canon.
-  - rewrite gpset_inter_none in EMPTY.
-    intuition congruence.
-  - rewrite gpset_inter_some.
-    auto.
-  }
-Qed.
-Local Hint Resolve wellformed_reg_lub : wellformed.
-
-Lemma wellformed_mem_kill_reg:
-  forall dst rel,
-    (wellformed_mem rel) -> (wellformed_mem (kill_reg dst rel)).
-Proof.
-  unfold wellformed_mem, kill_reg, pset_remove.
-  simpl.
-  intros dst rel Hrel.
-  intros i sv KILLREG KILLABLE.
-  rewrite PTree.gfilter1 in KILLREG.
-  destruct (peq dst i).
-  { subst i.
-    rewrite PTree.grs in *.
-    discriminate.
-  }
-  rewrite PTree.gro in * by congruence.
-  specialize Hrel with (i := i).
-  eapply Hrel.
-  2: eassumption.  
-  destruct (_ ! i); try discriminate.
-  destruct negb; congruence.
-Qed.
-Local Hint Resolve wellformed_mem_kill_reg : wellformed.
-
-Lemma kill_sym_val_referenced:
-  forall dst,
-  forall sv,
-    (kill_sym_val dst sv)=true <-> In dst (referenced_by sv).
-Proof.
-  intros.
-  destruct sv; simpl.
-  - destruct peq; intuition congruence.
-  - rewrite existsb_exists.
-    split.
-    + intros [x [IN EQ]].
-      destruct peq.
-      * subst x; trivial.
-      * discriminate.
-    + intro.
-      exists dst.
-      split; trivial.
-      destruct peq; trivial.
-      congruence.
-  - rewrite existsb_exists.
-    split.
-    + intros [x [IN EQ]].
-      destruct peq.
-      * subst x; trivial.
-      * discriminate.
-    + intro.
-      exists dst.
-      split; trivial.
-      destruct peq; trivial.
-      congruence.
-Qed.
-Local Hint Resolve kill_sym_val_referenced : wellformed.
-
-Lemma remove_from_sets_notin:
-  forall dst l sets j,
-    not (In j l) ->
-    (remove_from_sets dst l sets) ! j = sets ! j.
-Proof.
-  induction l; simpl; trivial.
-  intros.
-  rewrite IHl by tauto.
-  destruct (@PTree.get (PTree.t unit) a sets) eqn:SETSA; trivial.
-  pose proof (PTree.bempty_canon_correct (PTree.remove dst t)) as CORRECT.
-  destruct (PTree.bempty_canon (PTree.remove dst t)).
-  - apply PTree.gro.
-    intuition.
-  - rewrite PTree.gso by intuition.
-    trivial.
-Qed.
-
-Lemma remove_from_sets_pass:
-  forall dst l sets i j,
-    i <> dst ->
-    match sets ! j with
-    | Some uses => uses ! i = Some tt
-    | None => False
-    end ->
-    match (remove_from_sets dst l sets) ! j with
-    | Some uses => uses ! i = Some tt
-    | None => False
-    end.
-Proof.
-  induction l; simpl; trivial.
-  intros.
-  apply IHl; trivial.
-  destruct (@PTree.get (PTree.t unit) a sets) eqn:SETSA; trivial.
-  pose proof (PTree.bempty_canon_correct (PTree.remove dst t)) as CORRECT.
-  specialize CORRECT with (i := i).
-  destruct (PTree.bempty_canon (PTree.remove dst t)).
-  - rewrite PTree.gro in CORRECT by congruence.
-    destruct (peq a j).
-    + subst a.
-      rewrite SETSA in *.
-      intuition congruence.
-    + rewrite PTree.gro by congruence.
-      assumption.
-  - destruct (peq a j).
-    + subst a.
-      rewrite SETSA in *.
-      rewrite PTree.gss.
-      rewrite PTree.gro by congruence.
-      assumption.
-    + rewrite PTree.gso by congruence.
-      assumption.
-Qed.
-Local Hint Resolve remove_from_sets_pass : wellformed.
-
-Lemma rem_comes_from:
-  forall A x y (tr: PTree.t A) v,
-    (PTree.remove x tr) ! y = Some v -> tr ! y = Some v.
-Proof.
-  intros.
-  destruct (peq x y).
-  - subst y.
-    rewrite PTree.grs in *.
-    discriminate.
-  - rewrite PTree.gro in * by congruence.
-    assumption.
-Qed.
-Local Hint Resolve rem_comes_from : wellformed.
-
-Lemma rem_ineq:
-  forall A x y (tr: PTree.t A) v,
-    (PTree.remove x tr) ! y = Some v -> x<>y.
-Proof.
-  intros.
-  intro.
-  subst y.
-  rewrite PTree.grs in *.
-  discriminate.
-Qed.
-Local Hint Resolve rem_ineq : wellformed.
-
-Lemma wellformed_reg_kill_reg:
-  forall dst rel,
-    (wellformed_reg rel) -> (wellformed_reg (kill_reg dst rel)).
-Proof.
-  unfold wellformed_reg, kill_reg.
-  simpl.
-  intros dst rel Hrel.
-  intros i j sv KILLREG KILLABLE.
-
-  rewrite PTree.gfilter1 in KILLREG.
-  destruct PTree.get eqn:REMi in KILLREG.
-  2: discriminate.
-  destruct negb eqn:NEGB in KILLREG.
-  2: discriminate.
-  inv KILLREG.
-
-  assert ((var_to_sym rel) ! i = Some sv) as RELi by eauto with wellformed.
-  
-  destruct (peq dst j).
-  { (* absurd case *)
-    subst j.
-    rewrite KILLABLE in NEGB.
-    simpl in NEGB.
-    discriminate.
-  }
-  specialize Hrel with (i := i) (j := j) (sv := sv).
-  destruct ((var_to_sym rel) ! dst) eqn:DST; simpl.
-  {
-    assert (dst <> i) by eauto with wellformed.
-    apply remove_from_sets_pass.
-    congruence.
-    rewrite PTree.gro by congruence.
-    apply Hrel; trivial.
-  }
-  rewrite PTree.gro by congruence.
-  apply Hrel; trivial.
-Qed.
-Local Hint Resolve wellformed_reg_kill_reg : wellformed.
-
-Lemma wellformed_mem_kill_mem:
-  forall rel,
-    (wellformed_mem rel) -> (wellformed_mem (kill_mem rel)).
-Proof.
-  unfold wellformed_mem, kill_mem.
-  simpl.
-  intros rel Hrel.
-  intros i sv KILLMEM KILLABLE.
-  rewrite PTree.gremove_t in KILLMEM.
-  exfalso.
-  specialize Hrel with (i := i).
-  destruct ((var_to_sym rel) ! i) eqn:RELi.
-  - specialize Hrel with (sv := s).
-    destruct ((mem_used rel) ! i) eqn:USEDi.
-    discriminate.
-    inv KILLMEM.
-    intuition congruence.
- - destruct ((mem_used rel) ! i); discriminate.
-Qed.
-Local Hint Resolve wellformed_mem_kill_mem : wellformed.
-
-Lemma wellformed_reg_kill_mem:
-  forall rel,
-    (wellformed_reg rel) -> (wellformed_reg (kill_mem rel)).
-Proof.
-  unfold wellformed_reg, kill_mem.
-  simpl.
-  intros rel Hrel.
-  intros i j sv KILLMEM KILLABLE.
-  apply Hrel with (sv := sv); trivial.
-  rewrite PTree.gremove_t in KILLMEM.
-  destruct ((mem_used rel) ! i) in KILLMEM.
-  discriminate.
-  assumption.
-Qed.
-Local Hint Resolve wellformed_reg_kill_mem : wellformed.
-
-Lemma wellformed_mem_move:
-  forall r dst rel,
-    (wellformed_mem rel) -> (wellformed_mem (move r dst rel)).
-Proof.
-  Local Opaque kill_reg.
-  intros; unfold move, wellformed_mem; simpl.
-  intros i sv MOVE KILL.
-  destruct (peq i dst).
-  { subst i.
-    rewrite PTree.gss in MOVE.
-    inv MOVE.
-    simpl in KILL.
-    discriminate.
-  }
-  rewrite PTree.gso in MOVE by congruence.
-  eapply wellformed_mem_kill_reg; eauto.
-Qed.
-Local Hint Resolve wellformed_mem_move : wellformed.
-
-Lemma wellformed_mem_oper2:
-  forall op dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (oper2 op dst args rel)).
-Proof.
-  intros until rel. intro WELLFORMED.
-  unfold oper2.
-  intros i sv MOVE OPER.
-  simpl in *.
-  destruct (peq i dst).
-  { subst i.
-    rewrite PTree.gss in MOVE.
-    inv MOVE.
-    simpl in OPER.
-    rewrite OPER.
-    apply PTree.gss.
-  }
-  unfold pset_add.
-  rewrite PTree.gso in MOVE by congruence.
-  destruct op_depends_on_memory.
-  - rewrite PTree.gso by congruence.
-    eapply wellformed_mem_kill_reg; eauto.
-  - eapply wellformed_mem_kill_reg; eauto.
-Qed.
-Local Hint Resolve wellformed_mem_oper2 : wellformed.
-
-Lemma wellformed_mem_oper1:
-  forall op dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (oper1 op dst args rel)).
-Proof.
-  unfold oper1. intros.
-  destruct in_dec ; auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_oper1 : wellformed.
-
-Lemma wellformed_mem_oper:
-  forall op dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (oper op dst args rel)).
-Proof.
-  unfold oper. intros.
-  destruct find_op ; auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_oper : wellformed.
-
-Lemma wellformed_mem_gen_oper:
-  forall op dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (gen_oper op dst args rel)).
-Proof.
-  intros.
-  unfold gen_oper.
-  destruct op; auto with wellformed.
-  destruct args; auto with wellformed.
-  destruct args; auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_gen_oper : wellformed.
-
-Lemma wellformed_mem_load2 :
-  forall chunk addr dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (load2 chunk addr dst args rel)).
-Proof.
-  intros.
-  unfold load2, wellformed_mem.
-  simpl.
-  intros i sv LOAD KILL.
-  destruct (peq i dst).
-  { subst i.
-    apply PTree.gss.
-  }
-  unfold pset_add.
-  rewrite PTree.gso in * by congruence.
-  eapply wellformed_mem_kill_reg; eauto.
-Qed.
-Local Hint Resolve wellformed_mem_load2 : wellformed.
-
-Lemma wellformed_mem_load1 :
-  forall chunk addr dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (load1 chunk addr dst args rel)).
-Proof.
-  intros.
-  unfold load1.
-  destruct in_dec; eauto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_load1 : wellformed.
-
-Lemma wellformed_mem_load :
-  forall chunk addr dst args rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem (load chunk addr dst args rel)).
-Proof.
-  intros.
-  unfold load.
-  destruct find_load; eauto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_load : wellformed.
-
-Definition wellformed_mem_rb (rb : RB.t) :=
-  match rb with
-  | None => True
-  | Some r => wellformed_mem r
-  end.
-
-Lemma wellformed_mem_apply_instr:
-  forall instr rel,
-    (wellformed_mem rel) ->
-    (wellformed_mem_rb (apply_instr instr rel)).
-Proof.
-  destruct instr; simpl; auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_apply_instr : wellformed.
-
-Lemma wellformed_mem_rb_bot :
-  wellformed_mem_rb RB.bot.
-Proof.
-  simpl.
-  trivial.
-Qed.
-Local Hint Resolve wellformed_mem_rb_bot: wellformed.
-
-Lemma wellformed_mem_rb_top :
-  wellformed_mem_rb RB.top.
-Proof.
-  simpl.
-  auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_rb_top: wellformed.
-
-Lemma wellformed_mem_rb_apply_instr':
-  forall code pc rel,
-    (wellformed_mem_rb rel) ->
-    (wellformed_mem_rb (apply_instr' code pc rel)).
-Proof.
-  destruct rel; simpl; trivial.
-  intro.
-  destruct (code ! pc);
-  eauto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_rb_apply_instr' : wellformed.
-
-Lemma wellformed_mem_rb_lub : forall a b,
-    (wellformed_mem_rb a) -> (wellformed_mem_rb b) -> (wellformed_mem_rb (RB.lub a b)).
-Proof.
-  destruct a; destruct b; simpl; auto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_rb_lub: wellformed.
-
-Definition wellformed_mem_fmap fmap :=
-  forall i, wellformed_mem_rb (fmap !! i).
-
-Theorem wellformed_mem_forward_map : forall f,
-    forall fmap, (forward_map f) = Some fmap ->
-    wellformed_mem_fmap fmap.
-Proof.
-  intros.
-  unfold forward_map in *.
-  unfold wellformed_mem_fmap.
-  intro.
-  eapply DS.fixpoint_invariant with (ev := Some RELATION.top); eauto with wellformed.
-Qed.
-Local Hint Resolve wellformed_mem_forward_map: wellformed.
-
-Local Transparent kill_reg.
 
 Section SOUNDNESS.
   Variable F V : Type.
@@ -570,7 +62,7 @@ Definition sem_sym_val sym rs (v : option val) : Prop :=
   end.
     
 Definition sem_reg (rel : RELATION.t) (x : reg) (rs : regset) (v : val) : Prop :=
-  match (var_to_sym rel) ! x with
+  match rel ! x with
   | None => True
   | Some sym => sem_sym_val sym rs (Some (rs # x)) 
   end.
@@ -610,7 +102,7 @@ Proof.
   pose proof (SEM arg) as SEMarg.
   simpl. unfold forward_move.
   unfold sem_sym_val in *.
-  destruct (_ ! arg); trivial.
+  destruct (t ! arg); trivial.
   destruct s; congruence.
 Qed.
 
@@ -639,7 +131,7 @@ Lemma kill_reg_sound :
 Proof.
   unfold sem_rel, kill_reg, sem_reg, sem_sym_val.
   intros until v.
-  intros REL x. simpl.
+  intros REL x.
   rewrite PTree.gfilter1.
   destruct (Pos.eq_dec dst x).
   {
@@ -649,7 +141,7 @@ Proof.
   }
   rewrite PTree.gro by congruence.
   rewrite Regmap.gso by congruence.
-  destruct (_ ! x) as [relx | ] eqn:RELx; trivial.
+  destruct (rel ! x) as [relx | ] eqn:RELx; trivial.
   unfold kill_sym_val.
   pose proof (REL x) as RELinstx.
   rewrite RELx in RELinstx.
@@ -702,13 +194,12 @@ Proof.
   {
     subst x.
     unfold sem_reg.
-    simpl.
     rewrite PTree.gss.
     rewrite Regmap.gss.
     unfold sem_reg in *.
     simpl.
     unfold forward_move.
-    destruct (_ ! src) as [ sv |]; simpl.
+    destruct (rel ! src) as [ sv |]; simpl.
     destruct sv eqn:SV; simpl in *.
     {
       destruct (peq dst src0).
@@ -724,7 +215,6 @@ Proof.
   }
   rewrite Regmap.gso by congruence.
   unfold sem_reg.
-  simpl.
   rewrite PTree.gso by congruence.
   rewrite Regmap.gso in KILL by congruence.
   exact KILL.
@@ -737,10 +227,9 @@ Lemma move_cases_neq:
 Proof.
   intros until a. intro NEQ.
   unfold kill_reg, forward_move.
-  simpl.
   rewrite PTree.gfilter1.
   rewrite PTree.gro by congruence.
-  destruct (_ ! a); simpl.
+  destruct (rel ! a); simpl.
   2: congruence.
   destruct s.
   {
@@ -774,10 +263,9 @@ Proof.
   unfold kill_reg.
   unfold sem_reg in RELa.
   unfold forward_move.
-  simpl.
   rewrite PTree.gfilter1.
   rewrite PTree.gro by auto.
-  destruct (_ ! a); simpl; trivial.
+  destruct (rel ! a); simpl; trivial.
   destruct s; simpl in *; destruct negb; simpl; congruence.
 Qed.
 
@@ -801,7 +289,6 @@ Proof.
   {
     subst x.
     unfold sem_reg.
-    simpl.
     rewrite PTree.gss.
     rewrite Regmap.gss.
     simpl.
@@ -811,7 +298,6 @@ Proof.
   }
   rewrite Regmap.gso by congruence.
   unfold sem_reg.
-  simpl.
   rewrite PTree.gso by congruence.
   rewrite Regmap.gso in KILL by congruence.
   exact KILL.
@@ -859,13 +345,13 @@ Proof.
              | Some src => eval_operation genv sp op rs ## args m = Some rs # src
              end -> fold_left
     (fun (a : option reg) (p : positive * sym_val) =>
-     find_op_fold op args a (fst p) (snd p)) (PTree.elements (var_to_sym rel)) start =
+     find_op_fold op args a (fst p) (snd p)) (PTree.elements rel) start =
                     Some src ->
              eval_operation genv sp op rs ## args m = Some rs # src) as REC.
   {
     unfold sem_rel, sem_reg in REL.
-    generalize (PTree.elements_complete (var_to_sym rel)).
-    generalize (PTree.elements (var_to_sym rel)).
+    generalize (PTree.elements_complete rel).
+    generalize (PTree.elements rel).
     induction l; simpl.
     {
       intros.
@@ -890,7 +376,7 @@ Proof.
     destruct eq_args; trivial.
     subst args0.
     simpl.
-    assert (((var_to_sym rel) ! r) = Some (SOp op args)) as RELatr.
+    assert ((rel ! r) = Some (SOp op args)) as RELatr.
     {
       apply COMPLETE.
       left.
@@ -904,6 +390,7 @@ Proof.
   }
   apply REC; auto.
 Qed.
+
 
 Lemma find_load_sound :
   forall rel : RELATION.t,
@@ -941,7 +428,7 @@ Proof.
              end ->
     fold_left
     (fun (a : option reg) (p : positive * sym_val) =>
-     find_load_fold chunk addr args a (fst p) (snd p)) (PTree.elements (var_to_sym rel)) start =
+     find_load_fold chunk addr args a (fst p) (snd p)) (PTree.elements rel) start =
     Some src ->
     match eval_addressing genv sp addr rs##args with
                | Some a => match Mem.loadv chunk m a with
@@ -953,8 +440,8 @@ Proof.
   
   {
     unfold sem_rel, sem_reg in REL.
-    generalize (PTree.elements_complete (var_to_sym rel)).
-    generalize (PTree.elements (var_to_sym rel)).
+    generalize (PTree.elements_complete rel).
+    generalize (PTree.elements rel).
     induction l; simpl.
     {
       intros.
@@ -981,7 +468,7 @@ Proof.
     destruct eq_args; trivial.
     subst args0.
     simpl.
-    assert (((var_to_sym rel) ! r) = Some (SLoad chunk addr args)) as RELatr.
+    assert ((rel ! r) = Some (SLoad chunk addr args)) as RELatr.
     {
       apply COMPLETE.
       left.
@@ -1077,7 +564,21 @@ Proof.
   2: (apply IHargs; assumption).
   unfold forward_move, sem_rel, sem_reg, sem_sym_val in *.
   pose proof (REL a) as RELa.
-  destruct (_ ! a); trivial.
+  destruct (rel ! a); trivial.
+  destruct s; congruence.
+Qed.
+
+
+Lemma forward_move_rs:
+  forall rel arg rs,
+    sem_rel rel rs ->
+    rs # (forward_move rel arg) = rs # arg.
+Proof.
+  unfold forward_move, sem_rel, sem_reg, sem_sym_val in *.
+  intros until rs.
+  intro REL.
+  pose proof (REL arg) as RELarg.
+  destruct (rel ! arg); trivial.
   destruct s; congruence.
 Qed.
 
@@ -1160,7 +661,6 @@ Proof.
   {
     subst x.
     unfold sem_reg.
-    simpl.
     rewrite PTree.gss.
     rewrite Regmap.gss.
     simpl.
@@ -1173,7 +673,7 @@ Proof.
     discriminate.
   }
   rewrite Regmap.gso by congruence.
-  unfold sem_reg. simpl.
+  unfold sem_reg.
   rewrite PTree.gso by congruence.
   rewrite Regmap.gso in KILL by congruence.
   exact KILL.
@@ -1198,7 +698,7 @@ Proof.
   destruct (peq x dst).
   {
     subst x.
-    unfold sem_reg. simpl.
+    unfold sem_reg.
     rewrite PTree.gss.
     rewrite Regmap.gss.
     simpl.
@@ -1208,7 +708,7 @@ Proof.
     trivial.
   }
   rewrite Regmap.gso by congruence.
-  unfold sem_reg. simpl.
+  unfold sem_reg.
   rewrite PTree.gso by congruence.
   rewrite Regmap.gso in KILL by congruence.
   exact KILL.
@@ -1235,7 +735,7 @@ Proof.
   destruct (peq x dst).
   {
     subst x.
-    unfold sem_reg. simpl.
+    unfold sem_reg.
     rewrite PTree.gss.
     rewrite Regmap.gss.
     simpl.
@@ -1245,8 +745,7 @@ Proof.
     right; trivial.
   }
   rewrite Regmap.gso by congruence.
-  unfold sem_reg. simpl.
-  simpl.
+  unfold sem_reg.
   rewrite PTree.gso by congruence.
   rewrite Regmap.gso in KILL by congruence.
   exact KILL.
@@ -1443,7 +942,6 @@ Proof.
   intros REL x.
   pose proof (REL x) as RELx.
   unfold kill_reg, sem_reg in *.
-  simpl.
   rewrite PTree.gfilter1.
   destruct (peq res x).
   { subst x.
@@ -1451,7 +949,7 @@ Proof.
     reflexivity.
   }
   rewrite PTree.gro by congruence.
-  destruct (_ ! x) as [sv | ]; trivial.
+  destruct (mpc ! x) as [sv | ]; trivial.
   destruct negb; trivial.
 Qed.
 
@@ -1474,8 +972,8 @@ Proof.
   pose proof (RE x) as REx.
   pose proof (GE x) as GEx.
   unfold sem_reg in *.
-  destruct ((var_to_sym r1) ! x) as [r1x | ] in *;
-    destruct ((var_to_sym r2) ! x) as [r2x | ] in *;
+  destruct (r1 ! x) as [r1x | ] in *;
+    destruct (r2 ! x) as [r2x | ] in *;
     congruence.
 Qed.
 End SAME_MEMORY.
@@ -1484,35 +982,58 @@ Lemma kill_mem_sound :
   forall m m' : mem,
   forall rel : RELATION.t,
   forall rs,
-    wellformed_mem rel ->
     sem_rel m rel rs -> sem_rel m' (kill_mem rel) rs.
 Proof.
   unfold sem_rel, sem_reg.
   intros until rs.
-  intros WELLFORMED SEM x.
-  unfold wellformed_mem in *.
-  specialize SEM with (x := x).
-  specialize WELLFORMED with (i := x).
+  intros SEM x.
+  pose proof (SEM x) as SEMx.
   unfold kill_mem.
-  simpl.
-  rewrite PTree.gremove_t.
+  rewrite PTree.gfilter1.
   unfold kill_sym_val_mem.
-  destruct ((var_to_sym rel) ! x) as [ sv | ] eqn:VAR.
-  - specialize WELLFORMED with (sv0 := sv).
-    destruct ((mem_used rel) ! x) eqn:USED; trivial.
-    unfold sem_sym_val in *.
-    destruct sv; simpl in *; trivial.
-    + rewrite op_depends_on_memory_correct with (m2 := m).
-      assumption.
-      destruct op_depends_on_memory; intuition congruence.
-    + intuition discriminate.
-  - replace (match (mem_used rel) ! x with
-        | Some _ | _ => None
-             end) with (@None sym_val) by
-        (destruct ((mem_used rel) ! x); trivial).
-    trivial.
+  destruct (rel ! x) as [ sv | ].
+  2: reflexivity.
+  destruct sv; simpl in *; trivial.
+  {
+    destruct op_depends_on_memory eqn:DEPENDS; simpl; trivial.
+    rewrite SEMx.
+    apply op_depends_on_memory_correct; auto.
+  }
 Qed.
-
+  
+Lemma kill_store_sound :
+  forall m m' : mem,
+  forall rel : RELATION.t,
+  forall chunk addr args a v rs,
+    (eval_addressing genv sp addr (rs ## args)) = Some a ->
+    (Mem.storev chunk m a v) = Some m' ->
+    sem_rel m rel rs -> sem_rel m' (kill_store chunk addr args rel) rs.
+Proof.
+  unfold sem_rel, sem_reg.
+  intros until rs.
+  intros ADDR STORE SEM x.
+  pose proof (SEM x) as SEMx.
+  unfold kill_store, kill_store1.
+  rewrite PTree.gfilter1.
+  destruct (rel ! x) as [ sv | ].
+  2: reflexivity.
+  destruct sv; simpl in *; trivial.
+  {
+    destruct op_depends_on_memory eqn:DEPENDS; simpl; trivial.
+    rewrite SEMx.
+    apply op_depends_on_memory_correct; auto.
+  }
+  destruct may_overlap eqn:OVERLAP; simpl; trivial.
+  destruct (eval_addressing genv sp addr0 rs ## args0) eqn:ADDR0.
+  {
+    erewrite may_overlap_sound with (args := (map (forward_move rel) args)).
+    all: try eassumption.
+    
+    erewrite forward_move_map by eassumption.
+    assumption.
+  }
+  intuition congruence.
+Qed. 
 End SOUNDNESS.
 
 Definition match_prog (p tp: RTL.program) :=
@@ -1600,6 +1121,7 @@ Definition fmap_sem' := fmap_sem fundef unit ge.
 Definition subst_arg_ok' := subst_arg_ok fundef unit ge.
 Definition subst_args_ok' := subst_args_ok fundef unit ge.
 Definition kill_mem_sound' := kill_mem_sound fundef unit ge.
+Definition kill_store_sound' := kill_store_sound fundef unit ge.
 
 Lemma sem_rel_b_ge:
   forall rb1 rb2 : RB.t,
@@ -1651,39 +1173,6 @@ Ltac TR_AT :=
         generalize (transf_function_at _ _ _ A); intros
   end.
 
-Lemma wellformed_mem_mpc:
-  forall f map pc mpc,
-    (forward_map f) = Some map ->
-    map # pc = Some mpc ->
-    wellformed_mem mpc.
-Proof.
-  intros.
-  assert (wellformed_mem_fmap map) by eauto with wellformed.
-  unfold wellformed_mem_fmap, wellformed_mem_rb in *.
-  specialize H1 with (i := pc).
-  rewrite H0 in H1.
-  assumption.
-Qed.
-Hint Resolve wellformed_mem_mpc : wellformed.
-
-Lemma match_same_option :
-  forall { A B : Type},
-  forall x : option A,
-  forall y : B,
-    (match x with Some _ => y | None => y end) = y.
-Proof.
-  destruct x; trivial.
-Qed.
-
-Lemma match_same_bool :
-  forall { B : Type},
-  forall x : bool,
-  forall y : B,
-    (if x then y else y) = y.
-Proof.
-  destruct x; trivial.
-Qed.
-
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 ->
   forall S1', match_states S1 S1' ->
@@ -1711,9 +1200,8 @@ Proof.
   reflexivity.
 - (* op *)
   unfold transf_instr in *.
-  destruct (if is_trivial_op op then None else find_op_in_fmap (forward_map f)  pc op (subst_args (forward_map f) pc args)) eqn:FIND_OP.
+  destruct find_op_in_fmap eqn:FIND_OP.
   {
-    destruct is_trivial_op. discriminate.
     unfold find_op_in_fmap, fmap_sem', fmap_sem in *.
     destruct (forward_map f) as [map |] eqn:MAP.
     2: discriminate.
@@ -1803,9 +1291,9 @@ Proof.
       {
         f_equal.
         symmetry.
-        apply find_load_sound' with (chunk := chunk) (m := m) (a := a) (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs); trivial.
         rewrite MAP in H0.
-        assumption.
+        eapply find_load_sound' with (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs).
+        all: eassumption.
       }
       unfold fmap_sem. rewrite MAP. rewrite MPC. assumption.
     }
@@ -1830,36 +1318,37 @@ Proof.
     apply load_sound with (a := a); auto.
   }
   {  
-    econstructor; split.
-    assert (eval_addressing tge sp addr rs ## args = Some a).
-    rewrite <- H0.
-    apply eval_addressing_preserved. exact symbols_preserved.
-    eapply exec_Iload; eauto.
-    rewrite (subst_args_ok' sp m); assumption.
-    constructor; auto.
-    
-    simpl in *.
-    unfold fmap_sem', fmap_sem in *.
-    destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
-    destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-    apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
+  econstructor; split.
+  assert (eval_addressing tge sp addr rs ## args = Some a).
+  rewrite <- H0.
+  apply eval_addressing_preserved. exact symbols_preserved.
+  eapply exec_Iload; eauto.
+  rewrite (subst_args_ok' sp m); assumption.
+  constructor; auto.
+
+  simpl in *.
+  unfold fmap_sem', fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
+  {
+    replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
     {
-      replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
-      {
-        eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
-        2: apply apply_instr'_bot.
-        simpl. tauto.
-      }
-      unfold apply_instr'.
-      rewrite H.
-      rewrite MPC.
-      simpl.
-      reflexivity.
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
     }
-    apply load_sound with (a := a); assumption.
+    unfold apply_instr'.
+    rewrite H.
+    rewrite MPC.
+    simpl.
+    reflexivity.
+  }
+  apply load_sound with (a := a); assumption.
   }
   
--  unfold transf_instr in *.
+- (* load notrap1 *)
+  unfold transf_instr in *.
   destruct find_load_in_fmap eqn:FIND_LOAD.
   {
     unfold find_load_in_fmap, fmap_sem', fmap_sem in *.
@@ -1868,16 +1357,16 @@ Proof.
     change (@PMap.get (option RELATION.t) pc map) with (map # pc) in *. 
     destruct (map # pc) as [mpc | ] eqn:MPC.
     2: discriminate.
-
     econstructor; split.
     {
       eapply exec_Iop with (v := (default_notrap_load_value chunk)); eauto.
+      simpl.
       rewrite <- subst_args_ok with (genv := ge) (f := f) (pc := pc) (sp := sp) (m := m) in H0.
-      { simpl.
+      {
         f_equal.
-        apply find_load_notrap1_sound' with (chunk := chunk) (m := m) (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs); trivial.
         rewrite MAP in H0.
-        assumption.
+        eapply find_load_notrap1_sound' with (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs).
+        all: eassumption.
       }
       unfold fmap_sem. rewrite MAP. rewrite MPC. assumption.
     }
@@ -1901,37 +1390,38 @@ Proof.
     unfold sem_rel_b', sem_rel_b.
     apply load_notrap1_sound; auto.
   }
-  {
-    econstructor; split.
-    assert (eval_addressing tge sp addr rs ## args = None).
-    rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
-    eapply exec_Iload_notrap1; eauto.
-    rewrite subst_args_ok with (genv := ge) (sp := sp) (m := m) ; assumption.
-    constructor; auto.
+  {  
+  econstructor; split.
+  assert (eval_addressing tge sp addr rs ## args = None).
+  rewrite <- H0.
+  apply eval_addressing_preserved. exact symbols_preserved.
+  eapply exec_Iload_notrap1; eauto.
+  rewrite (subst_args_ok' sp m); assumption.
+  constructor; auto.
 
-    simpl in *.
-    unfold fmap_sem', fmap_sem in *.
-    destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
-    destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-    apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
+  simpl in *.
+  unfold fmap_sem', fmap_sem in *.
+  destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
+  destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
+  apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
+  {
+    replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
     {
-      replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
-      {
-        eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
-        2: apply apply_instr'_bot.
-        simpl. tauto.
-      }
-      unfold apply_instr'.
-      rewrite H.
-      rewrite MPC.
-      simpl.
-      reflexivity.
+      eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
+      2: apply apply_instr'_bot.
+      simpl. tauto.
     }
-    apply load_notrap1_sound; trivial.
+    unfold apply_instr'.
+    rewrite H.
+    rewrite MPC.
+    simpl.
+    reflexivity.
+  }
+  apply load_notrap1_sound; assumption.
   }
   
-- (* load notrap2 *)
-   unfold transf_instr in *.
+(* load notrap2 *)
+- unfold transf_instr in *.
   destruct find_load_in_fmap eqn:FIND_LOAD.
   {
     unfold find_load_in_fmap, fmap_sem', fmap_sem in *.
@@ -1947,9 +1437,9 @@ Proof.
       rewrite <- subst_args_ok with (genv := ge) (f := f) (pc := pc) (sp := sp) (m := m) in H0.
       {
         f_equal.
-        apply find_load_notrap2_sound' with (chunk := chunk) (m := m) (a := a) (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs); trivial.
         rewrite MAP in H0.
-        assumption.
+        eapply find_load_notrap2_sound' with (genv := ge) (sp := sp) (addr := addr) (args := subst_args (Some map) pc args) (rel := mpc) (src := r) (rs := rs).
+        all: try eassumption.
       }
       unfold fmap_sem. rewrite MAP. rewrite MPC. assumption.
     }
@@ -1973,19 +1463,20 @@ Proof.
     unfold sem_rel_b', sem_rel_b.
     apply load_notrap2_sound with (a := a); auto.
   }
-  {
+  {  
   econstructor; split.
   assert (eval_addressing tge sp addr rs ## args = Some a).
-  rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
+  rewrite <- H0.
+  apply eval_addressing_preserved. exact symbols_preserved.
   eapply exec_Iload_notrap2; eauto.
-  rewrite subst_args_ok with (genv := ge) (sp := sp) (m := m); assumption.
+  rewrite (subst_args_ok' sp m); assumption.
   constructor; auto.
 
   simpl in *.
   unfold fmap_sem', fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-  apply sem_rel_b_ge with (rb2 := Some  (load chunk addr dst args mpc)).
+  apply sem_rel_b_ge with (rb2 := Some (load chunk addr dst args mpc)).
   {
     replace (Some (load chunk addr dst args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
     {
@@ -2016,9 +1507,9 @@ Proof.
   unfold fmap_sem', fmap_sem in *.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
-  apply sem_rel_b_ge with (rb2 := Some (kill_mem mpc)); trivial.
+  apply sem_rel_b_ge with (rb2 := Some (kill_store chunk addr args mpc)); trivial.
   {
-  replace (Some (kill_mem mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
+  replace (Some (kill_store chunk addr args mpc)) with (apply_instr' (fn_code f) pc (map # pc)).
   {
     eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
     2: apply apply_instr'_bot.
@@ -2030,7 +1521,7 @@ Proof.
   rewrite H.
   reflexivity.
   }
-  apply (kill_mem_sound' sp m); eauto with wellformed.
+  eapply (kill_store_sound' sp m); eassumption.
   
 (* call *)
 - econstructor; split.
@@ -2060,7 +1551,8 @@ Proof.
       reflexivity.
     }
     apply kill_reg_sound.
-    apply (kill_mem_sound' sp m); eauto with wellformed.
+    apply (kill_mem_sound' sp m).
+    assumption.
   }
   
 (* tailcall *)

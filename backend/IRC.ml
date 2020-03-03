@@ -238,7 +238,6 @@ type graph = {
    according to their types.  A variable can be forced into class 2
    by giving it a negative spill cost. *)
 
-
 let class_of_reg r =
   if Conventions1.is_float_reg r then 1 else 0
 
