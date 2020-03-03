@@ -140,33 +140,6 @@ let rec last_element = function
   | e :: [] -> e
   | e' :: e :: l -> last_element (e::l)
 
-(** old version
-let dfs code entrypoint =
-  let visited = ref (PTree.map (fun n i -> false) code) in
-  let rec dfs_list code = function
-  | [] -> []
-  | node :: ln ->
-      let node_dfs =
-        if not (get_some @@ PTree.get node !visited) then begin
-          visited := PTree.set node true !visited;
-          match PTree.get node code with
-          | None -> failwith "No such node"
-          | Some bb -> [node] @ match (last_element bb) with
-            | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
-            | Lbuiltin _ -> assert false
-            | Ltailcall _ | Lreturn -> []
-            | Lbranch n -> dfs_list code [n]
-            | Lcond (_, _, ifso, ifnot) -> dfs_list code [ifnot; ifso]
-            | Ljumptable(_, ln) -> dfs_list code ln
-          end
-        else []
-      in node_dfs @ (dfs_list code ln)
-  in dfs_list code [entrypoint]
-
-let enumerate_aux_trace f reach = dfs f.fn_code f.fn_entrypoint
-*)
-
-
 let forward_sequences code entry =
   let visited = ref (PTree.map (fun n i -> false) code) in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
@@ -273,12 +246,140 @@ let try_merge code (fs: (BinNums.positive list) list) =
   done;
   !seqs
 
-let order_sequences fs = fs
+(** Code adapted from Duplicateaux.get_loop_headers
+  *
+  * Getting loop branches with a DFS visit :
+  * Each node is either Unvisited, Visited, or Processed
+  * pre-order: node becomes Processed
+  * post-order: node becomes Visited
+  *
+  * If we come accross an edge to a Processed node, it's a loop!
+  *)
+type pos = BinNums.positive
+
+module PP = struct
+  type t = pos * pos
+  let compare a b =
+    let ax, ay = a in
+    let bx, by = b in
+    let dx = compare ax bx in
+    if (dx == 0) then compare ay by
+    else dx
+end
+
+module PPMap = Map.Make(PP)
+
+type vstate = Unvisited | Processed | Visited
+
+let get_loop_edges code entry =
+  let visited = ref (PTree.map (fun n i -> Unvisited) code) in
+  let is_loop_edge = ref PPMap.empty
+  in let rec dfs_visit code from = function
+  | [] -> ()
+  | node :: ln ->
+      match (get_some @@ PTree.get node !visited) with
+      | Visited -> ()
+      | Processed -> begin
+          let from_node = get_some from in
+          is_loop_edge := PPMap.add (from_node, node) true !is_loop_edge;
+          visited := PTree.set node Visited !visited
+        end
+      | Unvisited -> begin
+          visited := PTree.set node Processed !visited;
+          let bb = get_some @@ PTree.get node code in
+          let next_visits = (match (last_element bb) with
+          | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
+          | Lbuiltin _ -> assert false
+          | Ltailcall _ | Lreturn -> []
+          | Lbranch n -> [n]
+          | Lcond (_, _, ifso, ifnot) -> [ifso; ifnot]
+          | Ljumptable(_, ln) -> ln
+          ) in dfs_visit code (Some node) next_visits;
+          visited := PTree.set node Visited !visited;
+          dfs_visit code from ln
+        end
+  in begin
+    dfs_visit code None [entry];
+    !is_loop_edge
+  end
+
+let ppmap_is_true pp ppmap = PPMap.mem pp ppmap && PPMap.find pp ppmap
+
+module Int = struct
+  type t = int
+  let compare x y = compare x y
+end
+
+module ISet = Set.Make(Int)
+
+let construct_depmap code entry fs =
+  let is_loop_edge = get_loop_edges code entry in
+  let visited = ref (PTree.map (fun n i -> false) code) in
+  let depmap = Array.map (fun e -> ISet.empty) fs in
+  let find_index_of_node n =
+    let index = ref 0 in
+    begin
+      Array.iteri (fun i s ->
+        match List.find_opt (fun e -> e == n) s with
+        | Some _ -> index := i
+        | None -> ()
+      ) fs;
+      !index
+    end
+  in let rec dfs_visit code = function
+  | [] -> ()
+  | node :: ln ->
+      match (get_some @@ PTree.get node !visited) with
+      | true -> ()
+      | false -> begin
+          visited := PTree.set node true !visited;
+          let bb = get_some @@ PTree.get node code in
+          let next_visits =
+            match (last_element bb) with
+            | Ltailcall _ | Lreturn -> []
+            | Lbranch n -> [n]
+            | Lcond (_, _, ifso, ifnot) -> begin
+                (if not (ppmap_is_true (node, ifso) is_loop_edge) then
+                  let in_index_fs = find_index_of_node node in
+                  let out_index_fs = find_index_of_node ifso in
+                  depmap.(out_index_fs) <- ISet.add in_index_fs depmap.(out_index_fs)
+                else
+                  ());
+                [ifso; ifnot]
+              end
+            | Ljumptable(_, ln) -> begin
+                let in_index_fs = find_index_of_node node in
+                List.iter (fun n ->
+                  if not (ppmap_is_true (node, n) is_loop_edge) then
+                    let out_index_fs = find_index_of_node n in
+                    depmap.(out_index_fs) <- ISet.add in_index_fs depmap.(out_index_fs)
+                  else
+                    ()
+                ) ln;
+                ln
+              end
+            (* end of bblocks should not be another value than one of the above *)
+            | _ -> failwith "last_element gave an invalid output"
+          in dfs_visit code next_visits
+        end
+  in begin
+    dfs_visit code [entry];
+    depmap
+  end
+
+let order_sequences code entry fs =
+  let fs_a = Array.of_list fs in
+  let depmap = construct_depmap code entry fs_a in
+  Array.iter (fun _ -> ()) depmap;
+  (* algo *)
+  fs
 
 let enumerate_aux_trace f reach =
-  let fs = forward_sequences f.fn_code f.fn_entrypoint
-  in let ofs = order_sequences fs
-  in List.flatten ofs
+  let code = f.fn_code in
+  let entry = f.fn_entrypoint in
+  let fs = forward_sequences code entry in
+  let ofs = order_sequences code entry fs in
+  List.flatten ofs
 
 let enumerate_aux f reach =
   if !Clflags.option_ftracelinearize then enumerate_aux_trace f reach
