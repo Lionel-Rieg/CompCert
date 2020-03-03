@@ -4,7 +4,7 @@
 (*                                                                     *)
 (*          Xavier Leroy, INRIA Paris-Rocquencourt                     *)
 (*                                                                     *)
-(*  Copyright Institut National de Recherche en Informatique et en     *)
+(*  Copyright Institut National de Recherstestche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
 (*  under the terms of the GNU General Public License as published by  *)
 (*  the Free Software Foundation, either version 2 of the License, or  *)
@@ -16,7 +16,7 @@
 (** Formalizations of machine integers modulo $2^N$ #2<sup>N</sup>#. *)
 
 Require Import Eqdep_dec Zquot Zwf.
-Require Import Coqlib Zbits.
+Require Import Coqlib Zbits Axioms.
 Require Archi.
 
 (** * Comparisons *)
@@ -28,6 +28,11 @@ Inductive comparison : Type :=
   | Cle : comparison               (**r less than or equal *)
   | Cgt : comparison               (**r greater than *)
   | Cge : comparison.              (**r greater than or equal *)
+
+Definition comparison_eq: forall (x y: comparison), {x = y} + {x <> y}.
+Proof.
+  decide equality.
+Defined.
 
 Definition negate_comparison (c: comparison): comparison :=
   match c with
@@ -1188,6 +1193,34 @@ Proof.
   apply Zsign_bit. rewrite two_power_nat_S. rewrite <- H0.
   rewrite <- half_modulus_modulus. apply unsigned_range.
 Qed.
+
+Local Transparent repr.
+Lemma sign_bit_of_signed: forall x,
+    (testbit x (zwordsize - 1)) = lt x zero.
+Proof.
+  intro.
+  rewrite sign_bit_of_unsigned.
+  unfold lt.
+  unfold signed, unsigned.
+  simpl.
+  pose proof half_modulus_pos as HMOD.
+  destruct (zlt 0 half_modulus) as [HMOD' | HMOD'].
+  2: omega.
+  clear HMOD'.
+  destruct (zlt (intval x) half_modulus) as [ LOW | HIGH].
+  {
+    destruct x as [ix RANGE].
+    simpl in *.
+    destruct (zlt ix 0). omega.
+    reflexivity.
+  }
+  destruct (zlt _ _) as [LOW' | HIGH']; trivial.
+  destruct x as [ix RANGE].
+  simpl in *.
+  rewrite half_modulus_modulus in *.
+  omega.
+Qed.
+Local Opaque repr.
 
 Lemma bits_signed:
   forall x i, 0 <= i ->
@@ -2422,6 +2455,57 @@ Proof.
   bit_solve. destruct (zlt (i + unsigned (sub iwordsize y)) zwordsize); auto.
 Qed.
 
+Theorem shrx1_shr:
+  forall x,
+  ltu one (repr (zwordsize - 1)) = true ->
+  shrx x (repr 1) = shr (add x (shru x (repr (zwordsize - 1)))) (repr 1).
+Proof.
+  intros.
+  rewrite shrx_shr by assumption.
+  rewrite shl_mul_two_p.
+  rewrite mul_commut. rewrite mul_one.
+  change (repr 1) with one.
+  rewrite unsigned_one.
+  change (two_p 1) with 2.
+  unfold sub.
+  rewrite unsigned_one.
+  assert (0 <= 2 <= max_unsigned).
+  {
+    unfold max_unsigned, modulus.
+    unfold zwordsize in *.
+    unfold ltu in *.
+    rewrite unsigned_one in H.
+    rewrite unsigned_repr in H.
+    {
+      destruct (zlt 1 (Z.of_nat wordsize - 1)) as [ LT | NONE].
+      2: discriminate.
+      clear H.
+      rewrite two_power_nat_two_p.
+      split.
+      omega.
+      set (w := (Z.of_nat wordsize)) in *.
+      assert ((two_p 2) <= (two_p w)) as MONO.
+      {
+        apply two_p_monotone.
+        omega.
+      }
+      change (two_p 2) with 4 in MONO.
+      omega.
+    }
+    generalize wordsize_max_unsigned.
+    fold zwordsize.
+    generalize wordsize_pos.
+    omega.
+  }
+  rewrite unsigned_repr by assumption.
+  simpl.
+  rewrite shru_lt_zero.
+  destruct (lt x zero).
+  reflexivity.
+  rewrite add_zero.
+  reflexivity.
+Qed.
+
 Theorem shrx_carry:
   forall x y,
   ltu y (repr (zwordsize - 1)) = true ->
@@ -3588,6 +3672,104 @@ Proof.
   unfold ltu. apply zlt_true. change (unsigned z < 63). rewrite A; omega.
 Qed.
 
+Lemma shr'63:
+  forall x, (shr' x (Int.repr 63)) = if lt x zero then mone else zero.
+Proof.
+  intro.
+  unfold shr', mone, zero.
+  rewrite Int.unsigned_repr by (change Int.max_unsigned with 4294967295; omega).
+  apply same_bits_eq.
+  intros i BIT.
+  rewrite testbit_repr by assumption.
+  rewrite Z.shiftr_spec by omega.
+  rewrite bits_signed by omega.
+  simpl.
+  change zwordsize with 64 in *.
+  destruct (zlt _ _) as [LT | GE].
+  {
+    replace i with 0 in * by omega.
+    change (0 + 63) with (zwordsize - 1).
+    rewrite  sign_bit_of_signed.
+    destruct (lt x _).
+    all: rewrite testbit_repr by (change zwordsize with 64 in *; omega).
+    all: simpl; reflexivity.
+  }
+  change (64 - 1) with (zwordsize - 1).
+  rewrite  sign_bit_of_signed.
+  destruct (lt x _).
+  all: rewrite testbit_repr by (change zwordsize with 64 in *; omega).
+  { symmetry.
+    apply Ztestbit_m1.
+    tauto.
+  }
+  symmetry.
+  apply Ztestbit_0.
+Qed.
+
+Lemma shru'63:
+  forall x, (shru' x (Int.repr 63)) = if lt x zero then one else zero.
+Proof.
+  intro.
+  unfold shru'.
+  rewrite Int.unsigned_repr by (change Int.max_unsigned with 4294967295; omega).
+  apply same_bits_eq.
+  intros i BIT.
+  rewrite testbit_repr by assumption.
+  rewrite Z.shiftr_spec by omega.
+  unfold lt.
+  rewrite signed_zero.
+  unfold one, zero.
+  destruct (zlt _ 0) as [LT | GE].
+  {
+    rewrite testbit_repr by assumption.
+    destruct (zeq i 0) as [IZERO | INONZERO].
+    { subst i.
+      change (Z.testbit (unsigned x) (0 + 63)) with (testbit x (zwordsize - 1)).
+      rewrite sign_bit_of_signed.
+      unfold lt.
+      rewrite signed_zero.
+      destruct (zlt _ _); try omega.
+      reflexivity.
+    }
+    change (Z.testbit (unsigned x) (i + 63)) with (testbit x (i+63)).
+    rewrite bits_above by (change zwordsize with 64; omega).
+    rewrite Ztestbit_1.
+    destruct (zeq i 0); trivial.
+    subst i.
+    omega.
+  }
+  destruct (zeq i 0) as [IZERO | INONZERO].
+  { subst i.
+    change (Z.testbit (unsigned x) (0 + 63)) with (testbit x (zwordsize - 1)).
+    rewrite sign_bit_of_signed.
+    unfold lt.
+    rewrite signed_zero.
+    rewrite bits_zero.
+    destruct (zlt _ _); try omega.
+    reflexivity.
+  }
+  change (Z.testbit (unsigned x) (i + 63)) with (testbit x (i + 63)).
+  rewrite bits_zero.
+  apply bits_above.
+  change zwordsize with 64.
+  omega.
+Qed.
+  
+Theorem shrx'1_shr':
+  forall x,
+  Int.ltu Int.one (Int.repr (zwordsize - 1)) = true ->
+  shrx' x (Int.repr 1) = shr' (add x (shru' x (Int.repr (Int64.zwordsize - 1)))) (Int.repr 1).
+Proof.
+  intros.
+  rewrite shrx'_shr_2 by reflexivity.
+  change (Int.sub (Int.repr 64) (Int.repr 1)) with (Int.repr 63).
+  f_equal. f_equal.
+  rewrite shr'63.
+  rewrite shru'63.
+  rewrite shru'63.
+  destruct (lt x zero); reflexivity.
+Qed.  
+
 Remark int_ltu_2_inv:
   forall y z,
   Int.ltu y iwordsize' = true ->
@@ -4536,7 +4718,25 @@ End Int64.
 
 Strategy 0 [Wordsize_64.wordsize].
 
+Definition int_eq: forall (i1 i2: int), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
+
 Notation int64 := Int64.int.
+
+Definition int64_eq: forall (i1 i2: int64), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Int.repr Int64.repr Byte.repr.
 
@@ -4813,6 +5013,15 @@ End Ptrofs.
 Strategy 0 [Wordsize_Ptrofs.wordsize].
 
 Notation ptrofs := Ptrofs.int.
+
+Definition ptrofs_eq: forall (i1 i2: ptrofs), {i1=i2} + {i1<>i2}.
+Proof.
+  generalize Z.eq_dec. intros.
+  destruct i1. destruct i2. generalize (H intval intval0). intro.
+  inversion H0.
+  - subst. left. assert (intrange = intrange0) by (apply proof_irr). congruence.
+  - right. intro. inversion H2. contradiction.
+Qed.
 
 Global Opaque Ptrofs.repr.
 

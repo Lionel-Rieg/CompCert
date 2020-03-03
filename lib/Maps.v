@@ -1066,104 +1066,36 @@ Module PTree <: TREE.
     intros. apply fold1_xelements with (l := @nil (positive * A)).
   Qed.
 
-  (* DM
-  Fixpoint xfind_any (A : Type) (P : elt -> A -> bool) (i : elt) (m : t A):
-    option elt :=
-    match m with
-    | Leaf => None
-    | Node l None r =>
-      match xfind_any P (xO i) l with
-      | None => xfind_any P (xI i) r
-      | r => r
-      end
-    | Node l (Some x) r =>
-      if P i x
-      then Some i
-      else
-        match xfind_any P (xO i) l with
-        | None => xfind_any P (xI i) r
-        | r => r
-        end
-    end.
-
-  Definition find_any (A : Type) (P : elt -> A -> bool) (m : t A) :=
-    xfind_any P xH m.
-
-  Fixpoint pos_concat (i : positive) (j : positive) :=
-    match i with
-    | xI r => xI (pos_concat r j)
-    | xO r => xO (pos_concat r j)
-    | xH => j
-    end.
-
-  Lemma pos_concat_assoc :
-    forall i j k,
-      (pos_concat (pos_concat i j) k) = (pos_concat i (pos_concat j k)).
-  Admitted.
-
-  Lemma pos_concat_eq_l : forall i j,
-      (pos_concat i j) = i -> j = xH.
+  Local Open Scope positive.
+  Lemma set_disjoint1:
+    forall (A: Type)(i d : elt) (m: t A)  (x y: A),
+      set (i + d) y (set i x m) = set i x (set (i + d) y m).
   Proof.
-    induction i; simpl; intros j EQ.
-    - inv EQ. auto.
-    - inv EQ. auto.
-    - trivial.
+    induction i; destruct d; destruct m; intro; simpl; trivial;
+      intro; congruence.
   Qed.
   
-  Lemma pos_concat_eq_r : forall i j,
-      (pos_concat i j) = j -> i = xH.
-  Admitted.
-
-  Local Hint Resolve pos_concat_eq_r : trees.
-  
-  Lemma pos_concat_xH_r: forall i, (pos_concat i xH) = i.
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type)(i j : elt) (m: t A)  (x y: A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
   Proof.
-    induction i; simpl; try rewrite IHi; trivial.
+    intros.
+    destruct (Pos.compare_spec i j) as [Heq | Hlt | Hlt].
+    { congruence. }
+    {
+      rewrite (Pos.lt_iff_add i j) in Hlt.
+      destruct Hlt as [d Hd].
+      subst j.
+      apply set_disjoint1.
+    }
+      rewrite (Pos.lt_iff_add j i) in Hlt.
+      destruct Hlt as [d Hd].
+      subst i.
+      symmetry.
+      apply set_disjoint1.
   Qed.
-  
-  Local Hint Resolve pos_concat_xH_r : trees.
-
-  (*
-  Fixpoint pos_is_prefix (i j : elt) :=
-    match i, j with
-    | xI i1, xI j1 => pos_is_prefix i1 j1
-    | xO i1, xO j1 => pos_is_prefix i1 j1
-    | xH, _ => true
-    | _, _ => false
-    end.
-   *)
-  
-  Lemma xfind_any_correct:
-    forall A P (m : t A) i k,
-      xfind_any P i m = Some k -> exists j v, k = pos_concat j i
-         /\ (get j m)=Some v /\ (P k v)=true.
-  Proof.
-    induction m; simpl.
-    { (* leaf *)
-      discriminate.
-    }
-    intros i k FOUND.
-    destruct o.
-    { destruct P eqn:Pval in FOUND.
-      { inv FOUND.
-        exists xH. exists a.
-        simpl.
-        eauto.
-      }
-      specialize IHm1 with (i := xO i) (k := k).
-      specialize IHm2 with (i := xI i) (k := k).
-      assert (Some k = Some k) as SK by trivial.
-      destruct (xfind_any P (xO i) m1).
-      {
-        inv FOUND.
-        destruct (IHm1 SK) as [j' [v [EQk [GET PP]]]].
-        exists (pos_concat j' (xO xH)). exists v.
-        rewrite pos_concat_assoc.
-        simpl.
-        split; trivial.
-        split; trivial.
-    }
-   *)
 End PTree.
 
 (** * An implementation of maps over type [positive] *)
@@ -1241,6 +1173,15 @@ Module PMap <: MAP.
     intros. unfold set. simpl. decEq. apply PTree.set2.
   Qed.
 
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. decEq. apply PTree.set_disjoint. assumption.
+  Qed.
+
 End PMap.
 
 (** * An implementation of maps over any type that injects into type [positive] *)
@@ -1308,6 +1249,16 @@ Module IMap(X: INDEXED_TYPE).
     intros. unfold set. apply PMap.set2.
   Qed.
 
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. apply PMap.set_disjoint.
+    intro INEQ.
+    assert (i = j) by (apply X.index_inj; auto).
+    auto.
+  Qed.
 End IMap.
 
 Module ZIndexed.

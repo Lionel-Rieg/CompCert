@@ -98,3 +98,7 @@ let rec print_builtin_res px oc = function
       fprintf oc "splitlong(%a, %a)"
                  (print_builtin_res px) hi (print_builtin_res px) lo
 
+let print_trapping_mode oc = function
+  | TRAP -> ()
+  | NOTRAP -> output_string oc " [notrap]"
+                

@@ -15,6 +15,7 @@
 
 Require Import Coqlib Decidableplus.
 Require Import AST Machregs Locations.
+Require Import Errors.
 
 (** * Classification of machine registers *)
 
@@ -26,7 +27,7 @@ Require Import AST Machregs Locations.
   We follow the x86-32 and x86-64 application binary interfaces (ABI)
   in our choice of callee- and caller-save registers.
 *)
-
+  
 Definition is_callee_save (r: mreg) : bool :=
   match r with
   | AX | CX | DX => false

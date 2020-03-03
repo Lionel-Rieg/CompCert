@@ -1,0 +1,28 @@
+include ../rules.mk
+
+all:	md2.all md5.all sha1.all sha256.all blowfish.all des.all
+k1c:	md2_test.ccomp.k1c md5_test.ccomp.k1c sha1_test.ccomp.k1c sha256_test.ccomp.k1c blowfish_test.ccomp.k1c des_test.ccomp.k1c
+
+md2.all : md2_test.ccomp.k1c.out md2_test.gcc.k1c.out
+md5.all : md5_test.ccomp.k1c.out md5_test.gcc.k1c.out
+arcfour.all : arcfour_test.ccomp.k1c.out arcfour_test.gcc.k1c.out
+blowfish.all : blowfish_test.ccomp.k1c.out blowfish_test.gcc.k1c.out
+rot-13.all : rot-13_test.ccomp.k1c.out rot-13_test.gcc.k1c.out
+sha1.all : sha1_test.ccomp.k1c.out sha1_test.gcc.k1c.out
+sha256.all : sha256_test.ccomp.k1c.out sha256_test.gcc.k1c.out
+des.all: des_test.ccomp.k1c.out des_test.gcc.k1c.out
+base64.all: base64_test.ccomp.k1c.out base64_test.gcc.k1c.out
+aes.all : aes_test.ccomp.k1c.out aes_test.gcc.k1c.out
+
+%.gcc.k1c.s %.ccomp.k1c.s %_test.gcc.k1c.s: %.h
+
+%_test.gcc.k1c: %.gcc.k1c.o %_test.gcc.k1c.o
+	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
+
+%_test.ccomp.k1c: %.ccomp.k1c.o %_test.gcc.k1c.o 
+	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
+
+clean:
+	$(RM) -f *.s *.o *.out *.k1c *.host
+
+.PHONY: clean all md2.all md5.all rot-13.all sha1.all sha256.all md5.all blowfish.all arcfour.all des.all base64.all aes.all

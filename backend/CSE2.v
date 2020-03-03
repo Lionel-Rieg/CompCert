@@ -465,7 +465,7 @@ Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   | Ijumptable _ _ => Some rel
   | Istore _ _ _ _ _ => Some (kill_mem rel)
   | Iop op args dst _ => Some (gen_oper op dst args rel)
-  | Iload chunk addr args dst _ => Some (load chunk addr dst args rel)
+  | Iload trap chunk addr args dst _ => Some (load chunk addr dst args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
   | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
   | Itailcall _ _ _ | Ireturn _ => RB.bot
@@ -529,10 +529,10 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     | None => Iop op args' dst s
     | Some src => Iop Omove (src::nil) dst s
     end
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
     let args' := subst_args fmap pc args in
     match find_load_in_fmap fmap pc chunk addr args' with
-    | None => Iload chunk addr args' dst s
+    | None => Iload trap chunk addr args' dst s
     | Some src => Iop Omove (src::nil) dst s
     end
   | Istore chunk addr args src s =>

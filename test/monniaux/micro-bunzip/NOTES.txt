@@ -1,0 +1,5 @@
+gcc segfault -O3
+
+stdout/stderr in thread-local stuff that does not get correctly handled
+
+fdopen not available?!

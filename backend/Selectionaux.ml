@@ -73,13 +73,13 @@ let fast_cmove ty =
   | "arm", _ ->
       (match ty with Tint | Tfloat | Tsingle -> true | _ -> false)
   | "powerpc", "e5500" -> 
-      (match ty with Tint -> true | Tlong -> true | _ -> false)
+      (match ty with Tint | Tlong -> true | _ -> false)
   | "powerpc", _ -> false
   | "riscV", _ -> false
   | "x86", _ -> 
-      (match ty with Tint -> true | Tlong -> Archi.ptr64 | _ -> false)
-  | _, _ ->
-      assert false
+     (match ty with Tint -> true | Tlong -> Archi.ptr64 | _ -> false)
+  | "mppa_k1c", _ -> true
+  | a, m -> failwith (Printf.sprintf "fast_cmove: unknown arch %s %s" a m)
 
 (* The if-conversion heuristic depend on the
    -fif-conversion and -Obranchless flags.

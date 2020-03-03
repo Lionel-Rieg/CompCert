@@ -1891,12 +1891,13 @@ Proof.
   apply plus_one. econstructor.
   instantiate (1 := v'). rewrite <- A. apply eval_operation_preserved.
   exact symbols_preserved. eauto.
-  econstructor; eauto with coqlib.
-  apply agree_regs_set_reg; auto.
-  rewrite transl_destroyed_by_op.  apply agree_regs_undef_regs; auto.
-  apply agree_locs_set_reg; auto. apply agree_locs_undef_locs. auto. apply destroyed_by_op_caller_save.
-  apply frame_set_reg. apply frame_undef_regs. exact SEP.
-
+  econstructor; eauto with coqlib;
+  try (apply agree_regs_set_reg; auto);
+  (* generic proof *)
+  solve [ 
+    (rewrite transl_destroyed_by_op; apply agree_regs_undef_regs; auto) |
+    (apply agree_locs_set_reg; auto; apply agree_locs_undef_locs; auto; apply destroyed_by_op_caller_save) |
+    (apply frame_set_reg; apply frame_undef_regs; exact SEP) ].
 - (* Lload *)
   assert (exists a',
           eval_addressing ge (Vptr sp' Ptrofs.zero) (transl_addr (make_env (function_bounds f)) addr) rs0##args = Some a'
@@ -1916,6 +1917,46 @@ Proof.
   econstructor; eauto with coqlib.
   apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
   apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.
+
+- (* Lload notrap1*)
+  assert (eval_addressing ge (Vptr sp' Ptrofs.zero) (transl_addr (make_env (function_bounds f)) addr) rs0##args = None) as Haddress.
+  eapply eval_addressing_inject_none; eauto.
+  eapply globalenv_inject_preserves_globals. eapply sep_proj2. eapply sep_proj2. eapply sep_proj2. eexact SEP.
+  eapply agree_reglist; eauto.
+  econstructor; split.
+  apply plus_one. apply exec_Mload_notrap1.
+  rewrite <- Haddress. apply eval_addressing_preserved. exact symbols_preserved.
+  eauto. econstructor; eauto with coqlib.
+  apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
+  apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.
+  
+- (* Lload notrap2 *)
+  assert (exists a',
+          eval_addressing ge (Vptr sp' Ptrofs.zero) (transl_addr (make_env (function_bounds f)) addr) rs0##args = Some a'
+       /\ Val.inject j a a').
+  eapply eval_addressing_inject; eauto.
+  eapply globalenv_inject_preserves_globals. eapply sep_proj2. eapply sep_proj2. eapply sep_proj2. eexact SEP.
+  eapply agree_reglist; eauto.
+  destruct H1 as [a' [A B]].
+
+  destruct ( Mem.loadv chunk m' a') as [v'|] eqn:Hloadv.
+  {
+  econstructor; split.
+  apply plus_one. apply exec_Mload with (a:=a') (v:=v'); eauto.
+  try (rewrite <- A; apply eval_addressing_preserved; auto; exact symbols_preserved).
+  econstructor; eauto with coqlib.
+  apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
+  apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.
+  }
+  {
+  econstructor; split.
+  apply plus_one. apply exec_Mload_notrap2 with (a:=a'); eauto.
+  try (rewrite <- A; apply eval_addressing_preserved; auto; exact symbols_preserved).
+  
+  econstructor; eauto with coqlib.
+  apply agree_regs_set_reg. rewrite transl_destroyed_by_load. apply agree_regs_undef_regs; auto. auto.
+  apply agree_locs_set_reg. apply agree_locs_undef_locs. auto. apply destroyed_by_load_caller_save. auto.
+  }
 
 - (* Lstore *)
   assert (exists a',

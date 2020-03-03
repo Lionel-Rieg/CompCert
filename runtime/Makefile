@@ -22,6 +22,12 @@ ifeq ($(ARCH),x86_64)
 OBJS=i64_dtou.o i64_utod.o i64_utof.o vararg.o
 else ifeq ($(ARCH),powerpc64)
 OBJS=i64_dtou.o i64_stof.o i64_utod.o i64_utof.o vararg.o
+else ifeq ($(ARCH),mppa_k1c)
+OBJS=i64_umod.o i64_udiv.o i64_udivmod.o i64_sdiv.o i64_smod.o vararg.o\
+		 i64_dtos.o i64_dtou.o i64_utod.o i64_utof.o i64_stod.o i64_stof.o\
+		 i64_shl.o i64_shr.o
+# Missing: i64_utod.o i64_utof.o i64_stod.o i64_stof.o
+DOMAKE:=$(shell (cd mppa_k1c && make))
 else ifeq ($(ARCH),aarch64)
 OBJS=vararg.o
 else
@@ -37,6 +43,9 @@ LIB=libcompcert.a
 INCLUDES=include/float.h include/stdarg.h include/stdbool.h \
   include/stddef.h include/varargs.h include/stdalign.h \
   include/stdnoreturn.h
+ifeq ($(ARCH),mppa_k1c)
+INCLUDES += include/ccomp_k1c_fixes.h include/math.h
+endif
 
 VPATH=$(ARCH)
 
@@ -65,7 +74,7 @@ $(LIB): $(OBJS)
 	../ccomp -O2 -S -o $*.s -I./c c/$*.c
 	sed -i -e 's/i64_/__compcert_i64_/g' $*.s
 	$(CASMRUNTIME) -o $*.o $*.s
-	@rm -f $*.s
+	@rm $*.s
 
 clean::
 	rm -f *.o $(LIB) *.tmp?.s

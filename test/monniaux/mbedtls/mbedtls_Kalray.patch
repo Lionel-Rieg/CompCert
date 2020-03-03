@@ -1,0 +1,70 @@
+diff --git a/include/mbedtls/config.h b/include/mbedtls/config.h
+index f89bf9604..9f8a4faeb 100644
+--- a/include/mbedtls/config.h
++++ b/include/mbedtls/config.h
+@@ -1076,7 +1076,7 @@
+  *
+  * Enable functions that use the filesystem.
+  */
+-#define MBEDTLS_FS_IO
++// DMonniaux #define MBEDTLS_FS_IO
+ 
+ /**
+  * \def MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
+@@ -1100,7 +1100,8 @@
+  *
+  * Uncomment this macro to disable the built-in platform entropy functions.
+  */
+-//#define MBEDTLS_NO_PLATFORM_ENTROPY
++//DMonniaux
++#define MBEDTLS_NO_PLATFORM_ENTROPY
+ 
+ /**
+  * \def MBEDTLS_ENTROPY_FORCE_SHA256
+@@ -2441,7 +2442,7 @@
+  *
+  * This module provides networking routines.
+  */
+-#define MBEDTLS_NET_C
++// DMonniaux #define MBEDTLS_NET_C
+ 
+ /**
+  * \def MBEDTLS_OID_C
+@@ -2838,7 +2839,7 @@
+  *
+  * This module is used by the HAVEGE random number generator.
+  */
+-#define MBEDTLS_TIMING_C
++// DMonniaux #define MBEDTLS_TIMING_C
+ 
+ /**
+  * \def MBEDTLS_VERSION_C
+diff --git a/tests/suites/helpers.function b/tests/suites/helpers.function
+index 1255ff4be..103abe9a8 100644
+--- a/tests/suites/helpers.function
++++ b/tests/suites/helpers.function
+@@ -40,10 +40,10 @@ typedef UINT32 uint32_t;
+ #endif
+ 
+ #include <string.h>
++#include <strings.h>
+ 
+ #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+ #include <unistd.h>
+-#include <strings.h>
+ #endif
+ 
+ /* Type for Hex parameters */
+diff --git a/tests/scripts/run-test-suites.pl b/tests/scripts/run-test-suites.pl
+index d0d4046..00cff26 100755
+--- a/tests/scripts/run-test-suites.pl
++++ b/tests/scripts/run-test-suites.pl
+@@ -59,7 +59,7 @@ for my $suite (@suites)
+     if( $verbose ) {
+         $command .= ' -v';
+     }
+-    my $result = `$command`;
++    my $result = `k1-cluster -- $command`;
+ 
+     $suite_cases_passed = () = $result =~ /.. PASS/g;
+     $suite_cases_failed = () = $result =~ /.. FAILED/g;

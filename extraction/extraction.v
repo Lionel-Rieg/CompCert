@@ -34,6 +34,7 @@ Require Clight.
 Require Compiler.
 Require Parser.
 Require Initializers.
+Require Asmaux.
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
@@ -104,6 +105,8 @@ Extract Constant Compopts.generate_float_constants =>
   "fun _ -> !Clflags.option_ffloatconstprop >= 2".
 Extract Constant Compopts.optim_tailcalls =>
   "fun _ -> !Clflags.option_ftailcalls".
+Extract Constant Compopts.optim_duplicate =>
+  "fun _ -> !Clflags.option_fduplicate".
 Extract Constant Compopts.optim_constprop =>
   "fun _ -> !Clflags.option_fconstprop".
 Extract Constant Compopts.optim_CSE =>
@@ -112,10 +115,28 @@ Extract Constant Compopts.optim_CSE2 =>
   "fun _ -> !Clflags.option_fcse2".
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
+Extract Constant Compopts.optim_postpass =>
+  "fun _ -> !Clflags.option_fpostpass".
 Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
   "fun _ -> !Clflags.option_g".
+Extract Constant Compopts.optim_globaladdrtmp =>
+  "fun _ -> !Clflags.option_fglobaladdrtmp".
+Extract Constant Compopts.optim_globaladdroffset =>
+  "fun _ -> !Clflags.option_fglobaladdroffset".
+Extract Constant Compopts.optim_xsaddr =>
+  "fun _ -> !Clflags.option_fxsaddr".
+Extract Constant Compopts.optim_addx =>
+  "fun _ -> !Clflags.option_faddx".
+Extract Constant Compopts.optim_coalesce_mem =>
+  "fun _ -> !Clflags.option_fcoalesce_mem".
+Extract Constant Compopts.optim_forward_moves =>
+  "fun _ -> !Clflags.option_fforward_moves".
+Extract Constant Compopts.va_strict =>
+  "fun _ -> false".
+Extract Constant Compopts.all_loads_nontrap =>
+  "fun _ -> !Clflags.option_all_loads_nontrap".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -125,6 +146,7 @@ Extract Constant Compiler.print_LTL => "PrintLTL.print_if".
 Extract Constant Compiler.print_Mach => "PrintMach.print_if".
 Extract Constant Compiler.print => "fun (f: 'a -> unit) (x: 'a) -> f x; x".
 Extract Constant Compiler.time  => "Timing.time_coq".
+Extract Constant Compopts.time  => "Timing.time_coq".
 
 (*Extraction Inline Compiler.apply_total Compiler.apply_partial.*)
 
@@ -178,7 +200,8 @@ Separate Extraction
    Machregs.mregs_for_operation Machregs.mregs_for_builtin
    Machregs.two_address_op Machregs.is_stack_reg
    Machregs.destroyed_at_indirect_call
-   AST.signature_main
+   AST.signature_main Asmaux
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
-   Parser.translation_unit_file.
+   Parser.translation_unit_file
+   Compopts.optim_postpass.

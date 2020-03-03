@@ -25,7 +25,11 @@ double test(int n)
 int main(int argc, char ** argv)
 {
   int n; double r;
+#ifdef __K1C__
+  if (argc >= 2) n = atoi(argv[1]); else n = 100000;
+#else
   if (argc >= 2) n = atoi(argv[1]); else n = 10000000;
+#endif
   r = test(n);
   printf("integr(square, 0.0, 1.0, %d) = %g\n", n, r);
   return 0;

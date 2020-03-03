@@ -1,0 +1,11 @@
+#!/bin/sh
+# does not work
+tmp=$2.tmp
+rm -f $tmp $2
+if scip -c "read $1" -c "optimize" -c "write solution $tmp" -c "quit" ;
+then
+    grep '(obj:' $tmp | sed -e 's@[[:space:]][[:space:]]*@ @' -e 's@[[:space:]]*(obj:.*)@@' > $2
+    rm -f $tmp
+else
+    exit $?
+fi

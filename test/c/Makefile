@@ -3,16 +3,32 @@ include ../../Makefile.config
 CCOMP=../../ccomp
 CCOMPFLAGS=$(CCOMPOPTS) -stdlib ../../runtime -dc -dclight -dasm
 
-CFLAGS=-O1 -Wall
+CFLAGS+=-O2 -Wall
+EXECUTE:=timeout --signal=SIGTERM 20s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
-TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
+TIME=time >/dev/null
+# FIXME - maybe this is better? From v3.6
+# TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
 
-PROGS=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
-  lists binarytrees fannkuch knucleotide mandelbrot nbody \
+PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
+  lists binarytrees fannkuch mandelbrot nbody \
   nsieve nsievebits spectral vmach \
-  bisect chomp perlin siphash24
+  chomp perlin siphash24
+
+##
+# Kalray NOTE :
+# * removed knucleotide from PROGS, it is hard to edit the input
+#   to modify its size without resulting in a seg fault, and the base input
+#   takes a too long time to complete in the simulator.
+# * also removed bisect, who is exhibiting different float values on the Kalray
+#   architecture than using x86 GCC (for both CompCert and GCC ports) (tested with n=10)
+##
+ifeq ($(ARCH),mppa_k1c)
+	PROGS:=$(filter-out knucleotide,$(PROGS))
+	PROGS:=$(filter-out bisect,$(PROGS))
+endif
 
 all: $(PROGS:%=%.compcert)
 
@@ -29,28 +45,22 @@ all_gcc: $(PROGS:%=%.gcc)
 %.gcc: %.c
 	$(CC) $(CFLAGS) -o $*.gcc $*.c $(LIBS)
 
-test:
+test: all
 	@for i in $(PROGS); do \
-	   if $(SIMU) ./$$i.compcert | cmp -s - Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; exit 2; \
-	   fi; \
+		 SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.compcert;\
          done
 
-test_gcc:
+test_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   if ./$$i.gcc | cmp -s - Results/$$i; \
-           then echo "$$i: passed"; \
-           else echo "$$i: FAILED"; \
-	   fi; \
+	   SIMU='$(EXECUTE)' ./Runtest $$i ./$$i.gcc;\
          done
 
-bench_gcc:
+bench_gcc: all_gcc
 	@for i in $(PROGS); do \
 	   $(TIME) -name $$i -- ./$$i.gcc; \
          done
 
-bench:
+bench: all
 	@for i in $(PROGS); do \
 	   $(TIME) -name $$i -- ./$$i.compcert; \
          done
@@ -58,3 +68,4 @@ bench:
 clean:
 	rm -f *.compcert *.gcc
 	rm -f *.compcert.c *.light.c *.parsed.c *.s *.o *.sdump *~ 
+	rm -f *.out

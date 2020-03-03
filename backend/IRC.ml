@@ -15,6 +15,7 @@ open Camlcoq
 open AST
 open Registers
 open Machregs
+open Machregsaux
 open Locations
 open Conventions1
 open XTL
@@ -237,10 +238,6 @@ type graph = {
    according to their types.  A variable can be forced into class 2
    by giving it a negative spill cost. *)
 
-let class_of_type = function
-  | Tint | Tlong -> 0
-  | Tfloat | Tsingle -> 1
-  | Tany32 | Tany64 -> assert false
 
 let class_of_reg r =
   if Conventions1.is_float_reg r then 1 else 0

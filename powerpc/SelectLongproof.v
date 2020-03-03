@@ -16,6 +16,7 @@ Require Import String Coqlib Maps Zbits Integers Floats Errors.
 Require Archi.
 Require Import AST Values Memory Globalenvs Events.
 Require Import Cminor Op CminorSel.
+Require Import OpHelpers OpHelpersproof.
 Require Import SelectOp SelectOpproof SplitLong SplitLongproof.
 Require Import SelectLong.
 

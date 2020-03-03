@@ -38,6 +38,10 @@ Require Import Floats.
 Require Import Values.
 Require Export Memdata.
 Require Export Memtype.
+Require Import Lia.
+
+Definition default_notrap_load_value (chunk : memory_chunk) := Vundef.
+
 
 (* To avoid useless definitions of inductors in extracted code. *)
 Local Unset Elimination Schemes.
@@ -538,6 +542,48 @@ Proof.
   induction vl; simpl; intros. auto. rewrite IHvl. auto.
 Qed.
 
+Remark set_setN_swap_disjoint:
+  forall vl: list memval,
+  forall v: memval,
+  forall m : ZMap.t memval,
+  forall p pl: Z,
+    ~ (Intv.In p (pl, pl + Z.of_nat (length vl))) ->
+    (setN vl pl (ZMap.set p v m)) = (ZMap.set p v (setN vl pl m)).
+Proof.
+  induction vl; simpl; trivial.
+  intros.
+  unfold Intv.In in *; simpl in *.
+  rewrite ZMap.set_disjoint by lia.
+  apply IHvl.
+  lia.
+Qed.
+
+Lemma setN_swap_disjoint:
+  forall vl1 vl2: list memval,
+  forall m : ZMap.t memval,
+  forall p1 p2: Z,
+    Intv.disjoint (p1, p1 + Z.of_nat (length vl1))
+                  (p2, p2 + Z.of_nat (length vl2)) ->
+    (setN vl1 p1 (setN vl2 p2 m)) = (setN vl2 p2 (setN vl1 p1 m)).
+Proof.
+  induction vl1; simpl; trivial.
+  intros until p2. intro DISJOINT.
+  rewrite <- set_setN_swap_disjoint.
+  { rewrite IHvl1.
+    reflexivity.
+    unfold Intv.disjoint, Intv.In in *.
+    simpl in *.
+    intro.
+    intro BOUNDS.
+    apply DISJOINT.
+    lia.
+  }
+  unfold Intv.disjoint, Intv.In in *.
+  simpl in *.
+  apply DISJOINT.
+  lia.
+Qed.
+    
 (** [store chunk m b ofs v] perform a write in memory state [m].
   Value [v] is stored at address [b] and offset [ofs].
   Return the updated memory store, or [None] if the accessed bytes
@@ -1178,6 +1224,89 @@ Local Hint Resolve store_valid_block_1 store_valid_block_2: mem.
 Local Hint Resolve store_valid_access_1 store_valid_access_2
              store_valid_access_3: mem.
 
+Remark mem_same_proof_irr :
+  forall m1 m2 : mem,
+    (mem_contents m1) = (mem_contents m2) ->
+    (mem_access m1) = (mem_access m2) ->
+    (nextblock m1) = (nextblock m2) ->
+    m1 = m2.
+Proof.
+  destruct m1 as [contents1 access1 nextblock1 access_max1 nextblock_noaccess1 default1].
+  destruct m2 as [contents2 access2 nextblock2 access_max2 nextblock_noaccess2 default2].
+  simpl.
+  intros.
+  subst contents2.
+  subst access2.
+  subst nextblock2.
+  f_equal; apply proof_irr.
+Qed.
+
+Theorem store_store_other:
+  forall chunk b ofs v chunk' b' ofs' v' m0 m1 m1',
+     b' <> b
+  \/ ofs' + size_chunk chunk' <= ofs
+  \/ ofs  + size_chunk chunk  <= ofs' ->
+     store chunk m0 b ofs v = Some m1 ->
+     store chunk' m0 b' ofs' v' = Some m1' ->
+     store chunk' m1 b' ofs' v' =
+     store chunk m1' b ofs v.
+Proof.
+  intros until m1'.
+  intro DISJOINT.
+  intros W0 W0'.
+  assert (valid_access m1' chunk b ofs Writable) as WRITEABLE1' by eauto with mem.
+  (* {
+    eapply store_valid_access_1.
+    apply W0'.
+    eapply store_valid_access_3.
+    apply W0.
+  } *)
+  assert (valid_access m1 chunk' b' ofs' Writable) as WRITABLE1 by eauto with mem.
+  (* {
+    eapply store_valid_access_1.
+    apply W0.
+    eapply store_valid_access_3.
+    apply W0'.
+  } *)
+  unfold store in *.
+  destruct (valid_access_dec m0 chunk b ofs Writable).
+  2: congruence.
+  destruct (valid_access_dec m1 chunk' b' ofs' Writable).
+  2: contradiction.
+  destruct (valid_access_dec m0 chunk' b' ofs' Writable).
+  2: congruence.
+  destruct (valid_access_dec m1' chunk b ofs Writable).
+  2: contradiction.
+  f_equal.
+  inv W0; simpl in *.
+  inv W0'; simpl in *.
+  apply mem_same_proof_irr; simpl; trivial.
+  destruct (eq_block b b').
+  { subst b'.
+    rewrite PMap.gss.
+    rewrite PMap.gss.
+    rewrite PMap.set2.
+    rewrite PMap.set2.
+    f_equal.
+    apply setN_swap_disjoint.
+    unfold Intv.disjoint.
+    rewrite encode_val_length.
+    rewrite <- size_chunk_conv.
+    rewrite encode_val_length.
+    rewrite <- size_chunk_conv.
+    unfold Intv.In; simpl.
+    intros.
+    destruct DISJOINT. contradiction.
+    lia.
+  }
+  {
+    rewrite PMap.set_disjoint by congruence.
+    rewrite PMap.gso by congruence.
+    rewrite PMap.gso by congruence.
+    reflexivity.
+  }
+Qed.
+    
 Lemma load_store_overlap:
   forall chunk m1 b ofs v m2 chunk' ofs' v',
   store chunk m1 b ofs v = Some m2 ->

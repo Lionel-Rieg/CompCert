@@ -436,6 +436,43 @@ Proof.
   apply eval_addressing_preserved. exact symbols_preserved. eauto.
   econstructor; eauto. apply set_reg_lessdef; auto.
 
+- (* load notrap1 *)
+  TransfInstr.
+  assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.
+  left.
+  exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- (default_notrap_load_value chunk)) m'); split.
+  eapply exec_Iload_notrap1.
+  eassumption.
+  eapply eval_addressing_lessdef_none. eassumption.
+  erewrite eval_addressing_preserved.
+  eassumption. exact symbols_preserved.
+
+  econstructor; eauto. apply set_reg_lessdef; auto.
+
+- (* load notrap2 *)
+  TransfInstr.
+  assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.
+  left.
+
+  exploit eval_addressing_lessdef; eauto.
+  intros [a' [ADDR' ALD]].
+  
+  destruct (Mem.loadv chunk m' a') eqn:Echunk2.
+  + exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- v) m'); split.
+    eapply exec_Iload with (a:=a'). eassumption.
+    erewrite eval_addressing_preserved.
+    eassumption.
+    exact symbols_preserved.
+    assumption.
+    econstructor; eauto. apply set_reg_lessdef; auto.
+  + exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- (default_notrap_load_value chunk)) m'); split.
+    eapply exec_Iload_notrap2. eassumption.
+    erewrite eval_addressing_preserved.
+    eassumption.
+    exact symbols_preserved.
+    assumption.
+    econstructor; eauto. apply set_reg_lessdef; auto.
+    
 - (* store *)
   TransfInstr.
   assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.

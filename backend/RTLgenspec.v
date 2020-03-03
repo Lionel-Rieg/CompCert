@@ -707,7 +707,7 @@ Inductive tr_expr (c: code):
       tr_expr c map pr (Eop op al) ns nd rd dst
   | tr_Eload: forall map pr chunk addr al ns nd rd n1 rl dst,
       tr_exprlist c map pr al ns n1 rl ->
-      c!n1 = Some (Iload chunk addr rl rd nd) ->
+      c!n1 = Some (Iload TRAP chunk addr rl rd nd) ->
       reg_map_ok map rd dst -> ~In rd pr ->
       tr_expr c map pr (Eload chunk addr al) ns nd rd dst
   | tr_Econdition: forall map pr a ifso ifnot ns nd rd ntrue nfalse dst,

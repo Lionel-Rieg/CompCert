@@ -40,6 +40,7 @@ Require Import Coqlib.
 Require Import Compopts.
 Require Import AST Integers Floats Builtins.
 Require Import Op CminorSel.
+Require Import OpHelpers.
 Require Archi.
 
 Local Open Scope cminorsel_scope.
@@ -575,6 +576,13 @@ Nondetfunction builtin_arg (e: expr) :=
   | Eload chunk (Ainstack ofs) Enil => BA_loadstack chunk ofs
   | _ => BA e
   end.
+
+(* floats *)
+Definition divf_base (e1: expr) (e2: expr) :=
+  Eop Odivf (e1 ::: e2 ::: Enil).
+
+Definition divfs_base (e1: expr) (e2: expr) :=
+  Eop Odivfs (e1 ::: e2 ::: Enil).
 
 (** Platform-specific known builtins *)
 

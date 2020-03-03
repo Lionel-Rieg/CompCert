@@ -261,6 +261,25 @@ Proof.
   apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
   apply select_sound; auto. eapply eval_static_condition_sound; eauto.
 Qed.
-
+(*
+Theorem eval_static_addressing_sound_none:
+  forall addr vargs aargs,
+  eval_addressing ge (Vptr sp Ptrofs.zero) addr vargs = None ->
+  list_forall2 (vmatch bc) vargs aargs ->
+  (eval_static_addressing addr aargs) = Vbot.
+Proof.
+  unfold eval_addressing, eval_static_addressing.
+  intros until aargs. intros Heval_none Hlist.
+  destruct (Archi.ptr64).
+  inv Hlist.
+  destruct addr; trivial; discriminate.
+  inv H0.
+  destruct addr; trivial; try discriminate. simpl in *.
+  inv H2.
+  destruct addr; trivial; discriminate.
+  inv H3;
+  destruct addr; trivial; discriminate.
+Qed.
+*)
 End SOUNDNESS.
 

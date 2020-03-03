@@ -15,7 +15,7 @@
 let prepro_options = ref ([]: string list)
 let linker_options = ref ([]: string list)
 let assembler_options = ref ([]: string list)
-let option_flongdouble = ref false
+let option_flongdouble = ref (Configuration.arch = "mppa_k1c")
 let option_fstruct_passing = ref false
 let option_fbitfields = ref false
 let option_fvararg_calls = ref true
@@ -28,6 +28,11 @@ let option_fconstprop = ref true
 let option_fcse = ref true
 let option_fcse2 = ref true
 let option_fredundancy = ref true
+let option_fduplicate = ref false
+let option_finvertcond = ref true (* only active if option_fduplicate is also true *)
+let option_ftracelinearize = ref false
+let option_fpostpass = ref true
+let option_fpostpass_sched = ref "list"
 let option_fifconversion = ref true
 let option_Obranchless = ref false
 let option_falignfunctions = ref (None: int option)
@@ -68,3 +73,11 @@ let option_small_const = ref (!option_small_data)
 let option_timings = ref false
 let stdlib_path = ref Configuration.stdlib_path
 let use_standard_headers =  ref Configuration.has_standard_headers
+
+let option_fglobaladdrtmp = ref false
+let option_fglobaladdroffset = ref false
+let option_fxsaddr = ref true  
+let option_faddx = ref false  
+let option_fcoalesce_mem = ref true
+let option_fforward_moves = ref true
+let option_all_loads_nontrap = ref false

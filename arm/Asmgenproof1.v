@@ -1264,15 +1264,32 @@ Local Transparent destroyed_by_op.
   destruct (rs x0) eqn: X0; simpl in H0; try discriminate.
   destruct (Int.ltu i (Int.repr 31)) eqn: LTU; inv H0.
   revert EQ2. predSpec Int.eq Int.eq_spec i Int.zero; intros EQ2.
+  {
   (* i = 0 *)
   inv EQ2. econstructor.
   split. apply exec_straight_one. simpl. reflexivity. auto.
   split. Simpl. unfold Int.shrx. rewrite Int.shl_zero. unfold Int.divs.
   change (Int.signed Int.one) with 1. rewrite Z.quot_1_r. rewrite Int.repr_signed. auto.
   intros. Simpl.
-  (* i <> 0 *)
-  inv EQ2.
-  assert (LTU': Int.ltu (Int.sub Int.iwordsize i) Int.iwordsize = true).
+  }
+  { (* i <> 0 *)
+    revert EQ2. predSpec Int.eq Int.eq_spec i Int.one; intros EQ2.
+    {
+      inv EQ2.
+      econstructor; split.
+      eapply exec_straight_two; simpl; reflexivity.
+      split.
+      { rewrite X0.
+        rewrite Int.shrx1_shr by reflexivity.
+        Simpl.
+      }
+      { intros.
+        Simpl.
+      }
+    }
+    clear H0.
+    inv EQ2.
+    assert (LTU': Int.ltu (Int.sub Int.iwordsize i) Int.iwordsize = true).
   {
     generalize (Int.ltu_inv _ _ LTU). intros.
     unfold Int.sub, Int.ltu. rewrite Int.unsigned_repr_wordsize.
@@ -1306,6 +1323,7 @@ Local Transparent destroyed_by_op.
   rewrite LTU'; simpl. rewrite LTU''; simpl.
   f_equal. symmetry. apply Int.shrx_shr_2. assumption.
   intros. unfold rs3; Simpl. unfold rs2; Simpl. unfold rs1; Simpl.
+  }
   (* intoffloat *)
   econstructor; split. apply exec_straight_one; simpl. rewrite H0; simpl. eauto. auto.
 Transparent destroyed_by_op.
@@ -1540,8 +1558,8 @@ Proof.
 Qed.
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) a m v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) a m v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs#SP) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -1549,7 +1567,9 @@ Lemma transl_load_correct:
    /\ rs'#(preg_of dst) = v
    /\ forall r, data_preg r = true -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
-  intros. destruct chunk; simpl in H.
+  intros.
+  destruct trap; try (simpl in *; discriminate).
+  destruct chunk; simpl in H.
   eapply transl_load_int_correct; eauto.
   eapply transl_load_int_correct; eauto.
   eapply transl_load_int_correct; eauto.

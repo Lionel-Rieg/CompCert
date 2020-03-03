@@ -16,10 +16,12 @@
 include Makefile.config
 
 ifeq ($(wildcard $(ARCH)_$(BITSIZE)),)
-ARCHDIRS=$(ARCH)
+ARCHDIRS?=$(ARCH)
 else
-ARCHDIRS=$(ARCH)_$(BITSIZE) $(ARCH)
+ARCHDIRS?=$(ARCH)_$(BITSIZE) $(ARCH)
 endif
+
+BACKENDLIB?=Asmgenproof0.v Asmgenproof1.v
 
 DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
   flocq/Core flocq/Prop flocq/Calc flocq/IEEE754 \
@@ -28,7 +30,7 @@ DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
 RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight \
   MenhirLib cparser
 
-COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) compcert.$(d))
+COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) $(subst /,.,compcert.$(d)))
 
 COQCOPTS ?= -w -undeclared-scope
 COQC="$(COQBIN)coqc" -q $(COQINCLUDES) $(COQCOPTS)
@@ -69,7 +71,7 @@ COMMON=Errors.v AST.v Linking.v \
 # Back-end modules (in backend/, $(ARCH)/)
 
 BACKEND=\
-  Cminor.v Cminortyping.v Op.v CminorSel.v \
+  Cminor.v Cminortyping.v  Op.v CminorSel.v OpHelpers.v OpHelpersproof.v \
   SelectOp.v SelectDiv.v SplitLong.v SelectLong.v Selection.v \
   SelectOpproof.v SelectDivproof.v SplitLongproof.v \
   SelectLongproof.v Selectionproof.v \
@@ -78,6 +80,7 @@ BACKEND=\
   Tailcall.v Tailcallproof.v \
   Inlining.v Inliningspec.v Inliningproof.v \
   Renumber.v Renumberproof.v \
+  Duplicate.v Duplicateproof.v \
   RTLtyping.v \
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
@@ -87,6 +90,8 @@ BACKEND=\
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
+  ForwardMoves.v ForwardMovesproof.v \
+  Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \
   Linear.v Lineartyping.v \
@@ -95,7 +100,8 @@ BACKEND=\
   Debugvar.v Debugvarproof.v \
   Mach.v \
   Bounds.v Stacklayout.v Stacking.v Stackingproof.v \
-  Asm.v Asmgen.v Asmgenproof0.v Asmgenproof1.v Asmgenproof.v
+  Asm.v Asmgen.v Asmgenproof.v Asmaux.v \
+  $(BACKENDLIB)
 
 # C front-end modules (in cfrontend/)
 
@@ -137,6 +143,7 @@ all:
 	$(MAKE) proof
 	$(MAKE) extraction
 	$(MAKE) ccomp
+	$(MAKE) ccomp.byte
 ifeq ($(HAS_RUNTIME_LIB),true)
 	$(MAKE) runtime
 endif

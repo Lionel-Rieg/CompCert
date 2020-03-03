@@ -17,6 +17,8 @@ Require Import AST Integers Floats.
 Require Import Values Memory Builtins Globalenvs.
 Require Import Cminor Op CminorSel.
 Require Import SelectOp.
+Require Import OpHelpers.
+Require Import OpHelpersproof.
 
 Local Open Scope cminorsel_scope.
 
@@ -68,8 +70,10 @@ Ltac TrivialExists :=
 (** * Correctness of the smart constructors *)
 
 Section CMCONSTR.
-
-Variable ge: genv.
+Variable prog: program.
+Variable hf: helper_functions.
+Hypothesis HELPERS: helper_functions_declared prog hf.
+Let ge := Genv.globalenv prog.
 Variable sp: val.
 Variable e: env.
 Variable m: mem.
@@ -1010,6 +1014,27 @@ Proof.
 - inv H. InvEval. rewrite eval_addressing_Aglobal in H6. inv H6. constructor; auto.
 - inv H. InvEval. rewrite eval_addressing_Ainstack in H6. inv H6. constructor; auto.
 - constructor; auto.
+Qed.
+
+(* floating-point division without HELPERS *)
+Theorem eval_divf_base:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divf_base a b) v /\ Val.lessdef (Val.divf x y) v.
+Proof.
+  intros; unfold divf_base.
+  TrivialExists.
+Qed.
+
+Theorem eval_divfs_base:
+  forall le a b x y,
+  eval_expr ge sp e m le a x ->
+  eval_expr ge sp e m le b y ->
+  exists v, eval_expr ge sp e m le (divfs_base a b) v /\ Val.lessdef (Val.divfs x y) v.
+Proof.
+  intros; unfold divfs_base.
+  TrivialExists.
 Qed.
 
 (** Platform-specific known builtins *)

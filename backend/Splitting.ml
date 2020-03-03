@@ -151,8 +151,8 @@ let ren_instr f maps pc i =
   | Inop s -> Inop s
   | Iop(op, args, res, s) ->
       Iop(op, ren_regs before args, ren_reg after res, s)
-  | Iload(chunk, addr, args, dst, s) ->
-      Iload(chunk, addr, ren_regs before args, ren_reg after dst, s)
+  | Iload(trap, chunk, addr, args, dst, s) ->
+      Iload(trap, chunk, addr, ren_regs before args, ren_reg after dst, s)
   | Istore(chunk, addr, args, src, s) ->
       Istore(chunk, addr, ren_regs before args, ren_reg before src, s)
   | Icall(sg, ros, args, res, s) ->

@@ -17,7 +17,7 @@
   the abstract syntax trees of many of the intermediate languages. *)
 
 Require Import String.
-Require Import Coqlib Maps Errors Integers Floats.
+Require Import Coqlib Maps Errors Integers Floats BinPos.
 Require Archi.
 
 Set Implicit Arguments.
@@ -231,6 +231,16 @@ Definition chunk_of_type (ty: typ) :=
 
 Lemma chunk_of_Tptr: chunk_of_type Tptr = Mptr.
 Proof. unfold Mptr, Tptr; destruct Archi.ptr64; auto. Qed.
+
+(** Trapping mode: does undefined behavior result in a trap or an undefined value (e.g. for loads) *)
+Inductive trapping_mode : Type := TRAP | NOTRAP.
+
+Definition trapping_mode_eq : forall x y : trapping_mode,
+    { x=y } + { x <> y}.
+Proof.
+  decide equality.
+Defined.
+
 
 (** Initialization data for global variables. *)
 
@@ -669,10 +679,27 @@ Inductive builtin_arg (A: Type) : Type :=
   | BA_splitlong (hi lo: builtin_arg A)
   | BA_addptr (a1 a2: builtin_arg A).
 
+Definition builtin_arg_eq {A: Type}:
+  (forall x y : A, {x = y} + {x <> y}) ->
+  forall (ba1 ba2: (builtin_arg A)), {ba1=ba2} + {ba1<>ba2}.
+Proof.
+  intro. generalize Integers.int_eq int64_eq float_eq float32_eq chunk_eq ptrofs_eq ident_eq.
+  decide equality.
+Defined.
+Global Opaque builtin_arg_eq.
+
 Inductive builtin_res (A: Type) : Type :=
   | BR (x: A)
   | BR_none
   | BR_splitlong (hi lo: builtin_res A).
+
+Definition builtin_res_eq {A: Type}:
+  (forall x y : A, {x = y} + {x <> y}) ->
+  forall (a b: builtin_res A), {a=b} + {a<>b}.
+Proof.
+  intro. decide equality.
+Defined.
+Global Opaque builtin_res_eq.
 
 Fixpoint globals_of_builtin_arg (A: Type) (a: builtin_arg A) : list ident :=
   match a with

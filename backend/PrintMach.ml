@@ -48,10 +48,11 @@ let print_instruction pp i =
   | Mop(op, args, res) ->
       fprintf pp "\t%a = %a\n"
          reg res (PrintOp.print_operation reg) (op, args)
-  | Mload(chunk, addr, args, dst) ->
-      fprintf pp "\t%a = %s[%a]\n"
+  | Mload(trap, chunk, addr, args, dst) ->
+      fprintf pp "\t%a = %s[%a]%a\n"
          reg dst (name_of_chunk chunk)
          (PrintOp.print_addressing reg) (addr, args)
+         print_trapping_mode trap
   | Mstore(chunk, addr, args, src) ->
       fprintf pp "\t%s[%a] = %a\n"
          (name_of_chunk chunk)

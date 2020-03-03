@@ -235,13 +235,19 @@ int test_vectors()
 
 u8 testdata[100] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 12, 34, 56, 78, 90 };
 
+#ifdef __K1C__
+#define NITER 1000
+#else
+#define NITER 1000000
+#endif
+
 int speed_test(void)
 {
   u8 out[8], k[16];
   int i;
 
   for(i = 0; i < 16; ++i ) k[i] = i;
-  for(i = 0; i < 1000000; i++) {
+  for(i = 0; i < NITER; i++) {
     testdata[99] = (u8) i;
     crypto_auth(out, testdata, 100, k);
   }

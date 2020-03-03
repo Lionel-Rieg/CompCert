@@ -1,0 +1,4 @@
+sources: "$(wildcard *.c)"
+target: ppm2tiff
+measures: [cycles]
+name: ppm2tiff

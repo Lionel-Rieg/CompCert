@@ -17,12 +17,20 @@ int main (int argc, char **argv)
 {
     int w, h, bit_num = 0;
     char byte_acc = 0;
+#ifdef __K1C__
+    int i, iter = 30;
+#else
     int i, iter = 50;
+#endif
     double x, y, limit = 2.0;
     double Zr, Zi, Cr, Ci, Tr, Ti;
 
     if (argc < 2) {
+#ifdef __K1C__
+      w = h = 40;
+#else
       w = h = 1000;
+#endif
     } else {
       w = h = atoi(argv[1]);
     }
@@ -51,14 +59,22 @@ int main (int argc, char **argv)
 
             if(bit_num == 8)
             {
+                printf("%c", byte_acc);
                 putc(byte_acc,stdout);
+#ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
+                fflush(stdout);
+#endif
                 byte_acc = 0;
                 bit_num = 0;
             }
             else if(x == w-1)
             {
                 byte_acc <<= (8-w%8);
+                printf("%c", byte_acc);
                 putc(byte_acc,stdout);
+#ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
+                fflush(stdout);
+#endif
                 byte_acc = 0;
                 bit_num = 0;
             }
