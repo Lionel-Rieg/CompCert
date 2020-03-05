@@ -1383,3 +1383,9 @@ Proof.
   apply WR.gfilter.
 Qed.
 End PSet.
+
+Require Extraction.
+
+Extract Inductive PSet.WR.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
+
+Extract Inlined Constant PSet.WR.pset_eq => "HashedSetaux.eq".
