@@ -36,6 +36,8 @@ Require Parser.
 Require Initializers.
 Require Asmaux.
 
+Require CSE3. (* FIXME *)
+
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
@@ -160,6 +162,10 @@ Extract Constant Cabs.loc =>
 Extract Inlined Constant Cabs.string => "String.t".
 Extract Constant Cabs.char_code => "int64".
 
+Extract Inductive HashedSet.PSet_internals.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
+
+Extract Inlined Constant HashedSet.PSet_internals.pset_eq => "(==)" (* "HashedSetaux.eq" *).
+
 (* Processor-specific extraction directives *)
 
 Load extractionMachdep.
@@ -182,6 +188,7 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
+   CSE3.totoro (* FIXME *)
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env

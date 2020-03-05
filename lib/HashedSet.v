@@ -3,156 +3,40 @@ Require Import Bool.
 Require Import List.
 Require Coq.Logic.Eqdep_dec.
 
-Require Extraction.
+(* begin from Maps *)
+Fixpoint prev_append (i j: positive) {struct i} : positive :=
+  match i with
+  | xH => j
+  | xI i' => prev_append i' (xI j)
+  | xO i' => prev_append i' (xO j)
+  end.
 
-Module Type POSITIVE_SET.
-Parameter t : Type.
-Parameter empty : t.
+Definition prev (i: positive) : positive :=
+  prev_append i xH.
 
-Parameter contains: t -> positive -> bool.
+Lemma prev_append_prev i j:
+  prev (prev_append i j) = prev_append j i.
+Proof.
+  revert j. unfold prev.
+  induction i as [i IH|i IH|]. 3: reflexivity.
+  intros j. simpl. rewrite IH. reflexivity.
+  intros j. simpl. rewrite IH. reflexivity.
+Qed.
 
-Axiom gempty :
-  forall i : positive,
-    contains empty i = false.
+Lemma prev_involutive i :
+  prev (prev i) = i.
+Proof (prev_append_prev i xH).
 
-Parameter add : positive -> t -> t.
-
-Axiom gaddo :
-  forall i j : positive,
-  forall s : t,
-    i <> j ->
-    contains (add i s) j = contains s j.
-
-Axiom gadds :
-  forall i : positive,
-  forall s : t,
-    contains (add i s) i = true.
-
-Parameter remove : positive -> t -> t.
-
-Axiom gremoves :
-  forall i : positive,
-  forall s : t,
-    contains (remove i s) i = false.
-
-Axiom gremoveo :
-  forall i j : positive,
-  forall s : t,
-    i<>j ->
-    contains (remove i s) j = contains s j.
-
-Parameter union : t -> t -> t.
-
-Axiom gunion:
-  forall s s' : t,
-  forall j : positive,
-    (contains (union s s')) j = orb (contains s j) (contains s' j).
-
-Parameter inter : t -> t -> t.
-
-Axiom ginter:
-  forall s s' : t,
-  forall j : positive,
-    (contains (inter s s')) j = andb (contains s j) (contains s' j).
-
-Parameter subtract : t -> t -> t.
-
-Axiom gsubtract:
-  forall s s' : t,
-  forall j : positive,
-    (contains (subtract s s')) j = andb (contains s j) (negb (contains s' j)).
-
-Axiom uneq_exists :
-  forall s s', s <> s' ->
-               exists i, (contains s i) <> (contains s' i).
-
-Parameter eq:
-  forall s s' : t, {s = s'} + {s <> s'}.
-
-Axiom eq_spec :
-  forall s s',
-    (forall i, (contains s i) = (contains s' i)) <-> s = s'.
-
-Parameter elements : t -> list positive.
-
-Axiom elements_correct:
-  forall (m: t) (i: positive),
-    contains m i = true -> In i (elements m).
-
-Axiom elements_complete:
-  forall (m: t) (i: positive),
-    In i (elements m) -> contains m i = true.
-
-Parameter fold:
-  forall {B : Type},
-    (B -> positive -> B) -> t -> B -> B.
-
-Axiom fold_spec:
-  forall {B: Type} (f: B -> positive -> B) (v: B) (m: t),
-    fold f m v =
-    List.fold_left f (elements m) v.
-
-Parameter is_subset : t -> t -> bool.
-
-Axiom is_subset_spec1:
-  forall s s',
-    is_subset s s' = true ->
-    (forall i, contains s i = true -> contains s' i = true).
-
-Axiom is_subset_spec2:
-  forall s s',
-    (forall i, contains s i = true -> contains s' i = true) ->
-    is_subset s s' = true.
-
-Axiom is_subset_spec:
-  forall s s',
-    is_subset s s' = true <->
-    (forall i, contains s i = true -> contains s' i = true).
-
-Parameter filter: (positive -> bool) -> t -> t.
-
-Axiom gfilter:
-  forall fn s j,
-    contains (filter fn s) j =
-    contains s j && (fn j).
-  
-End POSITIVE_SET.
-
-Module PSet : POSITIVE_SET.
-  (* begin from Maps *)
-  Fixpoint prev_append (i j: positive) {struct i} : positive :=
-    match i with
-      | xH => j
-      | xI i' => prev_append i' (xI j)
-      | xO i' => prev_append i' (xO j)
-    end.
-
-  Definition prev (i: positive) : positive :=
-    prev_append i xH.
-
-  Lemma prev_append_prev i j:
-    prev (prev_append i j) = prev_append j i.
-  Proof.
-    revert j. unfold prev.
-    induction i as [i IH|i IH|]. 3: reflexivity.
-    intros j. simpl. rewrite IH. reflexivity.
-    intros j. simpl. rewrite IH. reflexivity.
-  Qed.
-
-  Lemma prev_involutive i :
-    prev (prev i) = i.
-  Proof (prev_append_prev i xH).
-
-  Lemma prev_append_inj i j j' :
-    prev_append i j = prev_append i j' -> j = j'.
-  Proof.
-    revert j j'.
-    induction i as [i Hi|i Hi|]; intros j j' H; auto;
+Lemma prev_append_inj i j j' :
+  prev_append i j = prev_append i j' -> j = j'.
+Proof.
+  revert j j'.
+  induction i as [i Hi|i Hi|]; intros j j' H; auto;
     specialize (Hi _ _ H); congruence.
-  Qed.
+Qed.
 
-  (* end from Maps *)
-  
+(* end from Maps *)
+
 Lemma orb_idem: forall b, orb b b = b.
 Proof.
   destruct b; reflexivity.
@@ -170,7 +54,7 @@ Qed.
 
 Hint Rewrite orb_false_r andb_false_r andb_true_r orb_true_r orb_idem andb_idem  andb_negb_false: pset.
 
-Module WR.
+Module PSet_internals.
 Inductive pset : Type :=
 | Empty : pset
 | Node : pset -> bool -> pset -> pset.
@@ -1094,20 +978,135 @@ Definition elements (m : pset) := xelements m xH nil.
     intros.
     apply wf_xfilter; auto.
   Qed.
-End WR.
+End PSet_internals.
+
+Module Type POSITIVE_SET.
+Parameter t : Type.
+Parameter empty : t.
+
+Parameter contains: t -> positive -> bool.
+
+Axiom gempty :
+  forall i : positive,
+    contains empty i = false.
+
+Parameter add : positive -> t -> t.
+
+Axiom gaddo :
+  forall i j : positive,
+  forall s : t,
+    i <> j ->
+    contains (add i s) j = contains s j.
+
+Axiom gadds :
+  forall i : positive,
+  forall s : t,
+    contains (add i s) i = true.
+
+Parameter remove : positive -> t -> t.
+
+Axiom gremoves :
+  forall i : positive,
+  forall s : t,
+    contains (remove i s) i = false.
+
+Axiom gremoveo :
+  forall i j : positive,
+  forall s : t,
+    i<>j ->
+    contains (remove i s) j = contains s j.
+
+Parameter union : t -> t -> t.
+
+Axiom gunion:
+  forall s s' : t,
+  forall j : positive,
+    (contains (union s s')) j = orb (contains s j) (contains s' j).
+
+Parameter inter : t -> t -> t.
+
+Axiom ginter:
+  forall s s' : t,
+  forall j : positive,
+    (contains (inter s s')) j = andb (contains s j) (contains s' j).
+
+Parameter subtract : t -> t -> t.
+
+Axiom gsubtract:
+  forall s s' : t,
+  forall j : positive,
+    (contains (subtract s s')) j = andb (contains s j) (negb (contains s' j)).
+
+Axiom uneq_exists :
+  forall s s', s <> s' ->
+               exists i, (contains s i) <> (contains s' i).
+
+Parameter eq:
+  forall s s' : t, {s = s'} + {s <> s'}.
+
+Axiom eq_spec :
+  forall s s',
+    (forall i, (contains s i) = (contains s' i)) <-> s = s'.
+
+Parameter elements : t -> list positive.
+
+Axiom elements_correct:
+  forall (m: t) (i: positive),
+    contains m i = true -> In i (elements m).
+
+Axiom elements_complete:
+  forall (m: t) (i: positive),
+    In i (elements m) -> contains m i = true.
+
+Parameter fold:
+  forall {B : Type},
+    (B -> positive -> B) -> t -> B -> B.
+
+Axiom fold_spec:
+  forall {B: Type} (f: B -> positive -> B) (v: B) (m: t),
+    fold f m v =
+    List.fold_left f (elements m) v.
+
+Parameter is_subset : t -> t -> bool.
+
+Axiom is_subset_spec1:
+  forall s s',
+    is_subset s s' = true ->
+    (forall i, contains s i = true -> contains s' i = true).
+
+Axiom is_subset_spec2:
+  forall s s',
+    (forall i, contains s i = true -> contains s' i = true) ->
+    is_subset s s' = true.
+
+Axiom is_subset_spec:
+  forall s s',
+    is_subset s s' = true <->
+    (forall i, contains s i = true -> contains s' i = true).
+
+Parameter filter: (positive -> bool) -> t -> t.
+
+Axiom gfilter:
+  forall fn s j,
+    contains (filter fn s) j =
+    contains s j && (fn j).
+  
+End POSITIVE_SET.
+
+Module PSet : POSITIVE_SET.
 
 Record pset : Type := mkpset
 {
-  pset_x : WR.pset ;
-  pset_wf : WR.wf pset_x = true
+  pset_x : PSet_internals.pset ;
+  pset_wf : PSet_internals.wf pset_x = true
 }.
 
 Definition t := pset.
 
-Program Definition empty : t := mkpset WR.empty _.
+Program Definition empty : t := mkpset PSet_internals.empty _.
 
 Definition contains (s : t) (i : positive) :=
-  WR.contains (pset_x s) i.
+  PSet_internals.contains (pset_x s) i.
 
 Theorem gempty :
   forall i : positive,
@@ -1120,10 +1119,10 @@ Proof.
 Qed.
 
 Program Definition add (i : positive) (s : t) :=
-  mkpset (WR.add i (pset_x s)) _.
+  mkpset (PSet_internals.add i (pset_x s)) _.
 Obligation 1.
   destruct s.
-  apply WR.wf_add.
+  apply PSet_internals.wf_add.
   simpl.
   assumption.
 Qed.
@@ -1152,10 +1151,10 @@ Proof.
 Qed.
 
 Program Definition remove (i : positive) (s : t) :=
-  mkpset (WR.remove i (pset_x s)) _.
+  mkpset (PSet_internals.remove i (pset_x s)) _.
 Obligation 1.
   destruct s.
-  apply WR.wf_remove.
+  apply PSet_internals.wf_remove.
   simpl.
   assumption.
 Qed.
@@ -1184,10 +1183,10 @@ Proof.
 Qed.
 
 Program Definition union (s s' : t) :=
-  mkpset (WR.union (pset_x s) (pset_x s')) _.
+  mkpset (PSet_internals.union (pset_x s) (pset_x s')) _.
 Obligation 1.
   destruct s; destruct s'.
-  apply WR.wf_union; simpl; assumption.
+  apply PSet_internals.wf_union; simpl; assumption.
 Qed.
 
 Theorem gunion:
@@ -1202,10 +1201,10 @@ Proof.
 Qed.
 
 Program Definition inter (s s' : t) :=
-  mkpset (WR.inter (pset_x s) (pset_x s')) _.
+  mkpset (PSet_internals.inter (pset_x s) (pset_x s')) _.
 Obligation 1.
   destruct s; destruct s'.
-  apply WR.wf_inter; simpl; assumption.
+  apply PSet_internals.wf_inter; simpl; assumption.
 Qed.
 
 Theorem ginter:
@@ -1220,10 +1219,10 @@ Proof.
 Qed.
 
 Program Definition subtract (s s' : t) :=
-  mkpset (WR.subtract (pset_x s) (pset_x s')) _.
+  mkpset (PSet_internals.subtract (pset_x s) (pset_x s')) _.
 Obligation 1.
   destruct s; destruct s'.
-  apply WR.wf_subtract; simpl; assumption.
+  apply PSet_internals.wf_subtract; simpl; assumption.
 Qed.
 
 Theorem gsubtract:
@@ -1243,14 +1242,14 @@ Theorem uneq_exists :
 Proof.
   destruct s as [s WF]; destruct s' as [s' WF']; simpl.
   intro UNEQ.
-  destruct (WR.pset_eq s s').
+  destruct (PSet_internals.pset_eq s s').
   { subst s'.
-    pose proof (WR.wf_irrelevant s WF WF').
+    pose proof (PSet_internals.wf_irrelevant s WF WF').
     subst WF'.
     congruence.
   }
   unfold contains; simpl.
-  apply WR.wf_eq; trivial.
+  apply PSet_internals.wf_eq; trivial.
 Qed.
 
 Definition eq:
@@ -1258,11 +1257,11 @@ Definition eq:
 Proof.
   destruct s as [s WF].
   destruct s' as [s' WF'].
-  destruct (WR.pset_eq s s'); simpl.
+  destruct (PSet_internals.pset_eq s s'); simpl.
   {
     subst s'.
     left.
-    pose proof (WR.wf_irrelevant s WF WF').
+    pose proof (PSet_internals.wf_irrelevant s WF WF').
     subst WF'.
     reflexivity.
   }
@@ -1281,20 +1280,20 @@ Proof.
   destruct s' as [s' WF'].
   unfold contains in K.
   simpl in K.
-  fold (WR.iswf s) in WF.
-  fold (WR.iswf s') in WF'.
+  fold (PSet_internals.iswf s) in WF.
+  fold (PSet_internals.iswf s') in WF'.
   assert (s = s').
   {
-    apply WR.eq_correct; assumption.
+    apply PSet_internals.eq_correct; assumption.
   }
   subst s'.
-  pose proof (WR.wf_irrelevant s WF WF').
+  pose proof (PSet_internals.wf_irrelevant s WF WF').
   subst WF'.
   reflexivity.
 Qed.
 
 
-Definition elements (m : t) := WR.elements (pset_x m).
+Definition elements (m : t) := PSet_internals.elements (pset_x m).
 
 
 Theorem elements_correct:
@@ -1302,7 +1301,7 @@ Theorem elements_correct:
     contains m i = true -> In i (elements m).
 Proof.
   destruct m; unfold elements, contains; simpl.
-  apply WR.elements_correct.
+  apply PSet_internals.elements_correct.
 Qed.
 
 
@@ -1311,12 +1310,12 @@ Theorem elements_complete:
     In i (elements m) -> contains m i = true.
 Proof.
   destruct m; unfold elements, contains; simpl.
-  apply WR.elements_complete.
+  apply PSet_internals.elements_complete.
 Qed.
 
 
 Definition fold {B : Type} (f : B -> positive -> B) (m : t) (v : B) : B :=
-  WR.fold f (pset_x m) v.
+  PSet_internals.fold f (pset_x m) v.
 
 Theorem fold_spec:
   forall {B: Type} (f: B -> positive -> B) (v: B) (m: pset),
@@ -1324,10 +1323,10 @@ Theorem fold_spec:
     List.fold_left f (elements m) v.
 Proof.
   destruct m; unfold fold, elements; simpl.
-  apply WR.fold_spec.
+  apply PSet_internals.fold_spec.
 Qed.
 
-Definition is_subset (s s' : t) := WR.is_subset (pset_x s) (pset_x s').
+Definition is_subset (s s' : t) := PSet_internals.is_subset (pset_x s) (pset_x s').
 
 Theorem is_subset_spec1:
   forall s s',
@@ -1336,7 +1335,7 @@ Theorem is_subset_spec1:
 Proof.
   unfold is_subset, contains.
   intros s s' H.
-  apply WR.is_subset_spec1.
+  apply PSet_internals.is_subset_spec1.
   assumption.
 Qed.
 
@@ -1348,7 +1347,7 @@ Proof.
   destruct s; destruct s';
     unfold is_subset, contains;
     intros.
-  apply WR.is_subset_spec2.
+  apply PSet_internals.is_subset_spec2.
   all: simpl.
   all: assumption.
 Qed.
@@ -1366,10 +1365,10 @@ Proof.
 Qed.
 
 Program Definition filter (fn : positive -> bool) (m : t) : t :=
-  (mkpset (WR.filter fn (pset_x m)) _).
+  (mkpset (PSet_internals.filter fn (pset_x m)) _).
 Obligation 1.
-  apply WR.wf_filter.
-  unfold WR.iswf.
+  apply PSet_internals.wf_filter.
+  unfold PSet_internals.iswf.
   destruct m.
   assumption.
 Qed.
@@ -1382,10 +1381,6 @@ Proof.
   unfold contains, filter.
   simpl.
   intros.
-  apply WR.gfilter.
+  apply PSet_internals.gfilter.
 Qed.
-
-Extract Inductive WR.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
-
-Extract Inlined Constant WR.pset_eq => "HashedSetaux.eq".
 End PSet.

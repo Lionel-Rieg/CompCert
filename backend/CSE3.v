@@ -74,3 +74,5 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
     intuition.
   Qed.
 End RELATION.
+
+Definition totoro := RELATION.lub.
