@@ -3,6 +3,8 @@ Require Import Bool.
 Require Import List.
 Require Coq.Logic.Eqdep_dec.
 
+Require Extraction.
+
 Module Type POSITIVE_SET.
 Parameter t : Type.
 Parameter empty : t.
@@ -116,7 +118,7 @@ Axiom gfilter:
   
 End POSITIVE_SET.
 
-Module PSet <: POSITIVE_SET.
+Module PSet : POSITIVE_SET.
   (* begin from Maps *)
   Fixpoint prev_append (i j: positive) {struct i} : positive :=
     match i with
@@ -1382,10 +1384,8 @@ Proof.
   intros.
   apply WR.gfilter.
 Qed.
+
+Extract Inductive WR.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
+
+Extract Inlined Constant WR.pset_eq => "HashedSetaux.eq".
 End PSet.
-
-Require Extraction.
-
-Extract Inductive PSet.WR.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
-
-Extract Inlined Constant PSet.WR.pset_eq => "HashedSetaux.eq".

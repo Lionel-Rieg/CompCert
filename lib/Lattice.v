@@ -30,37 +30,6 @@ Local Unset Case Analysis Schemes.
   [bot], and an upper bound operation [lub].
   Note that we do not demand that [lub] computes the least upper bound. *)
 
-Module Type SEMILATTICE.
-
-  Parameter t: Type.
-  Parameter eq: t -> t -> Prop.
-  Axiom eq_refl: forall x, eq x x.
-  Axiom eq_sym: forall x y, eq x y -> eq y x.
-  Axiom eq_trans: forall x y z, eq x y -> eq y z -> eq x z.
-  Parameter beq: t -> t -> bool.
-  Axiom beq_correct: forall x y, beq x y = true -> eq x y.
-  Parameter ge: t -> t -> Prop.
-  Axiom ge_refl: forall x y, eq x y -> ge x y.
-  Axiom ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
-  Parameter bot: t.
-  Axiom ge_bot: forall x, ge x bot.
-  Parameter lub: t -> t -> t.
-  Axiom ge_lub_left: forall x y, ge (lub x y) x.
-  Axiom ge_lub_right: forall x y, ge (lub x y) y.
-
-End SEMILATTICE.
-
-(** A semi-lattice ``with top'' is similar, but also has a greatest
-  element [top]. *)
-
-Module Type SEMILATTICE_WITH_TOP.
-
-  Include SEMILATTICE.
-  Parameter top: t.
-  Axiom ge_top: forall x, ge top x.
-
-End SEMILATTICE_WITH_TOP.
-
 
 Module Type SEMILATTICE_WITHOUT_BOTTOM.
 
@@ -80,7 +49,23 @@ Module Type SEMILATTICE_WITHOUT_BOTTOM.
 
 End SEMILATTICE_WITHOUT_BOTTOM.
 
-Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM).
+Module Type SEMILATTICE.
+  Include SEMILATTICE_WITHOUT_BOTTOM.
+  Parameter bot: t.
+  Axiom ge_bot: forall x, ge x bot.
+End SEMILATTICE.
+
+(** A semi-lattice ``with top'' is similar, but also has a greatest
+  element [top]. *)
+
+Module Type SEMILATTICE_WITH_TOP.
+  Include SEMILATTICE.
+  Parameter top: t.
+  Axiom ge_top: forall x, ge top x.
+End SEMILATTICE_WITH_TOP.
+
+
+Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM) <: SEMILATTICE.
   Definition t := option L.t.
   Definition eq (a b : t) :=
     match a, b with
