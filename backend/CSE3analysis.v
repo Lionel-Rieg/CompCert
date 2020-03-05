@@ -146,10 +146,33 @@ Proof.
   - apply IHilist.
     assumption.
 Qed.
-    
-Definition xget_kills (eqs : PTree.t equation) :=
+
+Definition xget_kills (eqs : PTree.t equation) (m :  Regmap.t PSet.t) :
+  Regmap.t PSet.t :=
   PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
                 add_i_j (eq_lhs eq) eqno
-                  (add_ilist_j (eq_args eq) eqno already)). 
-             
+                  (add_ilist_j (eq_args eq) eqno already)) eqs m. 
+
+Lemma xget_kills_monotone :
+  forall eqs m i j,
+    PSet.contains (Regmap.get i m) j = true ->
+    PSet.contains (Regmap.get i (xget_kills eqs m)) j = true.
+Proof.
+  unfold xget_kills.
+  intros eqs m.
+  rewrite PTree.fold_spec.
+  generalize (PTree.elements eqs).
+  intro.
+  generalize m.
+  clear m.
+  induction l; simpl; trivial.
+  intros.
+  apply IHl.
+  apply add_i_j_monotone.
+  apply add_ilist_j_monotone.
+  assumption.
+Qed.
+
+Definition eq_involves (eq : equation) (i : reg) :=
+  i = (eq_lhs eq) \/ In i (eq_args eq).
 Definition totoro := RELATION.lub.
