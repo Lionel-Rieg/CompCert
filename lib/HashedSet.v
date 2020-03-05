@@ -1384,3 +1384,7 @@ Proof.
   apply PSet_internals.gfilter.
 Qed.
 End PSet.
+
+Hint Resolve PSet.gaddo PSet.gadds PSet.gremoveo PSet.gremoves PSet.gunion PSet.ginter PSet.gsubtract PSet.gfilter PSet.is_subset_spec1 PSet.is_subset_spec2 : pset.
+
+Hint Rewrite PSet.gadds PSet.gremoves PSet.gunion PSet.ginter PSet.gsubtract PSet.gfilter : pset.

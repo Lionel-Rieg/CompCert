@@ -43,7 +43,7 @@ Require Constprop.
 Require CSE.
 Require ForwardMoves.
 Require CSE2.
-Require CSE3.
+Require CSE3analysis.
 Require Deadcode.
 Require Unusedglob.
 Require Allnontrap.
