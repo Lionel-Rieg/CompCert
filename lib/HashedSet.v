@@ -3,6 +3,120 @@ Require Import Bool.
 Require Import List.
 Require Coq.Logic.Eqdep_dec.
 
+Module Type POSITIVE_SET.
+Parameter t : Type.
+Parameter empty : t.
+
+Parameter contains: t -> positive -> bool.
+
+Axiom gempty :
+  forall i : positive,
+    contains empty i = false.
+
+Parameter add : positive -> t -> t.
+
+Axiom gaddo :
+  forall i j : positive,
+  forall s : t,
+    i <> j ->
+    contains (add i s) j = contains s j.
+
+Axiom gadds :
+  forall i : positive,
+  forall s : t,
+    contains (add i s) i = true.
+
+Parameter remove : positive -> t -> t.
+
+Axiom gremoves :
+  forall i : positive,
+  forall s : t,
+    contains (remove i s) i = false.
+
+Axiom gremoveo :
+  forall i j : positive,
+  forall s : t,
+    i<>j ->
+    contains (remove i s) j = contains s j.
+
+Parameter union : t -> t -> t.
+
+Axiom gunion:
+  forall s s' : t,
+  forall j : positive,
+    (contains (union s s')) j = orb (contains s j) (contains s' j).
+
+Parameter inter : t -> t -> t.
+
+Axiom ginter:
+  forall s s' : t,
+  forall j : positive,
+    (contains (inter s s')) j = andb (contains s j) (contains s' j).
+
+Parameter subtract : t -> t -> t.
+
+Axiom gsubtract:
+  forall s s' : t,
+  forall j : positive,
+    (contains (subtract s s')) j = andb (contains s j) (negb (contains s' j)).
+
+Axiom uneq_exists :
+  forall s s', s <> s' ->
+               exists i, (contains s i) <> (contains s' i).
+
+Parameter eq:
+  forall s s' : t, {s = s'} + {s <> s'}.
+
+Axiom eq_spec :
+  forall s s',
+    (forall i, (contains s i) = (contains s' i)) <-> s = s'.
+
+Parameter elements : t -> list positive.
+
+Axiom elements_correct:
+  forall (m: t) (i: positive),
+    contains m i = true -> In i (elements m).
+
+Axiom elements_complete:
+  forall (m: t) (i: positive),
+    In i (elements m) -> contains m i = true.
+
+Parameter fold:
+  forall {B : Type},
+    (B -> positive -> B) -> t -> B -> B.
+
+Axiom fold_spec:
+  forall {B: Type} (f: B -> positive -> B) (v: B) (m: t),
+    fold f m v =
+    List.fold_left f (elements m) v.
+
+Parameter is_subset : t -> t -> bool.
+
+Axiom is_subset_spec1:
+  forall s s',
+    is_subset s s' = true ->
+    (forall i, contains s i = true -> contains s' i = true).
+
+Axiom is_subset_spec2:
+  forall s s',
+    (forall i, contains s i = true -> contains s' i = true) ->
+    is_subset s s' = true.
+
+Axiom is_subset_spec:
+  forall s s',
+    is_subset s s' = true <->
+    (forall i, contains s i = true -> contains s' i = true).
+
+Parameter filter: (positive -> bool) -> t -> t.
+
+Axiom gfilter:
+  forall fn s j,
+    contains (filter fn s) j =
+    contains s j && (fn j).
+  
+End POSITIVE_SET.
+
+Module PSet <: POSITIVE_SET.
   (* begin from Maps *)
   Fixpoint prev_append (i j: positive) {struct i} : positive :=
     match i with
@@ -1268,3 +1382,4 @@ Proof.
   intros.
   apply WR.gfilter.
 Qed.
+End PSet.
