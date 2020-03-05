@@ -36,7 +36,7 @@ Require Parser.
 Require Initializers.
 Require Asmaux.
 
-Require CSE3. (* FIXME *)
+Require CSE3analysis. (* FIXME *)
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
@@ -188,7 +188,7 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
-   CSE3.totoro (* FIXME *)
+   CSE3analysis.totoro (* FIXME *)
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env

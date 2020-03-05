@@ -75,4 +75,7 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   Qed.
 End RELATION.
 
+Module RB := ADD_BOTTOM(RELATION).
+Module DS := Dataflow_Solver(RB)(NodeSetForward).
+
 Definition totoro := RELATION.lub.
