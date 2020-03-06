@@ -370,9 +370,33 @@ let construct_depmap code entry fs =
 let order_sequences code entry fs =
   let fs_a = Array.of_list fs in
   let depmap = construct_depmap code entry fs_a in
-  Array.iter (fun _ -> ()) depmap;
-  (* algo *)
-  fs
+  let fs_evaluated = Array.map (fun e -> false) fs_a in
+  let ordered_fs = ref [] in
+  let evaluate s_id =
+    begin
+      assert (not fs_evaluated.(s_id));
+      ordered_fs := fs_a.(s_id) :: !ordered_fs;
+      fs_evaluated.(s_id) <- true;
+      Array.iteri (fun i deps ->
+        depmap.(i) <- ISet.remove s_id deps
+      ) depmap
+    end
+  in let select_next () =
+    let selected_id = ref (-1) in
+    begin
+      Array.iteri (fun i deps ->
+        if !selected_id == -1 && deps == ISet.empty && not fs_evaluated.(i)
+        then selected_id := i
+      ) depmap;
+      !selected_id
+    end
+  in begin
+    while List.length !ordered_fs != List.length fs do
+      let next_id = select_next () in
+      evaluate next_id
+    done;
+    !ordered_fs
+  end
 
 let enumerate_aux_trace f reach =
   let code = f.fn_code in
