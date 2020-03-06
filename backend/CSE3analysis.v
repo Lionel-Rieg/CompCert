@@ -144,18 +144,18 @@ Proof.
 Qed.
 Hint Resolve add_ilist_j_adds: cse3.
 
-Definition xget_kills (eqs : PTree.t equation) (m :  Regmap.t PSet.t) :
+Definition get_kills (eqs : PTree.t equation) :
   Regmap.t PSet.t :=
   PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
                 add_i_j (eq_lhs eq) eqno
-                  (add_ilist_j (eq_args eq) eqno already)) eqs m. 
+                        (add_ilist_j (eq_args eq) eqno already)) eqs
+  (PMap.init PSet.empty). 
 
 Definition xlget_kills (eqs : list (eq_id * equation)) (m :  Regmap.t PSet.t) :
   Regmap.t PSet.t :=
   List.fold_left (fun already (item : eq_id * equation) =>
-    let (eqno,eq) := item in
-    add_i_j (eq_lhs eq) eqno
-            (add_ilist_j (eq_args eq) eqno already)) eqs m. 
+    add_i_j (eq_lhs (snd item)) (fst item)
+            (add_ilist_j (eq_args (snd item)) (fst item) already)) eqs m. 
 
 Lemma xlget_kills_monotone :
   forall eqs m i j,
@@ -163,7 +163,6 @@ Lemma xlget_kills_monotone :
     PSet.contains (Regmap.get i (xlget_kills eqs m)) j = true.
 Proof.
   induction eqs; simpl; trivial.
-  destruct a as [eqno eq].
   intros.
   auto with cse3.
 Qed.
@@ -187,7 +186,6 @@ Proof.
 Qed.
 Hint Resolve xlget_kills_has_lhs : cse3.
 
-
 Lemma xlget_kills_has_arg :
   forall eqs m lhs sop arg args j,
     In (j, {| eq_lhs := lhs;
@@ -206,6 +204,26 @@ Proof.
 Qed.
 
 Hint Resolve xlget_kills_has_arg : cse3.
+
+
+Lemma get_kills_has_lhs :
+  forall eqs lhs sop args j,
+    PTree.get j eqs = Some {| eq_lhs := lhs;
+                              eq_op  := sop;
+                              eq_args:= args |} ->
+    PSet.contains (Regmap.get lhs (get_kills eqs)) j = true.
+Proof.
+  unfold get_kills.
+  intros.
+  rewrite PTree.fold_spec.
+  change (fold_left
+       (fun (a : Regmap.t PSet.t) (p : positive * equation) =>
+        add_i_j (eq_lhs (snd p)) (fst p)
+          (add_ilist_j (eq_args (snd p)) (fst p) a))) with xlget_kills.
+  eapply xlget_kills_has_lhs.
+  apply PTree.elements_correct.
+  eassumption.
+Qed.
 
 (*
 Lemma xget_kills_monotone :
