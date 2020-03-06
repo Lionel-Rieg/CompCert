@@ -186,7 +186,27 @@ Proof.
   - eapply IHeqs. eassumption.
 Qed.
 Hint Resolve xlget_kills_has_lhs : cse3.
-  
+
+
+Lemma xlget_kills_has_arg :
+  forall eqs m lhs sop arg args j,
+    In (j, {| eq_lhs := lhs;
+              eq_op  := sop;
+              eq_args:= args |}) eqs ->
+    In arg args ->
+    PSet.contains (Regmap.get arg (xlget_kills eqs m)) j = true.
+Proof.
+  induction eqs; simpl.
+  contradiction.
+  intros until j.
+  intros HEAD_TAIL ARG.
+  destruct HEAD_TAIL as [HEAD | TAIL]; subst; simpl.
+  - auto with cse3.
+  - eapply IHeqs; eassumption.
+Qed.
+
+Hint Resolve xlget_kills_has_arg : cse3.
+
 (*
 Lemma xget_kills_monotone :
   forall eqs m i j,
