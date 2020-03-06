@@ -225,6 +225,27 @@ Proof.
   eassumption.
 Qed.
 
+Lemma get_kills_has_arg :
+  forall eqs lhs sop arg args j,
+    PTree.get j eqs = Some {| eq_lhs := lhs;
+                              eq_op  := sop;
+                              eq_args:= args |} ->
+    In arg args ->
+    PSet.contains (Regmap.get arg (get_kills eqs)) j = true.
+Proof.
+  unfold get_kills.
+  intros.
+  rewrite PTree.fold_spec.
+  change (fold_left
+       (fun (a : Regmap.t PSet.t) (p : positive * equation) =>
+        add_i_j (eq_lhs (snd p)) (fst p)
+          (add_ilist_j (eq_args (snd p)) (fst p) a))) with xlget_kills.
+  eapply xlget_kills_has_arg.
+  - apply PTree.elements_correct.
+    eassumption.
+  - assumption.
+Qed.
+
 (*
 Lemma xget_kills_monotone :
   forall eqs m i j,
