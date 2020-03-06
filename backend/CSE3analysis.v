@@ -101,6 +101,7 @@ Proof.
   rewrite Regmap.gss.
   auto with pset.
 Qed.
+Hint Resolve add_i_j_adds: cse3.
 
 Lemma add_i_j_monotone : forall i j i' j' m,
     PSet.contains (Regmap.get i' m) j' = true ->
@@ -120,6 +121,8 @@ Proof.
     congruence.
 Qed.
 
+Hint Resolve add_i_j_monotone: cse3.
+
 Definition add_ilist_j (ilist : list reg) (j : eq_id) (m : Regmap.t PSet.t) :=
   List.fold_left (fun already i => add_i_j i j already) ilist m.
 
@@ -127,11 +130,9 @@ Lemma add_ilist_j_monotone : forall ilist j i' j' m,
     PSet.contains (Regmap.get i' m) j' = true ->
     PSet.contains (Regmap.get i' (add_ilist_j ilist j m)) j' = true.
 Proof.
-  induction ilist; simpl; intros until m; intro CONTAINS; trivial.
-  apply IHilist.
-  apply add_i_j_monotone.
-  assumption.
+  induction ilist; simpl; intros until m; intro CONTAINS; auto with cse3.
 Qed.
+Hint Resolve add_ilist_j_monotone: cse3.
 
 Lemma add_ilist_j_adds : forall ilist j m,
     forall i, In i ilist ->
@@ -139,13 +140,9 @@ Lemma add_ilist_j_adds : forall ilist j m,
 Proof.
   induction ilist; simpl; intros until i; intro IN.
   contradiction.
-  destruct IN as [HEAD | TAIL].
-  - subst a.
-    apply add_ilist_j_monotone.
-    apply add_i_j_adds.
-  - apply IHilist.
-    assumption.
+  destruct IN as [HEAD | TAIL]; subst; auto with cse3.
 Qed.
+Hint Resolve add_ilist_j_adds: cse3.
 
 Definition xget_kills (eqs : PTree.t equation) (m :  Regmap.t PSet.t) :
   Regmap.t PSet.t :=
@@ -153,6 +150,44 @@ Definition xget_kills (eqs : PTree.t equation) (m :  Regmap.t PSet.t) :
                 add_i_j (eq_lhs eq) eqno
                   (add_ilist_j (eq_args eq) eqno already)) eqs m. 
 
+Definition xlget_kills (eqs : list (eq_id * equation)) (m :  Regmap.t PSet.t) :
+  Regmap.t PSet.t :=
+  List.fold_left (fun already (item : eq_id * equation) =>
+    let (eqno,eq) := item in
+    add_i_j (eq_lhs eq) eqno
+            (add_ilist_j (eq_args eq) eqno already)) eqs m. 
+
+Lemma xlget_kills_monotone :
+  forall eqs m i j,
+    PSet.contains (Regmap.get i m) j = true ->
+    PSet.contains (Regmap.get i (xlget_kills eqs m)) j = true.
+Proof.
+  induction eqs; simpl; trivial.
+  destruct a as [eqno eq].
+  intros.
+  auto with cse3.
+Qed.
+
+Hint Resolve xlget_kills_monotone : cse3.
+
+Lemma xlget_kills_has_lhs :
+  forall eqs m lhs sop args j,
+    In (j, {| eq_lhs := lhs;
+              eq_op  := sop;
+              eq_args:= args |}) eqs ->
+    PSet.contains (Regmap.get lhs (xlget_kills eqs m)) j = true.
+Proof.
+  induction eqs; simpl.
+  contradiction.
+  intros until j.
+  intro HEAD_TAIL.
+  destruct HEAD_TAIL as [HEAD | TAIL]; subst; simpl.
+  - auto with cse3.
+  - eapply IHeqs. eassumption.
+Qed.
+Hint Resolve xlget_kills_has_lhs : cse3.
+  
+(*
 Lemma xget_kills_monotone :
   forall eqs m i j,
     PSet.contains (Regmap.get i m) j = true ->
@@ -172,7 +207,16 @@ Proof.
   apply add_ilist_j_monotone.
   assumption.
 Qed.
+*)
+Lemma xget_kills_has_lhs :
+  forall eqs m lhs sop args j,
+    PTree.get j eqs = Some {| eq_lhs := lhs;
+                              eq_op  := sop;
+                              eq_args:= args |} ->
+    PSet.contains (Regmap.get lhs (xget_kills eqs m)) j = true.
 
 Definition eq_involves (eq : equation) (i : reg) :=
   i = (eq_lhs eq) \/ In i (eq_args eq).
+
+
 Definition totoro := RELATION.lub.
