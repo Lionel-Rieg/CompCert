@@ -367,6 +367,16 @@ let construct_depmap code entry fs =
     depmap
   end
 
+let print_sequence s =
+  Printf.printf "[";
+  List.iter (fun n -> Printf.printf "%d, " (P.to_int n)) s;
+  Printf.printf "]\n"
+
+let print_ssequence ofs =
+  Printf.printf "[";
+  List.iter (fun s -> print_sequence s) ofs;
+  Printf.printf "]\n"
+
 let order_sequences code entry fs =
   let fs_a = Array.of_list fs in
   let depmap = construct_depmap code entry fs_a in
@@ -391,10 +401,12 @@ let order_sequences code entry fs =
       !selected_id
     end
   in begin
+    print_ssequence fs;
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
     done;
+    print_ssequence !ordered_fs;
     !ordered_fs
   end
 
