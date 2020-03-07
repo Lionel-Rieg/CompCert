@@ -859,7 +859,7 @@ Proof.
     destruct cmp; discriminate.
 Qed.
 
-Local Hint Resolve Val_cmpu_bool_correct Val_cmplu_bool_correct.
+Local Hint Resolve Val_cmpu_bool_correct Val_cmplu_bool_correct: core.
 
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m' tbb,
@@ -1163,7 +1163,7 @@ Proof.
   split; intros; Simpl.
 Qed.
 
-Local Hint Resolve Val_cmpu_correct Val_cmplu_correct.
+Local Hint Resolve Val_cmpu_correct Val_cmplu_correct: core.
 
 Lemma transl_condimm_int32u_correct:
   forall cmp rd r1 n k rs m,

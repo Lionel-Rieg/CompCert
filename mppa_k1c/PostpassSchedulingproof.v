@@ -567,7 +567,7 @@ Proof.
   unfold builtin_alone in H0. erewrite H0; eauto.
 Qed.
 
-Local Hint Resolve verified_schedule_nob_checks_alls_bundles.
+Local Hint Resolve verified_schedule_nob_checks_alls_bundles: core.
 
 Lemma verified_schedule_checks_alls_bundles bb lb bundle:
   verified_schedule bb = OK lb ->

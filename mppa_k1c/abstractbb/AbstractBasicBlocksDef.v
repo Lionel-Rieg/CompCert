@@ -403,7 +403,7 @@ Proof.
     * eapply H2; eauto. intros; eapply H0; eauto. rewrite rev_append_rev, in_app_iff; auto.
     * intros; eapply H0; eauto. rewrite rev_append_rev, in_app_iff, <- in_rev; auto.
 Qed.
-Local Hint Resolve app_fail_allvalid_correct.
+Local Hint Resolve app_fail_allvalid_correct: core.
 
 Lemma app_fail_correct l pt t1 t2: 
   match_pt t1 pt -> 
