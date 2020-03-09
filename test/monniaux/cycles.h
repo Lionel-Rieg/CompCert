@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdio.h>
+
 typedef unsigned long cycle_t;
 
 #ifdef MAX_MEASURES
@@ -39,12 +40,27 @@ static inline cycle_t get_cycle(void) {
 }
 
 #elif defined (__ARM_ARCH) && (__ARM_ARCH >= 6)
+#if (__ARM_ARCH < 8)
+/* need this kernel module
+https://github.com/zertyz/MTL/tree/master/cpp/time/kernel/arm */
 static inline cycle_t get_cycle(void) {
   cycle_t cycles;
   __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (cycles));
   return cycles;
 }
+#else
+/* need this kernel module:
+https://github.com/jerinjacobk/armv8_pmu_cycle_counter_el0
 
+on 5+ kernels, remove first argument of access_ok macro */
+
+static inline cycle_t get_cycle(void)
+{
+  uint64_t val;
+  __asm__ volatile("mrs %0, pmccntr_el0" : "=r"(val));
+  return val;
+}
+#endif
 #else
 static inline cycle_t get_cycle(void) { return 0; }
 #endif
