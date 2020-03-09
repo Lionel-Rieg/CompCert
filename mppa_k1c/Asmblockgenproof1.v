@@ -23,6 +23,8 @@ Require Import Op Locations Machblock Conventions.
 Require Import Asmblock Asmblockgen Asmblockgenproof0 Asmblockprops.
 Require Import Chunks.
 
+Import PArithCoercions.
+
 (** Decomposition of integer constants. *)
 
 Lemma make_immed32_sound:

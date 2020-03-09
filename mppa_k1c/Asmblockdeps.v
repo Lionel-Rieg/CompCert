@@ -339,7 +339,7 @@ Proof.
   }
   destruct (Mem.load _ m1 _ _) in *; destruct (Mem.load _ m0 _ _) in *; congruence.
 Qed.
-             
+
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => None
