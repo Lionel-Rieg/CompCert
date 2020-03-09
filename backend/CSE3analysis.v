@@ -101,7 +101,39 @@ Definition get_kills (eqs : PTree.t equation) :
   PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
                 add_i_j (eq_lhs eq) eqno
                         (add_ilist_j (eq_args eq) eqno already)) eqs
-  (PMap.init PSet.empty). 
+             (PMap.init PSet.empty).
+
+Definition is_move (op : operation) :
+  { op = Omove } + { op <> Omove }.
+Proof.
+  destruct op; try (right ; congruence).
+  left; trivial.
+Qed.
+
+Definition is_smove (sop : sym_op) :
+  { sop = SOp Omove } + { sop <> SOp Omove }.
+Proof.
+  destruct sop; try (right ; congruence).
+  destruct (is_move o).
+  - left; congruence.
+  - right; congruence.
+Qed.
+
+Definition get_move (eq : equation) :=
+  if is_smove (eq_op eq)
+  then match eq_args eq with
+       | h::nil => Some h
+       | _ => None
+       end
+  else None.
+
+Definition get_moves (eqs : PTree.t equation) :
+  Regmap.t PSet.t :=
+  PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
+                match get_move eq with
+                | Some rhs => add_i_j (eq_lhs eq) rhs already
+                | None => already
+                end) eqs (PMap.init PSet.empty).
 
 Record eq_context := mkeqcontext
                        { eq_catalog : node -> option equation;
