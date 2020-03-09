@@ -95,52 +95,6 @@ let print_intset s =
     Printf.printf "}"
   end
 
-(* FIXME - dominators not working well because the order of dataflow update isn't right *)
-  (*
-let get_dominators code entrypoint =
-  let bfs_order = bfs code entrypoint
-  and predecessors = get_predecessors_rtl code
-  in let doms = ref (PTree.map (fun n i -> PSet.of_list bfs_order) code)
-  in begin
-    Printf.printf "BFS: ";
-    print_intlist bfs_order;
-    Printf.printf "\n";
-    List.iter (fun n ->
-      let preds = get_some @@ PTree.get n predecessors
-      and single = PSet.singleton n
-      in match preds with
-      | [] -> doms := PTree.set n single !doms
-      | p::lp ->
-          let set_p = get_some @@ PTree.get p !doms
-          and set_lp = List.map (fun p -> get_some @@ PTree.get p !doms) lp
-          in let inter = List.fold_left PSet.inter set_p set_lp
-          in let union = PSet.union inter single
-          in begin
-            Printf.printf "----------------------------------------\n";
-            Printf.printf "n = %d\n" (P.to_int n);
-            Printf.printf "set_p = "; print_intset set_p; Printf.printf "\n";
-            Printf.printf "set_lp = ["; List.iter (fun s -> print_intset s; Printf.printf ", ") set_lp; Printf.printf "]\n";
-            Printf.printf "=> inter = "; print_intset inter; Printf.printf "\n";
-            Printf.printf "=> union = "; print_intset union; Printf.printf "\n";
-            doms := PTree.set n union !doms
-          end
-    ) bfs_order;
-    !doms
-  end
-*)
-
-let print_dominators dominators =
-  let domlist = PTree.elements dominators
-  in begin
-    Printf.printf "{\n";
-    List.iter (fun (n, doms) ->
-      Printf.printf "\t";
-      Printf.printf "%d:" (P.to_int n);
-      print_intset doms;
-      Printf.printf "\n"
-    ) domlist
-  end
-
 type vstate = Unvisited | Processed | Visited
 
 (** Getting loop branches with a DFS visit :
@@ -253,30 +207,31 @@ let get_directions code entrypoint =
   and is_loop_header = get_loop_headers code entrypoint
   and directions = ref (PTree.map (fun n i -> false) code) (* false <=> fallthru *)
   in begin
-    Printf.printf "Loop headers: ";
-    ptree_printbool is_loop_header;
-    Printf.printf "\n";
+    (* Printf.printf "Loop headers: "; *)
+    (* ptree_printbool is_loop_header; *)
+    (* Printf.printf "\n"; *)
     List.iter (fun n ->
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, ifso, ifnot) ->
-          Printf.printf "Analyzing %d.." (P.to_int n);
+          (* Printf.printf "Analyzing %d.." (P.to_int n); *)
           let preferred = ref false
           in (try
-            Printf.printf " call..";
+            (* Printf.printf " call.."; *)
             do_call_heuristic code ifso ifnot is_loop_header preferred;
-            Printf.printf " opcode..";
+            (* Printf.printf " opcode.."; *)
             do_opcode_heuristic code cond ifso ifnot preferred;
-            Printf.printf " return..";
+            (* Printf.printf " return.."; *)
             do_return_heuristic code ifso ifnot is_loop_header preferred;
-            Printf.printf " store..";
+            (* Printf.printf " store.."; *)
             do_store_heuristic code ifso ifnot is_loop_header preferred;
-            Printf.printf " loop..";
+            (* Printf.printf " loop.."; *)
             do_loop_heuristic code ifso ifnot is_loop_header preferred;
-            Printf.printf "Random choice for %d\n" (P.to_int n);
+            (* Printf.printf "Random choice for %d\n" (P.to_int n); *)
             preferred := Random.bool ()
-            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded
-              -> Printf.printf " %s\n" (match !preferred with true -> "BRANCH"
-                                        | false -> "FALLTHROUGH")
+            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded -> begin
+                (* Printf.printf " %s\n" (match !preferred with true -> "BRANCH" | false -> "FALLTHROUGH"); *)
+                ()
+                end
           ); directions := PTree.set n !preferred !directions
       | _ -> ()
     ) bfs_order;
@@ -306,9 +261,9 @@ let rec to_ttl_code_rec directions = function
 let to_ttl_code code entrypoint =
   let directions = get_directions code entrypoint
   in begin
-    Printf.printf "Ifso directions: ";
+    (* Printf.printf "Ifso directions: ";
     ptree_printbool directions;
-    Printf.printf "\n";
+    Printf.printf "\n"; *)
     Random.init(0); (* using same seed to make it deterministic *)
     to_ttl_code_rec directions (PTree.elements code)
   end
@@ -423,7 +378,7 @@ let select_traces code entrypoint =
         end
       end
     done;
-    Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n";
+    (* Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n"; *)
     !traces
   end
 
@@ -471,7 +426,7 @@ let rec change_pointers code n n' = function
  * n': the integer which should contain the duplicate of n
  * returns: new code, new ptree *)
 let duplicate code ptree parent n preds n' =
-  Printf.printf "Duplicating node %d into %d..\n" (P.to_int n) (P.to_int n');
+  (* Printf.printf "Duplicating node %d into %d..\n" (P.to_int n) (P.to_int n'); *)
   match PTree.get n' code with
   | Some _ -> failwith "The PTree already has a node n'"
   | None ->
@@ -548,7 +503,7 @@ let rec invert_iconds_trace code = function
         | Icond (c, lr, ifso, ifnot) ->
             assert (n' == ifso || n' == ifnot);
             if (n' == ifso) then (
-              Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n);
+              (* Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n); *)
               PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso)) code )
             else code
         | _ -> code
@@ -568,5 +523,5 @@ let duplicate_aux f =
   let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
   let icond_code = invert_iconds code traces in
   let preds = get_predecessors_rtl icond_code in
-  let (new_code, pTreeId) = (print_traces traces; superblockify_traces icond_code preds traces) in
+  let (new_code, pTreeId) = ((* print_traces traces; *) superblockify_traces icond_code preds traces) in
   ((new_code, f.fn_entrypoint), pTreeId)
