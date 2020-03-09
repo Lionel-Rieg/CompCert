@@ -206,21 +206,36 @@ Section SOUNDNESS.
       eq_catalog ctx i = Some eq ->
       sem_eq eq rs m.
 
-  Hypothesis ctx_kills_has_lhs :
+  Hypothesis ctx_kill_reg_has_lhs :
     forall lhs sop args j,
       eq_catalog ctx j = Some {| eq_lhs := lhs;
                                  eq_op  := sop;
                                  eq_args:= args |} ->
-      PSet.contains (eq_kills ctx lhs) j = true.
+      PSet.contains (eq_kill_reg ctx lhs) j = true.
 
-  Hypothesis ctx_kills_has_arg :
+  Hypothesis ctx_kill_reg_has_arg :
     forall lhs sop args j,
       eq_catalog ctx j = Some {| eq_lhs := lhs;
                                  eq_op  := sop;
                                  eq_args:= args |} ->
       forall arg,
       In arg args ->
-      PSet.contains (eq_kills ctx arg) j = true.
+      PSet.contains (eq_kill_reg ctx arg) j = true.
+
+  Hypothesis ctx_kill_mem_has_depends_on_mem :
+    forall lhs op args j,
+      eq_catalog ctx j = Some {| eq_lhs := lhs;
+                                 eq_op  := SOp op;
+                                 eq_args:= args |} ->
+      op_depends_on_memory op = true ->
+      PSet.contains (eq_kill_mem ctx) j = true.
+
+  Hypothesis ctx_kill_mem_has_load :
+    forall lhs chunk addr args j,
+      eq_catalog ctx j = Some {| eq_lhs := lhs;
+                                 eq_op  := SLoad chunk addr;
+                                 eq_args:= args |} ->
+      PSet.contains (eq_kill_mem ctx) j = true.
 
   Theorem kill_reg_sound :
     forall rel rs m dst v,
@@ -232,8 +247,8 @@ Section SOUNDNESS.
     intros REL i eq.
     specialize REL with (i := i) (eq0 := eq).
     destruct eq as [lhs sop args]; simpl.
-    specialize ctx_kills_has_lhs with (lhs := lhs) (sop := sop) (args := args) (j := i).
-    specialize ctx_kills_has_arg with (lhs := lhs) (sop := sop) (args := args) (j := i) (arg := dst).
+    specialize ctx_kill_reg_has_lhs with (lhs := lhs) (sop := sop) (args := args) (j := i).
+    specialize ctx_kill_reg_has_arg with (lhs := lhs) (sop := sop) (args := args) (j := i) (arg := dst).
     intuition.
     rewrite PSet.gsubtract in H.
     rewrite andb_true_iff in H.
@@ -306,5 +321,36 @@ Section SOUNDNESS.
     2: reflexivity.
     simpl in REL.
     intuition congruence.
+  Qed.
+
+  Theorem kill_mem_sound :
+    forall rel rs m m',
+      (sem_rel rel rs m) ->
+      (sem_rel (kill_mem (ctx:=ctx) rel) rs m').
+  Proof.
+    unfold sem_rel, sem_eq, kill_mem.
+    intros until m'.
+    intros REL i eq.
+    specialize REL with (i := i) (eq0 := eq).
+    intros SUBTRACT CATALOG.
+    rewrite PSet.gsubtract in SUBTRACT.
+    rewrite andb_true_iff in SUBTRACT.
+    intuition.
+    destruct (eq_op eq) as [op | chunk addr] eqn:OP.
+    - specialize ctx_kill_mem_has_depends_on_mem with (lhs := eq_lhs eq) (op := op) (args := eq_args eq) (j := i).
+      rewrite (op_depends_on_memory_correct genv sp op) with (m2 := m).
+      assumption.
+      destruct (op_depends_on_memory op) in *; trivial.
+      rewrite ctx_kill_mem_has_depends_on_mem in H0; trivial.
+      discriminate H0.
+      rewrite <- OP.
+      rewrite CATALOG.
+      destruct eq; reflexivity.
+    - specialize ctx_kill_mem_has_load with (lhs := eq_lhs eq) (chunk := chunk) (addr := addr) (args := eq_args eq) (j := i).
+      destruct eq as [lhs op args]; simpl in *.
+      rewrite negb_true_iff in H0.
+      rewrite OP in CATALOG.
+      intuition.
+      congruence.
   Qed.
 End SOUNDNESS.
