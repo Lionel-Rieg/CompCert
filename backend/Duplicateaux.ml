@@ -160,47 +160,37 @@ let rec look_ahead code node is_loop_header predicate =
         else look_ahead code n is_loop_header predicate
       )
 
-exception HeuristicSucceeded
-
-let do_call_heuristic code ifso ifnot is_loop_header preferred =
+let do_call_heuristic code cond ifso ifnot is_loop_header =
   let predicate n = (function
   | Icall _ -> true
   | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then
-    (preferred := false; raise HeuristicSucceeded)
-  else if (look_ahead code ifnot is_loop_header predicate) then
-    (preferred := true; raise HeuristicSucceeded)
-  else ()
+  in if (look_ahead code ifso is_loop_header predicate) then Some false
+  else if (look_ahead code ifnot is_loop_header predicate) then Some true
+  else None
 
-let do_opcode_heuristic code cond ifso ifnot preferred = DuplicateOpcodeHeuristic.opcode_heuristic code cond ifso ifnot preferred
+let do_opcode_heuristic code cond ifso ifnot is_loop_header = DuplicateOpcodeHeuristic.opcode_heuristic code cond ifso ifnot is_loop_header
 
-let do_return_heuristic code ifso ifnot is_loop_header preferred =
+let do_return_heuristic code cond ifso ifnot is_loop_header =
   let predicate n = (function
   | Ireturn _ -> true
   | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then
-    (preferred := false; raise HeuristicSucceeded)
-  else if (look_ahead code ifnot is_loop_header predicate) then
-    (preferred := true; raise HeuristicSucceeded)
-  else ()
+  in if (look_ahead code ifso is_loop_header predicate) then Some false
+  else if (look_ahead code ifnot is_loop_header predicate) then Some true
+  else None
 
-let do_store_heuristic code ifso ifnot is_loop_header preferred =
+let do_store_heuristic code cond ifso ifnot is_loop_header =
   let predicate n = (function
   | Istore _ -> true
   | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then
-    (preferred := false; raise HeuristicSucceeded)
-  else if (look_ahead code ifnot is_loop_header predicate) then
-    (preferred := true; raise HeuristicSucceeded)
-  else ()
+  in if (look_ahead code ifso is_loop_header predicate) then Some false
+  else if (look_ahead code ifnot is_loop_header predicate) then Some true
+  else None
 
-let do_loop_heuristic code ifso ifnot is_loop_header preferred =
+let do_loop_heuristic code cond ifso ifnot is_loop_header =
   let predicate n = get_some @@ PTree.get n is_loop_header
-  in if (look_ahead code ifso is_loop_header predicate) then
-    (preferred := true; raise HeuristicSucceeded)
-  else if (look_ahead code ifnot is_loop_header predicate) then
-    (preferred := false; raise HeuristicSucceeded)
-  else ()
+  in if (look_ahead code ifso is_loop_header predicate) then Some true
+  else if (look_ahead code ifnot is_loop_header predicate) then Some false
+  else None
 
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
@@ -214,25 +204,18 @@ let get_directions code entrypoint =
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, ifso, ifnot) ->
           (* Printf.printf "Analyzing %d.." (P.to_int n); *)
-          let preferred = ref false
-          in (try
-            (* Printf.printf " call.."; *)
-            do_call_heuristic code ifso ifnot is_loop_header preferred;
-            (* Printf.printf " opcode.."; *)
-            do_opcode_heuristic code cond ifso ifnot preferred;
-            (* Printf.printf " return.."; *)
-            do_return_heuristic code ifso ifnot is_loop_header preferred;
-            (* Printf.printf " store.."; *)
-            do_store_heuristic code ifso ifnot is_loop_header preferred;
-            (* Printf.printf " loop.."; *)
-            do_loop_heuristic code ifso ifnot is_loop_header preferred;
-            (* Printf.printf "Random choice for %d\n" (P.to_int n); *)
-            preferred := Random.bool ()
-            with HeuristicSucceeded | DuplicateOpcodeHeuristic.HeuristicSucceeded -> begin
-                (* Printf.printf " %s\n" (match !preferred with true -> "BRANCH" | false -> "FALLTHROUGH"); *)
-                ()
-                end
-          ); directions := PTree.set n !preferred !directions
+          let heuristics = [ do_call_heuristic; do_opcode_heuristic;
+            do_return_heuristic; do_store_heuristic; do_loop_heuristic ] in
+          let preferred = ref None in
+          begin
+            List.iter (fun do_heur ->
+              match !preferred with
+              | None -> preferred := do_heur code cond ifso ifnot is_loop_header
+              | Some _ -> ()
+            ) heuristics;
+            match !preferred with None -> preferred := Some (Random.bool ()) | Some _ -> ();
+            directions := PTree.set n (get_some !preferred) !directions
+          end
       | _ -> ()
     ) bfs_order;
     !directions
