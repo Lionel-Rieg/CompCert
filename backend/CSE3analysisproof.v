@@ -169,6 +169,25 @@ Proof.
   - assumption.
 Qed.
 
+Definition xlget_moves (eqs : list (eq_id * equation)) (m :  Regmap.t PSet.t) :
+  Regmap.t PSet.t :=
+  List.fold_left(fun already eq_id_no =>
+                   match get_move (snd eq_id_no) with
+                   | Some rhs => add_i_j (eq_lhs (snd eq_id_no)) rhs already
+                   | None => already
+                   end) eqs m.
+
+Lemma xlget_moves_monotone:
+  forall eqs m i j,
+    PSet.contains (Regmap.get i m) j = true ->
+    PSet.contains (Regmap.get i (xlget_moves eqs m)) j = true.
+Proof.
+  induction eqs; intros; simpl; trivial.
+  destruct get_move; auto with cse3.
+Qed.
+
+Hint Resolve xlget_moves_monotone : cse3.
+
 Definition eq_involves (eq : equation) (i : reg) :=
   i = (eq_lhs eq) \/ In i (eq_args eq).
 
@@ -259,4 +278,6 @@ Section SOUNDNESS.
     - rewrite Regmap.gso by congruence.
       assumption.
   Qed.
+
+
 End SOUNDNESS.
