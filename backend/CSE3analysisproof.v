@@ -262,5 +262,49 @@ Section SOUNDNESS.
       assumption.
   Qed.
 
-
+  Lemma pick_source_sound :
+    forall (l : list reg),
+      match pick_source l with
+      | Some x => In x l
+      | None => True
+      end.
+  Proof.
+    unfold pick_source.
+    destruct l; simpl; trivial.
+    left; trivial.
+  Qed.
+    
+  Theorem forward_move_sound :
+    forall rel rs m x,
+      (sem_rel rel rs m) ->
+      rs # (forward_move (ctx := ctx) rel x) = rs # x.
+  Proof.
+    unfold sem_rel, forward_move.
+    intros until x.
+    intro REL.
+    pose proof (pick_source_sound (PSet.elements (PSet.inter rel (eq_moves ctx x)))) as ELEMENT.
+    destruct (pick_source (PSet.elements (PSet.inter rel (eq_moves ctx x)))).
+    2: reflexivity.
+    destruct (eq_catalog ctx r) as [eq | ] eqn:CATALOG.
+    2: reflexivity.
+    specialize REL with (i := r) (eq0 := eq).
+    destruct (is_smove (eq_op eq)) as [MOVE | ].
+    2: reflexivity.
+    destruct (peq x (eq_lhs eq)).
+    2: reflexivity.
+    simpl.
+    subst x.
+    rewrite PSet.elements_spec in ELEMENT.
+    rewrite PSet.ginter in ELEMENT.
+    rewrite andb_true_iff in ELEMENT.
+    unfold sem_eq in REL.
+    rewrite MOVE in REL.
+    simpl in REL.
+    destruct (eq_args eq) as [ | h t].
+    reflexivity.
+    destruct t.
+    2: reflexivity.
+    simpl in REL.
+    intuition congruence.
+  Qed.
 End SOUNDNESS.

@@ -125,16 +125,41 @@ Definition get_moves (eqs : PTree.t equation) :
                 if is_smove (eq_op eq)
                 then add_i_j (eq_lhs eq) eqno already
                 else already) eqs (PMap.init PSet.empty).
-
+  
 Record eq_context := mkeqcontext
                        { eq_catalog : node -> option equation;
-                         eq_kills : reg -> PSet.t }.
+                         eq_kills : reg -> PSet.t;
+                         eq_moves : reg -> PSet.t }.
 
 Section OPERATIONS.
   Context {ctx : eq_context}.
   
   Definition kill_reg (r : reg) (rel : RELATION.t) : RELATION.t :=
     PSet.subtract rel (eq_kills ctx r).
+
+  Definition pick_source (l : list reg) := (* todo: take min? *)
+    match l with
+    | h::t => Some h
+    | nil => None
+    end.
+  
+  Definition forward_move (rel : RELATION.t)  (x : reg) : reg :=
+    match pick_source (PSet.elements (PSet.inter rel (eq_moves ctx x))) with
+    | None => x
+    | Some eqno =>
+      match eq_catalog ctx eqno with
+      | Some eq =>
+        if is_smove (eq_op eq) && peq x (eq_lhs eq)
+        then
+          match eq_args eq with
+          | src::nil => src
+          | _ => x
+          end
+        else x
+      | _ => x
+      end
+    end.
+  
 End OPERATIONS.
 
 Definition totoro := RELATION.lub.
