@@ -88,7 +88,7 @@ Record equation :=
       eq_op : sym_op;
       eq_args : list reg }.
 
-Definition eq_id := positive.
+Definition eq_id := node.
 
 Definition add_i_j (i : reg) (j : eq_id) (m : Regmap.t PSet.t) :=
   Regmap.set i (PSet.add j (Regmap.get i m)) m.
@@ -102,5 +102,16 @@ Definition get_kills (eqs : PTree.t equation) :
                 add_i_j (eq_lhs eq) eqno
                         (add_ilist_j (eq_args eq) eqno already)) eqs
   (PMap.init PSet.empty). 
+
+Record eq_context := mkeqcontext
+                       { eq_catalog : node -> option equation;
+                         eq_kills : reg -> PSet.t }.
+
+Section OPERATIONS.
+  Context {ctx : eq_context}.
+  
+  Definition kill_reg (r : reg) (rel : RELATION.t) : RELATION.t :=
+    PSet.subtract rel (eq_kills ctx r).
+End OPERATIONS.
 
 Definition totoro := RELATION.lub.

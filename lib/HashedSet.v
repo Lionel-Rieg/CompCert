@@ -52,7 +52,7 @@ Proof.
   destruct b; reflexivity.
 Qed.
 
-Hint Rewrite orb_false_r andb_false_r andb_true_r orb_true_r orb_idem andb_idem  andb_negb_false: pset.
+Hint Rewrite orb_false_r andb_false_r andb_true_r orb_true_r orb_idem andb_idem  andb_negb_false : pset.
 
 Module PSet_internals.
 Inductive pset : Type :=

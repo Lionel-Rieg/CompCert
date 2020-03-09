@@ -9,6 +9,24 @@ Require Import Registers Op RTL.
 Require Import CSE3analysis CSE2deps CSE2depsproof HashedSet.
 Require Import Lia.
 
+Lemma subst_args_notin :
+  forall (rs : regset) dst v args,
+    ~ In dst args ->
+    (rs # dst <- v) ## args = rs ## args.
+Proof.
+  induction args; simpl; trivial.
+  intro NOTIN.
+  destruct (peq a dst).
+  {
+    subst a.
+    intuition congruence.
+  }
+  rewrite Regmap.gso by congruence.
+  f_equal.
+  apply IHargs.
+  intuition congruence.
+Qed.
+
 Lemma add_i_j_adds : forall i j m,
     PSet.contains (Regmap.get i (add_i_j i j m)) j = true.
 Proof.
@@ -159,7 +177,7 @@ Section SOUNDNESS.
   Variable genv: Genv.t F V.
   Variable sp : val.
 
-  Variable eq_catalog : PTree.t equation.
+  Context {ctx : eq_context}.
   
   Definition sem_eq (eq : equation) (rs : regset) (m : mem) :=
     match eq_op eq with
@@ -183,6 +201,62 @@ Section SOUNDNESS.
   Definition sem_rel (rel : RELATION.t) (rs : regset) (m : mem) :=
     forall i eq,
       PSet.contains rel i = true ->
-      PTree.get i eq_catalog = Some eq ->
+      eq_catalog ctx i = Some eq ->
       sem_eq eq rs m.
+
+  Hypothesis ctx_kills_has_lhs :
+    forall lhs sop args j,
+      eq_catalog ctx j = Some {| eq_lhs := lhs;
+                                 eq_op  := sop;
+                                 eq_args:= args |} ->
+      PSet.contains (eq_kills ctx lhs) j = true.
+
+  Hypothesis ctx_kills_has_arg :
+    forall lhs sop args j,
+      eq_catalog ctx j = Some {| eq_lhs := lhs;
+                                 eq_op  := sop;
+                                 eq_args:= args |} ->
+      forall arg,
+      In arg args ->
+      PSet.contains (eq_kills ctx arg) j = true.
+
+  Theorem kill_reg_sound :
+    forall rel rs m dst v,
+      (sem_rel rel rs m) ->
+      (sem_rel (kill_reg (ctx:=ctx) dst rel) (rs#dst <- v) m).
+  Proof.
+    unfold sem_rel, sem_eq, kill_reg.
+    intros until v.
+    intros REL i eq.
+    specialize REL with (i := i) (eq0 := eq).
+    destruct eq as [lhs sop args]; simpl.
+    specialize ctx_kills_has_lhs with (lhs := lhs) (sop := sop) (args := args) (j := i).
+    specialize ctx_kills_has_arg with (lhs := lhs) (sop := sop) (args := args) (j := i) (arg := dst).
+    intuition.
+    rewrite PSet.gsubtract in H.
+    rewrite andb_true_iff in H.
+    rewrite negb_true_iff in H.
+    intuition.
+    simpl in *.
+    assert ({In dst args} + {~In dst args}) as IN_ARGS.
+    {
+      apply List.in_dec.
+      apply peq.
+    }
+    destruct IN_ARGS as [IN_ARGS | NOTIN_ARGS].
+    { intuition.
+      congruence.
+    }
+    destruct (peq dst lhs).
+    {
+      congruence.
+    }
+    rewrite subst_args_notin by assumption.
+    destruct sop.
+    - destruct (eval_operation genv sp o rs ## args m) as [ev | ]; trivial.
+      rewrite Regmap.gso by congruence.
+      assumption.
+    - rewrite Regmap.gso by congruence.
+      assumption.
+  Qed.
 End SOUNDNESS.
