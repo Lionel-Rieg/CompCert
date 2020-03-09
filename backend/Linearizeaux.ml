@@ -417,7 +417,7 @@ let order_sequences code entry fs =
     end
   in begin
     (* Printf.printf "depmap: "; print_depmap depmap; *)
-    print_ssequence fs;
+    (* print_ssequence fs; *)
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
