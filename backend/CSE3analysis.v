@@ -119,21 +119,12 @@ Proof.
   - right; congruence.
 Qed.
 
-Definition get_move (eq : equation) :=
-  if is_smove (eq_op eq)
-  then match eq_args eq with
-       | h::nil => Some h
-       | _ => None
-       end
-  else None.
-
 Definition get_moves (eqs : PTree.t equation) :
   Regmap.t PSet.t :=
   PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
-                match get_move eq with
-                | Some rhs => add_i_j (eq_lhs eq) rhs already
-                | None => already
-                end) eqs (PMap.init PSet.empty).
+                if is_smove (eq_op eq)
+                then add_i_j (eq_lhs eq) eqno already
+                else already) eqs (PMap.init PSet.empty).
 
 Record eq_context := mkeqcontext
                        { eq_catalog : node -> option equation;
