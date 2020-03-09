@@ -312,6 +312,18 @@ end
 
 module ISet = Set.Make(Int)
 
+let print_iset s = begin
+  Printf.printf "{";
+  ISet.iter (fun e -> Printf.printf "%d, " e) s;
+  Printf.printf "}"
+end
+
+let print_depmap dm = begin
+  Printf.printf "[|";
+  Array.iter (fun s -> print_iset s; Printf.printf ", ") dm;
+  Printf.printf "|]\n"
+end
+
 let construct_depmap code entry fs =
   let is_loop_edge = get_loop_edges code entry in
   let visited = ref (PTree.map (fun n i -> false) code) in
@@ -395,19 +407,23 @@ let order_sequences code entry fs =
     let selected_id = ref (-1) in
     begin
       Array.iteri (fun i deps ->
-        if !selected_id == -1 && deps == ISet.empty && not fs_evaluated.(i)
-        then selected_id := i
+        begin
+          (* Printf.printf "Deps: "; print_iset deps; Printf.printf "\n"; *)
+          if !selected_id == -1 && deps == ISet.empty && not fs_evaluated.(i)
+          then selected_id := i
+        end
       ) depmap;
       !selected_id
     end
   in begin
+    (* Printf.printf "depmap: "; print_depmap depmap; *)
     print_ssequence fs;
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
     done;
-    print_ssequence !ordered_fs;
-    !ordered_fs
+    (* print_ssequence (List.rev (!ordered_fs)); *)
+    List.rev (!ordered_fs)
   end
 
 let enumerate_aux_trace f reach =
