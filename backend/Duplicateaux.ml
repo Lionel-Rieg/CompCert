@@ -467,7 +467,7 @@ let tail_duplicate code preds ptree trace =
   in (new_code, new_ptree, !nb_duplicated)
 
 let superblockify_traces code preds traces =
-  let max_nb_duplicated = 1 (* FIXME - should be architecture dependent *)
+  let max_nb_duplicated = !Clflags.option_fduplicate (* FIXME - should be architecture dependent *)
   in let ptree = make_identity_ptree code
   in let rec f code ptree = function
     | [] -> (code, ptree, 0)
@@ -499,12 +499,14 @@ let rec invert_iconds code = function
                   else code
       in invert_iconds code' ts
 
-(* For now, identity function *)
 let duplicate_aux f =
   let entrypoint = f.fn_entrypoint in
   let code = f.fn_code in
   let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
   let icond_code = invert_iconds code traces in
   let preds = get_predecessors_rtl icond_code in
-  let (new_code, pTreeId) = ((* print_traces traces; *) superblockify_traces icond_code preds traces) in
-  ((new_code, f.fn_entrypoint), pTreeId)
+  if !Clflags.option_fduplicate >= 1 then
+    let (new_code, pTreeId) = ((* print_traces traces; *) superblockify_traces icond_code preds traces) in
+    ((new_code, f.fn_entrypoint), pTreeId)
+  else
+    ((icond_code, entrypoint), make_identity_ptree code)
