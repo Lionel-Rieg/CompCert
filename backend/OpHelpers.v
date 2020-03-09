@@ -6,16 +6,16 @@ Require Import Op CminorSel.
   runtime library functions.  The following type class collects
   the names of these functions. *)
 
-Definition sig_l_l := mksignature (Tlong :: nil) (Some Tlong) cc_default.
-Definition sig_l_f := mksignature (Tlong :: nil) (Some Tfloat) cc_default.
-Definition sig_l_s := mksignature (Tlong :: nil) (Some Tsingle) cc_default.
-Definition sig_f_l := mksignature (Tfloat :: nil) (Some Tlong) cc_default.
-Definition sig_ll_l := mksignature (Tlong :: Tlong :: nil) (Some Tlong) cc_default.
-Definition sig_li_l := mksignature (Tlong :: Tint :: nil) (Some Tlong) cc_default.
-Definition sig_ii_l := mksignature (Tint :: Tint :: nil) (Some Tlong) cc_default.
-Definition sig_ii_i := mksignature (Tint :: Tint :: nil) (Some Tint) cc_default.
-Definition sig_ff_f := mksignature (Tfloat :: Tfloat :: nil) (Some Tfloat) cc_default.
-Definition sig_ss_s := mksignature (Tsingle :: Tsingle :: nil) (Some Tsingle) cc_default.
+Definition sig_l_l := mksignature (Tlong :: nil) Tlong cc_default.
+Definition sig_l_f := mksignature (Tlong :: nil) Tfloat cc_default.
+Definition sig_l_s := mksignature (Tlong :: nil) Tsingle cc_default.
+Definition sig_f_l := mksignature (Tfloat :: nil) Tlong cc_default.
+Definition sig_ll_l := mksignature (Tlong :: Tlong :: nil) Tlong cc_default.
+Definition sig_li_l := mksignature (Tlong :: Tint :: nil) Tlong cc_default.
+Definition sig_ii_l := mksignature (Tint :: Tint :: nil) Tlong cc_default.
+Definition sig_ii_i := mksignature (Tint :: Tint :: nil) Tint cc_default.
+Definition sig_ff_f := mksignature (Tfloat :: Tfloat :: nil) Tfloat cc_default.
+Definition sig_ss_s := mksignature (Tsingle :: Tsingle :: nil) Tsingle cc_default.
 
 Class helper_functions := mk_helper_functions {
   i64_dtos: ident;                      (**r float64 -> signed long *)

@@ -728,6 +728,15 @@ Proof.
   apply decode_val_type.
 Qed.
 
+Theorem load_rettype:
+  forall m chunk b ofs v,
+  load chunk m b ofs = Some v ->
+  Val.has_rettype v (rettype_of_chunk chunk).
+Proof.
+  intros. exploit load_result; eauto; intros. rewrite H0.
+  apply decode_val_rettype.
+Qed.
+
 Theorem load_cast:
   forall m chunk b ofs v,
   load chunk m b ofs = Some v ->
@@ -1298,6 +1307,23 @@ Proof.
   }
 Qed.
     
+Section STOREV.
+Variable chunk: memory_chunk.
+Variable m1: mem.
+Variables addr v: val.
+Variable m2: mem.
+Hypothesis STORE: storev chunk m1 addr v = Some m2.
+
+
+Theorem loadv_storev_same:
+  loadv chunk m2 addr = Some (Val.load_result chunk v).
+Proof.
+  destruct addr; simpl in *; try discriminate.
+  eapply load_store_same.
+  eassumption.
+Qed.
+End STOREV.
+
 Lemma load_store_overlap:
   forall chunk m1 b ofs v m2 chunk' ofs' v',
   store chunk m1 b ofs v = Some m2 ->

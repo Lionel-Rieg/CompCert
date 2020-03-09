@@ -102,9 +102,6 @@ Fixpoint bblock_smem_rec (p: bblock) (d: smem): smem :=
      let d':=inst_smem i d d in
      bblock_smem_rec p' d'
   end.
-(*
-Local Hint Resolve smem_eval_empty.
-*)
 
 Definition bblock_smem: bblock -> smem
  := fun p => bblock_smem_rec p smem_empty.
@@ -124,7 +121,7 @@ Proof.
   intros d a H; eapply inst_smem_pre_monotonic; eauto.
 Qed.
 
-Local Hint Resolve inst_smem_pre_monotonic bblock_smem_pre_monotonic.
+Local Hint Resolve inst_smem_pre_monotonic bblock_smem_pre_monotonic: core.
 
 Lemma term_eval_exp e (od:smem) m0 old:
   (forall x, term_eval ge (od x) m0 = Some (old x)) ->
@@ -185,7 +182,7 @@ Lemma bblocks_smem_rec_Some_correct1 p m0: forall (m1 m2: mem) (d: smem),
   (forall x, term_eval ge (d x) m0 = Some (m1 x)) ->
   forall x, term_eval ge (bblock_smem_rec p d x) m0 = Some (m2 x).
 Proof.
-  Local Hint Resolve inst_smem_Some_correct1.
+  Local Hint Resolve inst_smem_Some_correct1: core.
   induction p as [ | i p]; simpl; intros m1 m2 d H.
   - inversion_clear H; eauto.
   - intros H0 x0.
@@ -299,7 +296,7 @@ Lemma block_smem_rec_valid p m0: forall (m1 m2: mem) (d:smem),
   (forall x, term_eval ge (d x) m0 = Some (m1 x)) ->
   pre (bblock_smem_rec p d) ge m0.
 Proof.
-  Local Hint Resolve inst_valid.
+  Local Hint Resolve inst_valid: core.
   induction p as [ | i p]; simpl; intros m1 d H; auto.
   intros H0 H1.
   destruct (inst_run ge i m1 m1) eqn: Heqov; eauto.
@@ -326,7 +323,7 @@ Theorem bblock_smem_simu p1 p2:
    smem_simu (bblock_smem p1) (bblock_smem p2) ->
    bblock_simu ge p1 p2.
 Proof.
-  Local Hint Resolve bblock_smem_valid bblock_smem_Some_correct1.
+  Local Hint Resolve bblock_smem_valid bblock_smem_Some_correct1: core.
   intros (INCL & EQUIV) m DONTFAIL; unfold smem_valid in * |-.
   destruct (run ge p1 m) as [m1|] eqn: RUN1; simpl; try congruence.
   assert (X: forall x, term_eval ge (bblock_smem p1 x) m = Some (m1 x)); eauto.
