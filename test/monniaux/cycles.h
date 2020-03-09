@@ -38,6 +38,13 @@ static inline cycle_t get_cycle(void) {
   return cycles;
 }
 
+#elif defined (__ARM_ARCH) && (__ARM_ARCH >= 6)
+static inline cycle_t get_cycle(void) {
+  cycle_t cycles;
+  __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (cycles));
+  return cycles;
+}
+
 #else
 static inline cycle_t get_cycle(void) { return 0; }
 #endif
