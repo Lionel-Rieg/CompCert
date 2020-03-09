@@ -105,7 +105,7 @@ Inductive is_end_block: Machblock_inst -> code -> Prop :=
   | End_basic bi bh bl: header bh <> nil -> is_end_block (MB_basic bi) (bh::bl)
   | End_cfi cfi bl: bl <> nil -> is_end_block (MB_cfi cfi) bl. 
 
-Local Hint Resolve End_empty End_basic End_cfi.
+Local Hint Resolve End_empty End_basic End_cfi: core.
 
 Inductive is_trans_code: Mach.code -> code -> Prop :=
   | Tr_nil: is_trans_code nil nil
@@ -123,7 +123,7 @@ Inductive is_trans_code: Mach.code -> code -> Prop :=
       header bh = nil ->
       is_trans_code (i::c) (add_basic bi bh::bl).
 
-Local Hint Resolve Tr_nil Tr_end_block.
+Local Hint Resolve Tr_nil Tr_end_block: core.
 
 Lemma add_to_code_is_trans_code i c bl:
   is_trans_code c bl ->
@@ -145,7 +145,7 @@ Proof.
       rewrite <- Heqti. eapply End_cfi. congruence.
 Qed.
 
-Local Hint Resolve add_to_code_is_trans_code.
+Local Hint Resolve add_to_code_is_trans_code: core.
 
 Lemma trans_code_is_trans_code_rev c1: forall c2 mbi, 
   is_trans_code c2 mbi ->
@@ -185,7 +185,7 @@ Proof.
   exists mbi1. split; congruence.
 Qed.
 
-Local Hint Resolve trans_code_is_trans_code.
+Local Hint Resolve trans_code_is_trans_code: core.
 
 Theorem is_trans_code_inv c bl: is_trans_code c bl <-> bl=(trans_code c).
 Proof.
