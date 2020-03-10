@@ -282,7 +282,26 @@ Section SOUNDNESS.
   Qed.
 
   Hint Resolve kill_reg_sound : cse3.
-  
+
+  Theorem kill_reg_sound2 :
+    forall rel rs m dst,
+      (sem_rel rel rs m) ->
+      (sem_rel (kill_reg (ctx:=ctx) dst rel) rs m).
+  Proof.
+    unfold sem_rel, sem_eq, sem_rhs, kill_reg.
+    intros until dst.
+    intros REL i eq.
+    specialize REL with (i := i) (eq0 := eq).
+    destruct eq as [lhs sop args]; simpl.
+    specialize ctx_kill_reg_has_lhs with (lhs := lhs) (sop := sop) (args := args) (j := i).
+    specialize ctx_kill_reg_has_arg with (lhs := lhs) (sop := sop) (args := args) (j := i) (arg := dst).
+    intuition.
+    rewrite PSet.gsubtract in H.
+    rewrite andb_true_iff in H.
+    rewrite negb_true_iff in H.
+    intuition.
+  Qed.
+    
   Lemma pick_source_sound :
     forall (l : list reg),
       match pick_source l with
@@ -421,6 +440,8 @@ Section SOUNDNESS.
     simpl in FIND.
     intuition congruence.
   Qed.
+
+  Hint Resolve rhs_find_op_sound : cse3.
   
   Theorem forward_move_rhs_sound :
     forall sop args rel rs m v,
@@ -432,5 +453,103 @@ Section SOUNDNESS.
     intros REL RHS.
     destruct sop; simpl in *.
     all: erewrite forward_move_l_sound by eassumption; assumption.
+  Qed.
+
+  Hint Resolve forward_move_rhs_sound : cse3.
+
+  Lemma arg_not_replaced:
+    forall (rs : regset) dst v args,
+      ~ In dst args ->
+      (rs # dst <- v) ## args = rs ## args.
+  Proof.
+    induction args; simpl; trivial.
+    intuition.
+    f_equal; trivial.
+    apply Regmap.gso; congruence.
+  Qed.
+
+  Lemma sem_rhs_depends_on_args_only:
+    forall sop args rs dst m v,
+      sem_rhs sop args rs m v ->
+      ~ In dst args ->
+      sem_rhs sop args (rs # dst <- v) m v.
+  Proof.
+    unfold sem_rhs.
+    intros.
+    rewrite arg_not_replaced by assumption.
+    assumption.
+  Qed.
+  
+  Lemma replace_sound:
+    forall no eqno dst sop args rel rs m v,
+    sem_rel rel rs m ->
+    sem_rhs sop args rs m  v ->
+    ~ In dst args ->
+    eq_find (ctx := ctx)
+            no {| eq_lhs := dst;
+                  eq_op  := sop;
+                  eq_args:= args |} = Some eqno ->
+    sem_rel (PSet.add eqno (kill_reg (ctx := ctx) dst rel)) (rs # dst <- v) m.
+  Proof.
+    intros until v.
+    intros REL RHS NOTIN FIND i eq CONTAINS CATALOG.
+    destruct (peq i eqno).
+    - subst i.
+      rewrite eq_find_sound with (no := no) (eq0 := {| eq_lhs := dst; eq_op := sop; eq_args := args |}) in CATALOG by exact FIND.
+      clear FIND.
+      inv CATALOG.
+      unfold sem_eq.
+      simpl in *.
+      rewrite Regmap.gss.
+      apply sem_rhs_depends_on_args_only; auto.
+    - rewrite PSet.gaddo in CONTAINS by congruence.
+      eapply kill_reg_sound; eauto.
+  Qed.
+
+  Lemma sem_rhs_det:
+    forall sop args rs m v v',
+      sem_rhs sop args rs m v ->
+      sem_rhs sop args rs m v' ->
+      v = v'.
+  Proof.
+    intros until v'. intro SEMv.
+    destruct sop; simpl in *.
+    - destruct eval_operation.
+      congruence.
+      contradiction.
+    - destruct eval_addressing.
+      + destruct Mem.loadv; congruence.
+      + congruence.
+  Qed.
+
+  Theorem oper2_sound:
+    forall no dst sop args rel rs m v,
+      sem_rel rel rs m ->
+      not (In dst args) ->
+      sem_rhs sop args rs m v ->
+      sem_rel (oper2 (ctx := ctx) no dst sop args rel) (rs # dst <- v) m.
+  Proof.
+    unfold oper2.
+    intros until v.
+    intros REL NOTIN RHS.    
+    pose proof (eq_find_sound no {| eq_lhs := dst; eq_op := sop; eq_args := args |}) as EQ_FIND_SOUND.
+    destruct eq_find.
+    2: auto with cse3; fail.
+    specialize EQ_FIND_SOUND with (id := e).
+    intuition.
+    intros i eq CONTAINS.
+    destruct (peq i e).
+    { subst i.
+      rewrite H.
+      clear H.
+      intro Z.
+      inv Z.
+      unfold sem_eq.
+      simpl.
+      rewrite Regmap.gss.
+      apply sem_rhs_depends_on_args_only; auto.
+    }
+    rewrite PSet.gaddo in CONTAINS by congruence.
+    apply (kill_reg_sound rel rs m dst v REL i eq); auto.
   Qed.
 End SOUNDNESS.

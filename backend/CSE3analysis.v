@@ -216,6 +216,16 @@ Section OPERATIONS.
         else None
       end
     end.
-End OPERATIONS.
+
+  Definition oper2 (no : node) (dst : reg) (op: sym_op)(args : list reg)
+           (rel : RELATION.t) :=
+    let rel' := kill_reg dst rel in
+    match eq_find no {| eq_lhs := dst;
+                        eq_op  := op;
+                        eq_args:= args |} with
+    | Some id => PSet.add id rel'
+    | None => rel'
+    end.
+  End OPERATIONS.
 
 Definition totoro := RELATION.lub.
