@@ -415,16 +415,24 @@ let order_sequences code entry fs =
       ) depmap
     end
   in let select_next () =
-    let selected_id = ref (-1) in
+    let selected_id = ref None in
     begin
       Array.iteri (fun i deps ->
         begin
           (* Printf.printf "Deps: "; print_iset deps; Printf.printf "\n"; *)
-          if !selected_id == -1 && deps == ISet.empty && not fs_evaluated.(i)
-          then selected_id := i
+          match !selected_id with
+          | None -> if (deps == ISet.empty && not fs_evaluated.(i)) then selected_id := Some i
+          | Some id -> ()
         end
       ) depmap;
-      !selected_id
+      match !selected_id with
+      | Some id -> id
+      | None -> begin
+          Printf.printf "original fs: "; print_ssequence fs;
+          Printf.printf "depmap: "; print_depmap depmap;
+          Printf.printf "current ordered fs: "; print_ssequence @@ List.rev (!ordered_fs);
+          failwith "Could not find a next schedulable trace. Are the dependencies alright?"
+        end
     end
   in begin
     (* Printf.printf "depmap: "; print_depmap depmap; *)
