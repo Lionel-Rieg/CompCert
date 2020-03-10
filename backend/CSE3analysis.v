@@ -74,6 +74,8 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
     rewrite andb_true_iff.
     intuition.
   Qed.
+
+  Definition top := PSet.empty.
 End RELATION.
 
 Module RB := ADD_BOTTOM(RELATION).
@@ -253,6 +255,34 @@ Section OPERATIONS.
     end.
   
   End PER_NODE.
+
+Definition apply_instr no instr (rel : RELATION.t) : RB.t :=
+  match instr with
+  | Inop _
+  | Icond _ _ _ _
+  | Ijumptable _ _ => Some rel
+  | Istore chunk addr args _ _ => Some (kill_mem rel)
+  | Iop op args dst _ => Some (oper no dst (SOp op) args rel)
+  | Iload trap chunk addr args dst _ => Some (oper no dst (SLoad chunk addr) args rel)
+  | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
+  | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
+  | Itailcall _ _ _ | Ireturn _ => RB.bot
+  end.
+
+Definition apply_instr' code (pc : node) (ro : RB.t) : RB.t :=
+  match ro with
+  | None => None
+  | Some x =>
+    match code ! pc with
+    | None => RB.bot
+    | Some instr => apply_instr pc instr x
+    end
+  end.
+
+Definition forward_map (f : RTL.function) := DS.fixpoint
+  (RTL.fn_code f) RTL.successors_instr
+  (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
+
 End OPERATIONS.
 
 Definition totoro := RELATION.lub.
