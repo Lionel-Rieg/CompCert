@@ -421,4 +421,16 @@ Section SOUNDNESS.
     simpl in FIND.
     intuition congruence.
   Qed.
+  
+  Theorem forward_move_rhs_sound :
+    forall sop args rel rs m v,
+      (sem_rel rel rs m) ->
+      (sem_rhs sop args rs m v) ->
+      (sem_rhs sop (forward_move_l (ctx := ctx) rel args) rs m v).
+  Proof.
+    intros until v.
+    intros REL RHS.
+    destruct sop; simpl in *.
+    all: erewrite forward_move_l_sound by eassumption; assumption.
+  Qed.
 End SOUNDNESS.
