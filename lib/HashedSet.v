@@ -1058,6 +1058,10 @@ Axiom elements_complete:
   forall (m: t) (i: positive),
     In i (elements m) -> contains m i = true.
 
+Axiom elements_spec:
+  forall (m: t) (i: positive),
+    In i (elements m) <-> contains m i = true.
+
 Parameter fold:
   forall {B : Type},
     (B -> positive -> B) -> t -> B -> B.
@@ -1304,7 +1308,6 @@ Proof.
   apply PSet_internals.elements_correct.
 Qed.
 
-
 Theorem elements_complete:
   forall (m: pset) (i: positive),
     In i (elements m) -> contains m i = true.
@@ -1313,6 +1316,15 @@ Proof.
   apply PSet_internals.elements_complete.
 Qed.
 
+
+Theorem elements_spec:
+  forall (m: pset) (i: positive),
+    In i (elements m) <-> contains m i = true.
+Proof.
+  intros. split.
+  - apply elements_complete.
+  - apply elements_correct.
+Qed.
 
 Definition fold {B : Type} (f : B -> positive -> B) (m : t) (v : B) : B :=
   PSet_internals.fold f (pset_x m) v.

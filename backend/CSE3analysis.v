@@ -128,14 +128,18 @@ Definition get_moves (eqs : PTree.t equation) :
   
 Record eq_context := mkeqcontext
                        { eq_catalog : node -> option equation;
-                         eq_kills : reg -> PSet.t;
+                         eq_kill_reg : reg -> PSet.t;
+                         eq_kill_mem : PSet.t;
                          eq_moves : reg -> PSet.t }.
 
 Section OPERATIONS.
   Context {ctx : eq_context}.
   
   Definition kill_reg (r : reg) (rel : RELATION.t) : RELATION.t :=
-    PSet.subtract rel (eq_kills ctx r).
+    PSet.subtract rel (eq_kill_reg ctx r).
+  
+  Definition kill_mem (rel : RELATION.t) : RELATION.t :=
+    PSet.subtract rel (eq_kill_mem ctx).
 
   Definition pick_source (l : list reg) := (* todo: take min? *)
     match l with
@@ -159,7 +163,9 @@ Section OPERATIONS.
       | _ => x
       end
     end.
-  
+
+  Definition forward_move_l (rel : RELATION.t) : list reg -> list reg :=
+    List.map (forward_move rel).
 End OPERATIONS.
 
 Definition totoro := RELATION.lub.

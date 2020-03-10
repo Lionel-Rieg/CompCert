@@ -277,6 +277,8 @@ Section SOUNDNESS.
       assumption.
   Qed.
 
+  Hint Resolve kill_reg_sound : cse3.
+  
   Lemma pick_source_sound :
     forall (l : list reg),
       match pick_source l with
@@ -289,6 +291,8 @@ Section SOUNDNESS.
     left; trivial.
   Qed.
     
+  Hint Resolve pick_source_sound : cse3.
+
   Theorem forward_move_sound :
     forall rel rs m x,
       (sem_rel rel rs m) ->
@@ -323,6 +327,20 @@ Section SOUNDNESS.
     intuition congruence.
   Qed.
 
+  Hint Resolve forward_move_sound : cse3.
+
+  Theorem forward_move_l_sound :
+    forall rel rs m l,
+      (sem_rel rel rs m) ->
+      rs ## (forward_move_l (ctx := ctx) rel l) = rs ## l.
+  Proof.
+    induction l; simpl; intros; trivial.
+    erewrite forward_move_sound by eassumption.
+    intuition congruence.
+  Qed.
+  
+  Hint Resolve forward_move_l_sound : cse3.
+
   Theorem kill_mem_sound :
     forall rel rs m m',
       (sem_rel rel rs m) ->
@@ -353,4 +371,6 @@ Section SOUNDNESS.
       intuition.
       congruence.
   Qed.
+
+  Hint Resolve kill_mem_sound : cse3.
 End SOUNDNESS.
