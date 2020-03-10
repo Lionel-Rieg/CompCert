@@ -140,10 +140,21 @@ let rec last_element = function
   | e :: [] -> e
   | e' :: e :: l -> last_element (e::l)
 
+let print_plist l =
+  let rec f = function
+  | [] -> ()
+  | n :: l -> Printf.printf "%d, " (P.to_int n); f l
+  in begin
+    Printf.printf "[";
+    f l;
+    Printf.printf "]"
+  end
+
 let forward_sequences code entry =
   let visited = ref (PTree.map (fun n i -> false) code) in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
   let rec traverse_fallthrough code node =
+    (* Printf.printf "Traversing %d..\n" (P.to_int node); *)
     if not (get_some @@ PTree.get node !visited) then begin
       visited := PTree.set node true !visited;
       match PTree.get node code with
@@ -164,8 +175,8 @@ let forward_sequences code entry =
   in let rec f code = function
   | [] -> []
   | node :: ln ->
-      let fs, rem = traverse_fallthrough code node
-      in [fs] @ (f code rem)
+      let fs, rem_from_node = traverse_fallthrough code node
+      in [fs] @ ((f code rem_from_node) @ (f code ln))
   in (f code [entry])
 
 module PInt = struct
@@ -417,12 +428,12 @@ let order_sequences code entry fs =
     end
   in begin
     (* Printf.printf "depmap: "; print_depmap depmap; *)
-    (* print_ssequence fs; *)
+    (* Printf.printf "forward sequences identified: "; print_ssequence fs; *)
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
     done;
-    (* print_ssequence (List.rev (!ordered_fs)); *)
+    (* Printf.printf "forward sequences ordered: "; print_ssequence (List.rev (!ordered_fs)); *)
     List.rev (!ordered_fs)
   end
 
