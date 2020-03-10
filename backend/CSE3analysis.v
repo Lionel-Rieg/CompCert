@@ -245,14 +245,13 @@ Section OPERATIONS.
     | None => kill_reg dst rel
     end.
 
-  (*
   Definition oper (dst : reg) (op: sym_op) (args : list reg)
              (rel : RELATION.t) : RELATION.t :=
-    match find_op rel op (forward_move_l rel args) with
+    match rhs_find op (forward_move_l rel args) rel with
     | Some r => move r dst rel
-    | None => oper1 op dst args rel
+    | None => oper1 dst op args rel
     end.
-*)
+  
   End PER_NODE.
 End OPERATIONS.
 

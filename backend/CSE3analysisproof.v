@@ -415,7 +415,7 @@ Section SOUNDNESS.
 
   Hint Resolve eq_find_sound : cse3.
 
-  Theorem rhs_find_op_sound:
+  Theorem rhs_find_sound:
     forall no sop args rel src rs m,
       sem_rel rel rs m ->
       rhs_find (ctx := ctx) no sop args rel = Some src ->
@@ -441,7 +441,7 @@ Section SOUNDNESS.
     intuition congruence.
   Qed.
 
-  Hint Resolve rhs_find_op_sound : cse3.
+  Hint Resolve rhs_find_sound : cse3.
   
   Theorem forward_move_rhs_sound :
     forall sop args rel rs m v,
@@ -507,7 +507,7 @@ Section SOUNDNESS.
   Qed.
 
   Lemma sem_rhs_det:
-    forall sop args rs m v v',
+    forall {sop} {args} {rs} {m} {v} {v'},
       sem_rhs sop args rs m v ->
       sem_rhs sop args rs m v' ->
       v = v'.
@@ -566,6 +566,8 @@ Section SOUNDNESS.
     destruct in_dec; auto with cse3.
   Qed.
 
+  Hint Resolve oper1_sound : cse3.
+
   Lemma move_sound :
     forall no : node,
     forall rel : RELATION.t,
@@ -598,4 +600,26 @@ Section SOUNDNESS.
         apply (kill_reg_sound rel rs m dst (rs # src) REL i); auto.
     - apply kill_reg_sound; auto.
   Qed.
+
+  Hint Resolve move_sound : cse3.
+  
+  Theorem oper_sound:
+    forall no dst sop args rel rs m v,
+      sem_rel rel rs m ->
+      sem_rhs sop args rs m v ->
+      sem_rel (oper (ctx := ctx) no dst sop args rel) (rs # dst <- v) m.
+  Proof.
+    intros until v.
+    intros REL RHS.
+    unfold oper.
+    destruct rhs_find as [src |] eqn:RHS_FIND.
+    - pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
+      eapply forward_move_rhs_sound in RHS.
+      2: eassumption.
+      rewrite <- (sem_rhs_det SOUND RHS).
+      apply move_sound; auto.
+    - apply oper1_sound; auto.
+  Qed.
+
+  Hint Resolve oper_sound : cse3.
 End SOUNDNESS.
