@@ -24,8 +24,7 @@ let string_of_chunk = function
 let print_reg channel i =
   Printf.fprintf channel "r%d" i;;
 
-let print_eq channel id (lhs, sop, args) =
-  Printf.printf "%d: " id;
+let print_eq channel (lhs, sop, args) =
   match sop with
   | SOp op ->
      Printf.printf "%a = %a\n" print_reg lhs (PrintOp.print_operation print_reg) (op, args)
@@ -50,13 +49,14 @@ let preanalysis (f : RTL.coq_function) =
   let mutating_eq_find_oracle node eq : P.t option =
     let (flat_eq_lhs, flat_eq_op, flat_eq_args) as flat_eq = flatten_eq eq in
     match Hashtbl.find_opt eq_table flat_eq with
-    | Some x -> Some x
+    | Some x ->
+       Some x
     | None ->
+       (* FIXME print_eq stderr flat_eq; *)
        incr cur_eq_id;
        let id = !cur_eq_id in
        let coq_id = P.of_int id in
        begin
-         print_eq stderr id flat_eq;
          Hashtbl.add eq_table flat_eq coq_id;
          Hashtbl.add rhs_table (flat_eq_op, flat_eq_args)
            (PSet.add coq_id

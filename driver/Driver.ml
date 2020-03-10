@@ -196,6 +196,7 @@ Processing options:
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
   -fcse2         Perform inter-loop common subexpression elimination [on]
+  -fcse3         Perform inter-loop common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
@@ -265,7 +266,7 @@ let dump_mnemonics destfile =
 
 let optimization_options = [
     option_ftailcalls; option_fifconversion; option_fconstprop;
-    option_fcse; option_fcse2;
+    option_fcse; option_fcse2; option_fcse3;
     option_fpostpass;
     option_fredundancy; option_finline; option_finline_functions_called_once;
 ]
@@ -391,6 +392,7 @@ let cmdline_actions =
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
   @ f_opt "cse2" option_fcse2
+  @ f_opt "cse3" option_fcse3
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ f_opt "duplicate" option_fduplicate
