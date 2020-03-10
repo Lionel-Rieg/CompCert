@@ -2,6 +2,7 @@ Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Memory Registers Op RTL Maps CSE2deps.
 Require Import HashedSet.
+Require List.
 
 Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   Definition t := PSet.t.
@@ -82,11 +83,34 @@ Inductive sym_op : Type :=
 | SOp : operation -> sym_op
 | SLoad : memory_chunk -> addressing -> sym_op.
 
+Definition eq_dec_sym_op : forall s s' : sym_op, {s = s'} + {s <> s'}.
+Proof.
+  generalize eq_operation.
+  generalize eq_addressing.
+  generalize chunk_eq.
+  decide equality.
+Defined.
+
+Definition eq_dec_args : forall l l' : list reg, { l = l' } + { l <> l' }.
+Proof.
+  apply List.list_eq_dec.
+  exact peq.
+Defined.
+
 Record equation :=
   mkequation
     { eq_lhs : reg;
       eq_op : sym_op;
       eq_args : list reg }.
+
+Definition eq_dec_equation :
+  forall eq eq' : equation, {eq = eq'} + {eq <> eq'}.
+Proof.
+  generalize peq.
+  generalize eq_dec_sym_op.
+  generalize eq_dec_args.
+  decide equality.
+Defined.
 
 Definition eq_id := node.
 
@@ -127,7 +151,8 @@ Definition get_moves (eqs : PTree.t equation) :
                 else already) eqs (PMap.init PSet.empty).
   
 Record eq_context := mkeqcontext
-                       { eq_catalog : node -> option equation;
+                       { eq_catalog : eq_id -> option equation;
+                         eq_find_oracle : node -> equation -> option eq_id;
                          eq_kill_reg : reg -> PSet.t;
                          eq_kill_mem : PSet.t;
                          eq_moves : reg -> PSet.t }.
@@ -166,6 +191,16 @@ Section OPERATIONS.
 
   Definition forward_move_l (rel : RELATION.t) : list reg -> list reg :=
     List.map (forward_move rel).
+
+  Definition eq_find (no : node) (eq : equation) :=
+    match eq_find_oracle ctx no eq with
+    | Some id =>
+      match eq_catalog ctx id with
+      | Some eq' => if eq_dec_equation eq eq' then Some id else None
+      | None => None
+      end
+    | None => None
+    end.
 End OPERATIONS.
 
 Definition totoro := RELATION.lub.

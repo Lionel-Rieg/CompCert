@@ -373,4 +373,20 @@ Section SOUNDNESS.
   Qed.
 
   Hint Resolve kill_mem_sound : cse3.
+
+  Theorem eq_find_sound:
+    forall no eq id,
+      eq_find (ctx := ctx) no eq = Some id ->
+      eq_catalog ctx id = Some eq.
+  Proof.
+    unfold eq_find.
+    intros.
+    destruct (eq_find_oracle ctx no eq) as [ id' | ].
+    2: discriminate.
+    destruct (eq_catalog ctx id') as [eq' |] eqn:CATALOG.
+    2: discriminate.
+    destruct (eq_dec_equation eq eq').
+    2: discriminate.
+    congruence.
+  Qed.
 End SOUNDNESS.
