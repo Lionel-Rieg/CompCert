@@ -349,6 +349,14 @@ let construct_depmap code entry fs =
       ) fs;
       !index
     end
+  in let check_and_update_depmap from target =
+    if not (ppmap_is_true (from, target) is_loop_edge) then
+      let in_index_fs = find_index_of_node from in
+      let out_index_fs = find_index_of_node target in
+      if out_index_fs != in_index_fs then
+        depmap.(out_index_fs) <- ISet.add in_index_fs depmap.(out_index_fs)
+      else ()
+    else ()
   in let rec dfs_visit code = function
   | [] -> ()
   | node :: ln ->
@@ -360,25 +368,14 @@ let construct_depmap code entry fs =
           let next_visits =
             match (last_element bb) with
             | Ltailcall _ | Lreturn -> []
-            | Lbranch n -> [n]
+            | Lbranch n -> (check_and_update_depmap node n; [n])
             | Lcond (_, _, ifso, ifnot) -> begin
-                (if not (ppmap_is_true (node, ifso) is_loop_edge) then
-                  let in_index_fs = find_index_of_node node in
-                  let out_index_fs = find_index_of_node ifso in
-                  depmap.(out_index_fs) <- ISet.add in_index_fs depmap.(out_index_fs)
-                else
-                  ());
+                check_and_update_depmap node ifso;
+                check_and_update_depmap node ifnot;
                 [ifso; ifnot]
               end
             | Ljumptable(_, ln) -> begin
-                let in_index_fs = find_index_of_node node in
-                List.iter (fun n ->
-                  if not (ppmap_is_true (node, n) is_loop_edge) then
-                    let out_index_fs = find_index_of_node n in
-                    depmap.(out_index_fs) <- ISet.add in_index_fs depmap.(out_index_fs)
-                  else
-                    ()
-                ) ln;
+                List.iter (fun n -> check_and_update_depmap node n) ln;
                 ln
               end
             (* end of bblocks should not be another value than one of the above *)
