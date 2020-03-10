@@ -318,7 +318,7 @@ let cmdline_actions =
  [
   Exact "-O0", Unit (unset_all optimization_options);
   Exact "-O", Unit (set_all optimization_options);
-  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false; option_fduplicate := false);
+  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
