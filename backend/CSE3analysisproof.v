@@ -552,4 +552,18 @@ Section SOUNDNESS.
     rewrite PSet.gaddo in CONTAINS by congruence.
     apply (kill_reg_sound rel rs m dst v REL i eq); auto.
   Qed.
+
+  Hint Resolve oper2_sound : cse3.
+  
+  Theorem oper1_sound:
+    forall no dst sop args rel rs m v,
+      sem_rel rel rs m ->
+      sem_rhs sop args rs m v ->
+      sem_rel (oper1 (ctx := ctx) no dst sop args rel) (rs # dst <- v) m.
+  Proof.
+    intros.
+    unfold oper1.
+    destruct in_dec; auto with cse3.
+  Qed.
+  
 End SOUNDNESS.
