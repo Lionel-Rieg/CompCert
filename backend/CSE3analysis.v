@@ -303,12 +303,13 @@ Record analysis_hints :=
       hint_eq_find_oracle : node -> equation -> option eq_id;
       hint_eq_rhs_oracle : node -> sym_op -> list reg -> PSet.t }.
 
-Definition analysis (eqs : PTree.t equation) (hints : analysis_hints) :=
+Definition analysis (hints : analysis_hints) :=
+  let eqs := hint_eq_catalog hints in
   let reg_kills := get_reg_kills eqs in 
   let mem_kills := get_mem_kills eqs in
   let moves := get_moves eqs in
   internal_analysis (ctx := {|
-      eq_catalog := fun eq_id => PTree.get eq_id (hint_eq_catalog hints);
+      eq_catalog := fun eq_id => PTree.get eq_id eqs;
       eq_find_oracle := hint_eq_find_oracle hints ;
       eq_rhs_oracle  := hint_eq_rhs_oracle hints;
       eq_kill_reg := fun reg => PMap.get reg reg_kills;

@@ -7,14 +7,14 @@ Axiom preanalysis : RTL.function -> analysis_hints.
 
 Definition run f := preanalysis f.
 
-Definition transf_instr (fmap : analysis_hints)
+Definition transf_instr (fmap : option (PMap.t RB.t))
            (pc: node) (instr: instruction) := instr.
 
 Definition transf_function (f: function) : function :=
   {| fn_sig := f.(fn_sig);
      fn_params := f.(fn_params);
      fn_stacksize := f.(fn_stacksize);
-     fn_code := PTree.map (transf_instr (preanalysis f)) f.(fn_code);
+     fn_code := PTree.map (transf_instr (analysis (preanalysis f) f)) f.(fn_code);
      fn_entrypoint := f.(fn_entrypoint) |}.
 
 Definition transf_fundef (fd: fundef) : fundef :=
