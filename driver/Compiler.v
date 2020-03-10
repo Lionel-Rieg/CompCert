@@ -43,7 +43,7 @@ Require Constprop.
 Require CSE.
 Require ForwardMoves.
 Require CSE2.
-Require CSE3analysis.
+Require CSE3.
 Require Deadcode.
 Require Unusedglob.
 Require Allnontrap.
@@ -69,6 +69,7 @@ Require Constpropproof.
 Require CSEproof.
 Require ForwardMovesproof.
 Require CSE2proof.
+Require CSE3proof.
 Require Deadcodeproof.
 Require Unusedglobproof.
 Require Allnontrapproof.
@@ -145,14 +146,16 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 7)
    @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
    @@ print (print_RTL 8)
-   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
+   @@ total_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
    @@ print (print_RTL 9)
-  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
+   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
    @@ print (print_RTL 10)
-   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
+  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
    @@ print (print_RTL 11)
-  @@@ time "Unused globals" Unusedglob.transform_program
+   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
    @@ print (print_RTL 12)
+  @@@ time "Unused globals" Unusedglob.transform_program
+   @@ print (print_RTL 13)
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
    @@ time "Branch tunneling" Tunneling.tunnel_program
@@ -260,6 +263,7 @@ Definition CompCert's_passes :=
   ::: mkpass (match_if Compopts.optim_constprop Renumberproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE2 CSE2proof.match_prog)
+  ::: mkpass (match_if Compopts.optim_CSE3 CSE3proof.match_prog)
   ::: mkpass (match_if Compopts.optim_forward_moves ForwardMovesproof.match_prog)
   ::: mkpass (match_if Compopts.optim_redundancy Deadcodeproof.match_prog)
   ::: mkpass (match_if Compopts.all_loads_nontrap Allnontrapproof.match_prog)
@@ -307,8 +311,9 @@ Proof.
   set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
   destruct (partial_if optim_CSE CSE.transf_program p12) as [p13|e] eqn:P13; simpl in T; try discriminate.
   set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
-  set (p13ter := total_if optim_forward_moves ForwardMoves.transf_program p13bis) in *.
-  destruct (partial_if optim_redundancy Deadcode.transf_program p13ter) as [p14|e] eqn:P14; simpl in T; try discriminate.
+  set (p13ter := total_if optim_CSE3 CSE3.transf_program p13bis) in *.
+  set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
+  destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; simpl in T; try discriminate.
   set (p14bis := total_if all_loads_nontrap Allnontrap.transf_program p14) in *.
   destruct (Unusedglob.transform_program p14bis) as [p15|e] eqn:P15; simpl in T; try discriminate.
   destruct (Allocation.transf_program p15) as [p16|e] eqn:P16; simpl in T; try discriminate.
@@ -332,7 +337,8 @@ Proof.
   exists p12; split. apply total_if_match. apply Renumberproof.transf_program_match.
   exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
   exists p13bis; split. apply total_if_match. apply CSE2proof.transf_program_match.
-  exists p13ter; split. eapply total_if_match; eauto. apply ForwardMovesproof.transf_program_match.
+  exists p13ter; split. apply total_if_match. apply CSE3proof.transf_program_match.
+  exists p13quater; split. eapply total_if_match; eauto. apply ForwardMovesproof.transf_program_match.
   exists p14; split. eapply partial_if_match; eauto. apply Deadcodeproof.transf_program_match.
   exists p14bis; split. eapply total_if_match; eauto. apply Allnontrapproof.transf_program_match.
   exists p15; split. apply Unusedglobproof.transf_program_match; auto.
@@ -393,7 +399,7 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p25)).
+  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p26)).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -422,6 +428,8 @@ Ltac DestructM :=
     eapply match_if_simulation. eassumption. exact CSEproof.transf_program_correct.
   eapply compose_forward_simulations.
   eapply match_if_simulation. eassumption. exact CSE2proof.transf_program_correct.
+  eapply compose_forward_simulations.
+  eapply match_if_simulation. eassumption. exact CSE3proof.transf_program_correct.
   eapply compose_forward_simulations.
   eapply match_if_simulation. eassumption. exact ForwardMovesproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.

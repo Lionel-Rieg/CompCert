@@ -134,9 +134,9 @@ Lemma get_kills_has_lhs :
     PTree.get j eqs = Some {| eq_lhs := lhs;
                               eq_op  := sop;
                               eq_args:= args |} ->
-    PSet.contains (Regmap.get lhs (get_kills eqs)) j = true.
+    PSet.contains (Regmap.get lhs (get_reg_kills eqs)) j = true.
 Proof.
-  unfold get_kills.
+  unfold get_reg_kills.
   intros.
   rewrite PTree.fold_spec.
   change (fold_left
@@ -154,9 +154,9 @@ Lemma get_kills_has_arg :
                               eq_op  := sop;
                               eq_args:= args |} ->
     In arg args ->
-    PSet.contains (Regmap.get arg (get_kills eqs)) j = true.
+    PSet.contains (Regmap.get arg (get_reg_kills eqs)) j = true.
 Proof.
-  unfold get_kills.
+  unfold get_reg_kills.
   intros.
   rewrite PTree.fold_spec.
   change (fold_left
@@ -232,14 +232,14 @@ Section SOUNDNESS.
                                  eq_op  := SOp op;
                                  eq_args:= args |} ->
       op_depends_on_memory op = true ->
-      PSet.contains (eq_kill_mem ctx) j = true.
+      PSet.contains (eq_kill_mem ctx tt) j = true.
 
   Hypothesis ctx_kill_mem_has_load :
     forall lhs chunk addr args j,
       eq_catalog ctx j = Some {| eq_lhs := lhs;
                                  eq_op  := SLoad chunk addr;
                                  eq_args:= args |} ->
-      PSet.contains (eq_kill_mem ctx) j = true.
+      PSet.contains (eq_kill_mem ctx tt) j = true.
 
   Theorem kill_reg_sound :
     forall rel rs m dst v,

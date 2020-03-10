@@ -122,12 +122,24 @@ Definition add_i_j (i : reg) (j : eq_id) (m : Regmap.t PSet.t) :=
 Definition add_ilist_j (ilist : list reg) (j : eq_id) (m : Regmap.t PSet.t) :=
   List.fold_left (fun already i => add_i_j i j already) ilist m.
 
-Definition get_kills (eqs : PTree.t equation) :
+Definition get_reg_kills (eqs : PTree.t equation) :
   Regmap.t PSet.t :=
   PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
                 add_i_j (eq_lhs eq) eqno
                         (add_ilist_j (eq_args eq) eqno already)) eqs
              (PMap.init PSet.empty).
+
+Definition eq_depends_on_mem eq :=
+  match eq_op eq with
+  | SLoad _ _ => true
+  | SOp op => op_depends_on_memory op
+  end.
+
+Definition get_mem_kills (eqs : PTree.t equation) : PSet.t :=
+  PTree.fold (fun already (eqno : eq_id) (eq : equation) =>
+                if eq_depends_on_mem eq
+                then PSet.add eqno already
+                else already) eqs PSet.empty.
 
 Definition is_move (op : operation) :
   { op = Omove } + { op <> Omove }.
@@ -157,7 +169,7 @@ Record eq_context := mkeqcontext
                          eq_find_oracle : node -> equation -> option eq_id;
                          eq_rhs_oracle : node -> sym_op -> list reg -> PSet.t;
                          eq_kill_reg : reg -> PSet.t;
-                         eq_kill_mem : PSet.t;
+                         eq_kill_mem : unit -> PSet.t;
                          eq_moves : reg -> PSet.t }.
 
 Section OPERATIONS.
@@ -167,7 +179,7 @@ Section OPERATIONS.
     PSet.subtract rel (eq_kill_reg ctx r).
   
   Definition kill_mem (rel : RELATION.t) : RELATION.t :=
-    PSet.subtract rel (eq_kill_mem ctx).
+    PSet.subtract rel (eq_kill_mem ctx tt).
 
   Definition pick_source (l : list reg) := (* todo: take min? *)
     match l with
@@ -279,10 +291,27 @@ Definition apply_instr' code (pc : node) (ro : RB.t) : RB.t :=
     end
   end.
 
-Definition forward_map (f : RTL.function) := DS.fixpoint
+Definition internal_analysis (f : RTL.function) := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
   (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
 
 End OPERATIONS.
 
-Definition totoro := RELATION.lub.
+Record analysis_hints :=
+  mkanalysis_hints
+    { hint_eq_catalog :  PTree.t equation;
+      hint_eq_find_oracle : node -> equation -> option eq_id;
+      hint_eq_rhs_oracle : node -> sym_op -> list reg -> PSet.t }.
+
+Definition analysis (eqs : PTree.t equation) (hints : analysis_hints) :=
+  let reg_kills := get_reg_kills eqs in 
+  let mem_kills := get_mem_kills eqs in
+  let moves := get_moves eqs in
+  internal_analysis (ctx := {|
+      eq_catalog := fun eq_id => PTree.get eq_id (hint_eq_catalog hints);
+      eq_find_oracle := hint_eq_find_oracle hints ;
+      eq_rhs_oracle  := hint_eq_rhs_oracle hints;
+      eq_kill_reg := fun reg => PMap.get reg reg_kills;
+      eq_kill_mem := fun _ => mem_kills;
+      eq_moves    := fun reg => PMap.get reg moves
+      |}).

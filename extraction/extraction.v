@@ -36,7 +36,8 @@ Require Parser.
 Require Initializers.
 Require Asmaux.
 
-Require CSE3analysis. (* FIXME *)
+Require CSE3.
+Require CSE3analysis.
 
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
@@ -115,6 +116,8 @@ Extract Constant Compopts.optim_CSE =>
   "fun _ -> !Clflags.option_fcse".
 Extract Constant Compopts.optim_CSE2 =>
   "fun _ -> !Clflags.option_fcse2".
+Extract Constant Compopts.optim_CSE3 =>
+  "fun _ -> !Clflags.option_fcse3".
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>
@@ -162,6 +165,8 @@ Extract Constant Cabs.loc =>
 Extract Inlined Constant Cabs.string => "String.t".
 Extract Constant Cabs.char_code => "int64".
 
+Extract Inlined Constant CSE3.preanalysis => "CSE3analysisaux.preanalysis".
+
 Extract Inductive HashedSet.PSet_internals.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
 
 Extract Inlined Constant HashedSet.PSet_internals.pset_eq => "(==)" (* "HashedSetaux.eq" *).
@@ -188,7 +193,7 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
-   CSE3analysis.totoro (* FIXME *)
+   CSE3analysis.internal_analysis CSE3.run
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env

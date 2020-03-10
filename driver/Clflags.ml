@@ -27,6 +27,7 @@ let option_ftailcalls = ref true
 let option_fconstprop = ref true
 let option_fcse = ref true
 let option_fcse2 = ref true
+let option_fcse3 = ref true
 let option_fredundancy = ref true
 let option_fduplicate = ref false
 let option_finvertcond = ref true (* only active if option_fduplicate is also true *)
