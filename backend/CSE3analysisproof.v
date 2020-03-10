@@ -485,10 +485,10 @@ Section SOUNDNESS.
     sem_rel rel rs m ->
     sem_rhs sop args rs m  v ->
     ~ In dst args ->
-    eq_find (ctx := ctx)
-            no {| eq_lhs := dst;
-                  eq_op  := sop;
-                  eq_args:= args |} = Some eqno ->
+    eq_find (ctx := ctx) no
+            {| eq_lhs := dst;
+               eq_op  := sop;
+               eq_args:= args |} = Some eqno ->
     sem_rel (PSet.add eqno (kill_reg (ctx := ctx) dst rel)) (rs # dst <- v) m.
   Proof.
     intros until v.

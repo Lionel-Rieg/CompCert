@@ -193,7 +193,10 @@ Section OPERATIONS.
   Definition forward_move_l (rel : RELATION.t) : list reg -> list reg :=
     List.map (forward_move rel).
 
-  Definition eq_find (no : node) (eq : equation) :=
+  Section PER_NODE.
+    Variable no : node.
+    
+  Definition eq_find  (eq : equation) :=
     match eq_find_oracle ctx no eq with
     | Some id =>
       match eq_catalog ctx id with
@@ -204,7 +207,7 @@ Section OPERATIONS.
     end.
 
 
-  Definition rhs_find (no : node) (sop : sym_op) (args : list reg) (rel : RELATION.t) : option reg :=
+  Definition rhs_find (sop : sym_op) (args : list reg) (rel : RELATION.t) : option reg :=
     match pick_source (PSet.elements (PSet.inter (eq_rhs_oracle ctx no sop args) rel)) with
     | None => None
     | Some src =>
@@ -217,15 +220,23 @@ Section OPERATIONS.
       end
     end.
 
-  Definition oper2 (no : node) (dst : reg) (op: sym_op)(args : list reg)
-           (rel : RELATION.t) :=
+  Definition oper2 (dst : reg) (op: sym_op)(args : list reg)
+           (rel : RELATION.t) : RELATION.t :=
     let rel' := kill_reg dst rel in
-    match eq_find no {| eq_lhs := dst;
-                        eq_op  := op;
-                        eq_args:= args |} with
+    match eq_find {| eq_lhs := dst;
+                     eq_op  := op;
+                     eq_args:= args |} with
     | Some id => PSet.add id rel'
     | None => rel'
     end.
-  End OPERATIONS.
+
+  Definition oper1 (dst : reg) (op: sym_op) (args : list reg)
+             (rel : RELATION.t) : RELATION.t :=
+    if List.in_dec peq dst args
+    then kill_reg dst rel
+    else oper2 dst op args rel.
+
+  End PER_NODE.
+End OPERATIONS.
 
 Definition totoro := RELATION.lub.
