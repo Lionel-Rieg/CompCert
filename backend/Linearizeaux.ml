@@ -429,10 +429,12 @@ let order_sequences code entry fs =
       match !selected_id with
       | Some id -> id
       | None -> begin
-          Printf.printf "original fs: "; print_ssequence fs;
-          Printf.printf "depmap: "; print_depmap depmap;
-          Printf.printf "current ordered fs: "; print_ssequence @@ List.rev (!ordered_fs);
-          failwith "Could not find a next schedulable trace. Are the dependencies alright?"
+          Array.iteri (fun i deps ->
+            match !selected_id with
+            | None -> if not fs_evaluated.(i) then selected_id := Some i
+            | Some id -> ()
+          ) depmap;
+          get_some !selected_id
         end
     end
   in begin
