@@ -236,6 +236,23 @@ Section OPERATIONS.
     then kill_reg dst rel
     else oper2 dst op args rel.
 
+  
+  Definition move (src dst : reg) (rel : RELATION.t) : RELATION.t :=
+    match eq_find {| eq_lhs := dst;
+                     eq_op  := SOp Omove;
+                     eq_args:= src::nil |} with
+    | Some eq_id => PSet.add eq_id (kill_reg dst rel)
+    | None => kill_reg dst rel
+    end.
+
+  (*
+  Definition oper (dst : reg) (op: sym_op) (args : list reg)
+             (rel : RELATION.t) : RELATION.t :=
+    match find_op rel op (forward_move_l rel args) with
+    | Some r => move r dst rel
+    | None => oper1 op dst args rel
+    end.
+*)
   End PER_NODE.
 End OPERATIONS.
 

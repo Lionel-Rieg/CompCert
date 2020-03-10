@@ -565,5 +565,37 @@ Section SOUNDNESS.
     unfold oper1.
     destruct in_dec; auto with cse3.
   Qed.
-  
+
+  Lemma move_sound :
+    forall no : node,
+    forall rel : RELATION.t,
+    forall src dst : reg,
+    forall rs m,
+      sem_rel rel rs m ->
+      sem_rel (move (ctx:=ctx) no src dst rel) (rs # dst <- (rs # src)) m.
+  Proof.
+    unfold move.
+    intros until m.
+    intro REL.
+    pose proof (eq_find_sound no  {| eq_lhs := dst; eq_op := SOp Omove; eq_args := src :: nil |}) as EQ_FIND_SOUND.
+    destruct eq_find.
+    - intros i eq CONTAINS.
+      destruct (peq i e).
+      + subst i.
+        rewrite (EQ_FIND_SOUND e) by trivial.
+        intro Z.
+        inv Z.
+        unfold sem_eq.
+        simpl.
+        destruct (peq src dst).
+        * subst dst.
+          reflexivity.
+        * rewrite Regmap.gss.
+          rewrite Regmap.gso by congruence.
+          reflexivity.
+      + intros.
+        rewrite PSet.gaddo in CONTAINS by congruence.
+        apply (kill_reg_sound rel rs m dst (rs # src) REL i); auto.
+    - apply kill_reg_sound; auto.
+  Qed.
 End SOUNDNESS.
