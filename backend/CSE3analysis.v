@@ -153,6 +153,7 @@ Definition get_moves (eqs : PTree.t equation) :
 Record eq_context := mkeqcontext
                        { eq_catalog : eq_id -> option equation;
                          eq_find_oracle : node -> equation -> option eq_id;
+                         eq_rhs_oracle : node -> sym_op -> list reg -> PSet.t;
                          eq_kill_reg : reg -> PSet.t;
                          eq_kill_mem : PSet.t;
                          eq_moves : reg -> PSet.t }.
@@ -200,6 +201,20 @@ Section OPERATIONS.
       | None => None
       end
     | None => None
+    end.
+
+
+  Definition rhs_find (no : node) (sop : sym_op) (args : list reg) (rel : RELATION.t) : option reg :=
+    match pick_source (PSet.elements (PSet.inter (eq_rhs_oracle ctx no sop args) rel)) with
+    | None => None
+    | Some src =>
+      match eq_catalog ctx src with
+      | None => None
+      | Some eq =>
+        if eq_dec_sym_op sop (eq_op eq) && eq_dec_args args (eq_args eq)
+        then Some (eq_lhs eq)
+        else None
+      end
     end.
 End OPERATIONS.
 

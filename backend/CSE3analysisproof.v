@@ -180,25 +180,29 @@ Section SOUNDNESS.
   Variable sp : val.
 
   Context {ctx : eq_context}.
-  
-  Definition sem_eq (eq : equation) (rs : regset) (m : mem) :=
-    match eq_op eq with
+
+  Definition sem_rhs (sop : sym_op) (args : list reg)
+             (rs : regset) (m : mem) (v' : val) :=
+    match sop with
     | SOp op =>
-      match eval_operation genv sp op (rs ## (eq_args eq)) m with
-      | Some v => rs # (eq_lhs eq) = v
+      match eval_operation genv sp op (rs ## args) m with
+      | Some v => v' = v
       | None => False
       end
     | SLoad chunk addr =>
       match
-        match eval_addressing genv sp addr rs##(eq_args eq) with
+        match eval_addressing genv sp addr (rs ## args) with
         | Some a => Mem.loadv chunk m a
         | None => None
         end
       with
-      | Some dat => rs # (eq_lhs eq) = dat
-      | None => rs # (eq_lhs eq) = default_notrap_load_value chunk
+      | Some dat => v' = dat
+      | None => v' = default_notrap_load_value chunk
       end
     end.
+    
+  Definition sem_eq (eq : equation) (rs : regset) (m : mem) :=
+    sem_rhs (eq_op eq) (eq_args eq) rs m (rs # (eq_lhs eq)).
 
   Definition sem_rel (rel : RELATION.t) (rs : regset) (m : mem) :=
     forall i eq,
@@ -242,7 +246,7 @@ Section SOUNDNESS.
       (sem_rel rel rs m) ->
       (sem_rel (kill_reg (ctx:=ctx) dst rel) (rs#dst <- v) m).
   Proof.
-    unfold sem_rel, sem_eq, kill_reg.
+    unfold sem_rel, sem_eq, sem_rhs, kill_reg.
     intros until v.
     intros REL i eq.
     specialize REL with (i := i) (eq0 := eq).
@@ -346,7 +350,7 @@ Section SOUNDNESS.
       (sem_rel rel rs m) ->
       (sem_rel (kill_mem (ctx:=ctx) rel) rs m').
   Proof.
-    unfold sem_rel, sem_eq, kill_mem.
+    unfold sem_rel, sem_eq, sem_rhs, kill_mem.
     intros until m'.
     intros REL i eq.
     specialize REL with (i := i) (eq0 := eq).
@@ -388,5 +392,33 @@ Section SOUNDNESS.
     destruct (eq_dec_equation eq eq').
     2: discriminate.
     congruence.
+  Qed.
+
+  Hint Resolve eq_find_sound : cse3.
+
+  Theorem rhs_find_op_sound:
+    forall no sop args rel src rs m,
+      sem_rel rel rs m ->
+      rhs_find (ctx := ctx) no sop args rel = Some src ->
+      sem_rhs sop args rs m (rs # src).
+  Proof.
+    unfold rhs_find, sem_rel, sem_eq.
+    intros until m.
+    intros REL FIND.
+    pose proof (pick_source_sound (PSet.elements (PSet.inter (eq_rhs_oracle ctx no sop args) rel))) as SOURCE.
+    destruct (pick_source (PSet.elements (PSet.inter (eq_rhs_oracle ctx no sop args) rel))) as [ src' | ].
+    2: discriminate.
+    rewrite PSet.elements_spec in SOURCE.
+    rewrite PSet.ginter in SOURCE.
+    rewrite andb_true_iff in SOURCE.
+    destruct (eq_catalog ctx src') as [eq | ] eqn:CATALOG.
+    2: discriminate.
+    specialize REL with (i := src') (eq0 := eq).
+    destruct (eq_dec_sym_op sop (eq_op eq)).
+    2: discriminate.
+    destruct (eq_dec_args args (eq_args eq)).
+    2: discriminate.
+    simpl in FIND.
+    intuition congruence.
   Qed.
 End SOUNDNESS.
