@@ -350,6 +350,7 @@ let construct_depmap code entry fs =
       !index
     end
   in let check_and_update_depmap from target =
+    (* Printf.printf "From %d to %d\n" (P.to_int from) (P.to_int target); *)
     if not (ppmap_is_true (from, target) is_loop_edge) then
       let in_index_fs = find_index_of_node from in
       let out_index_fs = find_index_of_node target in
@@ -360,28 +361,31 @@ let construct_depmap code entry fs =
   in let rec dfs_visit code = function
   | [] -> ()
   | node :: ln ->
-      match (get_some @@ PTree.get node !visited) with
-      | true -> ()
-      | false -> begin
-          visited := PTree.set node true !visited;
-          let bb = get_some @@ PTree.get node code in
-          let next_visits =
-            match (last_element bb) with
-            | Ltailcall _ | Lreturn -> []
-            | Lbranch n -> (check_and_update_depmap node n; [n])
-            | Lcond (_, _, ifso, ifnot) -> begin
-                check_and_update_depmap node ifso;
-                check_and_update_depmap node ifnot;
-                [ifso; ifnot]
-              end
-            | Ljumptable(_, ln) -> begin
-                List.iter (fun n -> check_and_update_depmap node n) ln;
-                ln
-              end
-            (* end of bblocks should not be another value than one of the above *)
-            | _ -> failwith "last_element gave an invalid output"
-          in dfs_visit code next_visits
-        end
+      begin
+        match (get_some @@ PTree.get node !visited) with
+        | true -> ()
+        | false -> begin
+            visited := PTree.set node true !visited;
+            let bb = get_some @@ PTree.get node code in
+            let next_visits =
+              match (last_element bb) with
+              | Ltailcall _ | Lreturn -> []
+              | Lbranch n -> (check_and_update_depmap node n; [n])
+              | Lcond (_, _, ifso, ifnot) -> begin
+                  check_and_update_depmap node ifso;
+                  check_and_update_depmap node ifnot;
+                  [ifso; ifnot]
+                end
+              | Ljumptable(_, ln) -> begin
+                  List.iter (fun n -> check_and_update_depmap node n) ln;
+                  ln
+                end
+              (* end of bblocks should not be another value than one of the above *)
+              | _ -> failwith "last_element gave an invalid output"
+            in dfs_visit code next_visits
+          end;
+        dfs_visit code ln
+      end
   in begin
     dfs_visit code [entry];
     depmap
