@@ -32,6 +32,11 @@ let print_eq channel (lhs, sop, args) =
      Printf.printf "%a = %s @ %a\n" print_reg lhs (string_of_chunk chunk)
        (PrintOp.print_addressing print_reg) (addr, args);;
 
+let print_set s =
+  Printf.printf "{ ";
+  List.iter (fun i -> Printf.printf "%d; " (P.to_int i)) (PSet.elements s);
+  Printf.printf "}\n";;
+
 let preanalysis (f : RTL.coq_function) =
   let cur_eq_id = ref 0
   and cur_catalog = ref PTree.empty
@@ -52,12 +57,13 @@ let preanalysis (f : RTL.coq_function) =
     | Some x ->
        Some x
     | None ->
-       (* FIXME print_eq stderr flat_eq; *)
+       (* TODO print_eq stderr flat_eq; *)
        incr cur_eq_id;
        let id = !cur_eq_id in
        let coq_id = P.of_int id in
        begin
          Hashtbl.add eq_table flat_eq coq_id;
+         (cur_catalog := PTree.set coq_id eq !cur_catalog);
          Hashtbl.add rhs_table (flat_eq_op, flat_eq_args)
            (PSet.add coq_id
               (match Hashtbl.find_opt rhs_table (flat_eq_op, flat_eq_args) with
