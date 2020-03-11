@@ -213,7 +213,7 @@ let get_directions code entrypoint =
               | None -> preferred := do_heur code cond ifso ifnot is_loop_header
               | Some _ -> ()
             ) heuristics;
-            match !preferred with None -> preferred := Some (Random.bool ()) | Some _ -> ();
+            (match !preferred with None -> preferred := Some (Random.bool ()) | Some _ -> ());
             directions := PTree.set n (get_some !preferred) !directions
           end
       | _ -> ()
