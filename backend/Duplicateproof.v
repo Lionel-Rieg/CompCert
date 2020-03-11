@@ -378,7 +378,7 @@ Theorem step_simulation:
      step tge s2 t s2'
   /\ match_states s1' s2'.
 Proof.
-  Local Hint Resolve transf_fundef_correct.
+  Local Hint Resolve transf_fundef_correct: core.
   induction 1; intros; inv MS.
 (* Inop *)
   - eapply dupmap_correct in DUPLIC; eauto.

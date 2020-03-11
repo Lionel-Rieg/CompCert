@@ -95,7 +95,7 @@ Proof.
   wlp_simplify.
 Qed.
 Global Opaque assert_list_incl.
-Hint Resolve assert_list_incl_correct.
+Hint Resolve assert_list_incl_correct: wlp.
 
 End Sets.
 
@@ -165,7 +165,7 @@ Lemma hConsV_correct A (hasheq: A -> A -> ?? bool):
     (forall x y, WHEN hasheq x y ~> b THEN b=true -> x=y) -> 
     forall x, WHEN hco.(hC) x ~> x' THEN x.(hdata).(data)=x'.(data).
 Proof.
-  Local Hint Resolve f_equal2.
+  Local Hint Resolve f_equal2: core.
   wlp_simplify.
   exploit H; eauto.
   + wlp_simplify.
