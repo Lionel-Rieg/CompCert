@@ -136,7 +136,7 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 2)
    @@ time "Renumbering" Renumber.transf_program
    @@ print (print_RTL 3)
-  @@@ partial_if Compopts.optim_duplicate (time "Tail-duplicating" Duplicate.transf_program)
+  @@@ time "Tail-duplicating" Duplicate.transf_program
    @@ print (print_RTL 4)
    @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
    @@ print (print_RTL 5)
@@ -258,7 +258,7 @@ Definition CompCert's_passes :=
   ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
   ::: mkpass Inliningproof.match_prog
   ::: mkpass Renumberproof.match_prog
-  ::: mkpass (match_if Compopts.optim_duplicate Duplicateproof.match_prog)
+  ::: mkpass Duplicateproof.match_prog
   ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Renumberproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
@@ -306,7 +306,7 @@ Proof.
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
   destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
   set (p9 := Renumber.transf_program p8) in *.
-  destruct (partial_if optim_duplicate Duplicate.transf_program p9) as [p10|e] eqn:P10; simpl in T; try discriminate.
+  destruct (Duplicate.transf_program p9) as [p10|e] eqn:P10; simpl in T; try discriminate.
   set (p11 := total_if optim_constprop Constprop.transf_program p10) in *.
   set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
   destruct (partial_if optim_CSE CSE.transf_program p12) as [p13|e] eqn:P13; simpl in T; try discriminate.
@@ -332,7 +332,7 @@ Proof.
   exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
   exists p8; split. apply Inliningproof.transf_program_match; auto.
   exists p9; split. apply Renumberproof.transf_program_match; auto.
-  exists p10; split. eapply partial_if_match; eauto. apply Duplicateproof.transf_program_match; auto.
+  exists p10; split. apply Duplicateproof.transf_program_match; auto.
   exists p11; split. apply total_if_match. apply Constpropproof.transf_program_match.
   exists p12; split. apply total_if_match. apply Renumberproof.transf_program_match.
   exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
@@ -419,7 +419,7 @@ Ltac DestructM :=
     eapply Inliningproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Duplicateproof.transf_program_correct.
+    eapply Duplicateproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
   eapply compose_forward_simulations.

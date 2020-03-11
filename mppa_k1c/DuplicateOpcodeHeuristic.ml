@@ -2,10 +2,8 @@
 open Op
 open Integers
 
-exception HeuristicSucceeded
-
-let opcode_heuristic code cond ifso ifnot preferred =
-  let decision = match cond with
+let opcode_heuristic code cond ifso ifnot is_loop_header =
+  match cond with
   | Ccompimm (c, n) | Ccompuimm (c, n) -> if n == Integers.Int.zero then (match c with
       | Clt | Cle -> Some false
       | Cgt | Cge -> Some true
@@ -27,6 +25,3 @@ let opcode_heuristic code cond ifso ifnot preferred =
       | _ -> None
       )
   | _ -> None
-  in match decision with
-  | Some b -> (preferred := b; raise HeuristicSucceeded)
-  | None -> ()
