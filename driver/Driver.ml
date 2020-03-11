@@ -204,7 +204,7 @@ Processing options:
     -finvertcond    Invert conditions based on predicted paths (to prefer fallthrough).
                     Requires -fduplicate to be also activated [on]
     -ftracelinearize Linearizes based on the traces identified by duplicate phase
-                    It is recommended to also activate -fduplicate with this pass [off]
+                    It is heavily recommended to activate -finvertcond with this pass [off]
   -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
@@ -318,7 +318,7 @@ let cmdline_actions =
  [
   Exact "-O0", Unit (unset_all optimization_options);
   Exact "-O", Unit (set_all optimization_options);
-  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false; option_fduplicate := false);
+  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
@@ -393,7 +393,7 @@ let cmdline_actions =
   @ f_opt "cse2" option_fcse2
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
-  @ f_opt "duplicate" option_fduplicate
+  @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]
   @ f_opt "invertcond" option_finvertcond
   @ f_opt "tracelinearize" option_ftracelinearize
   @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
