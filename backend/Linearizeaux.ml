@@ -444,7 +444,7 @@ let order_sequences code entry fs =
       let next_id = select_next () in
       evaluate next_id
     done;
-    (* Printf.printf "forward sequences ordered: "; print_ssequence (List.rev (!ordered_fs)); *)
+    Printf.printf "forward sequences ordered: "; print_ssequence (List.rev (!ordered_fs));
     List.rev (!ordered_fs)
   end
 

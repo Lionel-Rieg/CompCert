@@ -161,36 +161,52 @@ let rec look_ahead code node is_loop_header predicate =
       )
 
 let do_call_heuristic code cond ifso ifnot is_loop_header =
-  let predicate n = (function
-  | Icall _ -> true
-  | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then Some false
-  else if (look_ahead code ifnot is_loop_header predicate) then Some true
-  else None
+  begin
+    Printf.printf "\tCall heuristic..\n";
+    let predicate n = (function
+    | Icall _ -> true
+    | _ -> false) @@ get_some @@ PTree.get n code
+    in if (look_ahead code ifso is_loop_header predicate) then Some false
+    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    else None
+  end
 
-let do_opcode_heuristic code cond ifso ifnot is_loop_header = DuplicateOpcodeHeuristic.opcode_heuristic code cond ifso ifnot is_loop_header
+let do_opcode_heuristic code cond ifso ifnot is_loop_header =
+  begin
+    Printf.printf "\tOpcode heuristic..\n";
+    DuplicateOpcodeHeuristic.opcode_heuristic code cond ifso ifnot is_loop_header
+  end
 
 let do_return_heuristic code cond ifso ifnot is_loop_header =
-  let predicate n = (function
-  | Ireturn _ -> true
-  | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then Some false
-  else if (look_ahead code ifnot is_loop_header predicate) then Some true
-  else None
+  begin
+    Printf.printf "\tReturn heuristic..\n";
+    let predicate n = (function
+    | Ireturn _ -> true
+    | _ -> false) @@ get_some @@ PTree.get n code
+    in if (look_ahead code ifso is_loop_header predicate) then Some false
+    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    else None
+  end
 
 let do_store_heuristic code cond ifso ifnot is_loop_header =
-  let predicate n = (function
-  | Istore _ -> true
-  | _ -> false) @@ get_some @@ PTree.get n code
-  in if (look_ahead code ifso is_loop_header predicate) then Some false
-  else if (look_ahead code ifnot is_loop_header predicate) then Some true
-  else None
+  begin
+    Printf.printf "\tStore heuristic..\n";
+    let predicate n = (function
+    | Istore _ -> true
+    | _ -> false) @@ get_some @@ PTree.get n code
+    in if (look_ahead code ifso is_loop_header predicate) then Some false
+    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    else None
+  end
 
 let do_loop_heuristic code cond ifso ifnot is_loop_header =
-  let predicate n = get_some @@ PTree.get n is_loop_header
-  in if (look_ahead code ifso is_loop_header predicate) then Some true
-  else if (look_ahead code ifnot is_loop_header predicate) then Some false
-  else None
+  begin
+    Printf.printf "\tLoop heuristic..\n";
+    let predicate n = get_some @@ PTree.get n is_loop_header
+    in if (look_ahead code ifso is_loop_header predicate) then Some true
+    else if (look_ahead code ifnot is_loop_header predicate) then Some false
+    else None
+  end
 
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
@@ -208,13 +224,18 @@ let get_directions code entrypoint =
             do_return_heuristic; do_store_heuristic; do_loop_heuristic ] in
           let preferred = ref None in
           begin
+            Printf.printf "Deciding condition for RTL node %d\n" (P.to_int n);
             List.iter (fun do_heur ->
               match !preferred with
               | None -> preferred := do_heur code cond ifso ifnot is_loop_header
               | Some _ -> ()
             ) heuristics;
-            (match !preferred with None -> preferred := Some (Random.bool ()) | Some _ -> ());
-            directions := PTree.set n (get_some !preferred) !directions
+            (match !preferred with None -> (Printf.printf "\tRANDOM\n"; preferred := Some (Random.bool ())) | Some _ -> ());
+            directions := PTree.set n (get_some !preferred) !directions;
+            (match !preferred with | Some false -> Printf.printf "\tFALLTHROUGH\n"
+                                  | Some true -> Printf.printf "\tBRANCH\n"
+                                  | None -> ());
+            Printf.printf "---------------------------------------\n"
           end
       | _ -> ()
     ) bfs_order;
