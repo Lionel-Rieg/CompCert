@@ -2,19 +2,6 @@ open RTL
 open Maps
 open Camlcoq
 
-(* TTL : IR emphasizing the preferred next node *)
-module TTL = struct
-  type instruction =
-  | Tleaf of RTL.instruction
-  | Tnext of node * RTL.instruction
-
-  type code = instruction PTree.t
-end;;
-
-open TTL
-
-(** RTL to TTL *)
-
 let get_some = function
 | None -> failwith "Did not get some"
 | Some thing -> thing
@@ -242,37 +229,26 @@ let get_directions code entrypoint =
     !directions
   end
 
-let to_ttl_inst direction = function
-| Ireturn o -> Tleaf (Ireturn o)
-| Inop n -> Tnext (n, Inop n)
-| Iop (op, lr, r, n) -> Tnext (n, Iop(op, lr, r, n))
-| Iload (tm, m, a, lr, r, n) -> Tnext (n, Iload(tm, m, a, lr, r, n))
-| Istore (m, a, lr, r, n) -> Tnext (n, Istore(m, a, lr, r, n))
-| Icall (s, ri, lr, r, n) -> Tleaf (Icall(s, ri, lr, r, n))
-| Itailcall (s, ri, lr) -> Tleaf (Itailcall(s, ri, lr))
-| Ibuiltin (ef, lbr, br, n) -> Tleaf (Ibuiltin(ef, lbr, br, n))
-| Icond (cond, lr, n, n', i) -> (match direction with
-    | false -> Tnext (n', Icond(cond, lr, n, n', i))
-    | true -> Tnext (n, Icond(cond, lr, n, n', i)))
-| Ijumptable (r, ln) -> Tleaf (Ijumptable(r, ln))
+let update_direction direction = function
+| Icond (cond, lr, n, n', _) -> Icond (cond, lr, n, n', Some direction)
+| i -> i
 
-let rec to_ttl_code_rec directions = function
+let rec update_direction_rec directions = function
 | [] -> PTree.empty
 | m::lm -> let (n, i) = m
     in let direction = get_some @@ PTree.get n directions
-    in PTree.set n (to_ttl_inst direction i) (to_ttl_code_rec directions lm)
+    in PTree.set n (update_direction direction i) (update_direction_rec directions lm)
 
-let to_ttl_code code entrypoint =
+let update_directions code entrypoint =
   let directions = get_directions code entrypoint
   in begin
     (* Printf.printf "Ifso directions: ";
     ptree_printbool directions;
     Printf.printf "\n"; *)
-    Random.init(0); (* using same seed to make it deterministic *)
-    to_ttl_code_rec directions (PTree.elements code)
+    update_direction_rec directions (PTree.elements code)
   end
 
-(** Trace selection on TTL *)
+(** Trace selection *)
 
 let rec exists_false_rec = function
   | [] -> false
@@ -280,7 +256,7 @@ let rec exists_false_rec = function
 
 let exists_false boolmap = exists_false_rec (PTree.elements boolmap)
 
-(* DFS on TTL to guide the exploration *)
+(* DFS using prediction info to guide the exploration *)
 let dfs code entrypoint =
   let visited = ref (PTree.map (fun n i -> false) code) in
   let rec dfs_list code = function
@@ -291,22 +267,21 @@ let dfs code entrypoint =
           visited := PTree.set node true !visited;
           match PTree.get node code with
           | None -> failwith "No such node"
-          | Some ti -> [node] @ match ti with
-              | Tleaf i -> (match i with
-                  | Icall(_, _, _, _, n) -> dfs_list code [n]
-                  | Ibuiltin(_, _, _, n) -> dfs_list code [n]
-                  | Ijumptable(_, ln) -> dfs_list code ln
-                  | Itailcall _ | Ireturn _ -> [] 
-                  | _ -> failwith "Tleaf case not handled in dfs" )
-              | Tnext (n,i) -> (dfs_list code [n]) @ match i with
-                  | Icond (_, _, n1, n2, _) -> dfs_list code [n1; n2]
-                  | Inop _ | Iop _ | Iload _ | Istore _ -> []
-                  | _ -> failwith "Tnext case not handled in dfs"
+          | Some i -> [node] @ match i with
+            | Icall(_, _, _, _, n) -> dfs_list code [n]
+            | Ibuiltin(_, _, _, n) -> dfs_list code [n]
+            | Ijumptable(_, ln) -> dfs_list code ln
+            | Itailcall _ | Ireturn _ -> []
+            | Inop _ | Iop _ | Iload _ | Istore _ -> []
+            | Icond (_, _, n1, n2, info) -> match info with
+              | Some false -> dfs_list code [n2; n1]
+              | _ -> dfs_list code [n1; n2]
           end
         else []
       in node_dfs @ (dfs_list code ln)
   in dfs_list code [entrypoint]
 
+(*
 let get_predecessors_ttl code =
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, ti) = match ti with
@@ -322,8 +297,7 @@ let get_predecessors_ttl code =
     List.iter process_inst (PTree.elements code);
     !preds
   end
-
-let rtl_proj code = PTree.map (fun n ti -> match ti with Tleaf i | Tnext(_, i) -> i) code
+*)
 
 let rec select_unvisited_node is_visited = function
 | [] -> failwith "Empty list"
@@ -332,11 +306,21 @@ let rec select_unvisited_node is_visited = function
 let best_successor_of node code is_visited =
   match (PTree.get node code) with
   | None -> failwith "No such node in the code"
-  | Some ti -> match ti with
-      | Tleaf _ -> None
-      | Tnext (n,_) -> if not (ptree_get_some n is_visited) then Some n
-                       else None
+  | Some i ->
+      let next_node = match i with
+      | Inop n -> Some n
+      | Iop (_, _, _, n) -> Some n
+      | Iload (_, _, _, _, _, n) -> Some n
+      | Istore (_, _, _, _, n) -> Some n
+      | Icall (_, _, _, _, n) -> Some n
+      | Ibuiltin (_, _, _, n) -> Some n
+      | Icond (_, _, n1, n2, ob) -> (match ob with None -> None | Some false -> Some n2 | Some true -> Some n1)
+      | _ -> None
+      in match next_node with
+      | None -> None
+      | Some n -> if not (ptree_get_some n is_visited) then Some n else None
 
+(* FIXME - could be improved by selecting in priority the predicted paths *)
 let best_predecessor_of node predecessors order is_visited =
   match (PTree.get node predecessors) with
   | None -> failwith "No predecessor list found"
@@ -347,7 +331,7 @@ let best_predecessor_of node predecessors order is_visited =
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
 let select_traces code entrypoint =
   let order = dfs code entrypoint in
-  let predecessors = get_predecessors_ttl code in
+  let predecessors = get_predecessors_rtl code in
   let traces = ref [] in
   let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
     while exists_false !is_visited do (* while (there are unvisited nodes) *)
@@ -524,7 +508,7 @@ let rec invert_iconds code = function
 let duplicate_aux f =
   let entrypoint = f.fn_entrypoint in
   let code = f.fn_code in
-  let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
+  let traces = select_traces code entrypoint in
   let icond_code = invert_iconds code traces in
   let preds = get_predecessors_rtl icond_code in
   if !Clflags.option_fduplicate >= 1 then
