@@ -1200,8 +1200,11 @@ Proof.
   reflexivity.
 - (* op *)
   unfold transf_instr in *.
-  destruct find_op_in_fmap eqn:FIND_OP.
+  destruct (if is_trivial_op op then None else find_op_in_fmap (forward_map f) pc op
+               (subst_args (forward_map f) pc args)) eqn:FIND_OP.
   {
+    destruct (is_trivial_op op).
+    discriminate.
     unfold find_op_in_fmap, fmap_sem', fmap_sem in *.
     destruct (forward_map f) as [map |] eqn:MAP.
     2: discriminate.
