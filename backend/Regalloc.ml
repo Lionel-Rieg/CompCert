@@ -295,8 +295,8 @@ let block_of_RTL_instr funsig tyenv = function
          (Xbuiltin(ef, args2, res2) ::
             movelist (params_of_builtin_res res2) (params_of_builtin_res res1)
                [Xbranch s])
-  | RTL.Icond(cond, args, s1, s2) ->
-      [Xcond(cond, vregs tyenv args, s1, s2)]
+  | RTL.Icond(cond, args, s1, s2, i) ->
+      [Xcond(cond, vregs tyenv args, s1, s2, i)]
   | RTL.Ijumptable(arg, tbl) ->
       [Xjumptable(vreg tyenv arg, tbl)]
   | RTL.Ireturn None ->
@@ -380,7 +380,7 @@ let live_before instr after =
       vset_addargs args (vset_removeres res after)
   | Xbranch s ->
       after
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       List.fold_right VSet.add args after
   | Xjumptable(arg, tbl) ->
       VSet.add arg after
@@ -575,7 +575,7 @@ let spill_costs f =
             charge_list 10 1 (params_of_builtin_res res)
         end
     | Xbranch _ -> ()
-    | Xcond(cond, args, _, _) ->
+    | Xcond(cond, args, _, _, _) ->
         charge_list 10 1 args
     | Xjumptable(arg, _) ->
         charge 10 1 arg
@@ -718,7 +718,7 @@ let add_interfs_instr g instr live =
       end
   | Xbranch s ->
       ()
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       add_interfs_destroyed g live (destroyed_by_cond cond)
   | Xjumptable(arg, tbl) ->
       add_interfs_destroyed g live destroyed_by_jumptable
@@ -797,7 +797,7 @@ let tospill_instr alloc instr ts =
          (addlist_tospill alloc (params_of_builtin_res res) ts)
   | Xbranch s ->
       ts
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       addlist_tospill alloc args ts
   | Xjumptable(arg, tbl) ->
       add_tospill alloc arg ts
@@ -990,9 +990,9 @@ let spill_instr tospill eqs instr =
       (c1 @ Xbuiltin(ef, args', res') :: c2, eqs2)
   | Xbranch s ->
       ([instr], eqs)
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, i) ->
      let (args', c1, eqs1) = reload_vars tospill eqs args in
-     (c1 @ [Xcond(cond, args', s1, s2)], eqs1)
+     (c1 @ [Xcond(cond, args', s1, s2, i)], eqs1)
   | Xjumptable(arg, tbl) ->
       let (arg', c1, eqs1) = reload_var tospill eqs arg in
       (c1 @ [Xjumptable(arg', tbl)], eqs1)
@@ -1128,8 +1128,8 @@ let transl_instr alloc instr k =
                        AST.map_builtin_res (mreg_of alloc) res) :: k
   | Xbranch s ->
       LTL.Lbranch s :: []
-  | Xcond(cond, args, s1, s2) ->
-      LTL.Lcond(cond, mregs_of alloc args, s1, s2) :: []
+  | Xcond(cond, args, s1, s2, i) ->
+      LTL.Lcond(cond, mregs_of alloc args, s1, s2, i) :: []
   | Xjumptable(arg, tbl) ->
       LTL.Ljumptable(mreg_of alloc arg, tbl) :: []
   | Xreturn optarg ->

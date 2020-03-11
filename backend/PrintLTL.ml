@@ -83,7 +83,7 @@ let print_instruction pp succ = function
         (print_builtin_args loc) args
   | Lbranch s ->
       print_succ pp s succ
-  | Lcond(cond, args, s1, s2) ->
+  | Lcond(cond, args, s1, s2, _) ->
       fprintf pp "if (%a) goto %d else goto %d"
         (print_condition mreg) (cond, args)
         (P.to_int s1) (P.to_int s2)

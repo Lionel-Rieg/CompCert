@@ -39,7 +39,7 @@ let bfs code entrypoint =
             | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
             | Ijumptable(_, ln) -> List.iter (fun n -> Queue.add n to_visit) ln
             | Itailcall _ | Ireturn _ -> ()
-            | Icond (_, _, n1, n2) -> Queue.add n1 to_visit; Queue.add n2 to_visit
+            | Icond (_, _, n1, n2, _) -> Queue.add n1 to_visit; Queue.add n2 to_visit
             | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
       end
     done;
@@ -56,7 +56,7 @@ let get_predecessors_rtl code =
     let succ = match i with
       | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
       | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
-      | Icond (_,_,n1,n2) -> [n1;n2]
+      | Icond (_,_,n1,n2,_) -> [n1;n2]
       | Ijumptable (_,ln) -> ln
       | Itailcall _ | Ireturn _ -> []
     in List.iter (fun s ->
@@ -123,7 +123,7 @@ let get_loop_headers code entrypoint =
           | Some i -> let next_visits = (match i with
             | Icall (_, _, _, _, n) | Ibuiltin (_, _, _, n) | Inop n | Iop (_, _, _, n)
             | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> [n]
-            | Icond (_, _, n1, n2) -> [n1; n2]
+            | Icond (_, _, n1, n2, _) -> [n1; n2]
             | Itailcall _ | Ireturn _ -> []
             | Ijumptable (_, ln) -> ln
             ) in dfs_visit code next_visits;
@@ -218,7 +218,7 @@ let get_directions code entrypoint =
     (* Printf.printf "\n"; *)
     List.iter (fun n ->
       match (get_some @@ PTree.get n code) with
-      | Icond (cond, lr, ifso, ifnot) ->
+      | Icond (cond, lr, ifso, ifnot, _) ->
           (* Printf.printf "Analyzing %d.." (P.to_int n); *)
           let heuristics = [ do_call_heuristic; do_opcode_heuristic;
             do_return_heuristic; do_store_heuristic; do_loop_heuristic ] in
@@ -251,9 +251,9 @@ let to_ttl_inst direction = function
 | Icall (s, ri, lr, r, n) -> Tleaf (Icall(s, ri, lr, r, n))
 | Itailcall (s, ri, lr) -> Tleaf (Itailcall(s, ri, lr))
 | Ibuiltin (ef, lbr, br, n) -> Tleaf (Ibuiltin(ef, lbr, br, n))
-| Icond (cond, lr, n, n') -> (match direction with
-    | false -> Tnext (n', Icond(cond, lr, n, n'))
-    | true -> Tnext (n, Icond(cond, lr, n, n')))
+| Icond (cond, lr, n, n', i) -> (match direction with
+    | false -> Tnext (n', Icond(cond, lr, n, n', i))
+    | true -> Tnext (n, Icond(cond, lr, n, n', i)))
 | Ijumptable (r, ln) -> Tleaf (Ijumptable(r, ln))
 
 let rec to_ttl_code_rec directions = function
@@ -299,7 +299,7 @@ let dfs code entrypoint =
                   | Itailcall _ | Ireturn _ -> [] 
                   | _ -> failwith "Tleaf case not handled in dfs" )
               | Tnext (n,i) -> (dfs_list code [n]) @ match i with
-                  | Icond (_, _, n1, n2) -> dfs_list code [n1; n2]
+                  | Icond (_, _, n1, n2, _) -> dfs_list code [n1; n2]
                   | Inop _ | Iop _ | Iload _ | Istore _ -> []
                   | _ -> failwith "Tnext case not handled in dfs"
           end
@@ -314,7 +314,7 @@ let get_predecessors_ttl code =
   | Tnext (_, i) -> let succ = match i with
       | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
       | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
-      | Icond (_,_,n1,n2) -> [n1;n2]
+      | Icond (_,_,n1,n2,_) -> [n1;n2]
       | Ijumptable (_,ln) -> ln
       | _ -> []
       in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
@@ -413,10 +413,10 @@ let rec change_pointers code n n' = function
         | Ibuiltin(a, b, c, n0) -> assert (n0 == n); Ibuiltin(a, b, c, n')
         | Ijumptable(a, ln) -> assert (optbool @@ List.find_opt (fun e -> e == n) ln);
                                Ijumptable(a, List.map (fun e -> if (e == n) then n' else e) ln)
-        | Icond(a, b, n1, n2) -> assert (n1 == n || n2 == n);
+        | Icond(a, b, n1, n2, i) -> assert (n1 == n || n2 == n);
                                  let n1' = if (n1 == n) then n' else n1
                                  in let n2' = if (n2 == n) then n' else n2
-                                 in Icond(a, b, n1', n2')
+                                 in Icond(a, b, n1', n2', i)
         | Inop n0 -> assert (n0 == n); Inop n'
         | Iop (a, b, c, n0) -> assert (n0 == n); Iop (a, b, c, n')
         | Iload (a, b, c, d, e, n0) -> assert (n0 == n); Iload (a, b, c, d, e, n')
@@ -504,11 +504,12 @@ let rec invert_iconds_trace code = function
   | n::[] -> code
   | n :: n' :: t ->
       let code' = match ptree_get_some n code with
-        | Icond (c, lr, ifso, ifnot) ->
+        | Icond (c, lr, ifso, ifnot, i) ->
             assert (n' == ifso || n' == ifnot);
             if (n' == ifso) then (
               (* Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n); *)
-              PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso)) code )
+              let i' = match i with None -> None | Some b -> Some (not b) in
+              PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso, i')) code )
             else code
         | _ -> code
       in invert_iconds_trace code' (n'::t)

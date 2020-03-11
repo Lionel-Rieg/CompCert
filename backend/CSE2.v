@@ -405,7 +405,7 @@ Qed.
 Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
-  | Icond _ _ _ _
+  | Icond _ _ _ _ _
   | Ijumptable _ _ => Some rel
   | Istore chunk addr args _ _ => Some (kill_store chunk addr args rel)
   | Iop op args dst _ => Some (gen_oper op dst args rel)
@@ -485,8 +485,8 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>
     Itailcall sig ros (subst_args fmap pc args)
-  | Icond cond args s1 s2 =>
-    Icond cond (subst_args fmap pc args) s1 s2
+  | Icond cond args s1 s2 i =>
+    Icond cond (subst_args fmap pc args) s1 s2 i
   | Ijumptable arg tbl =>
     Ijumptable (subst_arg fmap pc arg) tbl
   | Ireturn (Some arg) =>

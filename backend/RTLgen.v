@@ -479,7 +479,7 @@ with transl_condexpr (map: mapping) (a: condexpr) (ntrue nfalse: node)
   match a with
   | CEcond c al =>
       do rl <- alloc_regs map al;
-      do nt <- add_instr (Icond c rl ntrue nfalse);
+      do nt <- add_instr (Icond c rl ntrue nfalse None);
          transl_exprlist map al rl nt
   | CEcondition a b c =>
       do nc <- transl_condexpr map c ntrue nfalse;

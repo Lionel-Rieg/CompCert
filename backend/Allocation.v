@@ -314,10 +314,10 @@ Definition pair_instr_block
           Some(BSbuiltin ef args res mv1 args' res' mv2 s)
       | _ => None
       end
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 i =>
       let (mv1, b1) := extract_moves nil b in
       match b1 with
-      | Lcond cond' args' s1' s2' :: b2 =>
+      | Lcond cond' args' s1' s2' i' :: b2 =>
           assertion (eq_condition cond cond');
           assertion (peq s1 s1');
           assertion (peq s2 s2');

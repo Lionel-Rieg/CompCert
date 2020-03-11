@@ -53,7 +53,7 @@ Definition ref_instruction (i: instruction) : list ident :=
   | Itailcall _ (inl r) _ => nil
   | Itailcall _ (inr id) _ => id :: nil
   | Ibuiltin _ args _ _ => globals_of_builtin_args args
-  | Icond cond _ _ _ => nil
+  | Icond cond _ _ _ _ => nil
   | Ijumptable _ _ => nil
   | Ireturn _ => nil
   end.

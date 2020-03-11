@@ -78,11 +78,11 @@ Definition record_gotos (f: LTL.function) : U.t :=
 Definition tunnel_instr (uf: U.t) (i: instruction) : instruction :=
   match i with
   | Lbranch s => Lbranch (U.repr uf s)
-  | Lcond cond args s1 s2 =>
+  | Lcond cond args s1 s2 info =>
       let s1' := U.repr uf s1 in let s2' := U.repr uf s2 in
       if peq s1' s2'
       then Lbranch s1'
-      else Lcond cond args s1' s2'
+      else Lcond cond args s1' s2' info
   | Ljumptable arg tbl => Ljumptable arg (List.map (U.repr uf) tbl)
   | _ => i
   end.

@@ -81,7 +81,7 @@ let basic_blocks f joins =
        | [] -> assert false
        | Lbranch s :: _ -> next_in_block blk minpc s
        | Ltailcall (sig0, ros) :: _ -> end_block blk minpc
-       | Lcond (cond, args, ifso, ifnot) :: _ ->
+       | Lcond (cond, args, ifso, ifnot, _) :: _ ->
              end_block blk minpc; start_block ifso; start_block ifnot
        | Ljumptable(arg, tbl) :: _ ->
              end_block blk minpc; List.iter start_block tbl
@@ -165,7 +165,7 @@ let forward_sequences code entry =
           | Lbuiltin _ -> assert false
           | Ltailcall _ | Lreturn -> ([], [])
           | Lbranch n -> let ln, rem = traverse_fallthrough code n in (ln, rem)
-          | Lcond (_, _, ifso, ifnot) -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
+          | Lcond (_, _, ifso, ifnot, _) -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
           | Ljumptable(_, ln) -> match ln with
               | [] -> ([], [])
               | n :: ln -> let lln, rem = traverse_fallthrough code n in (lln, ln @ rem)
@@ -219,7 +219,7 @@ let can_be_merged code s s' =
   | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
   | Lbuiltin _ | Ltailcall _ | Lreturn -> false
   | Lbranch n -> n == first_s'
-  | Lcond (_, _, ifso, ifnot) -> ifnot == first_s'
+  | Lcond (_, _, ifso, ifnot, _) -> ifnot == first_s'
   | Ljumptable (_, ln) ->
       match ln with
       | [] -> false
@@ -303,7 +303,7 @@ let get_loop_edges code entry =
           | Lbuiltin _ -> assert false
           | Ltailcall _ | Lreturn -> []
           | Lbranch n -> [n]
-          | Lcond (_, _, ifso, ifnot) -> [ifso; ifnot]
+          | Lcond (_, _, ifso, ifnot, _) -> [ifso; ifnot]
           | Ljumptable(_, ln) -> ln
           ) in dfs_visit code (Some node) next_visits;
           visited := PTree.set node Visited !visited;
@@ -371,7 +371,7 @@ let construct_depmap code entry fs =
               match (last_element bb) with
               | Ltailcall _ | Lreturn -> []
               | Lbranch n -> (check_and_update_depmap node n; [n])
-              | Lcond (_, _, ifso, ifnot) -> begin
+              | Lcond (_, _, ifso, ifnot, _) -> begin
                   check_and_update_depmap node ifso;
                   check_and_update_depmap node ifnot;
                   [ifso; ifnot]

@@ -312,9 +312,9 @@ Inductive tr_instr: context -> node -> instruction -> code -> Prop :=
       match res with BR r => Ple r ctx.(mreg) | _ => True end ->
       c!(spc ctx pc) = Some (Ibuiltin ef (map (sbuiltinarg ctx) args) (sbuiltinres ctx res) (spc ctx s)) ->
       tr_instr ctx pc (Ibuiltin ef args res s) c
-  | tr_cond: forall ctx pc cond args s1 s2 c,
-      c!(spc ctx pc) = Some (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2)) ->
-      tr_instr ctx pc (Icond cond args s1 s2) c
+  | tr_cond: forall ctx pc cond args s1 s2 c i,
+      c!(spc ctx pc) = Some (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2) i) ->
+      tr_instr ctx pc (Icond cond args s1 s2 i) c
   | tr_jumptable: forall ctx pc r tbl c,
       c!(spc ctx pc) = Some (Ijumptable (sreg ctx r) (List.map (spc ctx) tbl)) ->
       tr_instr ctx pc (Ijumptable r tbl) c

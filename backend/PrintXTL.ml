@@ -104,7 +104,7 @@ let print_instruction pp succ = function
         (print_builtin_args var) args
   | Xbranch s ->
       print_succ pp s succ
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       fprintf pp "if (%a) goto %d else goto %d"
         (print_condition var) (cond, args)
         (P.to_int s1) (P.to_int s2)
