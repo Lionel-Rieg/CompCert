@@ -4,6 +4,16 @@ Require Import Memory Registers Op RTL Maps CSE2deps.
 Require Import HashedSet.
 Require List.
 
+Definition loadv_storev_compatible_type
+           (chunk : memory_chunk) (ty : typ) : bool :=
+  match chunk, ty with
+  | Mint32, Tint
+  | Mint64, Tlong
+  | Mfloat32, Tsingle
+  | Mfloat64, Tfloat => true
+  | _, _ => false
+  end.
+
 Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   Definition t := PSet.t.
   Definition eq (x : t) (y : t) := x = y.
@@ -266,6 +276,23 @@ Section OPERATIONS.
     | None => oper1 dst op args rel
     end.
   
+  Definition store2
+             (chunk : memory_chunk) (addr: addressing) (args : list reg)
+             (src : reg)
+             (rel : RELATION.t) : RELATION.t := kill_mem rel.
+
+  Definition store1
+             (chunk : memory_chunk) (addr: addressing) (args : list reg)
+             (src : reg) (ty: typ)
+             (rel : RELATION.t) : RELATION.t :=
+    let rel' := store2 chunk addr args src rel in
+    match eq_find {| eq_lhs := src;
+                     eq_op  := SLoad chunk addr;
+                     eq_args:= args |} with
+    | Some id => PSet.add id rel'
+    | None => rel'
+    end.
+    
   End PER_NODE.
 
 Definition apply_instr no instr (rel : RELATION.t) : RB.t :=

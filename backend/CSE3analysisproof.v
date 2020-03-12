@@ -9,6 +9,26 @@ Require Import Registers Op RTL.
 Require Import CSE3analysis CSE2deps CSE2depsproof HashedSet.
 Require Import Lia.
 
+Theorem loadv_storev_really_same:
+  forall chunk: memory_chunk,
+  forall m1: mem,
+  forall addr v: val,
+  forall m2: mem,
+  forall ty : typ,
+  forall TYPE: Val.has_type v ty,
+  forall STORE: Mem.storev chunk m1 addr v = Some m2,
+  forall COMPATIBLE: loadv_storev_compatible_type chunk ty = true,
+    Mem.loadv chunk m2 addr = Some v.
+Proof.
+  intros.
+  rewrite Mem.loadv_storev_same with (m1:=m1) (v:=v) by assumption.
+  f_equal.
+  destruct chunk; destruct ty; try discriminate.
+  all: destruct v; trivial; try contradiction.
+  all: unfold Val.load_result, Val.has_type in *.
+  all: destruct Archi.ptr64; trivial; discriminate.
+Qed.
+
 Lemma subst_args_notin :
   forall (rs : regset) dst v args,
     ~ In dst args ->
@@ -622,4 +642,18 @@ Section SOUNDNESS.
   Qed.
 
   Hint Resolve oper_sound : cse3.
+
+  Theorem store2_sound:
+    forall chunk addr args a src rel rs m m' v,
+      sem_rel rel rs m ->
+      eval_addressing genv sp addr (rs ## args) = Some a ->
+      Mem.storev chunk m a v = Some m' ->
+      sem_rel (store2 (ctx:=ctx) chunk addr args src rel) rs m'.
+  Proof.
+    unfold store2.
+    intros.
+    apply kill_mem_sound with (m:=m); auto.
+  Qed.
+  
+  Hint Resolve store2_sound : cse3.
 End SOUNDNESS.
