@@ -270,9 +270,12 @@ let dfs code entrypoint =
           | Some i -> [node] @ match i with
             | Icall(_, _, _, _, n) -> dfs_list code [n]
             | Ibuiltin(_, _, _, n) -> dfs_list code [n]
+            | Iop (_, _, _, n) -> dfs_list code [n]
+            | Iload (_, _, _, _, _, n) -> dfs_list code [n]
+            | Istore (_, _, _, _, n) -> dfs_list code [n]
+            | Inop n -> dfs_list code [n]
             | Ijumptable(_, ln) -> dfs_list code ln
             | Itailcall _ | Ireturn _ -> []
-            | Inop _ | Iop _ | Iload _ | Istore _ -> []
             | Icond (_, _, n1, n2, info) -> match info with
               | Some false -> dfs_list code [n2; n1]
               | _ -> dfs_list code [n1; n2]
