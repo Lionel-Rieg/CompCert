@@ -331,16 +331,16 @@ Definition apply_instr' (tenv : typing_env) code (pc : node) (ro : RB.t) : RB.t 
 
 Definition invariants := PMap.t RB.t.
 
-Definition rel_le (x y : RELATION.t) : bool := (PSet.is_subset y x).
+Definition rel_leb (x y : RELATION.t) : bool := (PSet.is_subset y x).
 
-Definition relb_le (x y : RB.t) : bool :=
+Definition relb_leb (x y : RB.t) : bool :=
   match x, y with
   | None, _ => true
   | (Some _), None => false
-  | (Some x), (Some y) => rel_le x y
+  | (Some x), (Some y) => rel_leb x y
   end.
 
-Definition check_inductiveness (tenv: typing_env) (inv: invariants) (fn : RTL.function) :=
+Definition check_inductiveness (fn : RTL.function) (tenv: typing_env) (inv: invariants) :=
   (RB.beq (Some RELATION.top) (PMap.get (fn_entrypoint fn) inv)) &&
   PTree_Properties.for_all (fn_code fn) 
       (fun pc instr =>
@@ -349,7 +349,7 @@ Definition check_inductiveness (tenv: typing_env) (inv: invariants) (fn : RTL.fu
          | Some rel =>
            let rel' := apply_instr pc tenv instr rel in
            List.forallb
-             (fun pc' => relb_le rel' (PMap.get pc' inv))
+             (fun pc' => relb_leb rel' (PMap.get pc' inv))
              (RTL.successors_instr instr)
          end).
 

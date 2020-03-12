@@ -69,7 +69,7 @@ Definition transf_function (f: function) : res function :=
   do tenv <- type_function f;
   let (invariants, hints) := preanalysis tenv f in
   let ctx := context_from_hints hints in
-  if check_inductiveness (ctx:=ctx) tenv invariants f
+  if check_inductiveness (ctx:=ctx) f tenv invariants
   then
     OK {| fn_sig := f.(fn_sig);
           fn_params := f.(fn_params);

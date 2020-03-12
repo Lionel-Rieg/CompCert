@@ -10,6 +10,26 @@ Require Import CSE3analysis CSE2deps CSE2depsproof HashedSet.
 Require Import RTLtyping.
 Require Import Lia.
 
+Lemma rel_leb_correct:
+  forall x x',
+    rel_leb x x' = true <-> RELATION.ge x' x.
+Proof.
+  unfold rel_leb, RELATION.ge.
+  split; auto.
+Qed.
+
+Hint Resolve rel_leb_correct : cse3.
+
+Lemma relb_leb_correct:
+  forall x x',
+    relb_leb x x' = true <-> RB.ge x' x.
+Proof.
+  unfold relb_leb, RB.ge.
+  destruct x; destruct x'; split; trivial; try contradiction; discriminate.
+Qed.
+
+Hint Resolve relb_leb_correct : cse3.
+
 Theorem loadv_storev_really_same:
   forall chunk: memory_chunk,
   forall m1: mem,
@@ -708,4 +728,59 @@ Section SOUNDNESS.
     rewrite forward_move_sound with (rel:=rel) (m:=m) in STORE by trivial.
     assumption.
   Qed.
+
+  Hint Resolve store_sound : cse3.
+
+  Section INDUCTIVENESS.
+    Variable fn : RTL.function.
+    Variable tenv : typing_env.
+    Variable inv: invariants.
+    
+    Definition is_inductive_step (pc pc' : node) :=
+      forall instr,
+        PTree.get pc (fn_code fn) = Some instr ->
+        In pc' (successors_instr instr) ->
+        RB.ge (PMap.get pc' inv)
+              (apply_instr' (ctx:=ctx) tenv (fn_code fn) pc (PMap.get pc inv)).
+
+    Definition is_inductive_allstep :=
+      forall pc pc', is_inductive_step pc pc'.
+
+    Lemma checked_is_inductive_allstep:
+      (check_inductiveness (ctx:=ctx) fn tenv inv) = true ->
+      is_inductive_allstep.
+    Proof.
+      unfold check_inductiveness, is_inductive_allstep, is_inductive_step.
+      rewrite andb_true_iff.
+      rewrite PTree_Properties.for_all_correct.
+      intros (ENTRYPOINT & ALL).
+      intros until instr.
+      intros INSTR IN_SUCC.
+      specialize ALL with (x := pc) (a := instr).
+      pose proof (ALL INSTR) as AT_PC.
+      destruct (inv # pc).
+      2: apply RB.ge_bot.
+      rewrite List.forallb_forall in AT_PC.
+      unfold apply_instr'.
+      rewrite INSTR.
+      apply relb_leb_correct.
+      auto.
+    Qed.
+    
+    Lemma checked_is_inductive_entry:
+      (check_inductiveness (ctx:=ctx) fn tenv inv) = true ->
+      inv # (fn_entrypoint fn) = Some RELATION.top.
+    Proof.
+      unfold check_inductiveness, is_inductive_allstep, is_inductive_step.
+      rewrite andb_true_iff.
+      intros (ENTRYPOINT & ALL).
+      apply RB.beq_correct in ENTRYPOINT.
+      unfold RB.eq, RELATION.eq in ENTRYPOINT.
+      destruct (inv # (fn_entrypoint fn)) as [rel | ].
+      2: contradiction.
+      f_equal.
+      symmetry.
+      assumption.
+    Qed.
+  End INDUCTIVENESS.
 End SOUNDNESS.
