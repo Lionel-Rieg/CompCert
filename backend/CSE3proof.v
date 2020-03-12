@@ -76,7 +76,9 @@ Proof.
   destruct f; simpl; intros.
   - monadInv H.
     monadInv EQ.
-    destruct preanalysis.
+    destruct preanalysis as [invariants hints].
+    destruct check_inductiveness.
+    2: discriminate.
     inv EQ1.
     reflexivity.
   - monadInv H.

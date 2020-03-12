@@ -304,7 +304,7 @@ Section OPERATIONS.
              (rel : RELATION.t) : RELATION.t :=
     store1 chunk addr (forward_move_l rel args) src ty rel.
 
-Definition apply_instr (tenv : typing_env) (instr : RTL.instruction) (rel : RELATION.t) : RB.t :=
+  Definition apply_instr (tenv : typing_env) (instr : RTL.instruction) (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
   | Icond _ _ _ _
@@ -330,6 +330,28 @@ Definition apply_instr' (tenv : typing_env) code (pc : node) (ro : RB.t) : RB.t 
   end.
 
 Definition invariants := PMap.t RB.t.
+
+Definition rel_le (x y : RELATION.t) : bool := (PSet.is_subset y x).
+
+Definition relb_le (x y : RB.t) : bool :=
+  match x, y with
+  | None, _ => true
+  | (Some _), None => false
+  | (Some x), (Some y) => rel_le x y
+  end.
+
+Definition check_inductiveness (tenv: typing_env) (inv: invariants) (fn : RTL.function) :=
+  (RB.beq (Some RELATION.top) (PMap.get (fn_entrypoint fn) inv)) &&
+  PTree_Properties.for_all (fn_code fn) 
+      (fun pc instr =>
+         match PMap.get pc inv with
+         | None => true
+         | Some rel =>
+           let rel' := apply_instr pc tenv instr rel in
+           List.forallb
+             (fun pc' => relb_le rel' (PMap.get pc' inv))
+             (RTL.successors_instr instr)
+         end).
 
 Definition internal_analysis
   (tenv : typing_env)

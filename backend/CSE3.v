@@ -67,14 +67,17 @@ End REWRITE.
 
 Definition transf_function (f: function) : res function :=
   do tenv <- type_function f;
-  let (invariants, hints) := preanalysis tenv f in 
+  let (invariants, hints) := preanalysis tenv f in
   let ctx := context_from_hints hints in
+  if check_inductiveness (ctx:=ctx) tenv invariants f
+  then
     OK {| fn_sig := f.(fn_sig);
           fn_params := f.(fn_params);
           fn_stacksize := f.(fn_stacksize);
           fn_code := PTree.map (transf_instr (ctx := ctx) invariants)
                                f.(fn_code);
-          fn_entrypoint := f.(fn_entrypoint) |}.
+          fn_entrypoint := f.(fn_entrypoint) |}
+  else Error (msg "cse3: not inductive").
 
 Definition transf_fundef (fd: fundef) : res fundef :=
   AST.transf_partial_fundef transf_function fd.
