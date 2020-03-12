@@ -85,6 +85,64 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma stacksize_preserved:
+  forall f tf, transf_function f = OK tf -> fn_stacksize tf = fn_stacksize f.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  destruct preanalysis as [invariants hints].
+  destruct check_inductiveness.
+  2: discriminate.
+  inv EQ0.
+  reflexivity.
+Qed.
+
+Lemma params_preserved:
+  forall f tf, transf_function f = OK tf -> fn_params tf = fn_params f.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  destruct preanalysis as [invariants hints].
+  destruct check_inductiveness.
+  2: discriminate.
+  inv EQ0.
+  reflexivity.
+Qed.
+
+Lemma entrypoint_preserved:
+  forall f tf, transf_function f = OK tf -> fn_entrypoint tf = fn_entrypoint f.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  destruct preanalysis as [invariants hints].
+  destruct check_inductiveness.
+  2: discriminate.
+  inv EQ0.
+  reflexivity.
+Qed.
+
+Lemma sig_preserved2:
+  forall f tf, transf_function f = OK tf -> fn_sig tf = fn_sig f.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  destruct preanalysis as [invariants hints].
+  destruct check_inductiveness.
+  2: discriminate.
+  inv EQ0.
+  reflexivity.
+Qed.
+
+Lemma transf_function_is_typable:
+  forall f tf, transf_function f = OK tf ->
+               exists tenv, type_function f = OK tenv.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  exists x.
+  assumption.
+Qed.
+
 Lemma find_function_translated:
   forall ros rs fd,
     find_function ge ros rs = Some fd ->
@@ -102,15 +160,15 @@ Inductive match_stackframes: list stackframe -> list stackframe -> signature -> 
       sg.(sig_res) = Tint ->
       match_stackframes nil nil sg
   | match_stackframes_cons:
-      forall res f sp pc rs s tf bb ls ts sg tenv
+      forall res f sp pc rs s tf ts sg tenv
         (STACKS: match_stackframes s ts (fn_sig tf))
         (FUN: transf_function f = OK tf)
-        (WTF: wt_function f tenv)
+        (WTF: type_function f = OK tenv)
         (WTRS: wt_regset tenv rs)
         (WTRES: tenv res = proj_sig_res sg),
       match_stackframes
         (Stackframe res f sp pc rs :: s)
-        (Stackframe res tf sp ls bb :: ts)
+        (Stackframe res tf sp pc rs :: ts)
         sg.
 
 Inductive match_states: state -> state -> Prop :=
@@ -118,7 +176,7 @@ Inductive match_states: state -> state -> Prop :=
       forall s f sp pc rs m ts tf tenv
         (STACKS: match_stackframes s ts (fn_sig tf))
         (FUN: transf_function f = OK tf)
-        (WTF: wt_function f tenv)
+        (WTF: type_function f = OK tenv)
         (WTRS: wt_regset tenv rs),
       match_states (State s f sp pc rs m)
                    (State ts tf sp pc rs m)
@@ -148,11 +206,180 @@ Proof.
   unfold proj_sig_res in *. rewrite H0; auto.
 Qed.
 
+Lemma transf_function_at:
+  forall f tf pc tenv instr
+    (TF : transf_function f = OK tf)
+    (TYPE : type_function f = OK tenv)
+    (PC : (fn_code f) ! pc = Some instr),
+    (fn_code tf) ! pc = Some (transf_instr
+       (ctx := (context_from_hints (snd (preanalysis tenv f))))
+       (fst (preanalysis tenv f))
+       pc instr).
+Proof.
+  intros.
+  unfold transf_function in TF.
+  monadInv TF.
+  replace x with tenv in * by congruence.
+  clear EQ.
+  destruct (preanalysis tenv f) as [invariants hints].
+  destruct check_inductiveness.
+  2: discriminate.
+  inv EQ0.
+  simpl.
+  rewrite PTree.gmap.
+  rewrite PC.
+  reflexivity.
+Qed.
+
+Ltac TR_AT := erewrite transf_function_at by eauto.
+
+Hint Resolve wt_instrs type_function_correct : wt.
+
+Lemma wt_undef :
+  forall tenv rs dst,
+    wt_regset tenv rs ->
+    wt_regset tenv rs # dst <- Vundef.
+Proof.
+  unfold wt_regset.
+  intros.
+  destruct (peq r dst).
+  { subst dst.
+    rewrite Regmap.gss.
+    constructor.
+  }
+  rewrite Regmap.gso by congruence.
+  auto.
+Qed.
+
 Lemma step_simulation:
-  forall S1 t S2, RTL.step ge S1 t S2 ->
+  forall S1 t S2, RTL.step ge S1 t S2 -> 
   forall S1', match_states S1 S1' ->
               exists S2', RTL.step tge S1' t S2' /\ match_states S2 S2'.
 Proof.
+  induction 1; intros S1' MS; inv MS.
+  - (* Inop *)
+    exists (State ts tf sp pc' rs m). split.
+    + apply exec_Inop; auto.
+      TR_AT. reflexivity.
+    + econstructor; eauto.
+  - (* Iop *)
+    exists (State ts tf sp pc' (rs # res <- v) m). split.
+    + admit.
+    + econstructor; eauto.
+      eapply wt_exec_Iop with (f:=f); try eassumption.
+      eauto with wt.
+  - (* Iload *)
+    exists (State ts tf sp pc' (rs # dst <- v) m). split.
+    + admit.
+    + econstructor; eauto.
+      eapply wt_exec_Iload with (f:=f); try eassumption.
+      eauto with wt.
+  - (* Iload notrap1 *)
+    exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
+    + admit.
+    + econstructor; eauto.
+      apply wt_undef; assumption.
+  - (* Iload notrap2 *)
+    exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
+    + admit.
+    + econstructor; eauto.
+      apply wt_undef; assumption.
+  - (* Istore *)
+    exists (State ts tf sp pc' rs m'). split.
+    + eapply exec_Istore; try eassumption.
+      * TR_AT. reflexivity.
+      * admit.
+    + econstructor; eauto.
+  - (* Icall *)
+    destruct (find_function_translated ros rs fd H0) as [tfd [HTFD1 HTFD2]].
+    econstructor. split.
+    + eapply exec_Icall; try eassumption.
+      * TR_AT. reflexivity.
+      * apply sig_preserved; auto.
+    + admit.
+  - (* Itailcall *)
+    destruct (find_function_translated ros rs fd H0) as [tfd [HTFD1 HTFD2]].
+    econstructor. split.
+    + eapply exec_Itailcall; try eassumption.
+      * TR_AT. reflexivity.
+      * apply sig_preserved; auto.
+      * rewrite stacksize_preserved with (f:=f); eauto.
+    + admit.
+  - (* Ibuiltin *)
+    econstructor. split.
+    + eapply exec_Ibuiltin; try eassumption.
+      * TR_AT. reflexivity.
+      * eapply eval_builtin_args_preserved with (ge1 := ge); eauto. exact symbols_preserved.
+      * eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+    + econstructor; eauto.
+      eapply wt_exec_Ibuiltin with (f:=f); eauto with wt.
+  - (* Icond *)
+    econstructor. split.
+    + eapply exec_Icond; try eassumption.
+      * erewrite transf_function_at by eauto. simpl.
+        admit.
+      * reflexivity.
+    + econstructor; eauto.
+  - (* Ijumptable *)
+    econstructor. split.
+    + eapply exec_Ijumptable; try eassumption.
+      erewrite transf_function_at by eauto. simpl.
+      admit.
+    + econstructor; eauto.
+  - (* Ireturn *)
+    destruct or.
+    -- econstructor. split.
+       + eapply exec_Ireturn; try eassumption.
+         *  erewrite transf_function_at by eauto. simpl.
+         admit.
+         * rewrite stacksize_preserved with (f:=f); eauto.
+       + econstructor; eauto.
+         simpl.
+         apply type_function_correct in WTF.
+         apply wt_instrs with (pc:=pc) (instr:=(Ireturn (Some r))) in WTF.
+         2: assumption.
+         inv WTF.
+         rewrite sig_preserved2 with (f:=f) by assumption.
+         rewrite <- H3.
+         unfold wt_regset in WTRS.
+         apply WTRS.
+    -- econstructor. split.
+       + eapply exec_Ireturn; try eassumption.
+         *  erewrite transf_function_at by eauto. simpl.
+         admit.
+         * rewrite stacksize_preserved with (f:=f); eauto.
+       + econstructor; eauto.
+         simpl. trivial.
+  - (* Callstate internal *)
+    monadInv FUN.
+    rename x into tf.
+    destruct (transf_function_is_typable f tf EQ) as [tenv TENV].
+    econstructor; split.
+    + apply exec_function_internal.
+      rewrite stacksize_preserved with (f:=f); eauto.
+    + rewrite params_preserved with (tf:=tf) (f:=f) by assumption.
+      rewrite entrypoint_preserved with (tf:=tf) (f:=f) by assumption.
+      econstructor; eauto.
+      apply type_function_correct in TENV.
+      inv TENV.
+      simpl in WTARGS.
+      rewrite sig_preserved2 with (f:=f) in WTARGS by assumption.
+      apply wt_init_regs.
+      rewrite <- wt_params in WTARGS.
+      assumption.
+  - (* external *)
+    simpl in FUN.
+    inv FUN.
+    econstructor. split.
+    + eapply exec_function_external.
+      eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+    + econstructor; eauto.
+      eapply external_call_well_typed; eauto.
+  - (* return *)
+    inv STACKS.
+    econstructor. split.
+    + eapply exec_return.
+    + econstructor; eauto.
 Admitted.
 
 Lemma transf_initial_states:
@@ -186,10 +413,10 @@ Theorem transf_program_correct:
   forward_simulation (RTL.semantics prog) (RTL.semantics tprog).
 Proof.
   eapply forward_simulation_step.
-  apply senv_preserved.
-  eexact transf_initial_states.
-  eexact transf_final_states.
-  exact step_simulation.
+  - apply senv_preserved.
+  - eexact transf_initial_states.
+  - eexact transf_final_states.
+  - intros. eapply step_simulation; eauto.
 Qed.
 
 End PRESERVATION.

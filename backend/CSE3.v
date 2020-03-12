@@ -32,7 +32,14 @@ Definition forward_move_b (rb : RB.t) (x : reg) :=
 Definition subst_arg (fmap : PMap.t RB.t) (pc : node) (x : reg) : reg :=
   forward_move_b (PMap.get pc fmap) x.
 
-Definition subst_args fmap pc := List.map (subst_arg fmap pc).
+Definition forward_move_l_b (rb : RB.t) (xl : list reg) :=
+  match rb with
+  | None => xl
+  | Some rel => forward_move_l (ctx := ctx) rel xl
+  end.
+
+Definition subst_args fmap pc xl :=
+  forward_move_l_b (PMap.get pc fmap) xl.
 
 Definition transf_instr (fmap : PMap.t RB.t)
            (pc: node) (instr: instruction) :=
