@@ -783,4 +783,6 @@ Section SOUNDNESS.
       assumption.
     Qed.
   End INDUCTIVENESS.
+
+  Hint Resolve checked_is_inductive_allstep checked_is_inductive_entry : cse3.
 End SOUNDNESS.

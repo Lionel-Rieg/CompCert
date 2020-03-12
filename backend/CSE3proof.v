@@ -14,7 +14,7 @@ Require Import Globalenvs Values.
 Require Import Linking Values Memory Globalenvs Events Smallstep.
 Require Import Registers Op RTL.
 Require Import CSE3 CSE3analysis CSE3analysisproof.
-
+Require Import RTLtyping.
 
 Section SOUNDNESS.
   Variable F V : Type.
@@ -97,30 +97,56 @@ Proof.
   eapply function_ptr_translated; eauto.
 Qed.
 
-Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
-| match_frames_intro: forall res f tf sp pc rs
-    (FUN : transf_function f = OK tf),
-    (* (forall m : mem,
-     forall vres, (fmap_sem' sp m (forward_map f) pc rs # res <- vres)) -> *)
-    match_frames (Stackframe res f sp pc rs)
-                 (Stackframe res tf sp pc rs).
+Inductive match_stackframes: list stackframe -> list stackframe -> signature -> Prop :=
+  | match_stackframes_nil: forall sg,
+      sg.(sig_res) = Tint ->
+      match_stackframes nil nil sg
+  | match_stackframes_cons:
+      forall res f sp pc rs s tf bb ls ts sg tenv
+        (STACKS: match_stackframes s ts (fn_sig tf))
+        (FUN: transf_function f = OK tf)
+        (WTF: wt_function f tenv)
+        (WTRS: wt_regset tenv rs)
+        (WTRES: tenv res = proj_sig_res sg),
+      match_stackframes
+        (Stackframe res f sp pc rs :: s)
+        (Stackframe res tf sp ls bb :: ts)
+        sg.
 
-Inductive match_states: RTL.state -> RTL.state -> Prop :=
-  | match_regular_states: forall stk tf f sp pc rs m stk'
-      (STACKS: list_forall2 match_frames stk stk')
-      (FUN: transf_function f = OK tf),
-      (* (fmap_sem' sp m (forward_map f) pc rs) -> *)
-      match_states (State stk f sp pc rs m)
-                   (State stk' tf sp pc rs m)
-  | match_callstates: forall stk f tf args m stk'
-      (STACKS: list_forall2 match_frames stk stk')
-      (FUN: transf_fundef f = OK tf),
-      match_states (Callstate stk f args m)
-                   (Callstate stk' tf args m)
-  | match_returnstates: forall stk v m stk'
-        (STACKS: list_forall2 match_frames stk stk'),
-      match_states (Returnstate stk v m)
-                   (Returnstate stk' v m). 
+Inductive match_states: state -> state -> Prop :=
+  | match_states_intro:
+      forall s f sp pc rs m ts tf tenv
+        (STACKS: match_stackframes s ts (fn_sig tf))
+        (FUN: transf_function f = OK tf)
+        (WTF: wt_function f tenv)
+        (WTRS: wt_regset tenv rs),
+      match_states (State s f sp pc rs m)
+                   (State ts tf sp pc rs m)
+  | match_states_call:
+      forall s f args m ts tf
+        (STACKS: match_stackframes s ts (funsig tf))
+        (FUN: transf_fundef f = OK tf)
+        (WTARGS: Val.has_type_list args (sig_args (funsig tf))),
+      match_states (Callstate s f args m)
+                   (Callstate ts tf args m)
+  | match_states_return:
+      forall s res m ts sg
+        (STACKS: match_stackframes s ts sg)
+        (WTRES: Val.has_type res (proj_sig_res sg)),
+      match_states (Returnstate s res m)
+                   (Returnstate ts res m).
+
+Lemma match_stackframes_change_sig:
+  forall s ts sg sg',
+  match_stackframes s ts sg ->
+  sg'.(sig_res) = sg.(sig_res) ->
+  match_stackframes s ts sg'.
+Proof.
+  intros. inv H.
+  constructor. congruence.
+  econstructor; eauto.
+  unfold proj_sig_res in *. rewrite H0; auto.
+Qed.
 
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 ->
@@ -143,11 +169,15 @@ Proof.
       rewrite symbols_preserved. eauto.
       symmetry. eapply match_program_main; eauto.
     + rewrite <- H3. eapply sig_preserved; eauto.
-  - econstructor; auto. constructor.
+  - constructor; trivial.
+    + constructor. rewrite sig_preserved with (f:=f) by assumption.
+      rewrite H3. reflexivity.
+    + rewrite sig_preserved with (f:=f) by assumption.
+      rewrite H3. reflexivity.
 Qed.
 
 Lemma transf_final_states:
-  forall S1 S2 r, match_states S1 S2 -> RTL.final_state S1 r -> RTL.final_state S2 r.
+  forall S1 S2 r, match_states S1 S2 -> final_state S1 r -> final_state S2 r.
 Proof.
   intros. inv H0. inv H. inv STACKS. constructor.
 Qed.
