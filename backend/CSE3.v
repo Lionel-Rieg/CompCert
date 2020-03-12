@@ -6,31 +6,21 @@ Require Import RTLtyping.
 
 Local Open Scope error_monad_scope.
 
-Axiom preanalysis : typing_env -> RTL.function -> analysis_hints.
-
-Definition run f := preanalysis f.
+Axiom preanalysis : typing_env -> RTL.function -> invariants * analysis_hints.
 
 Section REWRITE.
   Context {ctx : eq_context}.
 
 Definition find_op_in_fmap fmap pc op args :=
-  match fmap with
+  match PMap.get pc fmap with
+  | Some rel => rhs_find (ctx:=ctx) pc (SOp op) args rel
   | None => None
-  | Some map =>
-    match PMap.get pc map with
-    | Some rel => rhs_find (ctx:=ctx) pc (SOp op) args rel
-    | None => None
-    end
   end.
 
 Definition find_load_in_fmap fmap pc chunk addr args :=
-  match fmap with
+  match PMap.get pc fmap with
+  | Some rel => rhs_find (ctx:=ctx) pc (SLoad chunk addr) args rel
   | None => None
-  | Some map =>
-    match PMap.get pc map with
-    | Some rel => rhs_find (ctx:=ctx) pc (SLoad chunk addr) args rel
-    | None => None
-    end
   end.
 
 Definition forward_move_b (rb : RB.t) (x : reg) :=
@@ -39,15 +29,12 @@ Definition forward_move_b (rb : RB.t) (x : reg) :=
   | Some rel => forward_move (ctx := ctx) rel x
   end.
 
-Definition subst_arg (fmap : option (PMap.t RB.t)) (pc : node) (x : reg) : reg :=
-  match fmap with
-  | None => x
-  | Some inv => forward_move_b (PMap.get pc inv) x
-  end.
+Definition subst_arg (fmap : PMap.t RB.t) (pc : node) (x : reg) : reg :=
+  forward_move_b (PMap.get pc fmap) x.
 
 Definition subst_args fmap pc := List.map (subst_arg fmap pc).
 
-Definition transf_instr (fmap : option (PMap.t RB.t))
+Definition transf_instr (fmap : PMap.t RB.t)
            (pc: node) (instr: instruction) :=
   match instr with
   | Iop op args dst s =>
@@ -80,8 +67,8 @@ End REWRITE.
 
 Definition transf_function (f: function) : res function :=
   do tenv <- type_function f;
-    let ctx := context_from_hints (preanalysis tenv f) in
-    let invariants := internal_analysis (ctx := ctx) tenv f in
+  let (invariants, hints) := preanalysis tenv f in 
+  let ctx := context_from_hints hints in
     OK {| fn_sig := f.(fn_sig);
           fn_params := f.(fn_params);
           fn_stacksize := f.(fn_stacksize);

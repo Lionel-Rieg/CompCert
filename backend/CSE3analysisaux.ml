@@ -80,15 +80,18 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
          Some coq_id
        end
   in
-  ignore 
-    (internal_analysis
+  match
+    internal_analysis
       { eq_catalog     = (fun eq_id -> PTree.get eq_id !cur_catalog);
         eq_find_oracle = mutating_eq_find_oracle;
         eq_rhs_oracle  = rhs_find_oracle ;
         eq_kill_reg    = (fun reg -> PMap.get reg !cur_kill_reg);
         eq_kill_mem    = (fun () -> !cur_kill_mem);
         eq_moves       = (fun reg -> PMap.get reg !cur_moves)
-      } tenv f);
-  { hint_eq_catalog    = !cur_catalog;
-    hint_eq_find_oracle= eq_find_oracle;
-    hint_eq_rhs_oracle = rhs_find_oracle };;
+      } tenv f
+  with None -> failwith "CSE3analysisaux analysis failed, try re-running with -fno-cse3"
+     | Some invariants ->
+        invariants,
+        { hint_eq_catalog    = !cur_catalog;
+          hint_eq_find_oracle= eq_find_oracle;
+          hint_eq_rhs_oracle = rhs_find_oracle };;

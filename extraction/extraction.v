@@ -191,7 +191,7 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
-   CSE3analysis.internal_analysis CSE3analysis.eq_depends_on_mem CSE3.run
+   CSE3analysis.internal_analysis CSE3analysis.eq_depends_on_mem
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env

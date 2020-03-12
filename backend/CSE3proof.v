@@ -76,6 +76,8 @@ Proof.
   destruct f; simpl; intros.
   - monadInv H.
     monadInv EQ.
+    destruct preanalysis.
+    inv EQ1.
     reflexivity.
   - monadInv H.
     reflexivity.

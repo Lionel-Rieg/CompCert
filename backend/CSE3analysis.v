@@ -329,9 +329,11 @@ Definition apply_instr' (tenv : typing_env) code (pc : node) (ro : RB.t) : RB.t 
     end
   end.
 
+Definition invariants := PMap.t RB.t.
+
 Definition internal_analysis
   (tenv : typing_env)
-  (f : RTL.function) := DS.fixpoint
+  (f : RTL.function) : option invariants := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
   (apply_instr' tenv (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
 
