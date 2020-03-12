@@ -2,8 +2,11 @@ Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Memory Registers Op RTL Maps CSE2deps.
 Require Import CSE3analysis HashedSet.
+Require Import RTLtyping.
 
-Axiom preanalysis : RTL.function -> analysis_hints.
+Local Open Scope error_monad_scope.
+
+Axiom preanalysis : typing_env -> RTL.function -> analysis_hints.
 
 Definition run f := preanalysis f.
 
@@ -75,20 +78,19 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
   end.
 End REWRITE.
 
-Definition transf_function (f: function) : function :=
-  let ctx := context_from_hints (preanalysis f) in
-  let invariants := internal_analysis (ctx := ctx) f in
-  {| fn_sig := f.(fn_sig);
-     fn_params := f.(fn_params);
-     fn_stacksize := f.(fn_stacksize);
-     fn_code := PTree.map (transf_instr (ctx := ctx) invariants) f.(fn_code);
-     fn_entrypoint := f.(fn_entrypoint) |}.
+Definition transf_function (f: function) : res function :=
+  do tenv <- type_function f;
+    let ctx := context_from_hints (preanalysis tenv f) in
+    let invariants := internal_analysis (ctx := ctx) tenv f in
+    OK {| fn_sig := f.(fn_sig);
+          fn_params := f.(fn_params);
+          fn_stacksize := f.(fn_stacksize);
+          fn_code := PTree.map (transf_instr (ctx := ctx) invariants)
+                               f.(fn_code);
+          fn_entrypoint := f.(fn_entrypoint) |}.
 
-Definition transf_fundef (fd: fundef) : fundef :=
-  AST.transf_fundef transf_function fd.
+Definition transf_fundef (fd: fundef) : res fundef :=
+  AST.transf_partial_fundef transf_function fd.
 
-Definition transf_program (p: program) : program :=
-  transform_program transf_fundef p.
-
-Definition match_prog (p tp: RTL.program) :=
-  match_program (fun ctx f tf => tf = transf_fundef f) eq p tp.
+Definition transf_program (p: program) : res program :=
+  transform_partial_program transf_fundef p.

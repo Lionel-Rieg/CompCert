@@ -37,7 +37,7 @@ let print_set s =
   List.iter (fun i -> Printf.printf "%d; " (P.to_int i)) (PSet.elements s);
   Printf.printf "}\n";;
 
-let preanalysis (f : RTL.coq_function) =
+let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   let cur_eq_id = ref 0
   and cur_catalog = ref PTree.empty
   and eq_table = Hashtbl.create 100
@@ -88,7 +88,7 @@ let preanalysis (f : RTL.coq_function) =
         eq_kill_reg    = (fun reg -> PMap.get reg !cur_kill_reg);
         eq_kill_mem    = (fun () -> !cur_kill_mem);
         eq_moves       = (fun reg -> PMap.get reg !cur_moves)
-      } f);
+      } tenv f);
   { hint_eq_catalog    = !cur_catalog;
     hint_eq_find_oracle= eq_find_oracle;
     hint_eq_rhs_oracle = rhs_find_oracle };;

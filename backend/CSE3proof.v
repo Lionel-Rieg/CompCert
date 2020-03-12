@@ -24,52 +24,68 @@ End SOUNDNESS.
 
 
 Definition match_prog (p tp: RTL.program) :=
-  match_program (fun cu f tf => tf = transf_fundef f) eq p tp.
+  match_program (fun ctx f tf => transf_fundef f = OK tf) eq p tp.
 
 Lemma transf_program_match:
-  forall p, match_prog p (transf_program p).
+  forall p tp, transf_program p = OK tp -> match_prog p tp.
 Proof.
-  intros. apply match_transform_program; auto.
+  intros. eapply match_transform_partial_program; eauto.
 Qed.
 
 Section PRESERVATION.
 
 Variables prog tprog: program.
-Hypothesis TRANSL: match_prog prog tprog.
+Hypothesis TRANSF: match_prog prog tprog.
 Let ge := Genv.globalenv prog.
 Let tge := Genv.globalenv tprog.
 
 Lemma functions_translated:
-  forall v f,
+  forall (v: val) (f: RTL.fundef),
   Genv.find_funct ge v = Some f ->
-  Genv.find_funct tge v = Some (transf_fundef f).
-Proof (Genv.find_funct_transf TRANSL).
+  exists tf,
+    Genv.find_funct tge v = Some tf /\ transf_fundef f = OK tf.
+Proof.
+  apply (Genv.find_funct_transf_partial TRANSF).
+Qed.
 
 Lemma function_ptr_translated:
-  forall v f,
-  Genv.find_funct_ptr ge v = Some f ->
-  Genv.find_funct_ptr tge v = Some (transf_fundef f).
-Proof (Genv.find_funct_ptr_transf TRANSL).
+  forall (b: block) (f: RTL.fundef),
+  Genv.find_funct_ptr ge b = Some f ->
+  exists tf,
+  Genv.find_funct_ptr tge b = Some tf /\ transf_fundef f = OK tf.
+Proof.
+  apply (Genv.find_funct_ptr_transf_partial TRANSF).
+Qed.
 
 Lemma symbols_preserved:
   forall id,
   Genv.find_symbol tge id = Genv.find_symbol ge id.
-Proof (Genv.find_symbol_transf TRANSL).
+Proof.
+  apply (Genv.find_symbol_match TRANSF).
+Qed.
 
 Lemma senv_preserved:
   Senv.equiv ge tge.
-Proof (Genv.senv_transf TRANSL).
+Proof.
+  apply (Genv.senv_match TRANSF).
+Qed.
 
 Lemma sig_preserved:
-  forall f, funsig (transf_fundef f) = funsig f.
+  forall f tf, transf_fundef f = OK tf -> funsig tf = funsig f.
 Proof.
-  destruct f; trivial.
+  destruct f; simpl; intros.
+  - monadInv H.
+    monadInv EQ.
+    reflexivity.
+  - monadInv H.
+    reflexivity.
 Qed.
 
 Lemma find_function_translated:
   forall ros rs fd,
-  find_function ge ros rs = Some fd ->
-  find_function tge ros rs = Some (transf_fundef fd).
+    find_function ge ros rs = Some fd ->
+    exists tfd,
+      find_function tge ros rs = Some tfd /\ transf_fundef fd = OK tfd.
 Proof.
   unfold find_function; intros. destruct ros as [r|id].
   eapply functions_translated; eauto.
@@ -78,27 +94,29 @@ Proof.
 Qed.
 
 Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
-| match_frames_intro: forall res f sp pc rs,
+| match_frames_intro: forall res f tf sp pc rs
+    (FUN : transf_function f = OK tf),
     (* (forall m : mem,
      forall vres, (fmap_sem' sp m (forward_map f) pc rs # res <- vres)) -> *)
     match_frames (Stackframe res f sp pc rs)
-                 (Stackframe res (transf_function f) sp pc rs).
+                 (Stackframe res tf sp pc rs).
 
 Inductive match_states: RTL.state -> RTL.state -> Prop :=
-  | match_regular_states: forall stk f sp pc rs m stk'
-                                 (STACKS: list_forall2 match_frames stk stk'),
+  | match_regular_states: forall stk tf f sp pc rs m stk'
+      (STACKS: list_forall2 match_frames stk stk')
+      (FUN: transf_function f = OK tf),
       (* (fmap_sem' sp m (forward_map f) pc rs) -> *)
       match_states (State stk f sp pc rs m)
-                   (State stk' (transf_function f) sp pc rs m)
-  | match_callstates: forall stk f args m stk'
-        (STACKS: list_forall2 match_frames stk stk'),
+                   (State stk' tf sp pc rs m)
+  | match_callstates: forall stk f tf args m stk'
+      (STACKS: list_forall2 match_frames stk stk')
+      (FUN: transf_fundef f = OK tf),
       match_states (Callstate stk f args m)
-                   (Callstate stk' (transf_fundef f) args m)
+                   (Callstate stk' tf args m)
   | match_returnstates: forall stk v m stk'
         (STACKS: list_forall2 match_frames stk stk'),
       match_states (Returnstate stk v m)
-                   (Returnstate stk' v m).
-  
+                   (Returnstate stk' v m). 
 
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 ->
@@ -106,17 +124,22 @@ Lemma step_simulation:
               exists S2', RTL.step tge S1' t S2' /\ match_states S2 S2'.
 Proof.
 Admitted.
+
 Lemma transf_initial_states:
   forall S1, RTL.initial_state prog S1 ->
   exists S2, RTL.initial_state tprog S2 /\ match_states S1 S2.
 Proof.
-  intros. inv H. econstructor; split.
-  econstructor.
-    eapply (Genv.init_mem_transf TRANSL); eauto.
-    rewrite symbols_preserved. rewrite (match_program_main TRANSL). eauto.
-    eapply function_ptr_translated; eauto.
-    rewrite <- H3; apply sig_preserved.
-  constructor. constructor.
+  intros. inversion H.
+  exploit function_ptr_translated; eauto.
+  intros (tf & A & B).
+  exists (Callstate nil tf nil m0); split.
+  - econstructor; eauto.
+    + eapply (Genv.init_mem_match TRANSF); eauto.
+    + replace (prog_main tprog) with (prog_main prog).
+      rewrite symbols_preserved. eauto.
+      symmetry. eapply match_program_main; eauto.
+    + rewrite <- H3. eapply sig_preserved; eauto.
+  - econstructor; auto. constructor.
 Qed.
 
 Lemma transf_final_states:

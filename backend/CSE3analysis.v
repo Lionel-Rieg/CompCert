@@ -4,6 +4,8 @@ Require Import Memory Registers Op RTL Maps CSE2deps.
 Require Import HashedSet.
 Require List.
 
+Definition typing_env := reg -> typ.
+
 Definition loadv_storev_compatible_type
            (chunk : memory_chunk) (ty : typ) : bool :=
   match chunk, ty with
@@ -301,34 +303,37 @@ Section OPERATIONS.
              (src : reg) (ty: typ)
              (rel : RELATION.t) : RELATION.t :=
     store1 chunk addr (forward_move_l rel args) src ty rel.
-  End PER_NODE.
 
-Definition apply_instr no instr (rel : RELATION.t) : RB.t :=
+Definition apply_instr (tenv : typing_env) (instr : RTL.instruction) (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
   | Icond _ _ _ _
   | Ijumptable _ _ => Some rel
-  | Istore chunk addr args _ _ => Some (kill_mem rel)
-  | Iop op args dst _ => Some (oper no dst (SOp op) args rel)
-  | Iload trap chunk addr args dst _ => Some (oper no dst (SLoad chunk addr) args rel)
+  | Istore chunk addr args src _ =>
+    Some (store chunk addr args src (tenv src) rel)
+  | Iop op args dst _ => Some (oper dst (SOp op) args rel)
+  | Iload trap chunk addr args dst _ => Some (oper dst (SLoad chunk addr) args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
   | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
+  End PER_NODE.
 
-Definition apply_instr' code (pc : node) (ro : RB.t) : RB.t :=
+Definition apply_instr' (tenv : typing_env) code (pc : node) (ro : RB.t) : RB.t :=
   match ro with
   | None => None
   | Some x =>
     match code ! pc with
     | None => RB.bot
-    | Some instr => apply_instr pc instr x
+    | Some instr => apply_instr pc tenv instr x
     end
   end.
 
-Definition internal_analysis (f : RTL.function) := DS.fixpoint
+Definition internal_analysis
+  (tenv : typing_env)
+  (f : RTL.function) := DS.fixpoint
   (RTL.fn_code f) RTL.successors_instr
-  (apply_instr' (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
+  (apply_instr' tenv (RTL.fn_code f)) (RTL.fn_entrypoint f) (Some RELATION.top).
 
 End OPERATIONS.
 

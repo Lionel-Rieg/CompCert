@@ -146,7 +146,7 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 7)
    @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
    @@ print (print_RTL 8)
-   @@ total_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
+  @@@ partial_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
    @@ print (print_RTL 9)
    @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
    @@ print (print_RTL 10)
@@ -311,7 +311,7 @@ Proof.
   set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
   destruct (partial_if optim_CSE CSE.transf_program p12) as [p13|e] eqn:P13; simpl in T; try discriminate.
   set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
-  set (p13ter := total_if optim_CSE3 CSE3.transf_program p13bis) in *.
+  destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; simpl in T; try discriminate.
   set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
   destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; simpl in T; try discriminate.
   set (p14bis := total_if all_loads_nontrap Allnontrap.transf_program p14) in *.
@@ -337,7 +337,7 @@ Proof.
   exists p12; split. apply total_if_match. apply Renumberproof.transf_program_match.
   exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
   exists p13bis; split. apply total_if_match. apply CSE2proof.transf_program_match.
-  exists p13ter; split. apply total_if_match. apply CSE3proof.transf_program_match.
+  exists p13ter; split. eapply partial_if_match; eauto. apply CSE3proof.transf_program_match.
   exists p13quater; split. eapply total_if_match; eauto. apply ForwardMovesproof.transf_program_match.
   exists p14; split. eapply partial_if_match; eauto. apply Deadcodeproof.transf_program_match.
   exists p14bis; split. eapply total_if_match; eauto. apply Allnontrapproof.transf_program_match.
