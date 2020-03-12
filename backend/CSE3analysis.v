@@ -296,6 +296,11 @@ Section OPERATIONS.
       end
     else rel'.
     
+  Definition store
+             (chunk : memory_chunk) (addr: addressing) (args : list reg)
+             (src : reg) (ty: typ)
+             (rel : RELATION.t) : RELATION.t :=
+    store1 chunk addr (forward_move_l rel args) src ty rel.
   End PER_NODE.
 
 Definition apply_instr no instr (rel : RELATION.t) : RB.t :=

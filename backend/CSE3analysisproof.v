@@ -689,5 +689,23 @@ Section SOUNDNESS.
     eauto.
   Qed.
   
-  Hint Resolve store2_sound : cse3.
+  Hint Resolve store1_sound : cse3.
+
+  Theorem store_sound:
+    forall no chunk addr args a src rel tenv rs m m',
+      sem_rel rel rs m ->
+      wt_regset tenv rs ->
+      eval_addressing genv sp addr (rs ## args) = Some a ->
+      Mem.storev chunk m a (rs#src) = Some m' ->
+      sem_rel (store (ctx:=ctx) no chunk addr args src (tenv src) rel) rs m'.
+  Proof.
+    unfold store.
+    intros until m'.
+    intros REL WT ADDR STORE.
+    rewrite <- forward_move_l_sound with (rel:=rel) (m:=m) in ADDR by trivial.
+    rewrite <- forward_move_sound with (rel:=rel) (m:=m) in STORE by trivial.
+    apply store1_sound with (a := a) (m := m); trivial.
+    rewrite forward_move_sound with (rel:=rel) (m:=m) in STORE by trivial.
+    assumption.
+  Qed.
 End SOUNDNESS.
