@@ -286,12 +286,15 @@ Section OPERATIONS.
              (src : reg) (ty: typ)
              (rel : RELATION.t) : RELATION.t :=
     let rel' := store2 chunk addr args src rel in
-    match eq_find {| eq_lhs := src;
-                     eq_op  := SLoad chunk addr;
-                     eq_args:= args |} with
-    | Some id => PSet.add id rel'
-    | None => rel'
-    end.
+    if loadv_storev_compatible_type chunk ty
+    then
+      match eq_find {| eq_lhs := src;
+                       eq_op  := SLoad chunk addr;
+                       eq_args:= args |} with
+      | Some id => PSet.add id rel'
+      | None => rel'
+      end
+    else rel'.
     
   End PER_NODE.
 

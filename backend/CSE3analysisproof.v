@@ -7,6 +7,7 @@ Require Import Globalenvs Values.
 Require Import Linking Values Memory Globalenvs Events Smallstep.
 Require Import Registers Op RTL.
 Require Import CSE3analysis CSE2deps CSE2depsproof HashedSet.
+Require Import RTLtyping.
 Require Import Lia.
 
 Theorem loadv_storev_really_same:
@@ -644,15 +645,48 @@ Section SOUNDNESS.
   Hint Resolve oper_sound : cse3.
 
   Theorem store2_sound:
-    forall chunk addr args a src rel rs m m' v,
+    forall chunk addr args a src rel rs m m',
       sem_rel rel rs m ->
       eval_addressing genv sp addr (rs ## args) = Some a ->
-      Mem.storev chunk m a v = Some m' ->
+      Mem.storev chunk m a (rs # src) = Some m' ->
       sem_rel (store2 (ctx:=ctx) chunk addr args src rel) rs m'.
   Proof.
     unfold store2.
     intros.
     apply kill_mem_sound with (m:=m); auto.
+  Qed.
+  
+  Hint Resolve store2_sound : cse3.
+
+  Theorem store1_sound:
+    forall no chunk addr args a src rel tenv rs m m',
+      sem_rel rel rs m ->
+      wt_regset tenv rs ->
+      eval_addressing genv sp addr (rs ## args) = Some a ->
+      Mem.storev chunk m a (rs#src) = Some m' ->
+      sem_rel (store1 (ctx:=ctx) no chunk addr args src (tenv src) rel) rs m'.
+  Proof.
+    unfold store1.
+    intros until m'.
+    intros REL WT ADDR STORE.
+    assert (sem_rel (store2 (ctx:=ctx) chunk addr args src rel) rs m') as REL' by eauto with cse3.
+    destruct loadv_storev_compatible_type eqn:COMPATIBLE.
+    2: auto; fail.
+    destruct eq_find as [eq_id | ] eqn:FIND.
+    2: auto; fail.
+    intros i eq CONTAINS CATALOG.
+    destruct (peq i eq_id).
+    { subst i.
+      rewrite eq_find_sound with (no:=no) (eq0:={| eq_lhs := src; eq_op := SLoad chunk addr; eq_args := args |}) in CATALOG; trivial.
+      inv CATALOG.
+      unfold sem_eq.
+      simpl.
+      rewrite ADDR.
+      rewrite loadv_storev_really_same with (m1:=m) (v:=rs#src) (ty:=(tenv src)); trivial.
+    }
+    unfold sem_rel in REL'.
+    rewrite PSet.gaddo in CONTAINS by congruence.
+    eauto.
   Qed.
   
   Hint Resolve store2_sound : cse3.
