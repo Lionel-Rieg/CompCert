@@ -198,9 +198,8 @@ let do_loop_heuristic code cond ifso ifnot is_loop_header =
 let get_directions code entrypoint =
   let bfs_order = bfs code entrypoint
   and is_loop_header = get_loop_headers code entrypoint
-  and directions = ref (PTree.map (fun n i -> false) code) (* false <=> fallthru *)
+  and directions = ref (PTree.map (fun n i -> None) code) (* None <=> no predicted direction *)
   in begin
-    (* Printf.printf "Loop headers: "; *)
     (* ptree_printbool is_loop_header; *)
     (* Printf.printf "\n"; *)
     List.iter (fun n ->
@@ -217,11 +216,10 @@ let get_directions code entrypoint =
               | None -> preferred := do_heur code cond ifso ifnot is_loop_header
               | Some _ -> ()
             ) heuristics;
-            (match !preferred with None -> (Printf.printf "\tRANDOM\n"; preferred := Some (Random.bool ())) | Some _ -> ());
-            directions := PTree.set n (get_some !preferred) !directions;
+            directions := PTree.set n !preferred !directions;
             (match !preferred with | Some false -> Printf.printf "\tFALLTHROUGH\n"
-                                  | Some true -> Printf.printf "\tBRANCH\n"
-                                  | None -> ());
+                                   | Some true -> Printf.printf "\tBRANCH\n"
+                                   | None -> Printf.printf "\tUNSURE\n");
             Printf.printf "---------------------------------------\n"
           end
       | _ -> ()
@@ -230,7 +228,7 @@ let get_directions code entrypoint =
   end
 
 let update_direction direction = function
-| Icond (cond, lr, n, n', _) -> Icond (cond, lr, n, n', Some direction)
+| Icond (cond, lr, n, n', _) -> Icond (cond, lr, n, n', direction)
 | i -> i
 
 let rec update_direction_rec directions = function
@@ -239,6 +237,7 @@ let rec update_direction_rec directions = function
     in let direction = get_some @@ PTree.get n directions
     in PTree.set n (update_direction direction i) (update_direction_rec directions lm)
 
+(* Uses branch prediction to write prediction annotations in Icond *)
 let update_directions code entrypoint =
   let directions = get_directions code entrypoint
   in begin
@@ -510,7 +509,7 @@ let rec invert_iconds code = function
 
 let duplicate_aux f =
   let entrypoint = f.fn_entrypoint in
-  let code = f.fn_code in
+  let code = update_directions (f.fn_code) entrypoint in
   let traces = select_traces code entrypoint in
   let icond_code = invert_iconds code traces in
   let preds = get_predecessors_rtl icond_code in

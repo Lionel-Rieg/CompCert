@@ -154,7 +154,7 @@ let forward_sequences code entry =
   let visited = ref (PTree.map (fun n i -> false) code) in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
   let rec traverse_fallthrough code node =
-    (* Printf.printf "Traversing %d..\n" (P.to_int node); *)
+    Printf.printf "Traversing %d..\n" (P.to_int node);
     if not (get_some @@ PTree.get node !visited) then begin
       visited := PTree.set node true !visited;
       match PTree.get node code with
@@ -163,12 +163,13 @@ let forward_sequences code entry =
           let ln, rem = match (last_element bb) with
           | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
           | Lbuiltin _ -> assert false
-          | Ltailcall _ | Lreturn -> ([], [])
+          | Ltailcall _ | Lreturn -> begin Printf.printf "STOP tailcall/return\n"; ([], []) end
           | Lbranch n -> let ln, rem = traverse_fallthrough code n in (ln, rem)
-          | Lcond (_, _, ifso, ifnot, _) -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
-          | Ljumptable(_, ln) -> match ln with
-              | [] -> ([], [])
-              | n :: ln -> let lln, rem = traverse_fallthrough code n in (lln, ln @ rem)
+          | Lcond (_, _, ifso, ifnot, info) -> (match info with
+            | None -> begin Printf.printf "STOP Lcond None\n"; ([], [ifso; ifnot]) end
+            | Some false -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
+            | Some true -> failwith "Inconsistency detected: ifnot is not the preferred branch")
+          | Ljumptable(_, ln) -> begin Printf.printf "STOP Ljumptable\n"; ([], ln) end
           in ([node] @ ln, rem)
       end
     else ([], [])
@@ -179,6 +180,7 @@ let forward_sequences code entry =
       in [fs] @ ((f code rem_from_node) @ (f code ln))
   in (f code [entry])
 
+(** Unused code
 module PInt = struct
   type t = P.t
   let compare x y = compare (P.to_int x) (P.to_int y)
@@ -219,7 +221,10 @@ let can_be_merged code s s' =
   | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
   | Lbuiltin _ | Ltailcall _ | Lreturn -> false
   | Lbranch n -> n == first_s'
-  | Lcond (_, _, ifso, ifnot, _) -> ifnot == first_s'
+  | Lcond (_, _, ifso, ifnot, info) -> (match info with
+    | None -> false
+    | Some false -> ifnot == first_s'
+    | Some true -> failwith "Inconsistency detected - ifnot is not the preferred branch")
   | Ljumptable (_, ln) ->
       match ln with
       | [] -> false
@@ -256,6 +261,7 @@ let try_merge code (fs: (BinNums.positive list) list) =
     end
   done;
   !seqs
+*)
 
 (** Code adapted from Duplicateaux.get_loop_headers
   *
