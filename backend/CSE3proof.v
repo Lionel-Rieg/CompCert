@@ -17,23 +17,37 @@ Require Import CSE3 CSE3analysis CSE3analysisproof.
 Require Import RTLtyping.
 
 
+Definition match_prog (p tp: RTL.program) :=
+  match_program (fun ctx f tf => transf_fundef f = OK tf) eq p tp.
+
+Lemma transf_program_match:
+  forall p tp, transf_program p = OK tp -> match_prog p tp.
+Proof.
+  intros. eapply match_transform_partial_program; eauto.
+Qed.
+
+Section PRESERVATION.
+
+Variables prog tprog: program.
+Hypothesis TRANSF: match_prog prog tprog.
+Let ge := Genv.globalenv prog.
+Let tge := Genv.globalenv tprog.
+
 Section SOUNDNESS.
-  Variable F V : Type.
-  Variable genv: Genv.t F V.
-  Variable sp : val.
-  Variable ctx : eq_context.
+Variable sp : val.
+Variable ctx : eq_context.
 
-  Definition sem_rel_b (rel : RB.t) (rs : regset) (m : mem) :=
-    match rel with
-    | None => False
-    | Some rel => sem_rel (ctx:=ctx) (genv:=genv) (sp:=sp) rel rs m
-    end.
+Definition sem_rel_b (rel : RB.t) (rs : regset) (m : mem) :=
+  match rel with
+  | None => False
+  | Some rel => sem_rel (ctx:=ctx) (genv:=ge) (sp:=sp) rel rs m
+  end.
 
-  Lemma forward_move_b_sound :
-    forall rel rs m x,
-      (sem_rel_b rel rs m) ->
-      rs # (forward_move_b (ctx := ctx) rel x) = rs # x.
-  Proof.
+Lemma forward_move_b_sound :
+  forall rel rs m x,
+    (sem_rel_b rel rs m) ->
+    rs # (forward_move_b (ctx := ctx) rel x) = rs # x.
+Proof.
     destruct rel as [rel | ]; simpl; intros.
     2: contradiction.
     eapply forward_move_sound; eauto.
@@ -86,22 +100,6 @@ Section SOUNDNESS.
     assumption.
   Qed.
 End SOUNDNESS.
-
-Definition match_prog (p tp: RTL.program) :=
-  match_program (fun ctx f tf => transf_fundef f = OK tf) eq p tp.
-
-Lemma transf_program_match:
-  forall p tp, transf_program p = OK tp -> match_prog p tp.
-Proof.
-  intros. eapply match_transform_partial_program; eauto.
-Qed.
-
-Section PRESERVATION.
-
-Variables prog tprog: program.
-Hypothesis TRANSF: match_prog prog tprog.
-Let ge := Genv.globalenv prog.
-Let tge := Genv.globalenv tprog.
 
 Lemma functions_translated:
   forall (v: val) (f: RTL.fundef),
@@ -232,6 +230,7 @@ Proof.
   eapply function_ptr_translated; eauto.
 Qed.
 
+Check sem_rel_b.
 Inductive match_stackframes: list stackframe -> list stackframe -> signature -> Prop :=
   | match_stackframes_nil: forall sg,
       sg.(sig_res) = Tint ->
@@ -245,7 +244,11 @@ Inductive match_stackframes: list stackframe -> list stackframe -> signature -> 
         (WTRES: tenv res = proj_sig_res sg)
         (invariants : PMap.t RB.t)
         (hints : analysis_hints)
-        (IND: is_inductive_allstep (ctx:=(context_from_hints hints)) f tenv invariants),
+        (IND: is_inductive_allstep (ctx:=(context_from_hints hints)) f tenv invariants)
+        (REL: forall m vres,
+            sem_rel_b sp (context_from_hints hints)
+                      (invariants#pc) (rs#res <- vres) m),
+
       match_stackframes
         (Stackframe res f sp pc rs :: s)
         (Stackframe res tf sp pc rs :: ts)
@@ -260,7 +263,8 @@ Inductive match_states: state -> state -> Prop :=
         (WTRS: wt_regset tenv rs)
         (invariants : PMap.t RB.t)
         (hints : analysis_hints)
-        (IND: is_inductive_allstep  (ctx:=(context_from_hints hints)) f tenv invariants),
+        (IND: is_inductive_allstep  (ctx:=(context_from_hints hints)) f tenv invariants)
+        (REL: sem_rel_b sp (context_from_hints hints) (invariants#pc) rs m),
       match_states (State s f sp pc rs m)
                    (State ts tf sp pc rs m)
   | match_states_call:
@@ -334,6 +338,21 @@ Proof.
   auto.
 Qed.
 
+Lemma rel_ge:
+  forall inv inv'
+         (GE : RELATION.ge inv' inv)
+         ctx sp rs m
+         (REL: sem_rel (genv:=ge) (sp:=sp) (ctx:=ctx) inv rs m),
+  sem_rel (genv:=ge) (sp:=sp) (ctx:=ctx) inv' rs m.
+Proof.
+  unfold sem_rel, RELATION.ge.
+  intros.
+  apply (REL i); trivial.
+  eapply HashedSet.PSet.is_subset_spec1; eassumption.
+Qed.
+
+Hint Resolve rel_ge : cse3.
+
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 -> 
   forall S1', match_states S1 S1' ->
@@ -345,12 +364,44 @@ Proof.
     + apply exec_Inop; auto.
       TR_AT. reflexivity.
     + econstructor; eauto.
+      
+      unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND.
+      specialize IND with (pc:=pc) (pc':=pc') (instr := (Inop pc')).
+      simpl in IND.
+      rewrite H in IND.
+      simpl in IND.
+      intuition.
+      unfold sem_rel_b in *.
+      destruct (invariants # pc') as [inv' | ];
+        destruct (invariants # pc) as [inv | ];
+        simpl in *;
+        try contradiction.
+      eapply rel_ge; eassumption.
+      
   - (* Iop *)
     exists (State ts tf sp pc' (rs # res <- v) m). split.
     + admit.
     + econstructor; eauto.
-      eapply wt_exec_Iop with (f:=f); try eassumption.
-      eauto with wt.
+      * eapply wt_exec_Iop with (f:=f); try eassumption.
+        eauto with wt.
+      * unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND.
+        specialize IND with (pc:=pc) (pc':=pc') (instr := (Iop op args res pc')).
+        simpl in IND.
+        rewrite H in IND.
+        simpl in IND.
+        intuition.
+        unfold sem_rel_b in *.
+        destruct (invariants # pc') as [inv' | ];
+          destruct (invariants # pc) as [inv | ];
+          simpl in *;
+          try contradiction.
+        eapply rel_ge.
+        eassumption.
+        apply oper_sound; eauto with cse3.
+        simpl.
+        rewrite H0.
+        trivial.
+
   - (* Iload *)
     exists (State ts tf sp pc' (rs # dst <- v) m). split.
     + admit.
