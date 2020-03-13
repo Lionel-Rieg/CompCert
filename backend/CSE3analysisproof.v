@@ -189,6 +189,22 @@ Proof.
   eassumption.
 Qed.
 
+Hint Resolve get_kills_has_lhs : cse3.
+
+Lemma context_from_hints_get_kills_has_lhs :
+  forall hints lhs sop args j,
+    PTree.get j (hint_eq_catalog hints) = Some {| eq_lhs := lhs;
+                              eq_op  := sop;
+                              eq_args:= args |} ->
+    PSet.contains  (eq_kill_reg (context_from_hints hints) lhs) j = true.
+Proof.
+  intros; simpl.
+  eapply get_kills_has_lhs.
+  eassumption.
+Qed.
+
+Hint Resolve context_from_hints_get_kills_has_lhs : cse3.
+
 Lemma get_kills_has_arg :
   forall eqs lhs sop arg args j,
     PTree.get j eqs = Some {| eq_lhs := lhs;
@@ -211,6 +227,21 @@ Proof.
 Qed.
 
 Hint Resolve get_kills_has_arg : cse3.
+
+Lemma context_from_hints_get_kills_has_arg :
+  forall hints lhs sop arg args j,
+    PTree.get j (hint_eq_catalog hints) = Some {| eq_lhs := lhs;
+                              eq_op  := sop;
+                              eq_args:= args |} ->
+    In arg args ->
+    PSet.contains (eq_kill_reg (context_from_hints hints) arg) j = true.
+Proof.
+  intros.
+  simpl.
+  eapply get_kills_has_arg; eassumption.
+Qed.
+
+Hint Resolve context_from_hints_get_kills_has_arg : cse3.
 
 Definition eq_involves (eq : equation) (i : reg) :=
   i = (eq_lhs eq) \/ In i (eq_args eq).

@@ -353,6 +353,37 @@ Qed.
 
 Hint Resolve rel_ge : cse3.
 
+Lemma sem_rhs_sop :
+  forall sp op rs args m v,
+  eval_operation ge sp op rs ## args m = Some v ->
+  sem_rhs (genv:=ge) (sp:=sp) (SOp op) args rs m v.
+Proof.
+  intros. simpl.
+  rewrite H.
+  reflexivity.
+Qed.
+
+Hint Resolve sem_rhs_sop : cse3.
+
+Ltac IND_STEP :=
+        match goal with
+        REW: (fn_code ?fn) ! ?mpc = Some ?minstr,
+        IND: is_inductive_allstep ?fn ?tenv ?invariants
+      |-
+        sem_rel_b ?sp ?ctx (?inv # ?mpc') ?rs ?m =>
+        unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND;
+        specialize IND with (pc:=mpc) (pc':=mpc') (instr:=minstr);
+        simpl in IND;
+        rewrite REW in IND;
+        simpl in IND;
+        destruct (inv # mpc') as [zinv' | ];
+        destruct (inv # mpc) as [zinv | ];
+        simpl in *;
+        intuition;
+        eapply rel_ge; eauto with cse3;
+        idtac mpc mpc' fn minstr inv
+      end.
+
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 -> 
   forall S1', match_states S1 S1' ->
@@ -364,19 +395,7 @@ Proof.
     + apply exec_Inop; auto.
       TR_AT. reflexivity.
     + econstructor; eauto.
-      
-      unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND.
-      specialize IND with (pc:=pc) (pc':=pc') (instr := (Inop pc')).
-      simpl in IND.
-      rewrite H in IND.
-      simpl in IND.
-      intuition.
-      unfold sem_rel_b in *.
-      destruct (invariants # pc') as [inv' | ];
-        destruct (invariants # pc) as [inv | ];
-        simpl in *;
-        try contradiction.
-      eapply rel_ge; eassumption.
+      IND_STEP.
       
   - (* Iop *)
     exists (State ts tf sp pc' (rs # res <- v) m). split.
@@ -384,23 +403,8 @@ Proof.
     + econstructor; eauto.
       * eapply wt_exec_Iop with (f:=f); try eassumption.
         eauto with wt.
-      * unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND.
-        specialize IND with (pc:=pc) (pc':=pc') (instr := (Iop op args res pc')).
-        simpl in IND.
-        rewrite H in IND.
-        simpl in IND.
-        intuition.
-        unfold sem_rel_b in *.
-        destruct (invariants # pc') as [inv' | ];
-          destruct (invariants # pc) as [inv | ];
-          simpl in *;
-          try contradiction.
-        eapply rel_ge.
-        eassumption.
+      * IND_STEP.
         apply oper_sound; eauto with cse3.
-        simpl.
-        rewrite H0.
-        trivial.
 
   - (* Iload *)
     exists (State ts tf sp pc' (rs # dst <- v) m). split.
