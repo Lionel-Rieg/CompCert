@@ -402,6 +402,17 @@ Proof.
 Qed.
 
 Hint Resolve sem_rhs_sload_notrap2 : cse3.
+
+Lemma sem_rel_top:
+  forall ctx sp rs m, sem_rel (genv:=ge) (sp:=sp) (ctx:=ctx) RELATION.top rs m.
+Proof.
+  unfold sem_rel, RELATION.top.
+  intros.
+  rewrite HashedSet.PSet.gempty in *.
+  discriminate.
+Qed.
+
+Hint Resolve sem_rel_top : cse3.
                                                                              
 Ltac IND_STEP :=
         match goal with
@@ -476,6 +487,7 @@ Proof.
       * admit.
     + econstructor; eauto.
       IND_STEP.
+      apply store_sound with (a0:=a) (m0:=m); eauto with cse3.
       
   - (* Icall *)
     destruct (find_function_translated ros rs fd H0) as [tfd [HTFD1 HTFD2]].
@@ -499,7 +511,8 @@ Proof.
       * eapply eval_builtin_args_preserved with (ge1 := ge); eauto. exact symbols_preserved.
       * eapply external_call_symbols_preserved; eauto. apply senv_preserved.
     + econstructor; eauto.
-      eapply wt_exec_Ibuiltin with (f:=f); eauto with wt.
+      * eapply wt_exec_Ibuiltin with (f:=f); eauto with wt.
+      * IND_STEP.
   - (* Icond *)
     econstructor. split.
     + eapply exec_Icond; try eassumption.
@@ -507,12 +520,17 @@ Proof.
         admit.
       * reflexivity.
     + econstructor; eauto.
+      destruct b; IND_STEP.
+      
   - (* Ijumptable *)
     econstructor. split.
     + eapply exec_Ijumptable; try eassumption.
       erewrite transf_function_at by eauto. simpl.
       admit.
     + econstructor; eauto.
+      assert (In pc' tbl) as IN_LIST by (eapply list_nth_z_in; eassumption).
+      IND_STEP.
+
   - (* Ireturn *)
     destruct or.
     -- econstructor. split.
@@ -556,6 +574,7 @@ Proof.
         assumption.
       * apply checked_is_inductive_allstep.
         apply transf_function_invariants_inductive with (tf:=tf); auto.
+
   - (* external *)
     simpl in FUN.
     inv FUN.
