@@ -378,18 +378,9 @@ Section SOUNDNESS.
       PSet.contains (eq_kill_reg ctx arg) j = true.
 
   Hypothesis ctx_kill_mem_has_depends_on_mem :
-    forall lhs op args j,
-      eq_catalog ctx j = Some {| eq_lhs := lhs;
-                                 eq_op  := SOp op;
-                                 eq_args:= args |} ->
-      op_depends_on_memory op = true ->
-      PSet.contains (eq_kill_mem ctx tt) j = true.
-
-  Hypothesis ctx_kill_mem_has_load :
-    forall lhs chunk addr args j,
-      eq_catalog ctx j = Some {| eq_lhs := lhs;
-                                 eq_op  := SLoad chunk addr;
-                                 eq_args:= args |} ->
+    forall eq j,
+      eq_catalog ctx j = Some eq ->
+      eq_depends_on_mem eq = true ->
       PSet.contains (eq_kill_mem ctx tt) j = true.
 
   Theorem kill_reg_sound :
@@ -529,17 +520,17 @@ Section SOUNDNESS.
     rewrite andb_true_iff in SUBTRACT.
     intuition.
     destruct (eq_op eq) as [op | chunk addr] eqn:OP.
-    - specialize ctx_kill_mem_has_depends_on_mem with (lhs := eq_lhs eq) (op := op) (args := eq_args eq) (j := i).
+    - specialize ctx_kill_mem_has_depends_on_mem with (eq0 := eq) (j := i).
+      unfold eq_depends_on_mem in ctx_kill_mem_has_depends_on_mem.
+      rewrite OP in ctx_kill_mem_has_depends_on_mem.
       rewrite (op_depends_on_memory_correct genv sp op) with (m2 := m).
       assumption.
       destruct (op_depends_on_memory op) in *; trivial.
       rewrite ctx_kill_mem_has_depends_on_mem in H0; trivial.
       discriminate H0.
-      rewrite <- OP.
-      rewrite CATALOG.
-      destruct eq; reflexivity.
-    - specialize ctx_kill_mem_has_load with (lhs := eq_lhs eq) (chunk := chunk) (addr := addr) (args := eq_args eq) (j := i).
+    - specialize ctx_kill_mem_has_depends_on_mem with (eq0 := eq) (j := i).
       destruct eq as [lhs op args]; simpl in *.
+      rewrite OP in ctx_kill_mem_has_depends_on_mem.
       rewrite negb_true_iff in H0.
       rewrite OP in CATALOG.
       intuition.
