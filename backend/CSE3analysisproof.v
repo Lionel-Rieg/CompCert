@@ -216,9 +216,9 @@ Definition eq_involves (eq : equation) (i : reg) :=
   i = (eq_lhs eq) \/ In i (eq_args eq).
 
 Section SOUNDNESS.
-  Variable F V : Type.
-  Variable genv: Genv.t F V.
-  Variable sp : val.
+  Context {F V : Type}.
+  Context {genv: Genv.t F V}.
+  Context {sp : val}.
 
   Context {ctx : eq_context}.
 

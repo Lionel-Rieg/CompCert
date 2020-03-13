@@ -16,12 +16,76 @@ Require Import Registers Op RTL.
 Require Import CSE3 CSE3analysis CSE3analysisproof.
 Require Import RTLtyping.
 
+
 Section SOUNDNESS.
   Variable F V : Type.
   Variable genv: Genv.t F V.
   Variable sp : val.
-End SOUNDNESS.
+  Variable ctx : eq_context.
 
+  Definition sem_rel_b (rel : RB.t) (rs : regset) (m : mem) :=
+    match rel with
+    | None => False
+    | Some rel => sem_rel (ctx:=ctx) (genv:=genv) (sp:=sp) rel rs m
+    end.
+
+  Lemma forward_move_b_sound :
+    forall rel rs m x,
+      (sem_rel_b rel rs m) ->
+      rs # (forward_move_b (ctx := ctx) rel x) = rs # x.
+  Proof.
+    destruct rel as [rel | ]; simpl; intros.
+    2: contradiction.
+    eapply forward_move_sound; eauto.
+  Qed.
+
+  Lemma forward_move_l_b_sound :
+    forall rel rs m x,
+      (sem_rel_b rel rs m) ->
+      rs ## (forward_move_l_b (ctx := ctx) rel x) = rs ## x.
+  Proof.
+    destruct rel as [rel | ]; simpl; intros.
+    2: contradiction.
+    eapply forward_move_l_sound; eauto.
+  Qed.
+
+  Definition fmap_sem (fmap : PMap.t RB.t) (pc : node) (rs : regset) (m : mem) :=
+    sem_rel_b (PMap.get pc fmap) rs m.
+
+  Definition subst_arg (fmap : PMap.t RB.t) (pc : node) (x : reg) : reg :=
+    forward_move_b (ctx:=ctx) (PMap.get pc fmap) x.
+  
+  Lemma subst_arg_ok:
+    forall invariants,
+    forall pc,
+    forall rs,
+    forall m,
+    forall arg,
+    forall (SEM : fmap_sem invariants pc rs m),
+      rs # (subst_arg invariants pc arg) = rs # arg.
+  Proof.
+    intros.
+    apply forward_move_b_sound with (m:=m).
+    assumption.
+  Qed.
+
+  Definition subst_args (fmap : PMap.t RB.t) (pc : node) (x : list reg) : list reg :=
+    forward_move_l_b (ctx:=ctx) (PMap.get pc fmap) x.
+  
+  Lemma subst_args_ok:
+    forall invariants,
+    forall pc,
+    forall rs,
+    forall m,
+    forall args,
+    forall (SEM : fmap_sem invariants pc rs m),
+      rs ## (subst_args invariants pc args) = rs ## args.
+  Proof.
+    intros.
+    apply forward_move_l_b_sound with (m:=m).
+    assumption.
+  Qed.
+End SOUNDNESS.
 
 Definition match_prog (p tp: RTL.program) :=
   match_program (fun ctx f tf => transf_fundef f = OK tf) eq p tp.
