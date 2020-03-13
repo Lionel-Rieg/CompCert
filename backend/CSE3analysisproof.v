@@ -120,7 +120,14 @@ Definition xlget_kills (eqs : list (eq_id * equation)) (m :  Regmap.t PSet.t) :
   Regmap.t PSet.t :=
   List.fold_left (fun already (item : eq_id * equation) =>
     add_i_j (eq_lhs (snd item)) (fst item)
-            (add_ilist_j (eq_args (snd item)) (fst item) already)) eqs m. 
+            (add_ilist_j (eq_args (snd item)) (fst item) already)) eqs m.
+
+
+Definition xlget_mem_kills (eqs : list (positive * equation)) (m : PSet.t) : PSet.t :=
+(fold_left
+       (fun (a : PSet.t) (p : positive * equation) =>
+        if eq_depends_on_mem (snd p) then PSet.add (fst p) a else a)
+       eqs m).
 
 Lemma xlget_kills_monotone :
   forall eqs m i j,
@@ -133,6 +140,24 @@ Proof.
 Qed.
 
 Hint Resolve xlget_kills_monotone : cse3.
+
+Lemma xlget_mem_kills_monotone :
+  forall eqs m j,
+    PSet.contains m j = true ->
+    PSet.contains (xlget_mem_kills eqs m) j = true.
+Proof.
+  induction eqs; simpl; trivial.
+  intros.
+  destruct eq_depends_on_mem.
+  - apply IHeqs.
+    destruct (peq (fst a) j).
+    + subst j. apply PSet.gadds.
+    + rewrite PSet.gaddo by congruence.
+      trivial.
+  - auto.
+Qed.
+
+Hint Resolve xlget_mem_kills_monotone : cse3.
 
 Lemma xlget_kills_has_lhs :
   forall eqs m lhs sop args j,
@@ -242,6 +267,60 @@ Proof.
 Qed.
 
 Hint Resolve context_from_hints_get_kills_has_arg : cse3.
+
+Lemma xlget_kills_has_eq_depends_on_mem :
+  forall eqs eq j m,
+    In (j, eq) eqs ->
+    eq_depends_on_mem eq = true ->
+    PSet.contains (xlget_mem_kills eqs m) j = true.
+Proof.
+  induction eqs; simpl.
+  contradiction.
+  intros.
+  destruct H.
+  { subst a.
+    simpl.
+    rewrite H0.
+    apply xlget_mem_kills_monotone.
+    apply PSet.gadds.
+  }
+  eauto.
+Qed.
+
+Hint Resolve xlget_kills_has_eq_depends_on_mem : cse3.
+
+Lemma get_kills_has_eq_depends_on_mem :
+  forall eqs eq j,
+    PTree.get j eqs = Some eq ->
+    eq_depends_on_mem eq = true ->
+    PSet.contains (get_mem_kills eqs) j = true.
+Proof.
+  intros.
+  unfold get_mem_kills.
+  rewrite PTree.fold_spec.
+  change (fold_left
+       (fun (a : PSet.t) (p : positive * equation) =>
+        if eq_depends_on_mem (snd p) then PSet.add (fst p) a else a)
+       (PTree.elements eqs) PSet.empty)
+    with (xlget_mem_kills (PTree.elements eqs) PSet.empty).
+  eapply xlget_kills_has_eq_depends_on_mem.
+  apply PTree.elements_correct.
+  eassumption.
+  trivial.
+Qed.
+  
+Lemma context_from_hints_get_kills_has_eq_depends_on_mem :
+  forall hints eq j,
+    PTree.get j (hint_eq_catalog hints) = Some eq ->
+    eq_depends_on_mem eq = true ->
+    PSet.contains (eq_kill_mem (context_from_hints hints) tt) j = true.
+Proof.
+  intros.
+  simpl.
+  eapply get_kills_has_eq_depends_on_mem; eassumption.
+Qed.
+
+Hint Resolve context_from_hints_get_kills_has_eq_depends_on_mem : cse3.
 
 Definition eq_involves (eq : equation) (i : reg) :=
   i = (eq_lhs eq) \/ In i (eq_args eq).

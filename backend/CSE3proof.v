@@ -377,6 +377,31 @@ Proof.
 Qed.
 
 Hint Resolve sem_rhs_sload : cse3.
+
+Lemma sem_rhs_sload_notrap1 :
+  forall sp chunk addr rs args m,
+  eval_addressing ge sp addr rs ## args = None ->
+  sem_rhs (genv:=ge) (sp:=sp) (SLoad chunk addr) args rs m Vundef.
+Proof.
+  intros. simpl.
+  rewrite H.
+  reflexivity.
+Qed.
+
+Hint Resolve sem_rhs_sload_notrap1 : cse3.
+
+Lemma sem_rhs_sload_notrap2 :
+  forall sp chunk addr rs args m a,
+  eval_addressing ge sp addr rs ## args = Some a ->
+  Mem.loadv chunk m a = None ->
+  sem_rhs (genv:=ge) (sp:=sp) (SLoad chunk addr) args rs m Vundef.
+Proof.
+  intros. simpl.
+  rewrite H. rewrite H0.
+  reflexivity.
+Qed.
+
+Hint Resolve sem_rhs_sload_notrap2 : cse3.
                                                                              
 Ltac IND_STEP :=
         match goal with
@@ -432,18 +457,26 @@ Proof.
     exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
     + admit.
     + econstructor; eauto.
-      apply wt_undef; assumption.
+      * apply wt_undef; assumption.
+      * IND_STEP.
+        apply oper_sound; eauto with cse3.
+        
   - (* Iload notrap2 *)
     exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
     + admit.
     + econstructor; eauto.
-      apply wt_undef; assumption.
+      * apply wt_undef; assumption.
+      * IND_STEP.
+        apply oper_sound; eauto with cse3.
+
   - (* Istore *)
     exists (State ts tf sp pc' rs m'). split.
     + eapply exec_Istore; try eassumption.
       * TR_AT. reflexivity.
       * admit.
     + econstructor; eauto.
+      IND_STEP.
+      
   - (* Icall *)
     destruct (find_function_translated ros rs fd H0) as [tfd [HTFD1 HTFD2]].
     econstructor. split.
