@@ -65,9 +65,6 @@ Proof.
 
   Definition fmap_sem (fmap : PMap.t RB.t) (pc : node) (rs : regset) (m : mem) :=
     sem_rel_b (PMap.get pc fmap) rs m.
-
-  Definition subst_arg (fmap : PMap.t RB.t) (pc : node) (x : reg) : reg :=
-    forward_move_b (ctx:=ctx) (PMap.get pc fmap) x.
   
   Lemma subst_arg_ok:
     forall invariants,
@@ -76,15 +73,12 @@ Proof.
     forall m,
     forall arg,
     forall (SEM : fmap_sem invariants pc rs m),
-      rs # (subst_arg invariants pc arg) = rs # arg.
+      rs # (subst_arg (ctx:=ctx) invariants pc arg) = rs # arg.
   Proof.
     intros.
     apply forward_move_b_sound with (m:=m).
     assumption.
   Qed.
-
-  Definition subst_args (fmap : PMap.t RB.t) (pc : node) (x : list reg) : list reg :=
-    forward_move_l_b (ctx:=ctx) (PMap.get pc fmap) x.
   
   Lemma subst_args_ok:
     forall invariants,
@@ -93,7 +87,7 @@ Proof.
     forall m,
     forall args,
     forall (SEM : fmap_sem invariants pc rs m),
-      rs ## (subst_args invariants pc args) = rs ## args.
+      rs ## (subst_args (ctx:=ctx) invariants pc args) = rs ## args.
   Proof.
     intros.
     apply forward_move_l_b_sound with (m:=m).
@@ -242,12 +236,9 @@ Inductive match_stackframes: list stackframe -> list stackframe -> signature -> 
         (WTF: type_function f = OK tenv)
         (WTRS: wt_regset tenv rs)
         (WTRES: tenv res = proj_sig_res sg)
-        (invariants : PMap.t RB.t)
-        (hints : analysis_hints)
-        (IND: is_inductive_allstep (ctx:=(context_from_hints hints)) f tenv invariants)
         (REL: forall m vres,
-            sem_rel_b sp (context_from_hints hints)
-                      (invariants#pc) (rs#res <- vres) m),
+            sem_rel_b sp (context_from_hints (snd (preanalysis tenv f)))
+                      ((fst (preanalysis tenv f))#pc) (rs#res <- vres) m),
 
       match_stackframes
         (Stackframe res f sp pc rs :: s)
@@ -261,10 +252,7 @@ Inductive match_states: state -> state -> Prop :=
         (FUN: transf_function f = OK tf)
         (WTF: type_function f = OK tenv)
         (WTRS: wt_regset tenv rs)
-        (invariants : PMap.t RB.t)
-        (hints : analysis_hints)
-        (IND: is_inductive_allstep  (ctx:=(context_from_hints hints)) f tenv invariants)
-        (REL: sem_rel_b sp (context_from_hints hints) (invariants#pc) rs m),
+        (REL: sem_rel_b sp (context_from_hints (snd (preanalysis tenv f))) ((fst (preanalysis tenv f))#pc) rs m),
       match_states (State s f sp pc rs m)
                    (State ts tf sp pc rs m)
   | match_states_call:
@@ -422,24 +410,26 @@ Proof.
 Qed.
 
 Hint Resolve sem_rel_b_top : cse3.
-                                                                             
+
 Ltac IND_STEP :=
         match goal with
-        REW: (fn_code ?fn) ! ?mpc = Some ?minstr,
-        IND: is_inductive_allstep ?fn ?tenv ?invariants
+        REW: (fn_code ?fn) ! ?mpc = Some ?minstr
       |-
-        sem_rel_b ?sp ?ctx (?inv # ?mpc') ?rs ?m =>
+        sem_rel_b ?sp (context_from_hints (snd (preanalysis ?tenv ?fn))) ((fst (preanalysis ?tenv ?fn)) # ?mpc') ?rs ?m =>
+        assert (is_inductive_allstep (ctx:= (context_from_hints (snd (preanalysis tenv fn)))) fn tenv (fst  (preanalysis tenv fn))) as IND by
+        (apply checked_is_inductive_allstep;
+          eapply transf_function_invariants_inductive; eassumption);
         unfold is_inductive_allstep, is_inductive_step, apply_instr' in IND;
         specialize IND with (pc:=mpc) (pc':=mpc') (instr:=minstr);
         simpl in IND;
         rewrite REW in IND;
         simpl in IND;
-        destruct (inv # mpc') as [zinv' | ];
-        destruct (inv # mpc) as [zinv | ];
+        destruct ((fst (preanalysis tenv fn)) # mpc') as [zinv' | ];
+        destruct ((fst (preanalysis tenv fn)) # mpc) as [zinv | ];
         simpl in *;
         intuition;
         eapply rel_ge; eauto with cse3;
-        idtac mpc mpc' fn minstr inv
+        idtac mpc mpc' fn minstr
       end.
 
 Lemma step_simulation:
@@ -454,10 +444,58 @@ Proof.
       TR_AT. reflexivity.
     + econstructor; eauto.
       IND_STEP.
-      
   - (* Iop *)
     exists (State ts tf sp pc' (rs # res <- v) m). split.
-    + admit.
+    + pose (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iop op args res pc')) as instr'.
+      assert (instr' = (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iop op args res pc'))) by reflexivity.
+      unfold transf_instr, find_op_in_fmap in instr'.
+      destruct (@PMap.get (option RELATION.t) pc) eqn:INV_PC.
+      pose proof (rhs_find_sound (sp:=sp) (genv:=ge) (ctx:=(context_from_hints (snd (preanalysis tenv f)))) pc (SOp op)
+                (CSE3.subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args) t) as FIND_SOUND.
+      * destruct rhs_find eqn:FIND.
+        ** apply exec_Iop with (op := Omove) (args := r :: nil).
+           TR_AT.
+           subst instr'.
+           congruence.
+           simpl.
+           specialize FIND_SOUND with (src := r) (rs := rs) (m := m).
+           simpl in FIND_SOUND.
+           rewrite subst_args_ok with (sp:=sp) (m:=m) in FIND_SOUND.
+           rewrite H0 in FIND_SOUND.
+           rewrite FIND_SOUND; auto.
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+        ** apply exec_Iop with (op := op) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)).
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_operation_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+      * apply exec_Iop with (op := op) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)).
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_operation_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
     + econstructor; eauto.
       * eapply wt_exec_Iop with (f:=f); try eassumption.
         eauto with wt.
