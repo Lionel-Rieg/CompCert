@@ -142,6 +142,19 @@ Proof.
   exists x.
   assumption.
 Qed.
+Lemma transf_function_invariants_inductive:
+  forall f tf tenv, transf_function f = OK tf ->
+    type_function f = OK tenv ->
+    check_inductiveness (ctx:=(context_from_hints (snd (preanalysis tenv f))))
+                        f tenv (fst (preanalysis tenv f)) = true.
+Proof.
+  unfold transf_function; destruct f; simpl; intros.
+  monadInv H.
+  replace x with tenv in * by congruence.
+  clear x.
+  destruct preanalysis as [invariants hints].
+  destruct check_inductiveness; trivial; discriminate.
+Qed.
 
 Lemma find_function_translated:
   forall ros rs fd,
