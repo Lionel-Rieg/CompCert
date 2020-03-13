@@ -242,7 +242,10 @@ Inductive match_stackframes: list stackframe -> list stackframe -> signature -> 
         (FUN: transf_function f = OK tf)
         (WTF: type_function f = OK tenv)
         (WTRS: wt_regset tenv rs)
-        (WTRES: tenv res = proj_sig_res sg),
+        (WTRES: tenv res = proj_sig_res sg)
+        (invariants : PMap.t RB.t)
+        (hints : analysis_hints)
+        (IND: is_inductive_allstep (ctx:=(context_from_hints hints)) f tenv invariants),
       match_stackframes
         (Stackframe res f sp pc rs :: s)
         (Stackframe res tf sp pc rs :: ts)
@@ -254,7 +257,10 @@ Inductive match_states: state -> state -> Prop :=
         (STACKS: match_stackframes s ts (fn_sig tf))
         (FUN: transf_function f = OK tf)
         (WTF: type_function f = OK tenv)
-        (WTRS: wt_regset tenv rs),
+        (WTRS: wt_regset tenv rs)
+        (invariants : PMap.t RB.t)
+        (hints : analysis_hints)
+        (IND: is_inductive_allstep  (ctx:=(context_from_hints hints)) f tenv invariants),
       match_states (State s f sp pc rs m)
                    (State ts tf sp pc rs m)
   | match_states_call:
@@ -437,13 +443,15 @@ Proof.
     + rewrite params_preserved with (tf:=tf) (f:=f) by assumption.
       rewrite entrypoint_preserved with (tf:=tf) (f:=f) by assumption.
       econstructor; eauto.
-      apply type_function_correct in TENV.
-      inv TENV.
-      simpl in WTARGS.
-      rewrite sig_preserved2 with (f:=f) in WTARGS by assumption.
-      apply wt_init_regs.
-      rewrite <- wt_params in WTARGS.
-      assumption.
+      * apply type_function_correct in TENV.
+        inv TENV.
+        simpl in WTARGS.
+        rewrite sig_preserved2 with (f:=f) in WTARGS by assumption.
+        apply wt_init_regs.
+        rewrite <- wt_params in WTARGS.
+        assumption.
+      * apply checked_is_inductive_allstep.
+        apply transf_function_invariants_inductive with (tf:=tf); auto.
   - (* external *)
     simpl in FUN.
     inv FUN.
