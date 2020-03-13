@@ -365,6 +365,19 @@ Qed.
 
 Hint Resolve sem_rhs_sop : cse3.
 
+Lemma sem_rhs_sload :
+  forall sp chunk addr rs args m a v,
+  eval_addressing ge sp addr rs ## args = Some a ->
+  Mem.loadv chunk m a = Some v ->
+  sem_rhs (genv:=ge) (sp:=sp) (SLoad chunk addr) args rs m v.
+Proof.
+  intros. simpl.
+  rewrite H. rewrite H0.
+  reflexivity.
+Qed.
+
+Hint Resolve sem_rhs_sload : cse3.
+                                                                             
 Ltac IND_STEP :=
         match goal with
         REW: (fn_code ?fn) ! ?mpc = Some ?minstr,
@@ -410,8 +423,11 @@ Proof.
     exists (State ts tf sp pc' (rs # dst <- v) m). split.
     + admit.
     + econstructor; eauto.
-      eapply wt_exec_Iload with (f:=f); try eassumption.
-      eauto with wt.
+      * eapply wt_exec_Iload with (f:=f); try eassumption.
+        eauto with wt.
+      * IND_STEP.
+        apply oper_sound; eauto with cse3.
+        
   - (* Iload notrap1 *)
     exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
     + admit.
