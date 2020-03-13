@@ -413,6 +413,15 @@ Proof.
 Qed.
 
 Hint Resolve sem_rel_top : cse3.
+
+Lemma sem_rel_b_top:
+  forall ctx sp rs m, sem_rel_b sp ctx (Some RELATION.top) rs m.
+Proof.
+  intros. simpl.
+  apply sem_rel_top.
+Qed.
+
+Hint Resolve sem_rel_b_top : cse3.
                                                                              
 Ltac IND_STEP :=
         match goal with
@@ -574,7 +583,10 @@ Proof.
         assumption.
       * apply checked_is_inductive_allstep.
         apply transf_function_invariants_inductive with (tf:=tf); auto.
-
+      * rewrite @checked_is_inductive_entry with (tenv:=tenv) (ctx:=(context_from_hints (snd (preanalysis tenv f)))).
+        ** apply sem_rel_b_top.
+        ** apply transf_function_invariants_inductive with (tf:=tf); auto.
+           
   - (* external *)
     simpl in FUN.
     inv FUN.
