@@ -168,7 +168,9 @@ let forward_sequences code entry =
           | Lcond (_, _, ifso, ifnot, info) -> (match info with
             | None -> begin Printf.printf "STOP Lcond None\n"; ([], [ifso; ifnot]) end
             | Some false -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
-            | Some true -> failwith "Inconsistency detected: ifnot is not the preferred branch")
+            | Some true ->
+                let errstr = Printf.sprintf ("Inconsistency detected in node %d: ifnot is not the preferred branch") (P.to_int node) in
+                  failwith errstr)
           | Ljumptable(_, ln) -> begin Printf.printf "STOP Ljumptable\n"; ([], ln) end
           in ([node] @ ln, rem)
       end
