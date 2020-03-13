@@ -329,6 +329,18 @@ let best_predecessor_of node predecessors order is_visited =
   | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
                with Not_found -> None
 
+let print_trace t = print_intlist t
+
+let print_traces traces =
+  let rec f = function
+  | [] -> ()
+  | t::lt -> Printf.printf "\n\t"; print_trace t; Printf.printf ",\n"; f lt
+  in begin
+    Printf.printf "Traces: {";
+    f traces;
+    Printf.printf "}\n";
+  end
+
 (* Algorithm mostly inspired from Chang and Hwu 1988
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
 let select_traces code entrypoint =
@@ -369,19 +381,8 @@ let select_traces code entrypoint =
       end
     done;
     (* Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n"; *)
+    Printf.printf "Traces: "; print_traces !traces;
     !traces
-  end
-
-let print_trace t = print_intlist t
-
-let print_traces traces =
-  let rec f = function
-  | [] -> ()
-  | t::lt -> Printf.printf "\n\t"; print_trace t; Printf.printf ",\n"; f lt
-  in begin
-    Printf.printf "Traces: {";
-    f traces;
-    Printf.printf "}\n";
   end
 
 let rec make_identity_ptree_rec = function
@@ -487,18 +488,16 @@ let superblockify_traces code preds traces =
 
 let rec invert_iconds_trace code = function
   | [] -> code
-  | n::[] -> code
-  | n :: n' :: t ->
+  | n :: ln ->
       let code' = match ptree_get_some n code with
-        | Icond (c, lr, ifso, ifnot, i) ->
-            assert (n' == ifso || n' == ifnot);
-            if (n' == ifso) then (
-              (* Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n); *)
-              let i' = match i with None -> None | Some b -> Some (not b) in
-              PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso, i')) code )
-            else code
+        | Icond (c, lr, ifso, ifnot, info) -> (match info with
+            | Some true -> begin
+                (* Printf.printf "Reversing ifso/ifnot for node %d\n" (P.to_int n); *)
+                PTree.set n (Icond (Op.negate_condition c, lr, ifnot, ifso, Some false)) code
+              end
+            | _ -> code)
         | _ -> code
-      in invert_iconds_trace code' (n'::t)
+      in invert_iconds_trace code' ln
 
 let rec invert_iconds code = function
   | [] -> code
