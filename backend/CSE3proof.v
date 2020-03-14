@@ -642,9 +642,10 @@ Proof.
       * IND_STEP.
   - (* Icond *)
     econstructor. split.
-    + eapply exec_Icond; try eassumption.
-      * erewrite transf_function_at by eauto. simpl.
-        admit.
+    + eapply exec_Icond with (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); try eassumption.
+      * TR_AT. reflexivity.
+      * rewrite subst_args_ok with (sp:=sp) (m:=m) by trivial.
+        eassumption.
       * reflexivity.
     + econstructor; eauto.
       destruct b; IND_STEP.
