@@ -563,7 +563,56 @@ Proof.
         
   - (* Iload notrap1 *)
     exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
-    + admit.
+    + pose (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iload NOTRAP chunk addr args dst pc')) as instr'.
+      assert (instr' = (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iload NOTRAP chunk addr args dst pc'))) by reflexivity.
+      unfold transf_instr, find_load_in_fmap in instr'.
+      destruct (@PMap.get (option RELATION.t) pc) eqn:INV_PC.
+      pose proof (rhs_find_sound (sp:=sp) (genv:=ge) (ctx:=(context_from_hints (snd (preanalysis tenv f)))) pc (SLoad chunk addr)
+                (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args) t) as FIND_SOUND.
+      * destruct rhs_find eqn:FIND.
+        ** apply exec_Iop with (op := Omove) (args := r :: nil).
+           TR_AT.
+           subst instr'.
+           congruence.
+           simpl.
+           specialize FIND_SOUND with (src := r) (rs := rs) (m := m).
+           simpl in FIND_SOUND.
+           rewrite subst_args_ok with (sp:=sp) (m:=m) in FIND_SOUND.
+           rewrite H0 in FIND_SOUND. (* ADDR *)
+           rewrite FIND_SOUND; auto.
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+        ** apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); trivial.
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_addressing_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+      * apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); trivial.
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_addressing_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
     + econstructor; eauto.
       * apply wt_undef; assumption.
       * IND_STEP.
@@ -571,7 +620,57 @@ Proof.
         
   - (* Iload notrap2 *)
     exists (State ts tf sp pc' (rs # dst <- Vundef) m). split.
-    + admit.
+    + pose (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iload NOTRAP chunk addr args dst pc')) as instr'.
+      assert (instr' = (transf_instr (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc (Iload NOTRAP chunk addr args dst pc'))) by reflexivity.
+      unfold transf_instr, find_load_in_fmap in instr'.
+      destruct (@PMap.get (option RELATION.t) pc) eqn:INV_PC.
+      pose proof (rhs_find_sound (sp:=sp) (genv:=ge) (ctx:=(context_from_hints (snd (preanalysis tenv f)))) pc (SLoad chunk addr)
+                (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args) t) as FIND_SOUND.
+      * destruct rhs_find eqn:FIND.
+        ** apply exec_Iop with (op := Omove) (args := r :: nil).
+           TR_AT.
+           subst instr'.
+           congruence.
+           simpl.
+           specialize FIND_SOUND with (src := r) (rs := rs) (m := m).
+           simpl in FIND_SOUND.
+           rewrite subst_args_ok with (sp:=sp) (m:=m) in FIND_SOUND.
+           rewrite H0 in FIND_SOUND. (* ADDR *)
+           rewrite H1 in FIND_SOUND. (* LOAD *)
+           rewrite FIND_SOUND; auto.
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+        ** apply exec_Iload_notrap2 with (chunk := chunk) (a := a) (addr := addr) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); trivial.
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_addressing_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
+      * apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (a := a) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); trivial.
+           TR_AT.
+           { subst instr'.
+           congruence. }
+           rewrite subst_args_ok with (sp:=sp) (m:=m).
+           {
+           rewrite eval_addressing_preserved with (ge1:=ge) by exact symbols_preserved.
+           assumption.
+           }
+           unfold fmap_sem.
+           change ((fst (preanalysis tenv f)) # pc)
+                  with (@PMap.get (option RELATION.t) pc (@fst invariants analysis_hints (preanalysis tenv f))).
+           rewrite INV_PC.
+           assumption.
     + econstructor; eauto.
       * apply wt_undef; assumption.
       * IND_STEP.
