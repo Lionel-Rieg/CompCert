@@ -190,6 +190,7 @@ Processing options:
   -Os            Optimize for code size in preference to code speed
   -Obranchless   Optimize to generate fewer conditional branches; try to produce
                  branch-free instruction sequences as much as possible
+  -finline-auto-threshold n   Inline functions under size n
   -ftailcalls    Optimize function calls in tail position [on]
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
@@ -322,6 +323,7 @@ let cmdline_actions =
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
+  Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
