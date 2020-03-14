@@ -612,7 +612,25 @@ Proof.
       * TR_AT. reflexivity.
       * apply sig_preserved; auto.
       * rewrite stacksize_preserved with (f:=f); eauto.
-    + admit.
+    + rewrite subst_args_ok with (m:=m) (sp := (Vptr stk Ptrofs.zero)) by trivial.
+      assert (wt_instr f tenv (Itailcall (funsig fd) ros args)) as WTcall by eauto with wt.
+      inv WTcall.
+      constructor; trivial.
+      * rewrite sig_preserved with (f:=fd) by trivial.
+        inv STACKS.
+        ** econstructor; eauto.
+           rewrite H7.
+           rewrite <- sig_preserved2 with (tf:=tf) by trivial.
+           assumption.
+        ** econstructor; eauto.
+           unfold proj_sig_res in *.
+           rewrite H7.
+           rewrite WTRES.
+           rewrite sig_preserved2 with (f:=f) by trivial.
+           reflexivity.
+      * rewrite sig_preserved with (f:=fd) by trivial.
+        rewrite <- H6.
+        apply wt_regset_list; auto.
   - (* Ibuiltin *)
     econstructor. split.
     + eapply exec_Ibuiltin; try eassumption.
@@ -681,8 +699,6 @@ Proof.
         apply wt_init_regs.
         rewrite <- wt_params in WTARGS.
         assumption.
-      * apply checked_is_inductive_allstep.
-        apply transf_function_invariants_inductive with (tf:=tf); auto.
       * rewrite @checked_is_inductive_entry with (tenv:=tenv) (ctx:=(context_from_hints (snd (preanalysis tenv f)))).
         ** apply sem_rel_b_top.
         ** apply transf_function_invariants_inductive with (tf:=tf); auto.
