@@ -592,7 +592,19 @@ Proof.
     + eapply exec_Icall; try eassumption.
       * TR_AT. reflexivity.
       * apply sig_preserved; auto.
-    + admit.
+    + rewrite subst_args_ok with (sp:=sp) (m:=m) by trivial.
+      assert (wt_instr f tenv (Icall (funsig fd) ros args res pc')) as WTcall by eauto with wt.
+      inv WTcall.
+      constructor; trivial.
+      * econstructor; eauto.
+        ** rewrite sig_preserved with (f:=fd); assumption.
+        ** intros.
+           IND_STEP.
+           apply kill_reg_sound; eauto with cse3.
+           eapply kill_mem_sound; eauto with cse3.
+      * rewrite sig_preserved with (f:=fd) by trivial.
+        rewrite <- H7.
+        apply wt_regset_list; auto.
   - (* Itailcall *)
     destruct (find_function_translated ros rs fd H0) as [tfd [HTFD1 HTFD2]].
     econstructor. split.
