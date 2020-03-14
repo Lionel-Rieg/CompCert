@@ -652,9 +652,10 @@ Proof.
       
   - (* Ijumptable *)
     econstructor. split.
-    + eapply exec_Ijumptable; try eassumption.
-      erewrite transf_function_at by eauto. simpl.
-      admit.
+    + eapply exec_Ijumptable with (arg := (subst_arg (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc arg)); try eassumption.
+      * TR_AT. reflexivity.
+      * rewrite subst_arg_ok with (sp:=sp) (m:=m) by trivial.
+        assumption.
     + econstructor; eauto.
       assert (In pc' tbl) as IN_LIST by (eapply list_nth_z_in; eassumption).
       IND_STEP.
