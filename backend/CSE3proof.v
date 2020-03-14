@@ -679,8 +679,7 @@ Proof.
          apply WTRS.
     -- econstructor. split.
        + eapply exec_Ireturn; try eassumption.
-         *  erewrite transf_function_at by eauto. simpl.
-         admit.
+         * TR_AT; reflexivity.
          * rewrite stacksize_preserved with (f:=f); eauto.
        + econstructor; eauto.
          simpl. trivial.
