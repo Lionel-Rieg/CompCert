@@ -2,7 +2,7 @@ Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Memory Registers Op RTL Maps CSE2deps.
 Require Import HashedSet.
-Require List.
+Require List Compopts.
 
 Definition typing_env := reg -> typ.
 
@@ -278,10 +278,31 @@ Section OPERATIONS.
     | None => oper1 dst op args rel
     end.
   
+  Definition clever_kill_store
+             (chunk : memory_chunk) (addr: addressing) (args : list reg)
+             (src : reg)
+             (rel : RELATION.t) : RELATION.t :=
+    PSet.subtract rel
+      (PSet.filter
+         (fun eqno =>
+            match eq_catalog ctx eqno with
+            | None => false
+            | Some eq =>
+              match eq_op eq with
+              | SOp op => true
+              | SLoad chunk' addr' =>
+                may_overlap chunk addr args chunk' addr' (eq_args eq)
+              end
+            end)
+         (PSet.inter rel (eq_kill_mem ctx tt))).
+
   Definition store2
              (chunk : memory_chunk) (addr: addressing) (args : list reg)
              (src : reg)
-             (rel : RELATION.t) : RELATION.t := kill_mem rel.
+             (rel : RELATION.t) : RELATION.t :=
+    if Compopts.optim_CSE3_alias_analysis tt
+    then clever_kill_store chunk addr args src rel
+    else kill_mem rel.
 
   Definition store1
              (chunk : memory_chunk) (addr: addressing) (args : list reg)

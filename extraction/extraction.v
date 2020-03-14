@@ -116,6 +116,8 @@ Extract Constant Compopts.optim_CSE2 =>
   "fun _ -> !Clflags.option_fcse2".
 Extract Constant Compopts.optim_CSE3 =>
   "fun _ -> !Clflags.option_fcse3".
+Extract Constant Compopts.optim_CSE3_alias_analysis =>
+  "fun _ -> !Clflags.option_fcse3_alias_analysis".
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>

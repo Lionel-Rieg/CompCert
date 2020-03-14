@@ -765,6 +765,43 @@ Section SOUNDNESS.
 
   Hint Resolve oper_sound : cse3.
 
+
+  Theorem clever_kill_store_sound:
+    forall chunk addr args a src rel rs m m',
+      sem_rel rel rs m ->
+      eval_addressing genv sp addr (rs ## args) = Some a ->
+      Mem.storev chunk m a (rs # src) = Some m' ->
+      sem_rel (clever_kill_store (ctx:=ctx) chunk addr args src rel) rs m'.
+  Proof.
+    unfold clever_kill_store.
+    intros until m'. intros REL ADDR STORE i eq CONTAINS CATALOG.
+    autorewrite with pset in CONTAINS.
+    destruct (PSet.contains rel i) eqn:RELi; simpl in CONTAINS.
+    2: discriminate.
+    rewrite CATALOG in CONTAINS.
+    unfold sem_rel in REL.
+    specialize REL with (i := i) (eq0 := eq).
+    destruct eq; simpl in *.
+    unfold sem_eq in *.
+    simpl in *.
+    destruct eq_op as [op' | chunk' addr']; simpl.
+    - destruct (op_depends_on_memory op') eqn:DEPENDS.
+      + erewrite ctx_kill_mem_has_depends_on_mem in CONTAINS by eauto.
+        discriminate.
+      + rewrite op_depends_on_memory_correct with (m2:=m); trivial.
+        apply REL; auto.
+    - simpl in REL.
+      erewrite ctx_kill_mem_has_depends_on_mem in CONTAINS by eauto.
+      simpl in CONTAINS.
+      rewrite negb_true_iff in CONTAINS.
+      destruct (eval_addressing genv sp addr' rs ## eq_args) as [a'|] eqn:ADDR'.
+      + erewrite may_overlap_sound with (chunk:=chunk) (addr:=addr) (args:=args) (chunk':=chunk') (addr':=addr') (args':=eq_args); try eassumption.
+        apply REL; auto.
+      + apply REL; auto.
+  Qed.
+
+  Hint Resolve clever_kill_store_sound : cse3.
+
   Theorem store2_sound:
     forall chunk addr args a src rel rs m m',
       sem_rel rel rs m ->
@@ -774,7 +811,7 @@ Section SOUNDNESS.
   Proof.
     unfold store2.
     intros.
-    apply kill_mem_sound with (m:=m); auto.
+    destruct (Compopts.optim_CSE3_alias_analysis tt); eauto with cse3.
   Qed.
   
   Hint Resolve store2_sound : cse3.

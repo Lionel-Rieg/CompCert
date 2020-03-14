@@ -194,9 +194,10 @@ Processing options:
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
-  -fcse          Perform common subexpression elimination [on]
-  -fcse2         Perform inter-loop common subexpression elimination [on]
+  -fcse          Perform common subexpression elimination [off]
+  -fcse2         Perform inter-loop common subexpression elimination [off]
   -fcse3         Perform inter-loop common subexpression elimination [on]
+  -fcse3-alias-analysis Perform inter-loop common subexpression elimination with alias analysis [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
@@ -393,6 +394,7 @@ let cmdline_actions =
   @ f_opt "cse" option_fcse
   @ f_opt "cse2" option_fcse2
   @ f_opt "cse3" option_fcse3
+  @ f_opt "cse3-alias-analysis" option_fcse3_alias_analysis
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]
