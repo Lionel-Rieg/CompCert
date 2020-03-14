@@ -432,6 +432,12 @@ Ltac IND_STEP :=
         idtac mpc mpc' fn minstr
       end.
 
+Lemma if_same : forall {T : Type} (b : bool) (x : T),
+    (if b then x else x) = x.
+Proof.
+  destruct b; trivial.
+Qed.
+
 Lemma step_simulation:
   forall S1 t S2, RTL.step ge S1 t S2 -> 
   forall S1', match_states S1 S1' ->
@@ -452,8 +458,13 @@ Proof.
       destruct (@PMap.get (option RELATION.t) pc) eqn:INV_PC.
       pose proof (rhs_find_sound (sp:=sp) (genv:=ge) (ctx:=(context_from_hints (snd (preanalysis tenv f)))) pc (SOp op)
                 (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args) t) as FIND_SOUND.
-      * destruct rhs_find eqn:FIND.
-        ** apply exec_Iop with (op := Omove) (args := r :: nil).
+      * destruct (if is_trivial_op op
+               then None
+               else
+                rhs_find pc (SOp op)
+                  (subst_args (fst (preanalysis tenv f)) pc args) t) eqn:FIND.
+        ** destruct (is_trivial_op op). discriminate.
+           apply exec_Iop with (op := Omove) (args := r :: nil).
            TR_AT.
            subst instr'.
            congruence.
@@ -483,8 +494,9 @@ Proof.
            rewrite INV_PC.
            assumption.
       * apply exec_Iop with (op := op) (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)).
-           TR_AT.
-           { subst instr'.
+        TR_AT.
+        { subst instr'.
+          rewrite if_same in H1.
            congruence. }
            rewrite subst_args_ok with (sp:=sp) (m:=m).
            {
