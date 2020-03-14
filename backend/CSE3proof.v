@@ -678,9 +678,11 @@ Proof.
 
   - (* Istore *)
     exists (State ts tf sp pc' rs m'). split.
-    + eapply exec_Istore; try eassumption.
+    + eapply exec_Istore with (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); try eassumption.
       * TR_AT. reflexivity.
-      * admit.
+      * rewrite subst_args_ok with (sp:=sp) (m:=m) by trivial.
+        rewrite eval_addressing_preserved with (ge1 := ge) by exact symbols_preserved.
+        assumption.
     + econstructor; eauto.
       IND_STEP.
       apply store_sound with (a0:=a) (m0:=m); eauto with cse3.
