@@ -661,16 +661,16 @@ Proof.
       IND_STEP.
 
   - (* Ireturn *)
-    destruct or.
+    destruct or as [arg | ].
     -- econstructor. split.
-       + eapply exec_Ireturn; try eassumption.
-         *  erewrite transf_function_at by eauto. simpl.
-         admit.
+       + eapply exec_Ireturn with (or := Some (subst_arg (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc arg)).
+         * TR_AT. reflexivity.
          * rewrite stacksize_preserved with (f:=f); eauto.
-       + econstructor; eauto.
-         simpl.
+       + simpl.
+         rewrite subst_arg_ok with (sp:=(Vptr stk Ptrofs.zero)) (m:=m) by trivial.
+         econstructor; eauto.
          apply type_function_correct in WTF.
-         apply wt_instrs with (pc:=pc) (instr:=(Ireturn (Some r))) in WTF.
+         apply wt_instrs with (pc:=pc) (instr:=(Ireturn (Some arg))) in WTF.
          2: assumption.
          inv WTF.
          rewrite sig_preserved2 with (f:=f) by assumption.
