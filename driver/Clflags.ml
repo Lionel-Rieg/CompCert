@@ -81,4 +81,4 @@ let option_faddx = ref false
 let option_fcoalesce_mem = ref true
 let option_fforward_moves = ref true
 let option_all_loads_nontrap = ref false
-let option_inline_auto_threshold = ref 30
+let option_inline_auto_threshold = ref 0
