@@ -201,7 +201,11 @@ Processing options:
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
-  -fduplicate    Perform tail duplication to form superblocks on predicted traces
+  -fduplicate <nb_nodes> Perform tail duplication to form superblocks on predicted traces
+    nb_nodes control the heuristic deciding to duplicate or not
+    A value of -1 desactivates the entire pass (including branch prediction)
+    A value of 0 desactivates the duplication (but activates the branch prediction)
+    FIXME : this is desactivated by default for now
     -finvertcond    Invert conditions based on predicted paths (to prefer fallthrough).
                     Requires -fduplicate to be also activated [on]
     -ftracelinearize Linearizes based on the traces identified by duplicate phase

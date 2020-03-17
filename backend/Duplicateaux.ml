@@ -502,11 +502,15 @@ let rec invert_iconds code = function
 let duplicate_aux f =
   let entrypoint = f.fn_entrypoint in
   let code = f.fn_code in
-  let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
-  let icond_code = invert_iconds code traces in
-  let preds = get_predecessors_rtl icond_code in
-  if !Clflags.option_fduplicate >= 1 then
-    let (new_code, pTreeId) = ((* print_traces traces; *) superblockify_traces icond_code preds traces) in
-    ((new_code, f.fn_entrypoint), pTreeId)
+  if !Clflags.option_fduplicate < 0 then
+    ((code, entrypoint), make_identity_ptree code)
   else
-    ((icond_code, entrypoint), make_identity_ptree code)
+    let traces = select_traces (to_ttl_code code entrypoint) entrypoint in
+    let icond_code = invert_iconds code traces in
+    let preds = get_predecessors_rtl icond_code in
+    if !Clflags.option_fduplicate >= 1 then
+      let (new_code, pTreeId) = ((* print_traces traces; *) superblockify_traces icond_code preds traces) in
+      ((new_code, f.fn_entrypoint), pTreeId)
+    else
+      ((icond_code, entrypoint), make_identity_ptree code)
+
