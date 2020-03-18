@@ -6,7 +6,8 @@ let get_some = function
 | None -> failwith "Did not get some"
 | Some thing -> thing
 
-let bfs code entrypoint =
+let bfs code entrypoint = begin
+  Printf.printf "bfs\n"; flush stdout;
   let visited = ref (PTree.map (fun n i -> false) code)
   and bfs_list = ref []
   and to_visit = Queue.create ()
@@ -32,6 +33,7 @@ let bfs code entrypoint =
     done;
     !bfs_list
   end
+end
 
 let optbool o = match o with Some _ -> true | None -> false
 
@@ -91,7 +93,8 @@ type vstate = Unvisited | Processed | Visited
   *
   * If we come accross an edge to a Processed node, it's a loop!
   *)
-let get_loop_headers code entrypoint =
+let get_loop_headers code entrypoint = begin
+  Printf.printf "get_loop_headers\n"; flush stdout;
   let visited = ref (PTree.map (fun n i -> Unvisited) code)
   and is_loop_header = ref (PTree.map (fun n i -> false) code)
   in let rec dfs_visit code = function
@@ -121,6 +124,7 @@ let get_loop_headers code entrypoint =
     dfs_visit code [entrypoint];
     !is_loop_header
   end
+end
 
 let ptree_printbool pt =
   let elements = PTree.elements pt
@@ -195,7 +199,8 @@ let do_loop_heuristic code cond ifso ifnot is_loop_header =
     else None
   end
 
-let get_directions code entrypoint =
+let get_directions code entrypoint = begin
+  Printf.printf "get_directions\n"; flush stdout;
   let bfs_order = bfs code entrypoint
   and is_loop_header = get_loop_headers code entrypoint
   and directions = ref (PTree.map (fun n i -> None) code) (* None <=> no predicted direction *)
@@ -226,6 +231,7 @@ let get_directions code entrypoint =
     ) bfs_order;
     !directions
   end
+end
 
 let update_direction direction = function
 | Icond (cond, lr, n, n', _) -> Icond (cond, lr, n, n', direction)
@@ -238,7 +244,8 @@ let rec update_direction_rec directions = function
     in PTree.set n (update_direction direction i) (update_direction_rec directions lm)
 
 (* Uses branch prediction to write prediction annotations in Icond *)
-let update_directions code entrypoint =
+let update_directions code entrypoint = begin
+  Printf.printf "Update_directions\n"; flush stdout;
   let directions = get_directions code entrypoint
   in begin
     (* Printf.printf "Ifso directions: ";
@@ -246,6 +253,7 @@ let update_directions code entrypoint =
     Printf.printf "\n"; *)
     update_direction_rec directions (PTree.elements code)
   end
+end
 
 (** Trace selection *)
 
@@ -343,7 +351,8 @@ let print_traces traces =
 
 (* Algorithm mostly inspired from Chang and Hwu 1988
  * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
-let select_traces code entrypoint =
+let select_traces code entrypoint = begin
+  Printf.printf "select_traces\n"; flush stdout;
   let order = dfs code entrypoint in
   let predecessors = get_predecessors_rtl code in
   let traces = ref [] in
@@ -384,6 +393,7 @@ let select_traces code entrypoint =
     Printf.printf "Traces: "; print_traces !traces;
     !traces
   end
+end
 
 let rec make_identity_ptree_rec = function
 | [] -> PTree.empty
