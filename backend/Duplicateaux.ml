@@ -21,7 +21,7 @@ let bfs code entrypoint = begin
         match PTree.get !node code with
         | None -> failwith "No such node"
         | Some i ->
-            bfs_list := !bfs_list @ [!node];
+            bfs_list := !node :: !bfs_list;
             match i with
             | Icall(_, _, _, _, n) -> Queue.add n to_visit
             | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
@@ -31,7 +31,7 @@ let bfs code entrypoint = begin
             | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
       end
     done;
-    !bfs_list
+    List.rev !bfs_list
   end
 end
 
