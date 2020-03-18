@@ -39,7 +39,8 @@ let optbool o = match o with Some _ -> true | None -> false
 
 let ptree_get_some n ptree = get_some @@ PTree.get n ptree
 
-let get_predecessors_rtl code =
+let get_predecessors_rtl code = begin
+  Printf.printf "get_predecessors_rtl\n"; flush stdout;
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, i) =
     let succ = match i with
@@ -56,6 +57,7 @@ let get_predecessors_rtl code =
     List.iter process_inst (PTree.elements code);
     !preds
   end
+end
 
 module PInt = struct
   type t = P.t
@@ -264,32 +266,28 @@ let rec exists_false_rec = function
 let exists_false boolmap = exists_false_rec (PTree.elements boolmap)
 
 (* DFS using prediction info to guide the exploration *)
-let dfs code entrypoint =
+let dfs code entrypoint = begin
+  Printf.printf "dfs\n"; flush stdout;
   let visited = ref (PTree.map (fun n i -> false) code) in
   let rec dfs_list code = function
   | [] -> []
   | node :: ln ->
-      let node_dfs =
-        if not (get_some @@ PTree.get node !visited) then begin
-          visited := PTree.set node true !visited;
-          match PTree.get node code with
-          | None -> failwith "No such node"
-          | Some i -> [node] @ match i with
-            | Icall(_, _, _, _, n) -> dfs_list code [n]
-            | Ibuiltin(_, _, _, n) -> dfs_list code [n]
-            | Iop (_, _, _, n) -> dfs_list code [n]
-            | Iload (_, _, _, _, _, n) -> dfs_list code [n]
-            | Istore (_, _, _, _, n) -> dfs_list code [n]
-            | Inop n -> dfs_list code [n]
-            | Ijumptable(_, ln) -> dfs_list code ln
-            | Itailcall _ | Ireturn _ -> []
-            | Icond (_, _, n1, n2, info) -> match info with
-              | Some false -> dfs_list code [n2; n1]
-              | _ -> dfs_list code [n1; n2]
-          end
-        else []
-      in node_dfs @ (dfs_list code ln)
+      if get_some @@ PTree.get node !visited then dfs_list code ln
+      else begin
+        visited := PTree.set node true !visited;
+        let next_nodes = (match get_some @@ PTree.get node code with
+        | Icall(_, _, _, _, n) | Ibuiltin (_, _, _, n) | Iop (_, _, _, n)
+        | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) | Inop n -> [n]
+        | Ijumptable (_, ln) -> ln
+        | Itailcall _ | Ireturn _ -> []
+        | Icond (_, _, n1, n2, info) -> (match info with
+          | Some false -> [n2; n1]
+          | _ -> [n1; n2]
+          )
+        ) in node :: dfs_list code (next_nodes @ ln)
+      end
   in dfs_list code [entrypoint]
+end
 
 (*
 let get_predecessors_ttl code =
