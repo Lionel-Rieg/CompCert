@@ -87,3 +87,14 @@ build_rv32:
   script:
     - ./config_rv32.sh
     - make -j "$NJOBS"
+
+build_k1c:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_k1c.sh -no-runtime-lib
+    - make -j "$NJOBS"
