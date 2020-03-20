@@ -5,7 +5,7 @@ build_x86_64:
   stage: build_x86_64
   image: "coqorg/coq"
   before_script:
-    - opam switch \$COMPILER_EDGE
+    - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
