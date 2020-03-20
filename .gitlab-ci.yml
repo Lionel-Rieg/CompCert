@@ -85,7 +85,7 @@ build_rv32:
     - eval `opam config env`
     - opam install -y menhir
   script:
-    - ./config_rv32.sh
+    - ./config_rv32.sh -no-runtime-lib
     - make -j "$NJOBS"
 
 build_k1c:
