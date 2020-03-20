@@ -1,5 +1,11 @@
 stages:
+  - build_ppc
+  - build_aarch64
+  - build_arm
+  - build_rv64
+  - build_rv32
   - build_x86_64
+  - build_x86
 
 build_x86_64:
   stage: build_x86_64
@@ -10,4 +16,75 @@ build_x86_64:
     - opam install -y menhir
   script:
     - ./config_x86_64.sh
+    - make -j "$NJOBS"
+
+build_x86:
+  stage: build_x86
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_x86.sh
+    - make -j "$NJOBS"
+
+build_aarch64:
+  stage: build_aarch64
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt install gcc-aarch64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_aarch64.sh
+    - make -j "$NJOBS"
+
+build_arm:
+  stage: build_arm
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt install gcc-arm-linux-gnueabihf
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_arm.sh
+    - make -j "$NJOBS"
+
+build_ppc:
+  stage: build_ppc
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt install gcc-powerpc-linux
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_ppc.sh
+    - make -j "$NJOBS"
+
+build_rv64:
+  stage: build_rv64
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt install gcc-riscv64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_rv64.sh
+    - make -j "$NJOBS"
+
+build_rv32:
+  stage: build_rv32
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt install gcc-riscv64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_rv32.sh
     - make -j "$NJOBS"
