@@ -57,7 +57,7 @@ build_ppc:
   stage: build_ppc
   image: "coqorg/coq"
   before_script:
-    - sudo apt install gcc-powerpc-linux
+    - sudo apt install gcc-powerpc-linux-gnu
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
