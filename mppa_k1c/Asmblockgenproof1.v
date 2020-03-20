@@ -1483,6 +1483,8 @@ Proof.
   destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
 Qed.
 
+Ltac splitall := repeat match goal with |- _ /\ _ => split end.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1575,7 +1577,7 @@ Opaque Int.eq.
     all: destruct c.
     all: simpl in *.
     all: inv EQ2.
-    all: try (econstructor; split; [idtac | split ]).
+    all: econstructor; splitall.
     all: try apply exec_straight_one.
     all: intros; simpl; trivial.
     all: unfold Val.select, cmove, cmoveu; simpl.
@@ -1599,7 +1601,7 @@ Opaque Int.eq.
     all: destruct c.
     all: simpl in *.
     all: inv EQ0.
-    all: try (econstructor; split; [idtac | split ]).
+    all: econstructor; splitall.
     all: try apply exec_straight_one.
     all: intros; simpl; trivial.
     all: unfold Val.select, cmove, cmoveu; simpl.
@@ -1623,7 +1625,7 @@ Opaque Int.eq.
     all: destruct c.
     all: simpl in *.
     all: inv EQ0.
-    all: try (econstructor; split; [idtac | split ]).
+    all: econstructor; splitall.
     all: try apply exec_straight_one.
     all: intros; simpl; trivial.
     all: unfold Val.select, cmove, cmoveu; simpl.
