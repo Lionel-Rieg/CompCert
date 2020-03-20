@@ -12,7 +12,7 @@ build_x86_64:
     - ./config_x86_64.sh
     - make -j "$NJOBS"
 
-build_x86:
+build_ia32:
   stage: build
   image: "coqorg/coq"
   before_script:
@@ -20,7 +20,7 @@ build_x86:
     - eval `opam config env`
     - opam install -y menhir
   script:
-    - ./config_x86.sh
+    - ./config_ia32.sh
     - make -j "$NJOBS"
 
 build_aarch64:
