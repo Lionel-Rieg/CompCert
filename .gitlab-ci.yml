@@ -1,0 +1,11 @@
+stages:
+  - build_x86_64
+
+.build_x86_64:
+  stage: build_x86_64
+  image: "coqorg/coq"
+  before_script:
+    - opam install -y menhir
+  script:
+    ./config_x86_64.sh
+    make -j "$NJOBS"
