@@ -52,11 +52,9 @@ let get_predecessors_rtl code = begin
     in List.iter (fun s ->
       let previous_preds = ptree_get_some s !preds in
       if optbool @@ List.find_opt (fun e -> e == node) previous_preds then ()
-      else preds := PTree.set s (node::previous_preds) !preds)
-      succ
+      else preds := PTree.set s (node::previous_preds) !preds) succ
   in begin
     List.iter process_inst (PTree.elements code);
-    Printf.printf "get_predecessors_rtl done\n"; flush stdout;
     !preds
   end
 end
@@ -331,10 +329,10 @@ let best_successor_of node code is_visited =
       | Some n -> if not (ptree_get_some n is_visited) then Some n else None
 
 (* FIXME - could be improved by selecting in priority the predicted paths *)
-let best_predecessor_of node predecessors order =
+let best_predecessor_of node predecessors order is_visited =
   match (PTree.get node predecessors) with
   | None -> failwith "No predecessor list found"
-  | Some lp -> try Some (List.find (fun n -> List.mem n lp) order)
+  | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
                with Not_found -> None
 
 let print_trace t = print_intlist t
@@ -349,7 +347,8 @@ let print_traces traces =
     Printf.printf "}\n";
   end
 
-let select_traces code entrypoint =
+(* Dumb (but linear) trace selection *)
+let select_traces_linear code entrypoint =
   let is_visited = ref (PTree.map (fun n i -> false) code) in
   let bfs_order = bfs code entrypoint in
   let rec go_through node = begin
@@ -374,9 +373,61 @@ let select_traces code entrypoint =
       if not (get_some @@ PTree.get n !is_visited) then
         traces := (go_through n) :: !traces
     ) bfs_order;
+    !traces
+  end
+
+
+(* Algorithm mostly inspired from Chang and Hwu 1988
+ * "Trace Selection for Compiling Large C Application Programs to Microcode" *)
+let select_traces_chang code entrypoint = begin
+  Printf.printf "select_traces\n"; flush stdout;
+  let order = dfs code entrypoint in
+  let predecessors = get_predecessors_rtl code in
+  let traces = ref [] in
+  let is_visited = ref (PTree.map (fun n i -> false) code) in begin (* mark all nodes visited *)
+    Printf.printf "Length: %d\n" (List.length order); flush stdout;
+    while exists_false !is_visited do (* while (there are unvisited nodes) *)
+      let seed = select_unvisited_node !is_visited order in
+      let trace = ref [seed] in
+      let current = ref seed in begin
+        is_visited := PTree.set seed true !is_visited; (* mark seed visited *)
+        let quit_loop = ref false in begin
+          while not !quit_loop do
+            let s = best_successor_of !current code !is_visited in
+            match s with
+            | None -> quit_loop := true (* if (s==0) exit loop *)
+            | Some succ -> begin
+                trace := !trace @ [succ];
+                is_visited := PTree.set succ true !is_visited; (* mark s visited *)
+                current := succ
+                end
+          done;
+          current := seed;
+          quit_loop := false;
+          while not !quit_loop do
+            let s = best_predecessor_of !current predecessors order !is_visited in
+            match s with
+            | None -> quit_loop := true (* if (s==0) exit loop *)
+            | Some pred -> begin
+                trace := pred :: !trace;
+                is_visited := PTree.set pred true !is_visited; (* mark s visited *)
+                current := pred
+                end
+          done;
+          traces := !trace :: !traces;
+        end
+      end
+    done;
+    (* Printf.printf "DFS: \t"; print_intlist order; Printf.printf "\n"; *)
     Printf.printf "Traces: "; print_traces !traces;
     !traces
   end
+end
+
+let select_traces code entrypoint =
+  let length = List.length @@ PTree.elements code in
+  if (length < 5000) then select_traces_chang code entrypoint
+  else select_traces_linear code entrypoint
 
 let rec make_identity_ptree_rec = function
 | [] -> PTree.empty
