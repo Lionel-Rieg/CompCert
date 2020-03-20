@@ -1,7 +1,7 @@
 stages:
   - build_x86_64
 
-.build_x86_64:
+build_x86_64:
   stage: build_x86_64
   image: "coqorg/coq"
   before_script:
