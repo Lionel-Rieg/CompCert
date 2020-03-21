@@ -11,10 +11,14 @@ build_x86_64:
   script:
     - ./config_x86_64.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_ia32:
   stage: build
@@ -26,10 +30,14 @@ build_ia32:
   script:
     - ./config_ia32.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_aarch64:
   stage: build
@@ -43,10 +51,14 @@ build_aarch64:
   script:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_arm:
   stage: build
@@ -60,10 +72,14 @@ build_arm:
   script:
     - ./config_arm.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_ppc:
   stage: build
@@ -77,10 +93,14 @@ build_ppc:
   script:
     - ./config_ppc.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_rv64:
   stage: build
@@ -94,10 +114,14 @@ build_rv64:
   script:
     - ./config_rv64.sh
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_rv32:
   stage: build
@@ -111,10 +135,14 @@ build_rv32:
   script:
     - ./config_rv32.sh -no-runtime-lib
     - make -j "$NJOBS"
-  only:
-    - master
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
 
 build_k1c:
   stage: build
@@ -126,6 +154,11 @@ build_k1c:
   script:
     - ./config_k1c.sh -no-runtime-lib
     - make -j "$NJOBS"
-  only:
-    - mppa-k1c
-    - mppa-work
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
