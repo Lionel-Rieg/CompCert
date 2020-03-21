@@ -1,0 +1,131 @@
+stages:
+  - build
+
+build_x86_64:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_x86_64.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_ia32:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_ia32.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_aarch64:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-aarch64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_aarch64.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_arm:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-arm-linux-gnueabihf
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_arm.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_ppc:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-powerpc-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_ppc.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_rv64:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-riscv64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_rv64.sh
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_rv32:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-riscv64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_rv32.sh -no-runtime-lib
+    - make -j "$NJOBS"
+  only:
+    - master
+    - mppa-k1c
+    - mppa-work
+
+build_k1c:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_k1c.sh -no-runtime-lib
+    - make -j "$NJOBS"
+  only:
+    - mppa-k1c
+    - mppa-work
