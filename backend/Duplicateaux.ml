@@ -195,12 +195,16 @@ let do_store_heuristic code cond ifso ifnot is_loop_header =
 let do_loop_heuristic code cond ifso ifnot is_loop_header =
   begin
     Printf.printf "\tLoop heuristic..\n";
-    let predicate n = get_some @@ PTree.get n is_loop_header
-    in if (look_ahead code ifso is_loop_header predicate) then Some true
-    else if (look_ahead code ifnot is_loop_header predicate) then Some false
+    let predicate n = get_some @@ PTree.get n is_loop_header in
+    let ifso_loop = look_ahead code ifso is_loop_header predicate in
+    let ifnot_loop = look_ahead code ifnot is_loop_header predicate in
+    if ifso_loop && ifnot_loop then None (* TODO - take the innermost loop ? *)
+    else if ifso_loop then Some true
+    else if ifnot_loop then Some false
     else None
   end
 
+  (* Remark - compared to the original paper, we don't use the store heuristic *)
 let get_directions code entrypoint = begin
   Printf.printf "get_directions\n"; flush stdout;
   let bfs_order = bfs code entrypoint
@@ -214,7 +218,7 @@ let get_directions code entrypoint = begin
       | Icond (cond, lr, ifso, ifnot, _) ->
           (* Printf.printf "Analyzing %d.." (P.to_int n); *)
           let heuristics = [ do_call_heuristic; do_opcode_heuristic;
-            do_return_heuristic; do_store_heuristic; do_loop_heuristic ] in
+            do_return_heuristic; do_loop_heuristic; (* do_store_heuristic *) ] in
           let preferred = ref None in
           begin
             Printf.printf "Deciding condition for RTL node %d\n" (P.to_int n);

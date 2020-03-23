@@ -154,7 +154,7 @@ let forward_sequences code entry =
   let visited = ref (PTree.map (fun n i -> false) code) in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
   let rec traverse_fallthrough code node =
-    Printf.printf "Traversing %d..\n" (P.to_int node);
+    (* Printf.printf "Traversing %d..\n" (P.to_int node); *)
     if not (get_some @@ PTree.get node !visited) then begin
       visited := PTree.set node true !visited;
       match PTree.get node code with
