@@ -163,15 +163,15 @@ let forward_sequences code entry =
           let ln, rem = match (last_element bb) with
           | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
           | Lbuiltin _ -> assert false
-          | Ltailcall _ | Lreturn -> begin Printf.printf "STOP tailcall/return\n"; ([], []) end
+          | Ltailcall _ | Lreturn -> begin (* Printf.printf "STOP tailcall/return\n"; *) ([], []) end
           | Lbranch n -> let ln, rem = traverse_fallthrough code n in (ln, rem)
           | Lcond (_, _, ifso, ifnot, info) -> (match info with
-            | None -> begin Printf.printf "STOP Lcond None\n"; ([], [ifso; ifnot]) end
+            | None -> begin (* Printf.printf "STOP Lcond None\n"; *) ([], [ifso; ifnot]) end
             | Some false -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
             | Some true ->
                 let errstr = Printf.sprintf ("Inconsistency detected in node %d: ifnot is not the preferred branch") (P.to_int node) in
                   failwith errstr)
-          | Ljumptable(_, ln) -> begin Printf.printf "STOP Ljumptable\n"; ([], ln) end
+          | Ljumptable(_, ln) -> begin (* Printf.printf "STOP Ljumptable\n"; *) ([], ln) end
           in ([node] @ ln, rem)
       end
     else ([], [])
@@ -423,31 +423,49 @@ let order_sequences code entry fs =
         depmap.(i) <- ISet.remove s_id deps
       ) depmap
     end
+  in let choose_best_of candidates =
+    let current_best_id = ref None in
+    let current_best_score = ref None in
+    begin
+      List.iter (fun id ->
+        match !current_best_id with
+        | None -> begin
+            current_best_id := Some id;
+            match fs_a.(id) with
+            | [] -> current_best_score := None
+            | n::l -> current_best_score := Some (P.to_int n)
+          end
+        | Some b -> begin
+            match fs_a.(id) with
+            | [] -> ()
+            | n::l -> let nscore = P.to_int n in
+              match !current_best_score with
+              | None -> (current_best_id := Some id; current_best_score := Some nscore)
+              | Some bs -> if nscore > bs then (current_best_id := Some id; current_best_score := Some nscore)
+          end
+      ) candidates;
+      !current_best_id
+    end
   in let select_next () =
-    let selected_id = ref None in
+    let candidates = ref [] in
     begin
       Array.iteri (fun i deps ->
         begin
           (* Printf.printf "Deps: "; print_iset deps; Printf.printf "\n"; *)
-          match !selected_id with
-          | None -> if (deps == ISet.empty && not fs_evaluated.(i)) then selected_id := Some i
-          | Some id -> ()
+          if (deps == ISet.empty && not fs_evaluated.(i)) then candidates := i :: !candidates
         end
       ) depmap;
-      match !selected_id with
-      | Some id -> id
-      | None -> begin
-          Array.iteri (fun i deps ->
-            match !selected_id with
-            | None -> if not fs_evaluated.(i) then selected_id := Some i
-            | Some id -> ()
-          ) depmap;
-          get_some !selected_id
-        end
+      if not (List.length !candidates > 0) then begin
+        Array.iteri (fun i deps ->
+          if (not fs_evaluated.(i)) then candidates := i :: !candidates
+        ) depmap;
+      end;
+      get_some (choose_best_of !candidates)
     end
   in begin
-    (* Printf.printf "depmap: "; print_depmap depmap; *)
-    (* Printf.printf "forward sequences identified: "; print_ssequence fs; *)
+    Printf.printf "-------------------------------\n";
+    Printf.printf "depmap: "; print_depmap depmap;
+    Printf.printf "forward sequences identified: "; print_ssequence fs;
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
