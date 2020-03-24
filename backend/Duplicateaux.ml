@@ -204,13 +204,65 @@ let do_loop_heuristic code cond ifso ifnot is_loop_header =
     else None
   end
 
+let do_loop2_heuristic loop_info n code cond ifso ifnot is_loop_header =
+  begin
+    Printf.printf "\tLoop2 heuristic..\n";
+    match get_some @@ PTree.get n loop_info with
+    | None -> None
+    | Some b -> Some b
+  end
+
+(* Returns a PTree of either None or Some b where b determines the node following the loop, for a cb instruction *)
+(* It uses the fact that loops in CompCert are done by a branch (backedge) instruction followed by a cb *)
+let get_loop_info is_loop_header bfs_order code =
+  let loop_info = ref (PTree.map (fun n i -> None) code) in
+  let mark_path s n =
+    let visited = ref (PTree.map (fun n i -> false) code) in
+    let rec explore src dest =
+      if (get_some @@ PTree.get src !visited) then false
+      else if src == dest then true
+      else begin
+        visited := PTree.set src true !visited;
+        match get_some @@ PTree.get src code with
+        | Inop s | Iop (_, _, _, s) | Iload (_,_,_,_,_,s) | Istore (_,_,_,_,s) | Icall (_,_,_,_,s)
+        | Ibuiltin (_,_,_,s) -> explore s dest
+        | Icond (_,_,s1,s2,_) -> (explore s1 dest) || (explore s2 dest)
+        | Ijumptable _ | Itailcall _ | Ireturn _ -> false
+      end
+    in match get_some @@ PTree.get s !loop_info with
+    | None -> begin
+        match get_some @@ PTree.get s code with
+        | Icond (_, _, n1, n2, _) ->
+            let b1 = explore n1 n in
+            let b2 = explore n2 n in
+            if (b1 && b2) then ()
+            else if b1 then loop_info := PTree.set s (Some true) !loop_info
+            else if b2 then loop_info := PTree.set s (Some false) !loop_info
+            else ()
+        | _ -> ()
+      end
+    | Some _ -> ()
+  in begin
+    List.iter (fun n ->
+      match get_some @@ PTree.get n code with
+      | Inop s | Iop (_,_,_,s) | Iload (_,_,_,_,_,s) | Istore (_,_,_,_,s) | Icall (_,_,_,_,s)
+      | Ibuiltin (_, _, _, s) ->
+          if get_some @@ PTree.get s is_loop_header then mark_path s n
+      | Icond _ -> () (* loop backedges are never Icond in CompCert *)
+      | Ijumptable _ -> ()
+      | Itailcall _ | Ireturn _ -> ()
+    ) bfs_order;
+    !loop_info
+  end
+
   (* Remark - compared to the original paper, we don't use the store heuristic *)
 let get_directions code entrypoint = begin
   Printf.printf "get_directions\n"; flush stdout;
-  let bfs_order = bfs code entrypoint
-  and is_loop_header = get_loop_headers code entrypoint
-  and directions = ref (PTree.map (fun n i -> None) code) (* None <=> no predicted direction *)
-  in begin
+  let bfs_order = bfs code entrypoint in
+  let is_loop_header = get_loop_headers code entrypoint in
+  let loop_info = get_loop_info is_loop_header bfs_order code in
+  let directions = ref (PTree.map (fun n i -> None) code) in (* None <=> no predicted direction *)
+  begin
     (* ptree_printbool is_loop_header; *)
     (* Printf.printf "\n"; *)
     List.iter (fun n ->
@@ -218,7 +270,7 @@ let get_directions code entrypoint = begin
       | Icond (cond, lr, ifso, ifnot, _) ->
           (* Printf.printf "Analyzing %d.." (P.to_int n); *)
           let heuristics = [ do_call_heuristic; do_opcode_heuristic;
-            do_return_heuristic; do_loop_heuristic; (* do_store_heuristic *) ] in
+            do_return_heuristic; do_loop2_heuristic loop_info n; do_loop_heuristic; (* do_store_heuristic *) ] in
           let preferred = ref None in
           begin
             Printf.printf "Deciding condition for RTL node %d\n" (P.to_int n);
