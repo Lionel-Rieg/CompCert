@@ -419,9 +419,13 @@ let order_sequences code entry fs =
       assert (not fs_evaluated.(s_id));
       ordered_fs := fs_a.(s_id) :: !ordered_fs;
       fs_evaluated.(s_id) <- true;
+      (* Printf.printf "++++++\n";
+      Printf.printf "Scheduling %d\n" s_id;
+      Printf.printf "Initial depmap: "; print_depmap depmap; *)
       Array.iteri (fun i deps ->
         depmap.(i) <- ISet.remove s_id deps
-      ) depmap
+      ) depmap;
+      (* Printf.printf "Final depmap: "; print_depmap depmap; *)
     end
   in let choose_best_of candidates =
     let current_best_id = ref None in
@@ -451,8 +455,10 @@ let order_sequences code entry fs =
     begin
       Array.iteri (fun i deps ->
         begin
-          (* Printf.printf "Deps: "; print_iset deps; Printf.printf "\n"; *)
-          if (deps == ISet.empty && not fs_evaluated.(i)) then candidates := i :: !candidates
+          (* Printf.printf "Deps of %d: " i; print_iset deps; Printf.printf "\n"; *)
+          (* FIXME - if we keep it that way (no dependency check), remove all the unneeded stuff *)
+          if ((* deps == ISet.empty && *) not fs_evaluated.(i)) then
+            candidates := i :: !candidates
         end
       ) depmap;
       if not (List.length !candidates > 0) then begin
