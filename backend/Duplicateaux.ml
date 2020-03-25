@@ -269,8 +269,9 @@ let get_directions code entrypoint = begin
       match (get_some @@ PTree.get n code) with
       | Icond (cond, lr, ifso, ifnot, _) ->
           (* Printf.printf "Analyzing %d.." (P.to_int n); *)
-          let heuristics = [ do_call_heuristic; do_opcode_heuristic;
-            do_return_heuristic; do_loop2_heuristic loop_info n; do_loop_heuristic; (* do_store_heuristic *) ] in
+          let heuristics = [ do_opcode_heuristic;
+            do_return_heuristic; do_loop2_heuristic loop_info n; do_loop_heuristic; do_call_heuristic;
+             (* do_store_heuristic *) ] in
           let preferred = ref None in
           begin
             Printf.printf "Deciding condition for RTL node %d\n" (P.to_int n);
