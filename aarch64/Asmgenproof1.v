@@ -2068,8 +2068,9 @@ Qed.
 
 Lemma make_epilogue_correct:
   forall ge0 f m stk soff cs m' ms rs k tm,
+  (is_leaf_function f = true -> rs # (IR RA) = parent_ra cs) ->
   load_stack m (Vptr stk soff) Tptr f.(fn_link_ofs) = Some (parent_sp cs) ->
-  load_stack m (Vptr stk soff) Tptr f.(fn_retaddr_ofs) = Some (parent_ra cs) ->
+  (is_leaf_function f = false -> load_stack m (Vptr stk soff) Tptr f.(fn_retaddr_ofs) = Some (parent_ra cs)) ->
   Mem.free m stk 0 f.(fn_stacksize) = Some m' ->
   agree ms (Vptr stk soff) rs ->
   Mem.extends m tm ->
@@ -2082,16 +2083,41 @@ Lemma make_epilogue_correct:
   /\ rs'#SP = parent_sp cs
   /\ (forall r, r <> PC -> r <> SP -> r <> RA -> r <> X16 -> rs'#r = rs#r).
 Proof.
-  intros until tm; intros LP LRA FREE AG MEXT MCS.
+  intros until tm; intros LEAF_RA LP LRA FREE AG MEXT MCS.
+  destruct (is_leaf_function f) eqn:IS_LEAF.
+  {
+  exploit Mem.loadv_extends. eauto. eexact LP. auto. simpl. intros (parent' & LP' & LDP').
+  exploit lessdef_parent_sp; eauto. intros EQ; subst parent'; clear LDP'.
+  exploit Mem.free_parallel_extends; eauto. intros (tm' & FREE' & MEXT').
+  unfold make_epilogue.
+  rewrite IS_LEAF.
+
+  econstructor; econstructor; split.
+  apply exec_straight_one. simpl.
+  rewrite <- (sp_val _ _ _ AG). simpl; rewrite LP'. 
+    rewrite FREE'. eauto. auto. 
+  split. apply agree_nextinstr. apply agree_set_other; auto.
+  apply agree_change_sp with (Vptr stk soff).
+  apply agree_exten with rs; auto.
+  eapply parent_sp_def; eauto.
+  split. auto.
+  split. Simpl.
+  split. Simpl.
+  intros. Simpl.
+  }
+  lapply LRA. 2: reflexivity.
+  clear LRA. intro LRA.
   exploit Mem.loadv_extends. eauto. eexact LP. auto. simpl. intros (parent' & LP' & LDP').
   exploit Mem.loadv_extends. eauto. eexact LRA. auto. simpl. intros (ra' & LRA' & LDRA').
   exploit lessdef_parent_sp; eauto. intros EQ; subst parent'; clear LDP'.
   exploit lessdef_parent_ra; eauto. intros EQ; subst ra'; clear LDRA'.
   exploit Mem.free_parallel_extends; eauto. intros (tm' & FREE' & MEXT').
   unfold make_epilogue.
+  rewrite IS_LEAF.
   exploit (loadptr_correct XSP (fn_retaddr_ofs f)).
     instantiate (2 := rs). simpl. rewrite <- (sp_val _ _ _ AG). simpl. eexact LRA'. simpl; congruence.
   intros (rs1 & A1 & B1 & C1).
+
   econstructor; econstructor; split.
   eapply exec_straight_trans. eexact A1. apply exec_straight_one. simpl. 
     simpl; rewrite (C1 SP) by auto with asmgen. rewrite <- (sp_val _ _ _ AG). simpl; rewrite LP'. 
