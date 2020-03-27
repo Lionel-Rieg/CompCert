@@ -113,14 +113,12 @@ build_ppc64:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-powerpc64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_ppc64.sh
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static SIMU='qemu-ppc64' EXECUTE='qemu-ppc64' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
