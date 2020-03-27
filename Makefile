@@ -94,6 +94,7 @@ BACKEND=\
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
   ForwardMoves.v ForwardMovesproof.v \
+  FirstNop.v \
   Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \
