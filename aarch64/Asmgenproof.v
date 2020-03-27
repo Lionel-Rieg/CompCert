@@ -338,8 +338,8 @@ Remark make_epilogue_label:
   forall f k, tail_nolabel k (make_epilogue f k).
 Proof.
   unfold make_epilogue; intros.
-  destruct is_leaf_function.
-  { TailNoLabel. }
+  (* FIXME destruct is_leaf_function.
+  { TailNoLabel. } *)
   eapply tail_nolabel_trans.
   apply loadptr_label.
   TailNoLabel.
