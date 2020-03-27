@@ -11,6 +11,7 @@ build_x86_64:
   script:
     - ./config_x86_64.sh
     - make -j "$NJOBS"
+    - cd test && make all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -24,12 +25,15 @@ build_ia32:
   stage: build
   image: "coqorg/coq"
   before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-multilib
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_ia32.sh
     - make -j "$NJOBS"
+    - cd test && make all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -44,13 +48,14 @@ build_aarch64:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-aarch64-linux-gnu
+    - sudo apt-get -y install gcc-aarch64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
+    - cd test && make CCOMPOPTS=-static SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -65,13 +70,14 @@ build_arm:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-arm-linux-gnueabihf
+    - sudo apt-get -y install gcc-arm-linux-gnueabihf qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_arm.sh
     - make -j "$NJOBS"
+    - cd test && make DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -86,7 +92,7 @@ build_ppc:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-powerpc-linux-gnu
+    - sudo apt-get -y install gcc-powerpc-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
@@ -102,18 +108,40 @@ build_ppc:
       when: always
     - when: manual
 
+build_ppc64:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-powerpc64-linux-gnu
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_ppc64.sh
+    - make -j "$NJOBS"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
+
 build_rv64:
   stage: build
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-riscv64-linux-gnu
+    - sudo apt-get -y install gcc-riscv64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_rv64.sh
     - make -j "$NJOBS"
+    - cd test && make CCOMPOPTS=-static SIMU='qemu-riscv64' EXECUTE='qemu-riscv64' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -128,7 +156,7 @@ build_rv32:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-riscv64-linux-gnu
+    - sudo apt-get -y install gcc-riscv64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
