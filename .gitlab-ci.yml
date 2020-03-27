@@ -25,6 +25,7 @@ build_ia32:
   stage: build
   image: "coqorg/coq"
   before_script:
+    - sudo apt-get -y install gcc-multilib
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
@@ -90,7 +91,7 @@ build_ppc:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-powerpc-linux-gnu qemu-user
+    - sudo apt-get -y install gcc-multilib-powerpc qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
@@ -161,7 +162,6 @@ build_k1c:
   script:
     - ./config_k1c.sh -no-runtime-lib
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static all
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
