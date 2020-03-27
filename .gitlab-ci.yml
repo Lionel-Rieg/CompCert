@@ -143,7 +143,6 @@ build_rv32:
   script:
     - ./config_rv32.sh -no-runtime-lib
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static SIMU='qemu-riscv32' EXECUTE='qemu-riscv32' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
