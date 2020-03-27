@@ -44,14 +44,14 @@ build_aarch64:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-aarch64-linux-gnu qemu-user-binfmt
+    - sudo apt-get -y install gcc-aarch64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static all test
+    - cd test && make CCOMPOPTS=-static SIMU='/opt/qemu/4.2.0/bin/qemu-aarch64' EXECUTE='/opt/qemu/4.2.0/bin/qemu-aarch64' all test
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
