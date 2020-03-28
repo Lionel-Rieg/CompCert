@@ -55,7 +55,8 @@ build_aarch64:
   script:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
-    - make -C test CCOMPOPTS=-static SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
+    - make -C test CCOMPOPTS='-static' SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
+    - make -C test/monniaux/yarpgen -k TARGET_CC='aarch64-linux-gnu-gcc' EXECUTE='qemu-aarch64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
