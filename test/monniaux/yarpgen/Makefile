@@ -29,7 +29,7 @@ TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 1 $(MAX)) \
 TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 1 $(MAX))
 TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(MAX))
 TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
-TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX))
+TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX)) $(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX))
 
 all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
 
@@ -66,11 +66,14 @@ ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o ran%/in
 ran%/example.gcc.host: ran%/func.gcc.host.o ran%/driver.gcc.host.o ran%/init.gcc.host.o ran%/check.gcc.host.o ran%/hash.gcc.host.o
 	$(CC) $(CFLAGS) $+ -o $@
 
-ran%/driver.c ran%/func.c ran%/init.h:
+ran%/driver.c ran%/func.c ran%/init.c ran%/check.c ran%/hash.c ran%/init.h:
 	mkdir -p ran$*
 	$(YARPGEN) --seed=$* --out-dir=ran$*/ --std=c99
 
 ran%/example.target.cmp : ran%/example.gcc.target.out ran%/example.ccomp.target.out
+	cmp $+ > $@
+
+ran%/example.host_target.cmp : ran%/example.gcc.host.out ran%/example.gcc.target.out
 	cmp $+ > $@
 
 yarpgen:
