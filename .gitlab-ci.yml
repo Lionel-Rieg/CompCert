@@ -73,7 +73,7 @@ build_arm:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-multilib gcc-arm-linux-gnueabihf qemu-user
+    - sudo apt-get -y install gcc-arm-linux-gnueabihf qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
