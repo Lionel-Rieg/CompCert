@@ -38,7 +38,7 @@ TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(M
 TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
 TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX)) # $(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX))
 
-all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
+all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_CMP) $(TESTS_C)
 
 tests_c: $(TESTS_C)
 
