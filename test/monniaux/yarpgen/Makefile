@@ -2,7 +2,7 @@ TARGET_CCOMP=../../../ccomp
 
 ifndef YARPGEN
 YARPGEN=./yarpgen
-generator: yarpgen
+GENERATOR=yarpgen
 endif
 
 MAX=300
@@ -14,18 +14,18 @@ TESTS_C=$(shell seq --format $(PREFIX)/func.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/init.h 0 $(MAX))
 
-$(TESTS_C): generator
+$(TESTS_C): $(GENERATOR)
 
-TESTS_CCOMP_TARGET_S=$(shell seq --format $(PREFIX)/func.ccomp.target.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.ccomp.target.s 0 $(MAX))
-TESTS_GCC_TARGET_S=$(shell seq --format $(PREFIX)/func.gcc.target.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.gcc.target.s 0 $(MAX))
-TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.gcc.host.s 0 $(MAX))
-TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 0 $(MAX))
-TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 0 $(MAX))
-TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 0 $(MAX))
-TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 0 $(MAX))
+TESTS_CCOMP_TARGET_S=$(shell seq --format $(PREFIX)/func.ccomp.target.s 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.ccomp.target.s 1 $(MAX))
+TESTS_GCC_TARGET_S=$(shell seq --format $(PREFIX)/func.gcc.target.s 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.gcc.target.s 1 $(MAX))
+TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.gcc.host.s 1 $(MAX))
+TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 1 $(MAX))
+TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(MAX))
+TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
+TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX))
 
 all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
 
@@ -78,7 +78,7 @@ yarpgen:
 	$(MAKE) CXX=g++ -C yarpgen-1.1
 	cp yarpgen-1.1/yarpgen $@
 
-.PHONY: all clean tests_c tests_c generator
+.PHONY: all clean tests_c tests_c
 
 clean:
 	-rm -rf ran*
