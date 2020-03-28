@@ -11,7 +11,8 @@ endif
 MAX=300
 PREFIX=ran%06.f
 
-CCOMPFLAGS+=-funprototyped -fbitfields -fno-cse2 # FIXME
+CCOMPOPTS=-static
+CCOMPFLAGS+=-funprototyped -fbitfields -fno-cse2 -stdlib ../../../runtime # FIXME
 
 TESTS_C=$(shell seq --format $(PREFIX)/func.c 1 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 1 $(MAX)) \
@@ -29,7 +30,7 @@ TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 1 $(MAX)) \
 TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 1 $(MAX))
 TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(MAX))
 TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
-TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX)) $(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX))
+TESTS_CMP=$(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX)) $(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX))
 
 all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
 
@@ -73,7 +74,7 @@ ran%/driver.c ran%/func.c ran%/init.c ran%/check.c ran%/hash.c ran%/init.h:
 ran%/example.target.cmp : ran%/example.gcc.target.out ran%/example.ccomp.target.out
 	cmp $+ > $@
 
-ran%/example.host_target.cmp : ran%/example.gcc.host.out ran%/example.gcc.target.out
+ran%/example.host_target.cmp : ran%/example.gcc.host.out ran%/example.ccomp.target.out
 	cmp $+ > $@
 
 yarpgen:
@@ -83,6 +84,7 @@ yarpgen:
 	cp yarpgen-1.1/yarpgen $@
 
 .PHONY: all clean tests_c tests_c
+.SECONDARY: .s .target .out
 
 clean:
 	-rm -rf ran*
