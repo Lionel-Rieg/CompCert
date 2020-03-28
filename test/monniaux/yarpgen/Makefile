@@ -1,14 +1,21 @@
 TARGET_CCOMP=../../../ccomp
 
-YARPGEN=yarpgen
+ifndef YARPGEN
+YARPGEN=./yarpgen
+generator: yarpgen
+endif
+
 MAX=300
 PREFIX=ran%06.f
 
-CCOMPOPTS += -funprototyped -fbitfields
+CCOMPFLAGS+=-funprototyped -fbitfields
 
 TESTS_C=$(shell seq --format $(PREFIX)/func.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/init.h 0 $(MAX))
+
+$(TESTS_C): generator
+
 TESTS_CCOMP_TARGET_S=$(shell seq --format $(PREFIX)/func.ccomp.target.s 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.ccomp.target.s 0 $(MAX))
 TESTS_GCC_TARGET_S=$(shell seq --format $(PREFIX)/func.gcc.target.s 0 $(MAX)) \
@@ -24,8 +31,10 @@ all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(T
 
 tests_c: $(TESTS_C)
 
+tests_s: $(TESTS_CCOMP_TARGET_S)
+
 %.ccomp.target.s : %.c
-	$(TARGET_CCOMP) $(CCOMPOPTS) -S -o $@ $<
+	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) -S -o $@ $<
 
 %.gcc.target.s : %.c
 	$(TARGET_CC) $(CCOMPOPTS) -S -o $@ $<
@@ -34,7 +43,7 @@ tests_c: $(TESTS_C)
 	$(CC) $(CFLAGS) -S -o $@ $<
 
 %.target.o : %.target.s
-	$(TARGET_CCOMP) $(CCOMPOPTS) -c -o $@ $<
+	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) -c -o $@ $<
 
 %.target.out : %.target
 	$(EXECUTE) $< > $@
@@ -45,7 +54,7 @@ tests_c: $(TESTS_C)
 ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
 
 ran%/example.ccomp.target: ran%/func.ccomp.target.o ran%/driver.ccomp.target.o 
-	$(TARGET_CCOMP) $(CCOMPOPTS) $+ -o $@
+	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) $+ -o $@
 
 ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o 
 	$(TARGET_CC) $(TARGET_CFLAGS) $+ -o $@
@@ -57,13 +66,19 @@ ran%/example.ccomp.host: ran%/func.ccomp.host.o ran%/driver.ccomp.host.o
 	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
 
 ran%/driver.c ran%/func.c ran%/init.h:
-	-mkdir ran$*
+	mkdir -p ran$*
 	$(YARPGEN) --seed=$* --out-dir=ran$*/ --std=c99
 
 ran%/example.target.cmp : ran%/example.gcc.target.out ran%/example.ccomp.target.out
 	cmp $+ > $@
 
-.PHONY: all clean tests_c
+yarpgen:
+	curl -L -o yarpgen_v1.1.tar.gz https://github.com/intel/yarpgen/archive/v1.1.tar.gz
+	tar xfz yarpgen_v1.1.tar.gz
+	$(MAKE) CXX=g++ -C yarpgen-1.1
+	cp yarpgen-1.1/yarpgen $@
+
+.PHONY: all clean tests_c tests_c generator
 
 clean:
 	-rm -rf ran*
