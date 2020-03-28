@@ -11,7 +11,8 @@ build_x86_64:
   script:
     - ./config_x86_64.sh
     - make -j "$NJOBS"
-    - cd test && make all test
+    - make -C test all test
+    - make -C test/monniaux/yarpgen
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -33,7 +34,8 @@ build_ia32:
   script:
     - ./config_ia32.sh
     - make -j "$NJOBS"
-    - cd test && make all test
+    - make -C test all test
+#    - make -C test/monniaux/yarpgen disabled due to -m32/-m64 issues
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -55,7 +57,8 @@ build_aarch64:
   script:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
+    - make -C test CCOMPOPTS='-static' SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
+    - make -C test/monniaux/yarpgen -k TARGET_CC='aarch64-linux-gnu-gcc' EXECUTE='qemu-aarch64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -77,7 +80,8 @@ build_arm:
   script:
     - ./config_arm.sh
     - make -j "$NJOBS"
-    - cd test && make DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
+    - make -C test DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
+#    - make -C test/monniaux/yarpgen -k TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' disabled; mysterious differences between gcc/clang and compcert
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -141,7 +145,8 @@ build_rv64:
   script:
     - ./config_rv64.sh
     - make -j "$NJOBS"
-    - cd test && make CCOMPOPTS=-static SIMU='qemu-riscv64' EXECUTE='qemu-riscv64' all test
+    - make -C test CCOMPOPTS=-static SIMU='qemu-riscv64' EXECUTE='qemu-riscv64' all test
+    - make -C test/monniaux/yarpgen -k TARGET_CC='riscv64-linux-gnu-gcc' EXECUTE='qemu-riscv64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
