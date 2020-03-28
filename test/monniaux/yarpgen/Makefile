@@ -1,4 +1,7 @@
 TARGET_CCOMP=../../../ccomp
+TARGET_CC=gcc
+
+all:
 
 ifndef YARPGEN
 YARPGEN=./yarpgen
@@ -10,9 +13,10 @@ PREFIX=ran%06.f
 
 CCOMPFLAGS+=-funprototyped -fbitfields
 
-TESTS_C=$(shell seq --format $(PREFIX)/func.c 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.c 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/init.h 0 $(MAX))
+TESTS_C=$(shell seq --format $(PREFIX)/func.c 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.c 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/init.c 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/init.h 1 $(MAX))
 
 $(TESTS_C): $(GENERATOR)
 
@@ -53,17 +57,14 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 
 ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
 
-ran%/example.ccomp.target: ran%/func.ccomp.target.o ran%/driver.ccomp.target.o 
+ran%/example.ccomp.target: ran%/func.ccomp.target.o ran%/driver.ccomp.target.o  ran%/init.ccomp.target.o ran%/check.ccomp.target.o ran%/hash.ccomp.target.o
 	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) $+ -o $@
 
-ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o 
+ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o ran%/init.ccomp.target.o ran%/check.gcc.target.o ran%/hash.gcc.target.o
 	$(TARGET_CC) $(TARGET_CFLAGS) $+ -o $@
 
-ran%/example.gcc.host: ran%/func.gcc.host.o ran%/driver.gcc.host.o 
+ran%/example.gcc.host: ran%/func.gcc.host.o ran%/driver.gcc.host.o ran%/init.gcc.host.o ran%/check.gcc.host.o ran%/hash.gcc.host.o
 	$(CC) $(CFLAGS) $+ -o $@
-
-ran%/example.ccomp.host: ran%/func.ccomp.host.o ran%/driver.ccomp.host.o 
-	$(CCOMP) $(CCOMPFLAGS) $+ -o $@
 
 ran%/driver.c ran%/func.c ran%/init.h:
 	mkdir -p ran$*
