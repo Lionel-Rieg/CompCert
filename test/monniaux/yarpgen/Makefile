@@ -17,6 +17,8 @@ CCOMPFLAGS+=-funprototyped -fbitfields -fno-cse2 -stdlib ../../../runtime # FIXM
 TESTS_C=$(shell seq --format $(PREFIX)/func.c 1 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 1 $(MAX)) \
 	$(shell seq --format $(PREFIX)/init.c 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/hash.c 1 $(MAX)) \
+	$(shell seq --format $(PREFIX)/check.c 1 $(MAX)) \
 	$(shell seq --format $(PREFIX)/init.h 1 $(MAX))
 
 $(TESTS_C): $(GENERATOR)
@@ -48,7 +50,7 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 	$(CC) $(CFLAGS) -S -o $@ $<
 
 %.target.o : %.target.s
-	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) -c -o $@ $<
+	$(TARGET_CC) -c -o $@ $<
 
 %.target.out : %.target
 	$(EXECUTE) $< > $@
@@ -84,7 +86,6 @@ yarpgen:
 	cp yarpgen-1.1/yarpgen $@
 
 .PHONY: all clean tests_c tests_c
-.SECONDARY: .s .target .out
 
 clean:
 	-rm -rf ran*
