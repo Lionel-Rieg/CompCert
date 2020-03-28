@@ -3,7 +3,7 @@ Require Import AST Linking.
 Require Import Memory Registers Op RTL.
 
 Definition transf_function (f: function) : function :=
-  let start_pc := max_pc_function f in
+  let start_pc := Pos.succ (max_pc_function f) in
   {| fn_sig := f.(fn_sig);
      fn_params := f.(fn_params);
      fn_stacksize := f.(fn_stacksize);
