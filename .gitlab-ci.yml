@@ -12,7 +12,7 @@ build_x86_64:
     - ./config_x86_64.sh
     - make -j "$NJOBS"
     - make -C test all test
-    - make -C test/monniaux/yarpgen
+    - ulimit -s65536 && make -C test/monniaux/yarpgen
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -35,7 +35,7 @@ build_ia32:
     - ./config_ia32.sh
     - make -j "$NJOBS"
     - make -C test all test
-#    - make -C test/monniaux/yarpgen disabled due to -m32/-m64 issues
+    - ulimit -s65536 && make -C test/monniaux/yarpgen BITS=32 TARGET_CC='gcc -m32'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -58,7 +58,7 @@ build_aarch64:
     - ./config_aarch64.sh
     - make -j "$NJOBS"
     - make -C test CCOMPOPTS='-static' SIMU='qemu-aarch64' EXECUTE='qemu-aarch64' all test
-    - make -C test/monniaux/yarpgen -k TARGET_CC='aarch64-linux-gnu-gcc' EXECUTE='qemu-aarch64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
+    - ulimit -s65536 && make -C test/monniaux/yarpgen TARGET_CC='aarch64-linux-gnu-gcc' EXECUTE='qemu-aarch64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -81,7 +81,7 @@ build_arm:
     - ./config_arm.sh
     - make -j "$NJOBS"
     - make -C test DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
-#    - make -C test/monniaux/yarpgen -k TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' disabled; mysterious differences between gcc/clang and compcert
+    - ulimit -s65536 && make -C test/monniaux/yarpgen TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' BITS=32
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
@@ -146,7 +146,7 @@ build_rv64:
     - ./config_rv64.sh
     - make -j "$NJOBS"
     - make -C test CCOMPOPTS=-static SIMU='qemu-riscv64' EXECUTE='qemu-riscv64' all test
-    - make -C test/monniaux/yarpgen -k TARGET_CC='riscv64-linux-gnu-gcc' EXECUTE='qemu-riscv64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
+    - ulimit -s65536 && make -C test/monniaux/yarpgen TARGET_CC='riscv64-linux-gnu-gcc' EXECUTE='qemu-riscv64' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
