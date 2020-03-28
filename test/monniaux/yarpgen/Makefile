@@ -1,37 +1,54 @@
+TARGET_CCOMP=../../../ccomp
+
 YARPGEN=yarpgen
 MAX=300
 PREFIX=ran%06.f
-include ../rules.mk
 
-K1C_CCOMPFLAGS += -funprototyped -fbitfields
-CCOMPFLAGS += -funprototyped -fbitfields
+CCOMPOPTS += -funprototyped -fbitfields
 
-TARGETS_C=$(shell seq --format $(PREFIX)/func.c 0 $(MAX)) \
+TESTS_C=$(shell seq --format $(PREFIX)/func.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/init.h 0 $(MAX))
-TARGETS_CCOMP_K1C_S=$(shell seq --format $(PREFIX)/func.ccomp.k1c.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.ccomp.k1c.s 0 $(MAX))
-TARGETS_GCC_K1C_S=$(shell seq --format $(PREFIX)/func.gcc.k1c.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.gcc.k1c.s 0 $(MAX))
-TARGETS_CCOMP_HOST_S=$(shell seq --format $(PREFIX)/func.ccomp.host.s 0 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.ccomp.host.s 0 $(MAX))
-TARGETS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 0 $(MAX)) \
+TESTS_CCOMP_TARGET_S=$(shell seq --format $(PREFIX)/func.ccomp.target.s 0 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.ccomp.target.s 0 $(MAX))
+TESTS_GCC_TARGET_S=$(shell seq --format $(PREFIX)/func.gcc.target.s 0 $(MAX)) \
+	$(shell seq --format $(PREFIX)/driver.gcc.target.s 0 $(MAX))
+TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 0 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.gcc.host.s 0 $(MAX))
-TARGETS_CCOMP_K1C_OUT=$(shell seq --format $(PREFIX)/example.ccomp.k1c.out 0 $(MAX))
-TARGETS_GCC_K1C_OUT=$(shell seq --format $(PREFIX)/example.gcc.k1c.out 0 $(MAX))
-TARGETS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 0 $(MAX))
-TARGETS_CCOMP_HOST_OUT=$(shell seq --format $(PREFIX)/example.ccomp.host.out 0 $(MAX))
-TARGETS_CMP=$(shell seq --format $(PREFIX)/example.k1c.cmp 0 $(MAX))
+TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 0 $(MAX))
+TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 0 $(MAX))
+TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 0 $(MAX))
+TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 0 $(MAX))
 
-all:	$(TARGETS_CCOMP_K1C_OUT) $(TARGETS_GCC_K1C_OUT) $(TARGETS_GCC_HOST_OUT) $(TARGETS_CCOMP_HOST_OUT) $(TARGETS_CCOMP_K1C_S) $(TARGETS_GCC_K1C_S) $(TARGETS_GCC_HOST_S) $(TARGETS_CCOMP_HOST_S) $(TARGETS_CMP) $(TARGETS_C)
+all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
 
-ran%/func.ccomp.k1c.s ran%/func.gcc.k1c.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
+tests_c: $(TESTS_C)
 
-ran%/example.ccomp.k1c: ran%/func.ccomp.k1c.o ran%/driver.ccomp.k1c.o 
-	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -o $@
+%.ccomp.target.s : %.c
+	$(TARGET_CCOMP) $(CCOMPOPTS) -S -o $@ $<
 
-ran%/example.gcc.k1c: ran%/func.gcc.k1c.o ran%/driver.gcc.k1c.o 
-	$(K1C_CC) $(K1C_CFLAGS) $+ -o $@
+%.gcc.target.s : %.c
+	$(TARGET_CC) $(CCOMPOPTS) -S -o $@ $<
+
+%.gcc.host.s : %.c
+	$(CC) $(CFLAGS) -S -o $@ $<
+
+%.target.o : %.target.s
+	$(TARGET_CCOMP) $(CCOMPOPTS) -c -o $@ $<
+
+%.target.out : %.target
+	$(EXECUTE) $< > $@
+
+%.host.out : %.host
+	./$< > $@
+
+ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
+
+ran%/example.ccomp.target: ran%/func.ccomp.target.o ran%/driver.ccomp.target.o 
+	$(TARGET_CCOMP) $(CCOMPOPTS) $+ -o $@
+
+ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o 
+	$(TARGET_CC) $(TARGET_CFLAGS) $+ -o $@
 
 ran%/example.gcc.host: ran%/func.gcc.host.o ran%/driver.gcc.host.o 
 	$(CC) $(CFLAGS) $+ -o $@
@@ -43,10 +60,10 @@ ran%/driver.c ran%/func.c ran%/init.h:
 	-mkdir ran$*
 	$(YARPGEN) --seed=$* --out-dir=ran$*/ --std=c99
 
-ran%/example.k1c.cmp : ran%/example.gcc.k1c.out ran%/example.ccomp.k1c.out
+ran%/example.target.cmp : ran%/example.gcc.target.out ran%/example.ccomp.target.out
 	cmp $+ > $@
 
-.PHONY: all clean
+.PHONY: all clean tests_c
 
 clean:
 	-rm -rf ran*
