@@ -8,7 +8,7 @@ YARPGEN=./yarpgen
 GENERATOR=yarpgen
 endif
 
-MAX=300
+MAX=170
 PREFIX=ran%06.f
 
 CCOMPOPTS=-static
