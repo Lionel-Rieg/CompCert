@@ -10,14 +10,11 @@ YARPGEN=./yarpgen
 GENERATOR=yarpgen
 endif
 
-<<<<<<< HEAD
-=======
 ifdef BITS
 YARPGEN+=-m $(BITS)
 CFLAGS+=-m$(BITS)
 endif
 
->>>>>>> origin/mppa-ci
 MAX=129
 PREFIX=ran%06.f
 
@@ -39,15 +36,9 @@ TESTS_GCC_HOST_S=$(TEST_C:.c=.gcc.host.s)
 TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 1 $(MAX))
 TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(MAX))
 TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
-<<<<<<< HEAD
-TESTS_CMP=$(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX)) $(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX))
-
-all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_GCC_HOST_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_GCC_HOST_S) $(TESTS_CMP) $(TESTS_C)
-=======
 TESTS_CMP=$(shell seq --format $(PREFIX)/example.target.cmp 1 $(MAX)) # $(shell seq --format $(PREFIX)/example.host_target.cmp 1 $(MAX))
 
 all:	$(TESTS_CCOMP_TARGET_OUT) $(TESTS_GCC_TARGET_OUT) $(TESTS_CCOMP_TARGET_S) $(TESTS_GCC_TARGET_S) $(TESTS_CMP) $(TESTS_C)
->>>>>>> origin/mppa-ci
 
 tests_c: $(TESTS_C)
 
@@ -65,13 +56,6 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 %.target.o : %.target.s
 	$(TARGET_CC) -c -o $@ $<
 
-<<<<<<< HEAD
-%.target.out : %.target
-	$(EXECUTE) $< > $@
-
-%.host.out : %.host
-	./$< > $@
-=======
 %.host.o : %.host.s
 	$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -80,7 +64,6 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 
 %.host.out : %.host
 	./$< | tee $@
->>>>>>> origin/mppa-ci
 
 ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s ran%/init.gcc.host.s : ran%/init.h
 
