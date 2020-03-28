@@ -54,7 +54,7 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 	$(CC) $(CFLAGS) -S -o $@ $<
 
 %.target.o : %.target.s
-	$(TARGET_CC) $(CFLAGS) -c -o $@ $<
+	$(TARGET_CC) -c -o $@ $<
 
 %.host.o : %.host.s
 	$(CC) $(CFLAGS) -c -o $@ $<
