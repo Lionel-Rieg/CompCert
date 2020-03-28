@@ -11,7 +11,7 @@ endif
 MAX=300
 PREFIX=ran%06.f
 
-CCOMPFLAGS+=-funprototyped -fbitfields
+CCOMPFLAGS+=-funprototyped -fbitfields -fno-cse2 # FIXME
 
 TESTS_C=$(shell seq --format $(PREFIX)/func.c 1 $(MAX)) \
 	$(shell seq --format $(PREFIX)/driver.c 1 $(MAX)) \
