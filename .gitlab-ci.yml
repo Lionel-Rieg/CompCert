@@ -81,7 +81,7 @@ build_arm:
     - ./config_arm.sh
     - make -j "$NJOBS"
     - make -C test DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
-    - make -C test/monniaux/yarpgen -k TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
+    - make -C test/monniaux/yarpgen -k TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' BITS=32
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always

@@ -10,6 +10,11 @@ YARPGEN=./yarpgen
 GENERATOR=yarpgen
 endif
 
+ifdef BITS
+YARPGEN+=-m $(BITS)
+CFLAGS+=-m$(BITS)
+endif
+
 MAX=129
 PREFIX=ran%06.f
 
@@ -49,13 +54,16 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 	$(CC) $(CFLAGS) -S -o $@ $<
 
 %.target.o : %.target.s
-	$(TARGET_CC) -c -o $@ $<
+	$(TARGET_CC) $(CFLAGS) -c -o $@ $<
+
+%.host.o : %.host.s
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.target.out : %.target
-	$(EXECUTE) $< > $@
+	$(EXECUTE) $< | tee $@
 
 %.host.out : %.host
-	./$< > $@
+	./$< | tee $@
 
 ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s ran%/init.gcc.host.s : ran%/init.h
 
