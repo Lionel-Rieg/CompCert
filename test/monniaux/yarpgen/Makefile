@@ -3,6 +3,8 @@ TARGET_CC=gcc
 
 all:
 
+.SECONDARY:
+
 ifndef YARPGEN
 YARPGEN=./yarpgen
 GENERATOR=yarpgen
@@ -23,12 +25,9 @@ TESTS_C=$(shell seq --format $(PREFIX)/func.c 1 $(MAX)) \
 
 $(TESTS_C): $(GENERATOR)
 
-TESTS_CCOMP_TARGET_S=$(shell seq --format $(PREFIX)/func.ccomp.target.s 1 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.ccomp.target.s 1 $(MAX))
-TESTS_GCC_TARGET_S=$(shell seq --format $(PREFIX)/func.gcc.target.s 1 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.gcc.target.s 1 $(MAX))
-TESTS_GCC_HOST_S=$(shell seq --format $(PREFIX)/func.gcc.host.s 1 $(MAX)) \
-	$(shell seq --format $(PREFIX)/driver.gcc.host.s 1 $(MAX))
+TESTS_CCOMP_TARGET_S=$(TEST_C:.c=.ccomp.target.s)
+TESTS_GCC_TARGET_S=$(TEST_C:.c=.gcc.target.s)
+TESTS_GCC_HOST_S=$(TEST_C:.c=.gcc.host.s)
 TESTS_CCOMP_TARGET_OUT=$(shell seq --format $(PREFIX)/example.ccomp.target.out 1 $(MAX))
 TESTS_GCC_TARGET_OUT=$(shell seq --format $(PREFIX)/example.gcc.target.out 1 $(MAX))
 TESTS_GCC_HOST_OUT=$(shell seq --format $(PREFIX)/example.gcc.host.out 1 $(MAX))
@@ -58,12 +57,12 @@ tests_s: $(TESTS_CCOMP_TARGET_S)
 %.host.out : %.host
 	./$< > $@
 
-ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s : ran%/init.h
+ran%/func.ccomp.target.s ran%/func.gcc.target.s ran%/func.ccomp.host.s ran%/func.gcc.host.s ran%/init.gcc.host.s : ran%/init.h
 
 ran%/example.ccomp.target: ran%/func.ccomp.target.o ran%/driver.ccomp.target.o  ran%/init.ccomp.target.o ran%/check.ccomp.target.o ran%/hash.ccomp.target.o
 	$(TARGET_CCOMP) $(CCOMPOPTS) $(CCOMPFLAGS) $+ -o $@
 
-ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o ran%/init.ccomp.target.o ran%/check.gcc.target.o ran%/hash.gcc.target.o
+ran%/example.gcc.target: ran%/func.gcc.target.o ran%/driver.gcc.target.o ran%/init.gcc.target.o ran%/check.gcc.target.o ran%/hash.gcc.target.o
 	$(TARGET_CC) $(TARGET_CFLAGS) $+ -o $@
 
 ran%/example.gcc.host: ran%/func.gcc.host.o ran%/driver.gcc.host.o ran%/init.gcc.host.o ran%/check.gcc.host.o ran%/hash.gcc.host.o
