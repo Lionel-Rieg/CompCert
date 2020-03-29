@@ -73,14 +73,38 @@ build_arm:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install gcc-arm-linux-gnueabihf qemu-user
+    - sudo apt-get -y install gcc-arm-linux-gnueabi qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
     - ./config_arm.sh
     - make -j "$NJOBS"
-    - make -C test DIRS="c compression spass regression" CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
+    - make -C test CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
+    - ulimit -s65536 && make -C test/monniaux/yarpgen TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' BITS=32
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
+
+
+build_armhf:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install gcc-arm-linux-gnueabihf qemu-user
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_armhf.sh
+    - make -j "$NJOBS"
+    - make -C test CCOMPOPTS=-static SIMU='qemu-arm' EXECUTE='qemu-arm' all test
     - ulimit -s65536 && make -C test/monniaux/yarpgen TARGET_CC='arm-linux-gnueabihf-gcc' EXECUTE='qemu-arm' CCOMPOPTS='-static' TARGET_CFLAGS='-static' BITS=32
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
