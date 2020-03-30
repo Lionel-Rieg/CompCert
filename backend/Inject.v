@@ -81,20 +81,28 @@ Definition inject prog extra_pc injections : code :=
 Section INJECTOR.
   Variable gen_injections : function -> PTree.t (list inj_instr).
 
+  Definition valid_injection_instr (max_reg : reg) (i : inj_instr) :=
+    match i with
+    | INJop op args res => (max_reg <? res) && (negb (is_trapping_op op)
+       && (Datatypes.length args =? args_of_operation op)%nat) 
+    | INJload _ _ _ res => max_reg <? res
+    end.
+  
+  Definition valid_injections1 max_pc max_reg :=
+    List.forallb
+         (fun injection =>
+            ((fst injection) <=? max_pc) &&
+            (List.forallb (valid_injection_instr max_reg) (snd injection))
+         ).
+
+  Definition valid_injections f :=
+    valid_injections1 (max_pc_function f) (max_reg_function f).
+  
   Definition transf_function (f : function) : res function :=
     let injections := PTree.elements (gen_injections f) in
     let max_pc := max_pc_function f in
     let max_reg := max_reg_function f in
-    if List.forallb
-         (fun injection =>
-            ((fst injection) <=? max_pc) &&
-            (List.forallb
-               (fun (i : inj_instr) =>
-                  (match i with
-                   | INJop _ _ res => res
-                   | INJload _ _ _ res => res
-                   end) <=? max_reg) (snd injection))
-         ) injections
+    if valid_injections1 max_pc max_reg injections
     then
       OK {| fn_sig := f.(fn_sig);
             fn_params := f.(fn_params);

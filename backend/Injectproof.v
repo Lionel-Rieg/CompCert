@@ -1,6 +1,6 @@
 Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
-Require Import Memory Registers Op RTL Globalenvs Values.
+Require Import Memory Registers Op RTL Globalenvs Values Events.
 Require Import Inject.
 Require Import Lia.
 
@@ -545,6 +545,11 @@ Section INJECTOR.
 
     Definition match_regs (f : function) (rs rs' : regset) :=
       forall r, r <= max_reg_function f -> (rs'#r = rs#r).
+
+    Lemma match_regs_refl : forall f rs, match_regs f rs rs.
+    Proof.
+      unfold match_regs. intros. trivial.
+    Qed.
     
     Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
     | match_frames_intro: forall res f tf sp pc rs trs
@@ -610,7 +615,7 @@ Section INJECTOR.
     Proof.
       destruct f; simpl; intros; monadInv H; trivial.
       unfold transf_function in *.
-      destruct forallb in EQ.
+      destruct valid_injections1 in EQ.
       2: discriminate.
       inv EQ.
       reflexivity.
@@ -623,7 +628,7 @@ Section INJECTOR.
       destruct f.
       unfold transf_function.
       intros.
-      destruct forallb in H.
+      destruct valid_injections1 in H.
       2: discriminate.
       inv H.
       reflexivity.
@@ -636,7 +641,7 @@ Section INJECTOR.
       destruct f.
       unfold transf_function.
       intros.
-      destruct forallb in H.
+      destruct valid_injections1 in H.
       2: discriminate.
       inv H.
       reflexivity.
@@ -649,7 +654,7 @@ Section INJECTOR.
       destruct f.
       unfold transf_function.
       intros.
-      destruct forallb in H.
+      destruct valid_injections1 in H.
       2: discriminate.
       inv H.
       reflexivity.
@@ -662,7 +667,7 @@ Section INJECTOR.
       destruct f.
       unfold transf_function.
       intros.
-      destruct forallb in H.
+      destruct valid_injections1 in H.
       2: discriminate.
       inv H.
       reflexivity.
@@ -693,5 +698,94 @@ Section INJECTOR.
       intros. inv H0. inv H. inv STACKS. constructor.
     Qed.
 
+    Lemma assign_above:
+      forall f trs res v,
+        (max_reg_function f) < res ->
+        match_regs f trs trs # res <- v.
+    Proof.
+      unfold match_regs.
+      intros.
+      apply Regmap.gso.
+      lia.
+    Qed.
+    
+    Lemma transf_function_inj_step:
+      forall ts f tf sp pc trs m ii
+        (FUN : transf_function gen_injections f = OK tf)
+        (GET : (fn_code tf) ! pc = Some (inject_instr ii (Pos.succ pc)))
+        (VALID : valid_injection_instr (max_reg_function f) ii = true),
+      exists trs',
+        RTL.step ge
+              (State ts tf sp pc trs m) E0
+              (State ts tf sp (Pos.succ pc) trs' m) /\
+        match_regs (f : function) trs trs'.
+    Proof.
+      destruct ii as [op args res | chunk addr args res]; simpl; intros.
+      - repeat rewrite andb_true_iff in VALID.
+        rewrite negb_true_iff in VALID.
+        destruct VALID as (MAX_REG & NOTRAP & LENGTH).
+        rewrite Pos.ltb_lt in MAX_REG.
+        rewrite Nat.eqb_eq in LENGTH.
+        destruct (eval_operation ge sp op trs ## args m) as [v | ] eqn:EVAL.
+        + exists (trs # res <- v).
+          split.
+          * apply exec_Iop with (op := op) (args := args) (res := res); assumption.
+          * apply assign_above; auto.
+        + exfalso.
+          generalize EVAL.
+          apply is_trapping_op_sound; trivial.
+          rewrite map_length.
+          assumption.
+      - rewrite Pos.ltb_lt in VALID.
+        destruct (eval_addressing ge sp addr trs ## args) as [a | ] eqn:ADDR.
+        + destruct (Mem.loadv chunk m a) as [v | ] eqn:LOAD.
+          * exists (trs # res <- v).
+            split.
+            ** apply exec_Iload with (trap := NOTRAP) (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); assumption.
+            ** apply assign_above; auto.
+          * exists (trs # res <- Vundef).
+            split.
+            ** apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); assumption.
+            ** apply assign_above; auto.
+        + exists (trs # res <- Vundef).
+          split.
+          * apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args) (dst := res); assumption.
+          * apply assign_above; auto.
+    Qed.
+
+    (* TODO
+    Lemma transf_function_starstep :
+      forall ts f tf sp m inj_n src_pc inj_pc inj_code
+        (FUN : transf_function gen_injections f = OK tf)
+        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+               Some (src_pc, inj_code))
+        (POSITION : inject_l_position (Pos.succ (max_pc_function f))
+                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+        (k : nat)
+        (CUR : (k <= (List.length inj_code))%nat)
+        (trs : regset),
+      exists trs',
+        match_regs (f : function) trs trs' /\
+        Smallstep.star RTL.step ge
+              (State ts tf sp (pos_add_nat inj_pc
+                                    ((List.length inj_code) - k)%nat) trs m) E0
+              (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs' m).
+    Proof.
+      induction k; simpl; intros.
+      { rewrite Nat.sub_0_r.
+        exists trs.
+        split.
+        - apply match_regs_refl.
+        - constructor.
+      }
+      assert (k <= Datatypes.length inj_code)%nat as KK by lia.
+      pose proof (IHk KK) as IH.
+      clear IHk KK.
+      assert (
+      exists trs'.
+      split.
+      assumption.
+*)
+      
 End PRESERVATION.
 End INJECTOR.
