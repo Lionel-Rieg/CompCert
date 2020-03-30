@@ -36,6 +36,21 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma pos_add_nat_monotone : forall x n1 n2,
+    (n1 < n2) % nat ->
+    (pos_add_nat x n1) < (pos_add_nat x n2).
+Proof.
+  induction n1; destruct n2; intros.
+  - lia.
+  - simpl.
+    pose proof (pos_add_nat_increases x n2).
+    lia.
+  - lia.
+  - simpl.
+    specialize IHn1 with n2.
+    lia.
+Qed.
+
 Lemma inject_list_increases:
   forall l prog pc dst,
     (fst (inject_list prog pc dst l)) = pos_add_nat pc (S (List.length l)).
@@ -266,6 +281,7 @@ Qed.
 
 Lemma inject_l_injected:
   forall injections prog injnum pc l extra_pc k
+         (BELOW : forallb (fun injection => (fst injection) <? extra_pc) injections = true)
          (NUMBER : nth_error injections injnum = Some (pc, l))
          (BOUND : (k < (List.length l))%nat),
     PTree.get (pos_add_nat (inject_l_position extra_pc injections injnum) k)
@@ -277,6 +293,9 @@ Proof.
   { rewrite nth_error_nil in NUMBER.
     discriminate NUMBER.
   }
+  simpl in BELOW.
+  rewrite andb_true_iff in BELOW.
+  destruct BELOW as [BELOW1 BELOW2].
   unfold inject_l.
   destruct a as [pc' l'].
   simpl fold_left.
@@ -289,11 +308,31 @@ Proof.
     rewrite inject_l_preserves; simpl.
     - apply inject_at_injected.
     - rewrite inject_at_increases.
-      simpl.
+      apply pos_add_nat_monotone.
+      lia.
+    - rewrite forallb_forall.
+      rewrite forallb_forall in BELOW2.
+      intros loc IN.
+      specialize BELOW2 with loc.
+      apply BELOW2 in IN.
+      destruct peq as [EQ | ]; trivial.
+      rewrite EQ in IN.
+      rewrite Pos.ltb_lt in IN.
+      pose proof (pos_add_nat_increases extra_pc k).
+      lia.
   }
-  rewrite <- IHinjections.
-  
-  destruct (prog ! pc); apply inject_list_injected.
+  simpl.
+  rewrite inject_at_increases.
+  apply IHinjections with (pc := pc); trivial.
+  rewrite forallb_forall.
+  rewrite forallb_forall in BELOW2.
+  intros loc IN.
+  specialize BELOW2 with loc.
+  apply BELOW2 in IN.
+  pose proof (pos_add_nat_increases extra_pc (Datatypes.length l')).
+  rewrite Pos.ltb_lt.
+  rewrite Pos.ltb_lt in IN.
+  lia.
 Qed.
 
 Lemma inject'_preserves :
