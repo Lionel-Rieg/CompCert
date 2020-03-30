@@ -77,3 +77,25 @@ Definition inject' (prog : code) (extra_pc : node) (injections : PTree.t (list i
 Definition inject prog extra_pc injections : code :=
   snd (inject' prog extra_pc injections).
 *)
+
+Section INJECTOR.
+  Variable gen_injections : function -> PTree.t (list inj_instr).
+
+  Definition transf_function (f : function) : res function :=
+    let injections := PTree.elements (gen_injections f) in
+    let max_pc := max_pc_function f in
+    if List.forallb (fun injection => (fst injection) <=? max_pc) injections
+    then
+      OK {| fn_sig := f.(fn_sig);
+            fn_params := f.(fn_params);
+            fn_stacksize := f.(fn_stacksize);
+            fn_code := snd (inject_l (fn_code f) (Pos.succ max_pc) injections);
+            fn_entrypoint := f.(fn_entrypoint) |}
+    else Error (msg "Inject.transf_function: injections at bad locations").
+
+Definition transf_fundef (fd: fundef) : res fundef :=
+  AST.transf_partial_fundef transf_function fd.
+
+Definition transf_program (p: program) : res program :=
+  transform_partial_program transf_fundef p.
+End INJECTOR.
