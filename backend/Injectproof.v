@@ -225,6 +225,19 @@ Fixpoint inject_l_position extra_pc
     end
   end.
 
+Lemma inject_l_position_increases : forall injections pc k,
+    pc <= inject_l_position pc injections k.
+Proof.
+  induction injections; simpl; intros.
+  lia.
+  destruct a as [_ l].
+  destruct k.
+  lia.
+  specialize IHinjections with (pc := (Pos.succ (pos_add_nat pc (Datatypes.length l)))) (k := k).
+  assert (pc <= (pos_add_nat pc (Datatypes.length l))) by apply pos_add_nat_increases.
+  lia.
+Qed.
+                    
 Definition inject_l (prog : code) extra_pc injections :=
   List.fold_left (fun already (injection : node * (list inj_instr)) =>
                     inject_at' already (fst injection) (snd injection))
@@ -550,6 +563,15 @@ Section INJECTOR.
     Proof.
       unfold match_regs. intros. trivial.
     Qed.
+
+    Lemma match_regs_trans : forall f rs1 rs2 rs3,
+        match_regs f rs1 rs2 -> match_regs f rs2 rs3 -> match_regs f rs1 rs3.
+    Proof.
+      unfold match_regs. intros until rs3. intros M12 M23 r.
+      specialize M12 with r.
+      specialize M23 with r.
+      intuition congruence.
+    Qed.
     
     Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
     | match_frames_intro: forall res f tf sp pc rs trs
@@ -753,8 +775,7 @@ Section INJECTOR.
           * apply assign_above; auto.
     Qed.
 
-    (* TODO
-    Lemma transf_function_starstep :
+    Lemma transf_function_inj_starstep :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code
         (FUN : transf_function gen_injections f = OK tf)
         (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
@@ -781,11 +802,68 @@ Section INJECTOR.
       assert (k <= Datatypes.length inj_code)%nat as KK by lia.
       pose proof (IHk KK) as IH.
       clear IHk KK.
-      assert (
-      exists trs'.
-      split.
-      assumption.
-*)
+      pose proof FUN as VALIDATE.
+      unfold transf_function, valid_injections1 in VALIDATE.
+      destruct forallb eqn:FORALL in VALIDATE.
+      2: discriminate.
+      injection VALIDATE.
+      intro TF.
+      symmetry in TF.
+      pose proof (inject_l_injected (PTree.elements (gen_injections f)) (fn_code f) inj_n src_pc inj_code (Pos.succ (max_pc_function f)) ((List.length inj_code) - (S k))%nat) as INJECTED.
+      lapply INJECTED.
+      { clear INJECTED.
+        intro INJECTED.
+        assert ((Datatypes.length inj_code - S k <
+                 Datatypes.length inj_code)%nat) as LESS by lia.
+        pose proof (INJECTED INJ LESS) as INJ'.
+        replace (snd
+            (inject_l (fn_code f) (Pos.succ (max_pc_function f))
+                      (PTree.elements (gen_injections f)))) with (fn_code tf) in INJ'.
+        2: rewrite TF; simpl; reflexivity.                                              apply transf_function_inj_step with (f:=f) (ts:=ts) (sp:=sp) (trs:=trs) (m := m) in INJ'.
+        2: assumption.
+        {
+          destruct INJ' as [trs'' [STEP STEPMATCH]].
+          destruct (IH trs'') as [trs' [STARSTEPMATCH STARSTEP]].
+          exists trs'.
+          split.
+          { apply match_regs_trans with (rs2 := trs''); assumption. }
+          eapply Smallstep.star_step with (t1:=E0) (t2:=E0).
+          {
+            rewrite POSITION in STEP.
+            exact STEP.
+          }
+          {
+            replace (Datatypes.length inj_code - k)%nat
+              with (S (Datatypes.length inj_code - (S k)))%nat in STARSTEP by lia.
+            simpl pos_add_nat in STARSTEP.
+            exact STARSTEP.
+          }
+          constructor.
+        }
+        rewrite forallb_forall in FORALL.
+        specialize FORALL with  (src_pc, inj_code).
+        lapply FORALL.
+        {
+          simpl.
+          rewrite andb_true_iff.
+          intros (SRC & ALL_VALID).
+          rewrite forallb_forall in ALL_VALID.
+          apply ALL_VALID.
+          admit.
+        }
+        apply nth_error_In with (n := inj_n).
+        assumption.
+      }
+      rewrite forallb_forall in FORALL.
+      rewrite forallb_forall.
+      intros x INx.
+      rewrite Pos.ltb_lt.
+      pose proof (FORALL x INx) as ALLx.
+      rewrite andb_true_iff in ALLx.
+      destruct ALLx as [ALLx1 ALLx2].
+      rewrite Pos.leb_le in ALLx1.
+      lia.
+    Admitted.
       
 End PRESERVATION.
 End INJECTOR.
