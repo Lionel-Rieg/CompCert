@@ -84,7 +84,17 @@ Section INJECTOR.
   Definition transf_function (f : function) : res function :=
     let injections := PTree.elements (gen_injections f) in
     let max_pc := max_pc_function f in
-    if List.forallb (fun injection => (fst injection) <=? max_pc) injections
+    let max_reg := max_reg_function f in
+    if List.forallb
+         (fun injection =>
+            ((fst injection) <=? max_pc) &&
+            (List.forallb
+               (fun (i : inj_instr) =>
+                  (match i with
+                   | INJop _ _ res => res
+                   | INJload _ _ _ res => res
+                   end) <=? max_reg) (snd injection))
+         ) injections
     then
       OK {| fn_sig := f.(fn_sig);
             fn_params := f.(fn_params);
