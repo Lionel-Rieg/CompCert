@@ -168,11 +168,26 @@ Proof.
   all: apply inject_list_increases.
 Qed.
 
-Definition inject_l (prog : code) extra_pc injections :=
-  List.fold_left (fun already (injection : node * (list inj_instr)) =>
-                    inject_at' already (fst injection) (snd injection))
-    injections
-    (extra_pc, prog).
+Lemma inject_at_injected:
+  forall l prog pc extra_pc k (BOUND : (k < (List.length l))%nat),
+    PTree.get (pos_add_nat extra_pc k) (snd (inject_at prog pc extra_pc l)) =
+    Some (inject_instr (bounded_nth k l BOUND) (Pos.succ (pos_add_nat extra_pc k))).
+Proof.
+  intros. unfold inject_at.
+  destruct (prog ! pc); apply inject_list_injected.
+Qed.
+
+Lemma inject_at_injected_end:
+  forall l prog pc extra_pc i,
+    PTree.get pc prog = Some i ->
+    PTree.get (pos_add_nat extra_pc (List.length l))
+              (snd (inject_at prog pc extra_pc l)) =
+    Some (Inop (successor i)).
+Proof.
+  intros until i. intro REW. unfold inject_at.
+  rewrite REW.
+  apply inject_list_injected_end.
+Qed.
 
 Lemma pair_expand:
   forall { A B : Type } (p : A*B),
@@ -180,6 +195,12 @@ Lemma pair_expand:
 Proof.
   destruct p; simpl; trivial.
 Qed.
+
+Definition inject_l (prog : code) extra_pc injections :=
+  List.fold_left (fun already (injection : node * (list inj_instr)) =>
+                    inject_at' already (fst injection) (snd injection))
+    injections
+    (extra_pc, prog).
 
 Lemma inject_l_preserves :
   forall injections prog extra_pc pc0,
