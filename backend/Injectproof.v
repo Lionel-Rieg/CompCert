@@ -775,7 +775,17 @@ Section INJECTOR.
           * apply assign_above; auto.
     Qed.
 
-    Lemma transf_function_inj_starstep :
+    Lemma bounded_nth_In: forall {T : Type} (l : list T) k LESS,
+        In (bounded_nth k l LESS) l.
+    Proof.
+      induction l; simpl; intros.
+      lia.
+      destruct k; simpl.
+      - left; trivial.
+      - right. apply IHl.
+    Qed.
+
+    Lemma transf_function_inj_starstep_rec :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code
         (FUN : transf_function gen_injections f = OK tf)
         (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
@@ -849,7 +859,7 @@ Section INJECTOR.
           intros (SRC & ALL_VALID).
           rewrite forallb_forall in ALL_VALID.
           apply ALL_VALID.
-          admit.
+          apply bounded_nth_In.
         }
         apply nth_error_In with (n := inj_n).
         assumption.
@@ -863,7 +873,28 @@ Section INJECTOR.
       destruct ALLx as [ALLx1 ALLx2].
       rewrite Pos.leb_le in ALLx1.
       lia.
-    Admitted.
-      
+    Qed.
+    
+    Lemma transf_function_inj_starstep :
+      forall ts f tf sp m inj_n src_pc inj_pc inj_code
+        (FUN : transf_function gen_injections f = OK tf)
+        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+               Some (src_pc, inj_code))
+        (POSITION : inject_l_position (Pos.succ (max_pc_function f))
+                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+        (trs : regset),
+      exists trs',
+        match_regs (f : function) trs trs' /\
+        Smallstep.star RTL.step ge
+              (State ts tf sp inj_pc trs m) E0
+              (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs' m).
+    Proof.
+      intros.
+      replace (State ts tf sp inj_pc trs m) with (State ts tf sp (pos_add_nat inj_pc ((List.length inj_code) - (List.length inj_code))%nat) trs m).
+      eapply transf_function_inj_starstep_rec; eauto.
+      f_equal.
+      rewrite <- minus_n_n.
+      reflexivity.
+    Qed.
 End PRESERVATION.
 End INJECTOR.
