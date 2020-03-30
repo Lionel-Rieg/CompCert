@@ -47,6 +47,65 @@ Proof.
   reflexivity.
 Qed.
 
+Program Fixpoint bounded_nth
+  {T : Type} (k : nat) (l : list T) (BOUND : (k < List.length l)%nat) : T :=
+  match k, l with
+  | O, h::_ => h
+  | (S k'), _::l' => bounded_nth k' l' _
+  | _, nil => _
+  end.
+Obligation 1.
+Proof.
+  simpl in BOUND.
+  lia.
+Qed.
+Obligation 2.
+Proof.
+  simpl in BOUND.
+  lia.
+Qed.
+
+Program Definition bounded_nth_S_statement : Prop :=
+  forall {T : Type} (k : nat) (h : T) (l : list T) (BOUND : (k < List.length l)%nat),
+    bounded_nth (S k) (h::l) _ = bounded_nth k l BOUND.
+Obligation 1.
+lia.
+Qed.
+
+Lemma bounded_nth_proof_irr :
+  forall {T : Type} (k : nat) (l : list T)
+         (BOUND1 BOUND2 : (k < List.length l)%nat),
+    (bounded_nth k l BOUND1) = (bounded_nth k l BOUND2).
+Proof.
+  induction k; destruct l; simpl; intros; trivial; lia.
+Qed.
+
+Lemma bounded_nth_S : bounded_nth_S_statement.
+Proof.
+  unfold bounded_nth_S_statement.
+  induction k; destruct l; simpl; intros; trivial.
+  1, 2: lia.
+  apply bounded_nth_proof_irr.
+Qed.
+
+Lemma inject_list_injected:
+  forall l prog pc dst k (BOUND : (k < (List.length l))%nat),
+    PTree.get (pos_add_nat pc k) (snd (inject_list prog pc dst l)) =
+    Some (inject_instr (bounded_nth k l BOUND) (Pos.succ (pos_add_nat pc k))).
+Proof.
+  induction l; simpl; intros.
+  - lia.
+  - simpl.
+    destruct k as [ | k].
+    + admit.
+    + simpl pos_add_nat.
+      rewrite pos_add_nat_succ.
+      erewrite IHl.
+      f_equal. f_equal.
+      simpl.
+      apply bounded_nth_proof_irr.
+Qed.
+
 Lemma inject_at_preserves :
   forall prog pc extra_pc l pc0,
     pc0 < extra_pc ->
@@ -152,4 +211,14 @@ Proof.
   apply PTree.elements_complete in IN.
   destruct (peq pc pc0); trivial.
   congruence.
+Qed.
+
+Lemma inject_preserves :
+  forall injections prog extra_pc pc0,
+    pc0 < extra_pc ->
+    PTree.get pc0 injections = None ->
+    PTree.get pc0 (inject prog extra_pc injections) = PTree.get pc0 prog.
+Proof.
+  unfold inject'.
+  apply inject'_preserves.
 Qed.
