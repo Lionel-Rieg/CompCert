@@ -60,3 +60,13 @@ Definition inject_at (prog : code) (pc extra_pc : node)
                 extra_pc (successor i) l
   | None => inject_list prog extra_pc 1 l (* does not happen *)
   end.
+
+Definition inject_at' (already : node * code) pc l :=
+  let (extra_pc, prog) := already in
+  inject_at prog pc extra_pc l.
+
+Definition inject' (prog : code) (extra_pc : node) (injections : PTree.t (list inj_instr)) :=
+  PTree.fold inject_at' injections (extra_pc, prog).
+
+Definition inject prog extra_pc injections : code :=
+  snd (inject' prog extra_pc injections).
