@@ -1,6 +1,6 @@
 Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
-Require Import Memory Registers Op RTL.
+Require Import Memory Registers Op RTL Globalenvs Values.
 Require Import Inject.
 Require Import Lia.
 
@@ -523,3 +523,175 @@ Proof.
   apply inject'_preserves.
 Qed.
 *)
+
+Section INJECTOR.
+  Variable gen_injections : function -> PTree.t (list inj_instr).
+
+  Definition match_prog (p tp: RTL.program) :=
+    match_program (fun ctx f tf => transf_fundef gen_injections f = OK tf) eq p tp.
+
+  Lemma transf_program_match:
+    forall p tp, transf_program gen_injections p = OK tp -> match_prog p tp.
+  Proof.
+    intros. eapply match_transform_partial_program; eauto.
+  Qed.
+
+  Section PRESERVATION.
+
+    Variables prog tprog: program.
+    Hypothesis TRANSF: match_prog prog tprog.
+    Let ge := Genv.globalenv prog.
+    Let tge := Genv.globalenv tprog.
+
+    Definition match_regs (f : function) (rs rs' : regset) :=
+      forall r, r <= max_reg_function f -> (rs'#r = rs#r).
+    
+    Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
+    | match_frames_intro: forall res f tf sp pc rs trs
+        (FUN : transf_function gen_injections f = OK tf)
+        (REGS : match_regs f rs trs),
+        match_frames (Stackframe res f sp pc rs)
+                     (Stackframe res tf sp pc trs).
+
+    Inductive match_states: state -> state -> Prop :=
+    | match_states_intro:
+      forall s f tf sp pc rs trs m ts
+        (FUN : transf_function gen_injections f = OK tf)
+        (STACKS: list_forall2 match_frames s ts)
+        (REGS: match_regs f rs trs),
+      match_states (State s f sp pc rs m) (State ts tf sp pc trs m)
+    | match_states_call:
+        forall s fd tfd args m ts
+        (FUN : transf_fundef gen_injections fd = OK tfd)
+        (STACKS: list_forall2 match_frames s ts),
+          match_states (Callstate s fd args m) (Callstate ts tfd args m)
+    | match_states_return:
+        forall s res m ts
+               (STACKS: list_forall2 match_frames s ts),
+          match_states (Returnstate s res m)
+                       (Returnstate ts res m).
+
+    Lemma functions_translated:
+      forall (v: val) (f: RTL.fundef),
+        Genv.find_funct ge v = Some f ->
+        exists tf,
+          Genv.find_funct tge v = Some tf /\
+          transf_fundef gen_injections f = OK tf.
+    Proof.
+      apply (Genv.find_funct_transf_partial TRANSF).
+    Qed.
+
+    Lemma function_ptr_translated:
+      forall (b: block) (f: RTL.fundef),
+        Genv.find_funct_ptr ge b = Some f ->
+        exists tf,
+          Genv.find_funct_ptr tge b = Some tf /\
+          transf_fundef gen_injections f = OK tf.
+    Proof.
+      apply (Genv.find_funct_ptr_transf_partial TRANSF).
+    Qed.
+
+    Lemma symbols_preserved:
+      forall id,
+        Genv.find_symbol tge id = Genv.find_symbol ge id.
+    Proof.
+      apply (Genv.find_symbol_match TRANSF).
+    Qed.
+
+    Lemma senv_preserved:
+      Senv.equiv ge tge.
+    Proof.
+      apply (Genv.senv_match TRANSF).
+    Qed.
+
+    Lemma sig_preserved:
+      forall f tf, transf_fundef gen_injections f = OK tf
+                   -> funsig tf = funsig f.
+    Proof.
+      destruct f; simpl; intros; monadInv H; trivial.
+      unfold transf_function in *.
+      destruct forallb in EQ.
+      2: discriminate.
+      inv EQ.
+      reflexivity.
+    Qed.
+
+    Lemma stacksize_preserved:
+      forall f tf, transf_function gen_injections f = OK tf ->
+                   fn_stacksize tf = fn_stacksize f.
+    Proof.
+      destruct f.
+      unfold transf_function.
+      intros.
+      destruct forallb in H.
+      2: discriminate.
+      inv H.
+      reflexivity.
+    Qed.
+
+    Lemma params_preserved:
+      forall f tf, transf_function gen_injections f = OK tf ->
+                   fn_params tf = fn_params f.
+    Proof.
+      destruct f.
+      unfold transf_function.
+      intros.
+      destruct forallb in H.
+      2: discriminate.
+      inv H.
+      reflexivity.
+    Qed.
+
+    Lemma entrypoint_preserved:
+      forall f tf, transf_function gen_injections f = OK tf ->
+                   fn_entrypoint tf = fn_entrypoint f.
+    Proof.
+      destruct f.
+      unfold transf_function.
+      intros.
+      destruct forallb in H.
+      2: discriminate.
+      inv H.
+      reflexivity.
+    Qed.
+
+    Lemma sig_preserved2:
+      forall f tf, transf_function gen_injections f = OK tf ->
+                   fn_sig tf = fn_sig f.
+    Proof.
+      destruct f.
+      unfold transf_function.
+      intros.
+      destruct forallb in H.
+      2: discriminate.
+      inv H.
+      reflexivity.
+    Qed.
+
+    Lemma transf_initial_states:
+      forall S1, RTL.initial_state prog S1 ->
+                 exists S2, RTL.initial_state tprog S2 /\ match_states S1 S2.
+    Proof.
+      intros. inversion H.
+      exploit function_ptr_translated; eauto.
+      intros (tf & A & B).
+      exists (Callstate nil tf nil m0); split.
+      - econstructor; eauto.
+        + eapply (Genv.init_mem_match TRANSF); eauto.
+        + replace (prog_main tprog) with (prog_main prog).
+          rewrite symbols_preserved. eauto.
+          symmetry. eapply match_program_main; eauto.
+        + rewrite <- H3. eapply sig_preserved; eauto.
+      - constructor; trivial.
+        constructor.
+    Qed.
+
+    Lemma transf_final_states:
+      forall S1 S2 r, match_states S1 S2 ->
+                      final_state S1 r -> final_state S2 r.
+    Proof.
+      intros. inv H0. inv H. inv STACKS. constructor.
+    Qed.
+
+End PRESERVATION.
+End INJECTOR.
