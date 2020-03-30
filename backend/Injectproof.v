@@ -425,6 +425,88 @@ Proof.
   }
 Qed.
 
+
+Lemma inject_l_redirects:
+  forall injections prog injnum pc i l extra_pc
+         (BEFORE : PTree.get pc prog = Some i)
+         (DISTINCT : list_norepet (map fst injections))
+         (BELOW : forallb (fun injection => (fst injection) <? extra_pc) injections = true)
+         (NUMBER : nth_error injections injnum = Some (pc, l)),
+    PTree.get pc (snd (inject_l prog extra_pc injections)) =
+    Some (alter_successor i (inject_l_position extra_pc injections injnum)).
+Proof.
+  induction injections; intros.
+  { rewrite nth_error_nil in NUMBER.
+    discriminate NUMBER.
+  }
+  simpl in BELOW.
+  rewrite andb_true_iff in BELOW.
+  destruct BELOW as [BELOW1 BELOW2].
+  unfold inject_l.
+  destruct a as [pc' l'].
+  simpl fold_left.
+  rewrite pair_expand with (p := inject_at prog pc' extra_pc l').
+  progress fold (inject_l (snd (inject_at prog pc' extra_pc l'))
+              (fst (inject_at prog pc' extra_pc l'))
+              injections).
+  simpl in BELOW1.
+  apply Pos.ltb_lt in BELOW1.
+  inv DISTINCT.
+  destruct injnum as [ | injnum']; simpl in NUMBER.
+  { inv NUMBER.
+    rewrite inject_l_preserves; simpl.
+    - apply inject_at_redirects; trivial.
+    - rewrite inject_at_increases.
+      pose proof (pos_add_nat_increases extra_pc (S (Datatypes.length l))).
+      lia.
+    - rewrite forallb_forall.
+      intros loc IN.
+      destruct loc as [pc' l'].
+      simpl in *.
+      destruct peq; trivial.
+      subst pc'.
+      apply in_map with (f := fst) in IN.
+      simpl in IN.
+      exfalso.
+      auto.
+  }
+  simpl.
+  rewrite inject_at_increases.
+  apply IHinjections with (pc := pc) (l := l); trivial.
+  {
+    rewrite <- BEFORE.
+    apply nth_error_In in NUMBER.
+    rewrite forallb_forall in BELOW2.
+    specialize BELOW2 with (pc, l).
+    simpl in BELOW2.
+    rewrite Pos.ltb_lt in BELOW2.
+    apply inject_at_preserves; auto.
+    assert (In (fst (pc, l)) (map fst injections)) as Z.
+    { apply in_map. assumption.
+    }
+    simpl in Z.
+    intro EQ.
+    subst pc'.
+    auto.
+  }
+  {
+    rewrite forallb_forall.
+    rewrite forallb_forall in BELOW2.
+    intros loc IN.
+    specialize BELOW2 with loc.
+    apply BELOW2 in IN.
+    pose proof (pos_add_nat_increases extra_pc (Datatypes.length l')).
+    rewrite Pos.ltb_lt.
+    rewrite Pos.ltb_lt in IN.
+    assert (pos_add_nat extra_pc (Datatypes.length l') <
+            pos_add_nat extra_pc (S (Datatypes.length l'))).
+    { apply pos_add_nat_monotone.
+      lia.
+    }
+    lia.
+  }
+Qed.
+
 Lemma inject'_preserves :
   forall injections prog extra_pc pc0,
     pc0 < extra_pc ->
