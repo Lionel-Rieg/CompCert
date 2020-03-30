@@ -197,11 +197,17 @@ Proof.
 Qed.
 
 Fixpoint inject_l_position extra_pc
-         (injections : list (node * (list inj_instr))) : node :=
+         (injections : list (node * (list inj_instr)))
+         (k : nat) {struct injections} : node :=
   match injections with
   | nil => extra_pc
-  | (pc,l)::t => inject_l_position
-                   (Pos.succ (pos_add_nat extra_pc (List.length l))) t
+  | (pc,l)::l' =>
+    match k with
+    | O => extra_pc
+    | S k' =>
+      inject_l_position
+        (Pos.succ (pos_add_nat extra_pc (List.length l))) l' k'
+    end
   end.
 
 Definition inject_l (prog : code) extra_pc injections :=
@@ -210,6 +216,7 @@ Definition inject_l (prog : code) extra_pc injections :=
     injections
     (extra_pc, prog).
 
+(*
 Lemma inject_l_position_ok:
   forall injections prog extra_pc,
     (fst (inject_l prog extra_pc injections)) =
@@ -225,7 +232,7 @@ Proof.
   rewrite inject_at_increases.
   reflexivity.
 Qed.
-
+*)
 Lemma inject_l_preserves :
   forall injections prog extra_pc pc0,
     pc0 < extra_pc ->
@@ -249,6 +256,44 @@ Proof.
   - rewrite inject_at_increases.
     pose proof (pos_add_nat_increases extra_pc (S (Datatypes.length l))).
     lia.
+Qed.
+
+Lemma nth_error_nil : forall { T : Type} k,
+    nth_error (@nil T) k = None.
+Proof.
+  destruct k; simpl; trivial.
+Qed.
+
+Lemma inject_l_injected:
+  forall injections prog injnum pc l extra_pc k
+         (NUMBER : nth_error injections injnum = Some (pc, l))
+         (BOUND : (k < (List.length l))%nat),
+    PTree.get (pos_add_nat (inject_l_position extra_pc injections injnum) k)
+              (snd (inject_l prog extra_pc injections)) =
+    Some (inject_instr (bounded_nth k l BOUND)
+       (Pos.succ (pos_add_nat (inject_l_position extra_pc injections injnum) k))).
+Proof.
+  induction injections; intros.
+  { rewrite nth_error_nil in NUMBER.
+    discriminate NUMBER.
+  }
+  unfold inject_l.
+  destruct a as [pc' l'].
+  simpl fold_left.
+  rewrite pair_expand with (p := inject_at prog pc' extra_pc l').
+  progress fold (inject_l (snd (inject_at prog pc' extra_pc l'))
+              (fst (inject_at prog pc' extra_pc l'))
+              injections).
+  destruct injnum as [ | injnum']; simpl in NUMBER.
+  { inv NUMBER.
+    rewrite inject_l_preserves; simpl.
+    - apply inject_at_injected.
+    - rewrite inject_at_increases.
+      simpl.
+  }
+  rewrite <- IHinjections.
+  
+  destruct (prog ! pc); apply inject_list_injected.
 Qed.
 
 Lemma inject'_preserves :
