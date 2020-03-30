@@ -65,8 +65,15 @@ Definition inject_at' (already : node * code) pc l :=
   let (extra_pc, prog) := already in
   inject_at prog pc extra_pc l.
 
+Definition inject_l (prog : code) extra_pc injections :=
+  List.fold_left (fun already (injection : node * (list inj_instr)) =>
+                    inject_at' already (fst injection) (snd injection))
+    injections
+    (extra_pc, prog).
+(*
 Definition inject' (prog : code) (extra_pc : node) (injections : PTree.t (list inj_instr)) :=
   PTree.fold inject_at' injections (extra_pc, prog).
 
 Definition inject prog extra_pc injections : code :=
   snd (inject' prog extra_pc injections).
+*)

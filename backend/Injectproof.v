@@ -81,7 +81,7 @@ Proof.
 Qed.
 
 Program Definition bounded_nth_S_statement : Prop :=
-  forall {T : Type} (k : nat) (h : T) (l : list T) (BOUND : (k < List.length l)%nat),
+  forall (T : Type) (k : nat) (h : T) (l : list T) (BOUND : (k < List.length l)%nat),
     bounded_nth (S k) (h::l) _ = bounded_nth k l BOUND.
 Obligation 1.
 lia.
@@ -231,23 +231,6 @@ Definition inject_l (prog : code) extra_pc injections :=
     injections
     (extra_pc, prog).
 
-(*
-Lemma inject_l_position_ok:
-  forall injections prog extra_pc,
-    (fst (inject_l prog extra_pc injections)) =
-    inject_l_position extra_pc injections.
-Proof.
-  induction injections; intros; simpl; trivial.
-  destruct a as [pc l].
-  unfold inject_l. simpl.
-  rewrite (pair_expand (inject_at prog pc extra_pc l)).
-  fold (inject_l (snd (inject_at prog pc extra_pc l)) (fst (inject_at prog pc extra_pc l)) injections).
-  rewrite IHinjections.
-  f_equal.
-  rewrite inject_at_increases.
-  reflexivity.
-Qed.
-*)
 Lemma inject_l_preserves :
   forall injections prog extra_pc pc0,
     pc0 < extra_pc ->
@@ -507,6 +490,7 @@ Proof.
   }
 Qed.
 
+(*
 Lemma inject'_preserves :
   forall injections prog extra_pc pc0,
     pc0 < extra_pc ->
@@ -538,3 +522,4 @@ Proof.
   unfold inject'.
   apply inject'_preserves.
 Qed.
+*)
