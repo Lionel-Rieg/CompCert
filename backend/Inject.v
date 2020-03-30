@@ -2,6 +2,8 @@ Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
 Require Import Memory Registers Op RTL.
 
+Local Open Scope positive.
+
 Inductive inj_instr : Type :=
   | INJop: operation -> list reg -> reg -> inj_instr
   | INJload: memory_chunk -> addressing -> list reg -> reg -> inj_instr.
@@ -33,7 +35,7 @@ Definition successor (i : instruction) : node :=
   | Icond _ _ pc' _ => pc'
   | Itailcall _ _ _
   | Ijumptable _ _
-  | Ireturn _ => 1%positive
+  | Ireturn _ => 1
   end.
 
 Definition alter_successor (i : instruction) (pc' : node) : instruction :=
@@ -56,5 +58,5 @@ Definition inject_at (prog : code) (pc extra_pc : node)
   | Some i =>
     inject_list (PTree.set pc (alter_successor i extra_pc) prog)
                 extra_pc (successor i) l
-  | None => inject_list prog extra_pc 1%positive l (* does not happen *)
+  | None => inject_list prog extra_pc 1 l (* does not happen *)
   end.

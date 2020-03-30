@@ -86,6 +86,7 @@ BACKEND=\
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
   ConstpropOp.v Constprop.v ConstpropOpproof.v Constpropproof.v \
+  Inject.v \
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
   CSE2deps.v CSE2depsproof.v \
   CSE2.v CSE2proof.v \
