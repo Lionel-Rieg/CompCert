@@ -196,11 +196,35 @@ Proof.
   destruct p; simpl; trivial.
 Qed.
 
+Fixpoint inject_l_position extra_pc
+         (injections : list (node * (list inj_instr))) : node :=
+  match injections with
+  | nil => extra_pc
+  | (pc,l)::t => inject_l_position
+                   (Pos.succ (pos_add_nat extra_pc (List.length l))) t
+  end.
+
 Definition inject_l (prog : code) extra_pc injections :=
   List.fold_left (fun already (injection : node * (list inj_instr)) =>
                     inject_at' already (fst injection) (snd injection))
     injections
     (extra_pc, prog).
+
+Lemma inject_l_position_ok:
+  forall injections prog extra_pc,
+    (fst (inject_l prog extra_pc injections)) =
+    inject_l_position extra_pc injections.
+Proof.
+  induction injections; intros; simpl; trivial.
+  destruct a as [pc l].
+  unfold inject_l. simpl.
+  rewrite (pair_expand (inject_at prog pc extra_pc l)).
+  fold (inject_l (snd (inject_at prog pc extra_pc l)) (fst (inject_at prog pc extra_pc l)) injections).
+  rewrite IHinjections.
+  f_equal.
+  rewrite inject_at_increases.
+  reflexivity.
+Qed.
 
 Lemma inject_l_preserves :
   forall injections prog extra_pc pc0,
