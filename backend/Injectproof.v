@@ -96,16 +96,31 @@ Proof.
   induction l; simpl; intros.
   - lia.
   - simpl.
-    destruct k as [ | k].
-    + admit.
-    + simpl pos_add_nat.
-      rewrite pos_add_nat_succ.
+    destruct k as [ | k]; simpl pos_add_nat.
+    + simpl bounded_nth.
+      rewrite inject_list_preserves by lia.
+      apply PTree.gss.
+    + rewrite pos_add_nat_succ.
       erewrite IHl.
       f_equal. f_equal.
       simpl.
       apply bounded_nth_proof_irr.
+      Unshelve.
+      lia.
 Qed.
 
+Lemma inject_list_injected_end:
+  forall l prog pc dst,
+    PTree.get (pos_add_nat pc (List.length l))
+              (snd (inject_list prog pc dst l)) =
+    Some (Inop dst).
+Proof.
+  induction l; simpl; intros.
+  - apply PTree.gss.
+  - rewrite pos_add_nat_succ.
+    apply IHl.
+Qed.
+    
 Lemma inject_at_preserves :
   forall prog pc extra_pc l pc0,
     pc0 < extra_pc ->
