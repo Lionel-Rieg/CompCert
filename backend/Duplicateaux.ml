@@ -159,8 +159,11 @@ let do_call_heuristic code cond ifso ifnot is_loop_header =
     let predicate n = (function
     | Icall _ -> true
     | _ -> false) @@ get_some @@ PTree.get n code
-    in if (look_ahead code ifso is_loop_header predicate) then Some false
-    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    in let ifso_call = look_ahead code ifso is_loop_header predicate
+    in let ifnot_call = look_ahead code ifnot is_loop_header predicate
+    in if ifso_call && ifnot_call then None
+    else if ifso_call then Some false
+    else if ifnot_call then Some true
     else None
   end
 
@@ -176,8 +179,11 @@ let do_return_heuristic code cond ifso ifnot is_loop_header =
     let predicate n = (function
     | Ireturn _ -> true
     | _ -> false) @@ get_some @@ PTree.get n code
-    in if (look_ahead code ifso is_loop_header predicate) then Some false
-    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    in let ifso_return = look_ahead code ifso is_loop_header predicate
+    in let ifnot_return = look_ahead code ifnot is_loop_header predicate
+    in if ifso_return && ifnot_return then None
+    else if ifso_return then Some false
+    else if ifnot_return then Some true
     else None
   end
 
@@ -187,8 +193,11 @@ let do_store_heuristic code cond ifso ifnot is_loop_header =
     let predicate n = (function
     | Istore _ -> true
     | _ -> false) @@ get_some @@ PTree.get n code
-    in if (look_ahead code ifso is_loop_header predicate) then Some false
-    else if (look_ahead code ifnot is_loop_header predicate) then Some true
+    in let ifso_store = look_ahead code ifso is_loop_header predicate
+    in let ifnot_store = look_ahead code ifnot is_loop_header predicate
+    in if ifso_store && ifnot_store then None
+    else if ifso_store then Some false
+    else if ifnot_store then Some true
     else None
   end
 
