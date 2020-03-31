@@ -1094,6 +1094,87 @@ Section INJECTOR.
         apply SAME. right. assumption.
     Qed.
 
+    (*
+    Lemma transf_function_preserves_builtin_arg:
+      forall rs trs ef res sp m pc'
+        (arg : builtin_arg reg)
+        (SAME : (forall r,
+                    In r (instr_uses (Ibuiltin ef args res pc')) ->
+                    trs # r = rs # r) )
+        varg
+        (EVAL : eval_builtin_arg ge (fun r => rs#r) sp m arg varg),
+        eval_builtin_arg ge (fun r => trs#r) sp m arg varg.
+    Proof.
+     *)
+    
+    Lemma transf_function_preserves_builtin_args_rec:
+      forall rs trs ef res sp m pc'
+        (args : list (builtin_arg reg))
+        (SAME : (forall r,
+                    In r (instr_uses (Ibuiltin ef args res pc')) ->
+                       trs # r = rs # r) )
+        (vargs : list val)
+        (EVAL : eval_builtin_args ge (fun r => rs#r) sp m args vargs),
+        eval_builtin_args ge (fun r => trs#r) sp m args vargs.
+    Proof.
+      unfold eval_builtin_args.
+      induction args; intros; inv EVAL.
+      - constructor.
+      - constructor.
+        + induction H1.
+          all: try (constructor; auto; fail).
+          * rewrite <- SAME.
+            apply eval_BA.
+            simpl.
+            left. reflexivity.
+          * constructor.
+            ** apply IHeval_builtin_arg1.
+               intros r INr.
+               apply SAME.
+               simpl.
+               simpl in INr.
+               rewrite in_app in INr.
+               rewrite in_app.
+               rewrite in_app.
+               tauto.
+            ** apply IHeval_builtin_arg2.
+               intros r INr.
+               apply SAME.
+               simpl.
+               simpl in INr.
+               rewrite in_app in INr.
+               rewrite in_app.
+               rewrite in_app.
+               tauto.
+          * constructor.
+            ** apply IHeval_builtin_arg1.
+               intros r INr.
+               apply SAME.
+               simpl.
+               simpl in INr.
+               rewrite in_app in INr.
+               rewrite in_app.
+               rewrite in_app.
+               tauto.
+            ** apply IHeval_builtin_arg2.
+               intros r INr.
+               apply SAME.
+               simpl.
+               simpl in INr.
+               rewrite in_app in INr.
+               rewrite in_app.
+               rewrite in_app.
+               tauto.
+        + apply IHargs.
+          2: assumption.
+          intros r INr.
+          apply SAME.
+          simpl.
+          apply in_or_app.
+          right.
+          exact INr.
+    Qed.
+
     Lemma match_regs_write:
       forall f rs trs res v
              (MATCH : match_regs f rs trs),
@@ -1488,7 +1569,8 @@ Section INJECTOR.
                *** exact ALTER.
                *** apply eval_builtin_args_preserved with (ge1 := ge); eauto.
                    exact symbols_preserved.
-                   admit.
+                   Compute (instr_uses (Ibuiltin ef args res pc')).
+                   (instr_uses 
                *** eapply external_call_symbols_preserved; eauto. apply senv_preserved.
             ** apply Smallstep.plus_star.
                exact PLUS.
