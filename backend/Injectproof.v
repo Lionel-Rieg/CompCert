@@ -737,7 +737,7 @@ Section INJECTOR.
         (GET : (fn_code tf) ! pc = Some (inject_instr ii (Pos.succ pc)))
         (VALID : valid_injection_instr (max_reg_function f) ii = true),
       exists trs',
-        RTL.step ge
+        RTL.step tge
               (State ts tf sp pc trs m) E0
               (State ts tf sp (Pos.succ pc) trs' m) /\
         match_regs (f : function) trs trs'.
@@ -755,7 +755,10 @@ Section INJECTOR.
         destruct (eval_operation ge sp op trs ## args m) as [v | ] eqn:EVAL.
         + exists (trs # res <- v).
           split.
-          * apply exec_Iop with (op := op) (args := args) (res := res); assumption.
+          * apply exec_Iop with (op := op) (args := args) (res := res); trivial.
+            rewrite eval_operation_preserved with (ge1 := ge).
+            assumption.
+            exact symbols_preserved.
           * apply assign_above; auto.
         + exfalso.
           generalize EVAL.
@@ -767,15 +770,24 @@ Section INJECTOR.
         + destruct (Mem.loadv chunk m a) as [v | ] eqn:LOAD.
           * exists (trs # res <- v).
             split.
-            ** apply exec_Iload with (trap := NOTRAP) (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); assumption.
+            ** apply exec_Iload with (trap := NOTRAP) (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); trivial.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               assumption.
+               exact symbols_preserved.
             ** apply assign_above; auto.
           * exists (trs # res <- Vundef).
             split.
-            ** apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); assumption.
+            ** apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); trivial.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               assumption.
+               exact symbols_preserved.
             ** apply assign_above; auto.
         + exists (trs # res <- Vundef).
           split.
-          * apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args) (dst := res); assumption.
+          * apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args) (dst := res); trivial.
+            rewrite eval_addressing_preserved with (ge1 := ge).
+            assumption.
+            exact symbols_preserved.
           * apply assign_above; auto.
     Qed.
 
@@ -801,7 +813,7 @@ Section INJECTOR.
         (trs : regset),
       exists trs',
         match_regs (f : function) trs trs' /\
-        Smallstep.star RTL.step ge
+        Smallstep.star RTL.step tge
               (State ts tf sp (pos_add_nat inj_pc
                                     ((List.length inj_code) - k)%nat) trs m) E0
               (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs' m).
@@ -889,7 +901,7 @@ Section INJECTOR.
         (trs : regset),
       exists trs',
         match_regs (f : function) trs trs' /\
-        Smallstep.star RTL.step ge
+        Smallstep.star RTL.step tge
               (State ts tf sp inj_pc trs m) E0
               (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs' m).
     Proof.
@@ -910,7 +922,7 @@ Section INJECTOR.
         (POSITION : inject_l_position (Pos.succ (max_pc_function f))
                                       (PTree.elements (gen_injections f)) inj_n = inj_pc)
         (trs : regset),
-        RTL.step ge
+        RTL.step tge
           (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs m) E0
           (State ts tf sp (successor i) trs m).
     Proof.
@@ -968,7 +980,7 @@ Section INJECTOR.
         (trs : regset),
       exists trs',
         match_regs (f : function) trs trs' /\
-        Smallstep.plus RTL.step ge
+        Smallstep.plus RTL.step tge
               (State ts tf sp inj_pc trs m) E0
               (State ts tf sp (successor i) trs' m).
     Proof.
@@ -1019,7 +1031,7 @@ Section INJECTOR.
         (forall ts sp m trs,
             exists trs',
             match_regs f trs trs' /\
-            Smallstep.plus RTL.step ge
+            Smallstep.plus RTL.step tge
               (State ts tf sp pc' trs m) E0
               (State ts tf sp (successor ii) trs' m)).        
     Proof.
@@ -1060,7 +1072,50 @@ Section INJECTOR.
       intro TRANS.
       exact (TRANS trs).
     Qed.
-    
+
+    Lemma transf_function_preserves_uses:
+      forall f tf pc rs trs ii
+        (FUN : transf_function gen_injections f = OK tf)
+        (MATCH : match_regs f rs trs)
+        (INSTR : (fn_code f) ! pc = Some ii),
+        trs ## (instr_uses ii) = rs ## (instr_uses ii).
+    Proof.
+      intros.
+      assert (forall r, In r (instr_uses ii) ->
+                        trs # r = rs # r) as SAME.
+      {
+        intros r INr.
+        apply MATCH.
+        apply (max_reg_function_use f pc ii); auto.
+      }
+      induction (instr_uses ii); simpl; trivial.
+      f_equal.
+      - apply SAME. constructor; trivial.
+      - apply IHl. intros.
+        apply SAME. right. assumption.
+    Qed.
+
+    Lemma match_regs_write:
+      forall f rs trs res v
+             (MATCH : match_regs f rs trs),
+        match_regs f (rs # res <- v) (trs # res <- v).
+    Proof.
+      intros.
+      intros r LESS.
+      destruct (peq r res).
+      {
+        subst r.
+        rewrite Regmap.gss.
+        symmetry.
+        apply Regmap.gss.
+      }
+      rewrite Regmap.gso.
+      rewrite Regmap.gso.
+      all: trivial.
+      apply MATCH.
+      trivial.
+    Qed.
+      
     Theorem transf_step_correct:
       forall s1 t s2, step ge s1 t s2 ->
          forall ts1 (MS: match_states s1 ts1),
@@ -1069,16 +1124,82 @@ Section INJECTOR.
       induction 1; intros ts1 MS; inv MS; try (inv TRC).
       - (* nop *)
         destruct ((gen_injections f) ! pc) eqn:INJECTION.
-        + econstructor; split.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m) (trs := trs).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
           * eapply Smallstep.plus_left.
             ** apply exec_Inop.
-            ** 
+               exact ALTER.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs); assumption.
         + econstructor; split.
           * apply Smallstep.plus_one.
             apply exec_Inop.
             rewrite transf_function_preserves with (f:=f); eauto.
             eapply max_pc_function_sound; eauto.
           * constructor; trivial.
+      - (* op *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m)
+             (trs := trs # res <- v).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Iop with (op := op) (args := args).
+               exact ALTER.
+               rewrite eval_operation_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iop op args res pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+                 simpl.
+                 eassumption.
+               }
+               exact symbols_preserved.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs # res <- v); trivial.
+            apply match_regs_write.
+            assumption.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Iop with (op := op) (args := args).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** rewrite eval_operation_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iop op args res pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+                 simpl.
+                 eassumption.
+               }
+               exact symbols_preserved.
+          * constructor; trivial.
+            apply match_regs_write.
+            assumption.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
     Admitted.
 
     Theorem transf_program_correct:
