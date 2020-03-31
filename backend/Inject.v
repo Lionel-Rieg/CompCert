@@ -5,11 +5,13 @@ Require Import Memory Registers Op RTL.
 Local Open Scope positive.
 
 Inductive inj_instr : Type :=
+  | INJnop
   | INJop: operation -> list reg -> reg -> inj_instr
   | INJload: memory_chunk -> addressing -> list reg -> reg -> inj_instr.
 
 Definition inject_instr (i : inj_instr) (pc' : node) : instruction :=
   match i with
+  | INJnop => Inop pc'
   | INJop op args dst => Iop op args dst pc'
   | INJload chunk addr args dst => Iload NOTRAP chunk addr args dst pc'
   end.
@@ -83,6 +85,7 @@ Section INJECTOR.
 
   Definition valid_injection_instr (max_reg : reg) (i : inj_instr) :=
     match i with
+    | INJnop => true
     | INJop op args res => (max_reg <? res) && (negb (is_trapping_op op)
        && (Datatypes.length args =? args_of_operation op)%nat) 
     | INJload _ _ _ res => max_reg <? res

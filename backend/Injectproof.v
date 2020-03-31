@@ -742,7 +742,11 @@ Section INJECTOR.
               (State ts tf sp (Pos.succ pc) trs' m) /\
         match_regs (f : function) trs trs'.
     Proof.
-      destruct ii as [op args res | chunk addr args res]; simpl; intros.
+      destruct ii as [ |op args res | chunk addr args res]; simpl; intros.
+      - exists trs.
+        split.
+        * apply exec_Inop; assumption.
+        * apply match_regs_refl.
       - repeat rewrite andb_true_iff in VALID.
         rewrite negb_true_iff in VALID.
         destruct VALID as (MAX_REG & NOTRAP & LENGTH).
