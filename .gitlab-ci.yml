@@ -1,6 +1,12 @@
 stages:
+  - check-admitted
   - build
 
+check-admitted:
+  stage: check-admitted
+  script:
+    - make check-admitted
+    
 build_x86_64:
   stage: build
   image: "coqorg/coq"
