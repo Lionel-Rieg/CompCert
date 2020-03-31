@@ -934,7 +934,6 @@ Section INJECTOR.
       injection VALIDATE.
       intro TF.
       symmetry in TF.
-      Check inject_l_injected_end.
       pose proof (inject_l_injected_end (PTree.elements (gen_injections f)) (fn_code f) inj_n src_pc i inj_code (Pos.succ (max_pc_function f))) as INJECTED.
       lapply INJECTED.
       2: assumption.
@@ -1632,7 +1631,14 @@ Section INJECTOR.
           eapply external_call_symbols_preserved; eauto. apply senv_preserved.
         + constructor; auto.
         
-      - admit.
+      - (* return *)
+        inv STACKS. inv H1.
+        econstructor; split.
+        + apply Smallstep.plus_one.
+          apply exec_return.
+        + constructor; trivial.
+          apply match_regs_write.
+          assumption.
     Admitted.
 
     Theorem transf_program_correct:
