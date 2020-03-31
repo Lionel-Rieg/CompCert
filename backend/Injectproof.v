@@ -1584,7 +1584,35 @@ Section INJECTOR.
             rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
             eassumption.
           * constructor; trivial.
-      - admit.
+      - (* return *)
+         destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := (Vptr stk Ptrofs.zero)) (m := m) (trs := trs).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Ireturn.
+            exact ALTER.
+            rewrite stacksize_preserved with (f:=f); eassumption.
+          * destruct or as [r | ]; simpl.
+            ** replace (trs # r) with (hd Vundef (trs ## (instr_uses (Ireturn (Some r))))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               constructor; auto.
+            ** constructor; auto.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Ireturn.
+            rewrite transf_function_preserves with (f:=f); eauto.
+            eapply max_pc_function_sound; eauto.
+            rewrite stacksize_preserved with (f:=f); eassumption.
+          * destruct or as [r | ]; simpl.
+            ** replace (trs # r) with (hd Vundef (trs ## (instr_uses (Ireturn (Some r))))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               constructor; auto.
+            ** constructor; auto.
+
       - admit.
       - admit.
       - admit.
