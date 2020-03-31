@@ -17,7 +17,8 @@ open Maps
 open Op
 open Ordered
 open! RTL
-
+open Camlcoq
+   
 module PSet = Make(OrderedPositive)
 
 type inlining_info = {
@@ -83,13 +84,15 @@ let static_called_once id io =
   else
     false
 
-(* To be considered: heuristics based on size of function? *)
+(* D. Monniaux: attempt at heuristic based on size *)
+let small_enough (f : coq_function) =
+  P.to_int (RTL.max_pc_function f) <= !Clflags.option_inline_auto_threshold
 
 let should_inline (io: inlining_info) (id: ident) (f: coq_function) =
   if !Clflags.option_finline then begin
     match C2C.atom_inline id with
     | C2C.Inline -> true
     | C2C.Noinline -> false
-    | C2C.No_specifier -> static_called_once id io
+    | C2C.No_specifier -> static_called_once id io || small_enough f
   end else
     false
