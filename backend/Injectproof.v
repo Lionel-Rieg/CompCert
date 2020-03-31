@@ -1612,9 +1612,11 @@ Section INJECTOR.
                eapply max_pc_function_sound; eauto.
             ** apply eval_builtin_args_preserved with (ge1 := ge); eauto.
                exact symbols_preserved.
-               admit.
+               apply transf_function_preserves_builtin_args with (f:=f) (tf:=tf) (pc:=pc) (rs:=rs) (ef:=ef) (res0:=res) (pc':=pc'); auto.
             ** eapply external_call_symbols_preserved; eauto. apply senv_preserved.
-          * admit.
+          * constructor; auto.
+            apply match_regs_setres.
+            assumption.
             
       - (* cond *)
         destruct ((gen_injections f) ! pc) eqn:INJECTION.
@@ -1748,7 +1750,7 @@ Section INJECTOR.
         + constructor; trivial.
           apply match_regs_write.
           assumption.
-    Admitted.
+    Qed.
 
     Theorem transf_program_correct:
       Smallstep.forward_simulation (semantics prog) (semantics tprog).
