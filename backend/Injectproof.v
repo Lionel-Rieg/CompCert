@@ -1134,6 +1134,25 @@ Section INJECTOR.
         destruct (Genv.find_symbol ge id); try congruence.
         eapply function_ptr_translated; eauto.
     Qed.
+
+    Lemma transf_function_preserves_ros_tail:
+      forall f tf pc rs trs ros args fd sig
+        (FUN : transf_function gen_injections f = OK tf)
+        (MATCH : match_regs f rs trs)
+        (INSTR : (fn_code f) ! pc = Some (Itailcall sig ros args))
+        (FIND : find_function ge ros rs = Some fd),
+      exists tfd, find_function tge ros trs = Some tfd
+                  /\ transf_fundef gen_injections fd = OK tfd.
+    Proof.
+      intros; destruct ros as  [r|id].
+      - apply functions_translated; auto.
+        replace (trs # r) with (hd Vundef (trs ## (instr_uses (Itailcall sig (inl r) args)))) by reflexivity.
+        rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+      - simpl. rewrite symbols_preserved.
+        simpl in FIND.
+        destruct (Genv.find_symbol ge id); try congruence.
+        eapply function_ptr_translated; eauto.
+    Qed.
       
     Theorem transf_step_correct:
       forall s1 t s2, step ge s1 t s2 ->
@@ -1417,7 +1436,45 @@ Section INJECTOR.
                constructor; auto.
                constructor; auto.
         
-      - admit.
+      -  (* tailcall *)
+        destruct (transf_function_preserves_ros_tail f tf pc rs trs ros args fd (funsig fd) FUN REGS H H0) as [tfd [TFD1 TFD2]].
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          simpl in ALTER.
+          econstructor; split.
+          * eapply Smallstep.plus_one.
+            apply exec_Itailcall with (args := args) (sig := (funsig fd)) (ros := ros).
+            exact ALTER.
+            exact TFD1.
+            apply sig_preserved; auto.
+            rewrite stacksize_preserved with (f:=f) by trivial.
+            eassumption.
+          * destruct ros as [r | id].
+            ** replace (trs ## args) with (tl (trs ## (instr_uses (Itailcall (funsig fd) (inl r) args)))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               apply match_states_call; auto.
+            ** replace (trs ## args) with (trs ## (instr_uses (Itailcall (funsig fd) (inr id) args))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               apply match_states_call; auto.
+        + econstructor; split.
+          * eapply Smallstep.plus_one.
+            apply exec_Itailcall with (args := args) (sig := (funsig fd)) (ros := ros).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** exact TFD1.
+            ** apply sig_preserved; auto.
+            ** rewrite stacksize_preserved with (f:=f) by trivial.
+               eassumption.
+          * destruct ros as [r | id].
+            ** replace (trs ## args) with (tl (trs ## (instr_uses (Itailcall (funsig fd) (inl r) args)))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               apply match_states_call; auto.
+            ** replace (trs ## args) with (trs ## (instr_uses (Itailcall (funsig fd) (inr id) args))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               apply match_states_call; auto.
+
       - admit.
       - admit.
       - admit.
