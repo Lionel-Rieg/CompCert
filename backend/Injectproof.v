@@ -981,6 +981,115 @@ Section INJECTOR.
       eapply transf_function_inj_end; eassumption.
       reflexivity.
     Qed.
+    
+    Lemma transf_function_preserves:
+      forall f tf pc 
+        (FUN : transf_function gen_injections f = OK tf)
+        (LESS : pc <= max_pc_function f)
+        (NOCHANGE : (gen_injections f) ! pc = None),
+        (fn_code tf) ! pc = (fn_code f) ! pc.
+    Proof.
+      intros.
+      unfold transf_function in FUN.
+      destruct valid_injections1 in FUN.
+      2: discriminate.
+      inv FUN.
+      simpl.
+      apply inject_l_preserves.
+      lia.
+      rewrite forallb_forall.
+      intros x INx.
+      destruct peq; trivial.
+      subst pc.
+      exfalso.
+      destruct x as [pc ii].
+      simpl in *.
+      apply PTree.elements_complete in INx.
+      congruence.
+    Qed.
+    
+    Lemma transf_function_redirects:
+      forall f tf pc injl ii
+        (FUN : transf_function gen_injections f = OK tf)
+        (LESS : pc <= max_pc_function f)
+        (INJECTION : (gen_injections f) ! pc = Some injl)
+        (INSTR: (fn_code f) ! pc = Some ii),
+      exists pc' : node,
+        (fn_code tf) ! pc = Some (alter_successor ii pc') /\
+        (forall ts sp m trs,
+            exists trs',
+            match_regs f trs trs' /\
+            Smallstep.plus RTL.step ge
+              (State ts tf sp pc' trs m) E0
+              (State ts tf sp (successor ii) trs' m)).        
+    Proof.
+      intros.
+      apply PTree.elements_correct in INJECTION.
+      apply In_nth_error in INJECTION.
+      destruct INJECTION as [injn INJECTION].
+      exists (inject_l_position (Pos.succ (max_pc_function f))
+                                (PTree.elements (gen_injections f)) injn).
+      split.
+      { unfold transf_function in FUN.
+        destruct (valid_injections1) eqn:VALID in FUN.
+        2: discriminate.
+        inv FUN.
+        simpl.
+        apply inject_l_redirects with (l := injl); auto.
+        apply PTree.elements_keys_norepet.
+        unfold valid_injections1 in VALID.
+        rewrite forallb_forall in VALID.
+        rewrite forallb_forall.
+        intros x INx.
+        pose proof (VALID x INx) as VALIDx.
+        clear VALID.
+        rewrite andb_true_iff in VALIDx.
+        rewrite Pos.leb_le in VALIDx.
+        destruct VALIDx as [VALIDx1 VALIDx2].
+        rewrite Pos.ltb_lt.
+        lia.
+      }
+      intros.
+      pose proof (transf_function_inj_plusstep ts f tf sp m injn pc
+                 (inject_l_position (Pos.succ (max_pc_function f))
+                                    (PTree.elements (gen_injections f)) injn)
+                 injl ii FUN INJECTION INSTR) as TRANS.
+      lapply TRANS.
+      2: reflexivity.
+      clear TRANS.
+      intro TRANS.
+      exact (TRANS trs).
+    Qed.
+    
+    Theorem transf_step_correct:
+      forall s1 t s2, step ge s1 t s2 ->
+         forall ts1 (MS: match_states s1 ts1),
+         exists ts2, Smallstep.plus step tge ts1 t ts2 /\ match_states s2 ts2.
+    Proof.
+      induction 1; intros ts1 MS; inv MS; try (inv TRC).
+      - (* nop *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Inop.
+            ** 
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Inop.
+            rewrite transf_function_preserves with (f:=f); eauto.
+            eapply max_pc_function_sound; eauto.
+          * constructor; trivial.
+    Admitted.
 
+    Theorem transf_program_correct:
+      Smallstep.forward_simulation (semantics prog) (semantics tprog).
+    Proof.
+      eapply Smallstep.forward_simulation_plus.
+      apply senv_preserved.
+      eexact transf_initial_states.
+      eexact transf_final_states.
+      eexact transf_step_correct.
+    Qed.
+    
 End PRESERVATION.
 End INJECTOR.
