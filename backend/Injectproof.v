@@ -1313,7 +1313,48 @@ Section INJECTOR.
             apply match_regs_write.
             assumption.
         
-      - admit.
+      - (* store *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m') (trs := trs).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Istore with (chunk := chunk) (addr := addr) (args := args) (a := a) (src := src).
+               exact ALTER.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace (trs ## args) with (tl (trs ## (instr_uses (Istore chunk addr args src pc')))) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+               replace (trs # src) with (hd Vundef (trs ## (instr_uses (Istore chunk addr args src pc')))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               simpl.
+               eassumption.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs); trivial.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Istore with (chunk := chunk) (addr := addr) (args := args) (a := a) (src := src).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace (trs ## args) with (tl (trs ## (instr_uses (Istore chunk addr args src pc')))) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+            ** replace (trs # src) with (hd Vundef (trs ## (instr_uses (Istore chunk addr args src pc')))) by reflexivity.
+               rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               simpl.
+               eassumption.
+          * constructor; trivial.
       - admit.
       - admit.
       - admit.
