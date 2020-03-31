@@ -1475,6 +1475,39 @@ Section INJECTOR.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                apply match_states_call; auto.
 
+      - (* builtin *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m')
+             (trs := (regmap_setres res vres trs)).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Ibuiltin with (ef := ef) (args := args) (res := res) (vargs := vargs).
+               *** exact ALTER.
+               *** apply eval_builtin_args_preserved with (ge1 := ge); eauto.
+                   exact symbols_preserved.
+                   admit.
+               *** eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** symmetry. apply E0_right.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := (regmap_setres res vres trs)); trivial.
+            admit.
+        + econstructor; split.
+          * eapply Smallstep.plus_one.
+            apply exec_Ibuiltin with (ef := ef) (args := args) (res := res) (vargs := vargs).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** apply eval_builtin_args_preserved with (ge1 := ge); eauto.
+               exact symbols_preserved.
+               admit.
+            ** eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+          * admit.
+            
       - admit.
       - admit.
       - admit.
