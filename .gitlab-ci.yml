@@ -11,6 +11,14 @@ check-admitted:
   script:
     - ./config_x86_64.sh
     - make check-admitted
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "mppa-work"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: manual
     
 build_x86_64:
   stage: build
