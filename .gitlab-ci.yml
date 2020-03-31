@@ -4,6 +4,7 @@ stages:
 
 check-admitted:
   stage: check-admitted
+  image: "coqorg/coq"
   script:
     - make check-admitted
     
