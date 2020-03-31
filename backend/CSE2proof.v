@@ -55,9 +55,9 @@ Definition sem_sym_val sym rs (v : option val) : Prop :=
     match eval_addressing genv sp addr rs##args with
     | Some a => match Mem.loadv chunk m a with
                 | Some dat => v = Some dat
-                | None => v = None \/ v = Some (default_notrap_load_value chunk)
+                | None => v = None \/ v = Some Vundef
                 end
-    | None   => v = None \/ v = Some (default_notrap_load_value chunk)
+    | None   => v = None \/ v = Some Vundef
     end
   end.
     
@@ -404,9 +404,9 @@ Lemma find_load_sound :
     match eval_addressing genv sp addr rs##args with
     | Some a => match Mem.loadv chunk m a with
                 | Some dat => rs#src = dat
-                | None => rs#src = default_notrap_load_value chunk
+                | None => rs#src = Vundef
                 end
-    | None   => rs#src = default_notrap_load_value chunk
+    | None   => rs#src = Vundef
     end.
 Proof.
   intros until rs.
@@ -421,9 +421,9 @@ Proof.
                match eval_addressing genv sp addr rs##args with
                | Some a => match Mem.loadv chunk m a with
                            | Some dat => rs#src = dat
-                           | None => rs#src = default_notrap_load_value chunk
+                           | None => rs#src = Vundef
                            end
-               | None   => rs#src = default_notrap_load_value chunk
+               | None   => rs#src = Vundef
                end
              end ->
     fold_left
@@ -433,9 +433,9 @@ Proof.
     match eval_addressing genv sp addr rs##args with
                | Some a => match Mem.loadv chunk m a with
                            | Some dat => rs#src = dat
-                           | None => rs#src = default_notrap_load_value chunk
+                           | None => rs#src = Vundef
                            end
-               | None   => rs#src = default_notrap_load_value chunk
+               | None   => rs#src = Vundef
                end) as REC.
   
   {
@@ -523,7 +523,7 @@ Lemma find_load_notrap1_sound' :
     sem_rel rel rs ->
     find_load rel chunk addr args = Some src ->
     eval_addressing genv sp addr rs##args = None ->
-    rs # src = (default_notrap_load_value chunk).
+    rs # src = Vundef.
 Proof.
   intros until rs. intros REL FINDLOAD ADDR.
   pose proof (find_load_sound rel chunk addr src args rs REL FINDLOAD) as Z.
@@ -543,7 +543,7 @@ Lemma find_load_notrap2_sound' :
     find_load rel chunk addr args = Some src ->
     eval_addressing genv sp addr rs##args = Some a ->
     Mem.loadv chunk m a = None ->
-    rs # src = (default_notrap_load_value chunk).
+    rs # src = Vundef.
 Proof.
   intros until a. intros REL FINDLOAD ADDR LOAD.
   pose proof (find_load_sound rel chunk addr src args rs REL FINDLOAD) as Z.
@@ -689,11 +689,11 @@ Lemma load2_notrap1_sound :
     sem_rel rel rs ->
     not (In dst args) ->
     eval_addressing genv sp addr (rs ## args) = None ->
-    sem_rel (load2 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load2 chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until rs.
   intros REL NOT_IN ADDR x.
-  pose proof (kill_reg_sound rel dst rs (default_notrap_load_value chunk) REL x) as KILL.
+  pose proof (kill_reg_sound rel dst rs Vundef REL x) as KILL.
   unfold load2.
   destruct (peq x dst).
   {
@@ -726,11 +726,11 @@ Lemma load2_notrap2_sound :
     not (In dst args) ->
     eval_addressing genv sp addr (rs ## args) = Some a ->
     Mem.loadv chunk m a = None ->
-    sem_rel (load2 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load2 chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until a.
   intros REL NOT_IN ADDR LOAD x.
-  pose proof (kill_reg_sound rel dst rs  (default_notrap_load_value chunk) REL x) as KILL.
+  pose proof (kill_reg_sound rel dst rs Vundef REL x) as KILL.
   unfold load2.
   destruct (peq x dst).
   {
@@ -784,7 +784,7 @@ Lemma load1_notrap1_sound :
   forall rs : regset,
     sem_rel rel rs ->
     eval_addressing genv sp addr (rs ## args) = None ->
-    sem_rel (load1 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load1 chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until rs.
   intros REL ADDR LOAD.
@@ -807,7 +807,7 @@ Lemma load1_notrap2_sound :
     sem_rel rel rs ->
     eval_addressing genv sp addr (rs ## args) = Some a ->
     Mem.loadv chunk m a = None ->
-    sem_rel (load1 chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load1 chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until a.
   intros REL ADDR LOAD.
@@ -841,9 +841,9 @@ Proof.
     assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
     | Some a => match Mem.loadv chunk m a with
                 | Some dat => rs#src = dat
-                | None => rs#src = default_notrap_load_value chunk
+                | None => rs#src = Vundef
                 end
-    | None   => rs#src = default_notrap_load_value chunk
+    | None   => rs#src = Vundef
     end) as FIND_LOAD.
     {
       apply (find_load_sound rel); trivial.
@@ -869,7 +869,7 @@ Lemma load_notrap1_sound :
   forall rs : regset,
     sem_rel rel rs ->
     eval_addressing genv sp addr (rs ## args) = None ->
-    sem_rel (load chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until rs.
   intros REL ADDR.
@@ -879,9 +879,9 @@ Proof.
     assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
     | Some a => match Mem.loadv chunk m a with
                 | Some dat => rs#src = dat
-                | None => rs#src = default_notrap_load_value chunk
+                | None => rs#src = Vundef
                 end
-    | None   => rs#src = default_notrap_load_value chunk
+    | None   => rs#src = Vundef
     end) as FIND_LOAD.
     {
       apply (find_load_sound rel); trivial.
@@ -906,7 +906,7 @@ Lemma load_notrap2_sound :
     sem_rel rel rs ->
     eval_addressing genv sp addr (rs ## args) = Some a ->
     Mem.loadv chunk m a = None ->
-    sem_rel (load chunk addr dst args rel) (rs # dst <- (default_notrap_load_value chunk)).
+    sem_rel (load chunk addr dst args rel) (rs # dst <- Vundef).
 Proof.
   intros until a.
   intros REL ADDR.
@@ -916,9 +916,9 @@ Proof.
     assert (match eval_addressing genv sp addr rs## (map (forward_move rel) args) with
     | Some a => match Mem.loadv chunk m a with
                 | Some dat => rs#src = dat
-                | None => rs#src = default_notrap_load_value chunk
+                | None => rs#src = Vundef
                 end
-    | None   => rs#src = default_notrap_load_value chunk
+    | None   => rs#src = Vundef
     end) as FIND_LOAD.
     {
       apply (find_load_sound rel); trivial.
@@ -1680,7 +1680,7 @@ Proof.
   econstructor; split.
   eapply exec_return; eauto.
   constructor; auto.
-Admitted.
+Qed.
 
 
 Lemma transf_initial_states:

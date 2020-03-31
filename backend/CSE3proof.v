@@ -830,7 +830,10 @@ Proof.
     econstructor. split.
     + eapply exec_return.
     + econstructor; eauto.
-Admitted.
+      apply wt_regset_assign; trivial.
+      rewrite WTRES0.
+      exact WTRES.
+Qed.
 
 Lemma transf_initial_states:
   forall S1, RTL.initial_state prog S1 ->
