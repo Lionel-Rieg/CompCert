@@ -1214,6 +1214,15 @@ Section INJECTOR.
       trivial.
     Qed.
 
+    Lemma match_regs_setres:
+      forall f res rs trs vres
+             (MATCH : match_regs f rs trs),
+        match_regs f (regmap_setres res vres rs) (regmap_setres res vres trs).
+    Proof.
+      induction res; simpl; intros; trivial.
+      apply match_regs_write; auto.
+    Qed.
+    
     Lemma transf_function_preserves_ros:
       forall f tf pc rs trs ros args res fd pc' sig
         (FUN : transf_function gen_injections f = OK tf)
@@ -1594,7 +1603,8 @@ Section INJECTOR.
             ** symmetry. apply E0_right.
           * constructor; trivial.
             apply match_regs_trans with (rs2 := (regmap_setres res vres trs)); trivial.
-            admit.
+            apply match_regs_setres.
+            assumption.
         + econstructor; split.
           * eapply Smallstep.plus_one.
             apply exec_Ibuiltin with (ef := ef) (args := args) (res := res) (vargs := vargs).
