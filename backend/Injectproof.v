@@ -1562,7 +1562,28 @@ Section INJECTOR.
                *** reflexivity.
             ** constructor; auto.
                        
-      - admit.
+      - destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m) (trs := trs).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Ijumptable with (arg := arg) (tbl := tbl) (n := n); trivial.
+            replace (trs # arg) with (hd Vundef (trs ## (instr_uses (Ijumptable arg tbl)))) by reflexivity.
+            rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+            eassumption.
+          * constructor; trivial.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Ijumptable with (arg := arg) (tbl := tbl) (n := n); trivial.
+            rewrite transf_function_preserves with (f:=f); eauto.
+            eapply max_pc_function_sound; eauto.
+            replace (trs # arg) with (hd Vundef (trs ## (instr_uses (Ijumptable arg tbl)))) by reflexivity.
+            rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+            eassumption.
+          * constructor; trivial.
       - admit.
       - admit.
       - admit.
