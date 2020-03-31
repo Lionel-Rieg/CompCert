@@ -1,6 +1,17 @@
 stages:
   - build
 
+check-admitted:
+  stage: build
+  image: "coqorg/coq"
+  before_script:
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam install -y menhir
+  script:
+    - ./config_x86_64.sh
+    - make check-admitted
+    
 build_x86_64:
   stage: build
   image: "coqorg/coq"
