@@ -1144,6 +1144,7 @@ Section INJECTOR.
             rewrite transf_function_preserves with (f:=f); eauto.
             eapply max_pc_function_sound; eauto.
           * constructor; trivial.
+            
       - (* op *)
         destruct ((gen_injections f) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
@@ -1187,9 +1188,131 @@ Section INJECTOR.
           * constructor; trivial.
             apply match_regs_write.
             assumption.
-      - admit.
-      - admit.
-      - admit.
+
+      - (* load *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m)
+             (trs := trs # dst <- v).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Iload with (trap := trap) (chunk := chunk) (addr := addr) (args := args) (a := a).
+               exact ALTER.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload trap chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+               eassumption.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs # dst <- v); trivial.
+            apply match_regs_write.
+            assumption.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Iload with (trap := trap) (chunk := chunk) (addr := addr) (args := args) (a := a).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload trap chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+            ** eassumption.
+          * constructor; trivial.
+            apply match_regs_write.
+            assumption.
+        
+      - (* load notrap1 *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m)
+             (trs := trs # dst <- Vundef).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args).
+               exact ALTER.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload NOTRAP chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs # dst <- Vundef); trivial.
+            apply match_regs_write.
+            assumption.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload NOTRAP chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+          * constructor; trivial.
+            apply match_regs_write.
+            assumption.
+
+      - (* load notrap2 *)
+        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        + exploit transf_function_redirects; eauto.
+          { eapply max_pc_function_sound; eauto. }
+          intros [pc_inj [ALTER SKIP]].
+          specialize SKIP with (ts := ts) (sp := sp) (m := m)
+             (trs := trs # dst <- Vundef).
+          destruct SKIP as [trs' [MATCH PLUS]].
+          econstructor; split.
+          * eapply Smallstep.plus_left.
+            ** apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (a := a).
+               exact ALTER.
+               rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload NOTRAP chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+               eassumption.
+            ** apply Smallstep.plus_star.
+               exact PLUS.
+            ** reflexivity.
+          * constructor; trivial.
+            apply match_regs_trans with (rs2 := trs # dst <- Vundef); trivial.
+            apply match_regs_write.
+            assumption.
+        + econstructor; split.
+          * apply Smallstep.plus_one.
+            apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (a := a).
+            ** rewrite transf_function_preserves with (f:=f); eauto.
+               eapply max_pc_function_sound; eauto.
+            ** rewrite eval_addressing_preserved with (ge1 := ge).
+               {
+                 replace args with (instr_uses (Iload NOTRAP chunk addr args dst pc')) by reflexivity.
+                 rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
+               }
+               exact symbols_preserved.
+            ** eassumption.
+          * constructor; trivial.
+            apply match_regs_write.
+            assumption.
+        
       - admit.
       - admit.
       - admit.
