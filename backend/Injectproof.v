@@ -1174,7 +1174,25 @@ Section INJECTOR.
           right.
           exact INr.
     Qed.
-
+    
+    Lemma transf_function_preserves_builtin_args:
+      forall f tf pc rs trs ef res sp m pc'
+        (args : list (builtin_arg reg))
+        (FUN : transf_function gen_injections f = OK tf)
+        (MATCH : match_regs f rs trs)
+        (INSTR : (fn_code f) ! pc = Some (Ibuiltin ef args res pc'))
+        (vargs : list val)
+        (EVAL : eval_builtin_args ge (fun r => rs#r) sp m args vargs),
+        eval_builtin_args ge (fun r => trs#r) sp m args vargs.
+    Proof.
+      intros.
+      apply transf_function_preserves_builtin_args_rec with (rs := rs) (ef := ef) (res := res) (pc' := pc').
+      intros r INr.
+      apply MATCH.
+      apply (max_reg_function_use f pc (Ibuiltin ef args res pc')).
+      all: auto.
+    Qed.
+    
     Lemma match_regs_write:
       forall f rs trs res v
              (MATCH : match_regs f rs trs),
@@ -1569,8 +1587,7 @@ Section INJECTOR.
                *** exact ALTER.
                *** apply eval_builtin_args_preserved with (ge1 := ge); eauto.
                    exact symbols_preserved.
-                   Compute (instr_uses (Ibuiltin ef args res pc')).
-                   (instr_uses 
+                   apply transf_function_preserves_builtin_args with (f:=f) (tf:=tf) (pc:=pc) (rs:=rs) (ef:=ef) (res0:=res) (pc':=pc'); auto.
                *** eapply external_call_symbols_preserved; eauto. apply senv_preserved.
             ** apply Smallstep.plus_star.
                exact PLUS.
