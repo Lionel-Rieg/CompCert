@@ -953,5 +953,30 @@ Section INJECTOR.
       lia.
     Qed.
 
+    Lemma transf_function_inj_plusstep :
+      forall ts f tf sp m inj_n src_pc inj_pc inj_code i
+        (FUN : transf_function gen_injections f = OK tf)
+        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+               Some (src_pc, inj_code))
+        (SRC: (fn_code f) ! src_pc = Some i)
+        (POSITION : inject_l_position (Pos.succ (max_pc_function f))
+                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+        (trs : regset),
+      exists trs',
+        match_regs (f : function) trs trs' /\
+        Smallstep.plus RTL.step ge
+              (State ts tf sp inj_pc trs m) E0
+              (State ts tf sp (successor i) trs' m).
+    Proof.
+      intros.
+      destruct (transf_function_inj_starstep ts f tf sp m inj_n src_pc inj_pc inj_code FUN INJ POSITION trs) as [trs' [MATCH PLUS]].
+      exists trs'.
+      split. assumption.
+      eapply Smallstep.plus_right.
+      exact PLUS.
+      eapply transf_function_inj_end; eassumption.
+      reflexivity.
+    Qed.
+
 End PRESERVATION.
 End INJECTOR.
