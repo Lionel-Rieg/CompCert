@@ -1624,7 +1624,14 @@ Section INJECTOR.
           constructor; auto.
           rewrite params_preserved with (f:=f)(tf:=x) by assumption.
           apply match_regs_refl.
-      - admit.
+      - (* external call *)
+        monadInv FUN.
+        econstructor; split.
+        + apply Smallstep.plus_one.
+          apply exec_function_external.
+          eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+        + constructor; auto.
+        
       - admit.
     Admitted.
 
