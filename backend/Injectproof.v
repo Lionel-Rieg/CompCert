@@ -1613,7 +1613,17 @@ Section INJECTOR.
                constructor; auto.
             ** constructor; auto.
 
-      - admit.
+      - (* internal call *)
+        monadInv FUN.
+        econstructor; split.
+        + apply Smallstep.plus_one.
+          apply exec_function_internal.
+          rewrite stacksize_preserved with (f:=f) by assumption.
+          eassumption.
+        + rewrite entrypoint_preserved with (f:=f)(tf:=x) by assumption.
+          constructor; auto.
+          rewrite params_preserved with (f:=f)(tf:=x) by assumption.
+          apply match_regs_refl.
       - admit.
       - admit.
     Admitted.
