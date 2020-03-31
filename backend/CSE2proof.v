@@ -1680,7 +1680,7 @@ Proof.
   econstructor; split.
   eapply exec_return; eauto.
   constructor; auto.
-Admitted.
+Qed.
 
 
 Lemma transf_initial_states:
