@@ -271,8 +271,9 @@ Definition CompCert's_passes :=
   ::: mkpass Renumberproof.match_prog
   ::: mkpass (match_if Compopts.optim_duplicate Duplicateproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
+  ::: mkpass Renumberproof.match_prog
   ::: mkpass (match_if Compopts.optim_move_loop_invariants LICMproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_constprop Renumberproof.match_prog)
+  ::: mkpass (match_if Compopts.optim_move_loop_invariants Renumberproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE2 CSE2proof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE3 CSE3proof.match_prog)
@@ -315,18 +316,15 @@ Proof.
   destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
   destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
   unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
-  ::: mkpass (match_if Compopts.optim_move_loop_invariants LICM.match_prog)
-  ::: mkpass (match_if Compopts.optim_move_loop_invariants Renumberproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
   destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
   set (p9 := total_if Compopts.optim_move_loop_invariants FirstNop.transf_program p8) in *.
   set (p9bis := Renumber.transf_program p9) in *.
   destruct (partial_if optim_duplicate Duplicate.transf_program p9bis) as [p10|e] eqn:P10; simpl in T; try discriminate.
   set (p11 := total_if optim_constprop Constprop.transf_program p10) in *.
-  set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
+  set (p12 := Renumber.transf_program p11) in *.
   destruct (partial_if optim_move_loop_invariants LICM.transf_program p12) as [p12bis|e] eqn:P12bis; simpl in T; try discriminate.
-  set (p12ter :=(total_if optim_move_loop_invariant Renumber.transf_program p12bis)) in *.
+  set (p12ter :=(total_if optim_move_loop_invariants Renumber.transf_program p12bis)) in *.
   destruct (partial_if optim_CSE CSE.transf_program p12ter) as [p13|e] eqn:P13; simpl in T; try discriminate.
   set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
   destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; simpl in T; try discriminate.
@@ -349,11 +347,13 @@ Proof.
   exists p6; split. apply RTLgenproof.transf_program_match; auto.
   exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
   exists p8; split. apply Inliningproof.transf_program_match; auto.
-  exists p9; split. apply FirstNopproof.transf_program_match; auto.
-  exists p9bis; split. apply Renumberproof.transf_program_match; auto.
+  exists p9; split. apply total_if_match. apply FirstNopproof.transf_program_match.
+  exists p9bis; split. apply Renumberproof.transf_program_match.
   exists p10; split. eapply partial_if_match; eauto. apply Duplicateproof.transf_program_match; auto.
   exists p11; split. apply total_if_match. apply Constpropproof.transf_program_match.
-  exists p12; split. apply total_if_match. apply Renumberproof.transf_program_match.
+  exists p12; split. apply Renumberproof.transf_program_match.
+  exists p12bis; split. eapply partial_if_match; eauto. apply LICMproof.transf_program_match.
+  exists p12ter; split. apply total_if_match; eauto. apply Renumberproof.transf_program_match.
   exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
   exists p13bis; split. apply total_if_match. apply CSE2proof.transf_program_match.
   exists p13ter; split. eapply partial_if_match; eauto. apply CSE3proof.transf_program_match.
@@ -418,7 +418,7 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p27)).
+  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p29)).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -436,12 +436,16 @@ Ltac DestructM :=
     eapply match_if_simulation. eassumption. exact Tailcallproof.transf_program_correct.
   eapply compose_forward_simulations.
     eapply Inliningproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations. eapply FirstNopproof.transf_program_correct; eassumption.
+  eapply compose_forward_simulations.
+    eapply match_if_simulation. eassumption. exact FirstNopproof.transf_program_correct.
   eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply match_if_simulation. eassumption. exact Duplicateproof.transf_program_correct.
   eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
+  eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
+  eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
+  eapply compose_forward_simulations.
+    eapply match_if_simulation. eassumption. exact LICMproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply match_if_simulation. eassumption. exact Renumberproof.transf_program_correct.
   eapply compose_forward_simulations.

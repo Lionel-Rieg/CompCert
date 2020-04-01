@@ -12,6 +12,12 @@ Section PRESERVATION.
   Variables prog tprog: program.
   Hypothesis TRANSF: match_prog prog tprog.
 
+  Lemma transf_program_match:
+    forall prog tprog, transf_program prog = OK tprog -> match_prog prog tprog.
+  Proof.
+    intros. eapply match_transform_partial_program_contextual; eauto.
+  Qed.
+  
   Theorem transf_program_correct :
     Smallstep.forward_simulation (semantics prog) (semantics tprog).
   Proof.
