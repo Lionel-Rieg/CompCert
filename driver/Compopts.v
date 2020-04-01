@@ -27,8 +27,7 @@ Parameter generate_float_constants: unit -> bool.
 (** For value analysis.  Currently always false. *)
 Parameter va_strict: unit -> bool.
 
-(** Flag -fduplicate. For tail duplication optimization. Necessary to have
-  * bigger superblocks *)
+(** Flag -fduplicate. Branch prediction annotation + tail duplication *)
 Parameter optim_duplicate: unit -> bool.
 
 (** Flag -ftailcalls.  For tail call optimization. *)
