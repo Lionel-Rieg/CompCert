@@ -61,9 +61,9 @@ Proof.
   - subst. repeat (rewrite Pregmap.gss); auto.
     destruct v; simpl; auto.
     rewrite Ptrofs.add_assoc.
-    cutrewrite (Ptrofs.repr (x + y) = Ptrofs.add (Ptrofs.repr x) (Ptrofs.repr y)); auto.
+    enough (Ptrofs.repr (x + y) = Ptrofs.add (Ptrofs.repr x) (Ptrofs.repr y)) as ->; auto.
     unfold Ptrofs.add.
-    cutrewrite (x + y = Ptrofs.unsigned (Ptrofs.repr x) + Ptrofs.unsigned (Ptrofs.repr y)); auto.
+    enough (x + y = Ptrofs.unsigned (Ptrofs.repr x) + Ptrofs.unsigned (Ptrofs.repr y)) as ->; auto.
     repeat (rewrite Ptrofs.unsigned_repr); auto.
   - repeat (rewrite Pregmap.gso; auto).
 Qed.
@@ -220,7 +220,8 @@ Proof.
     destruct (zeq pos 0).
     + inv H. exists lbb. constructor; auto.
     + apply IHlbb in H. destruct H as (c & TAIL). exists c.
-      cutrewrite (pos = pos - size a + size a). apply code_tail_S; auto.
+      enough (pos = pos - size a + size a) as ->.
+      apply code_tail_S; auto.
       omega.
 Qed.
 
