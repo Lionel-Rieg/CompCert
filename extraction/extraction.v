@@ -87,6 +87,9 @@ Extract Inlined Constant Inlining.inlining_info => "Inliningaux.inlining_info".
 Extract Inlined Constant Inlining.inlining_analysis => "Inliningaux.inlining_analysis".
 Extraction Inline Inlining.ret Inlining.bind.
 
+(* Loop invariant code motion *)
+Extract Inlined Constant LICM.gen_injections => "LICMaux.gen_injections".
+
 (* Allocation *)
 Extract Constant Allocation.regalloc => "Regalloc.regalloc".
 
