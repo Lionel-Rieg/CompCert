@@ -572,13 +572,20 @@ Section INJECTOR.
       specialize M23 with r.
       intuition congruence.
     Qed.
-    
+
     Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
-    | match_frames_intro: forall res f tf sp pc rs trs
+    | match_frames_intro: forall res f tf sp pc pc' rs trs
         (FUN : transf_function gen_injections f = OK tf)
-        (REGS : match_regs f rs trs),
+        (REGS : match_regs f rs trs)
+        (STAR:
+           forall ts m trs1,
+           exists trs2,
+             (match_regs f trs1 trs2) /\
+             Smallstep.star RTL.step tge
+                                      (State ts tf sp pc' trs1 m) E0
+                                      (State ts tf sp pc trs2 m)),
         match_frames (Stackframe res f sp pc rs)
-                     (Stackframe res tf sp pc trs).
+                     (Stackframe res tf sp pc' trs).
 
     Inductive match_states: state -> state -> Prop :=
     | match_states_intro:
@@ -1519,11 +1526,23 @@ Section INJECTOR.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
+
+               (* FIXME *)
+               intros.
+               exists trs1. split.
+               apply match_regs_refl.
+               constructor.
+               
             ** replace (trs ## args) with (trs ## (instr_uses (Icall (funsig fd) (inr id) args res pc'))) by reflexivity.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
+               (* FIXME *)
+               intros.
+               exists trs1. split.
+               apply match_regs_refl.
+               constructor.
         + econstructor; split.
           * eapply Smallstep.plus_one.
             apply exec_Icall with (args := args) (sig := (funsig fd)) (ros := ros).
@@ -1537,11 +1556,21 @@ Section INJECTOR.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
+               (* FIXME *)
+               intros.
+               exists trs1. split.
+               apply match_regs_refl.
+               constructor.
             ** replace (trs ## args) with (trs ## (instr_uses (Icall (funsig fd) (inr id) args res pc'))) by reflexivity.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
+               (* FIXME *)
+               intros.
+               exists trs1. split.
+               apply match_regs_refl.
+               constructor.
         
       -  (* tailcall *)
         destruct (transf_function_preserves_ros_tail f tf pc rs trs ros args fd (funsig fd) FUN REGS H H0) as [tfd [TFD1 TFD2]].
@@ -1744,11 +1773,16 @@ Section INJECTOR.
         
       - (* return *)
         inv STACKS. inv H1.
+        destruct (STAR bl m (trs # res <- vres)) as [trs2 [MATCH' STAR']].
         econstructor; split.
-        + apply Smallstep.plus_one.
-          apply exec_return.
+        + eapply Smallstep.plus_left.
+          * apply exec_return.
+          * exact STAR'.
+          * reflexivity.
         + constructor; trivial.
+          apply match_regs_trans with (rs2 := (trs # res <- vres)).
           apply match_regs_write.
+          assumption.
           assumption.
     Qed.
 
