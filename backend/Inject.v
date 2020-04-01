@@ -48,7 +48,7 @@ Definition alter_successor (i : instruction) (pc' : node) : instruction :=
   | Istore chunk addr args src _ => Istore chunk addr args src pc'
   | Ibuiltin ef args res _ => Ibuiltin ef args res pc'
   | Icond cond args _ pc2 => Icond cond args pc' pc2
-  | Icall _ _ _ _ _
+  | Icall sig ros args res _ => Icall sig ros args res pc'
   | Itailcall _ _ _
   | Ijumptable _ _
   | Ireturn _ => i

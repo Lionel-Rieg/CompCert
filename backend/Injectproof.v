@@ -1527,22 +1527,22 @@ Section INJECTOR.
                constructor; auto.
                constructor; auto.
 
-               (* FIXME *)
                intros.
-               exists trs1. split.
-               apply match_regs_refl.
-               constructor.
+               destruct (SKIP ts0 sp m0 trs1) as [trs2 [MATCH PLUS]].
+               exists trs2. split. assumption.
+               apply Smallstep.plus_star. exact PLUS.
                
             ** replace (trs ## args) with (trs ## (instr_uses (Icall (funsig fd) (inr id) args res pc'))) by reflexivity.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
-               (* FIXME *)
+
                intros.
-               exists trs1. split.
-               apply match_regs_refl.
-               constructor.
+               destruct (SKIP ts0 sp m0 trs1) as [trs2 [MATCH PLUS]].
+               exists trs2. split. assumption.
+               apply Smallstep.plus_star. exact PLUS.
+               
         + econstructor; split.
           * eapply Smallstep.plus_one.
             apply exec_Icall with (args := args) (sig := (funsig fd)) (ros := ros).
@@ -1556,21 +1556,18 @@ Section INJECTOR.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
-               (* FIXME *)
-               intros.
-               exists trs1. split.
-               apply match_regs_refl.
-               constructor.
+
+               intros. exists trs1. split.
+               apply match_regs_refl. constructor.
+               
             ** replace (trs ## args) with (trs ## (instr_uses (Icall (funsig fd) (inr id) args res pc'))) by reflexivity.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                apply match_states_call; auto.
                constructor; auto.
                constructor; auto.
-               (* FIXME *)
-               intros.
-               exists trs1. split.
-               apply match_regs_refl.
-               constructor.
+
+               intros. exists trs1. split.
+               apply match_regs_refl. constructor.
         
       -  (* tailcall *)
         destruct (transf_function_preserves_ros_tail f tf pc rs trs ros args fd (funsig fd) FUN REGS H H0) as [tfd [TFD1 TFD2]].
