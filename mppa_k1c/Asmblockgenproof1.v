@@ -1483,6 +1483,8 @@ Proof.
   destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
 Qed.
 
+Ltac splitall := repeat match goal with |- _ /\ _ => split end.
+
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
   transl_op op args res k = OK c ->
@@ -1517,21 +1519,21 @@ Opaque Int.eq.
 - (* Ocast8signed *)
   econstructor; split.
   eapply exec_straight_two. simpl;eauto. simpl;eauto.
-  split; intros; simpl; Simpl.
+  repeat split; intros; simpl; Simpl.
   assert (A: Int.ltu (Int.repr 24) Int.iwordsize = true) by auto.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A.
   apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Ocast16signed *)
   econstructor; split.
   eapply exec_straight_two. simpl;eauto. simpl;eauto.
-  split; intros; Simpl.
+  repeat split; intros; Simpl.
   assert (A: Int.ltu (Int.repr 16) Int.iwordsize = true) by auto.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A. 
   apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Oshrximm *)
   econstructor; split.
   + apply exec_straight_one. simpl. eauto.
-  + split.
+  + repeat split.
     * rewrite Pregmap.gss.
       subst v.
       destruct (rs x0); simpl; trivial.
@@ -1542,7 +1544,7 @@ Opaque Int.eq.
 - (* Oshrxlimm *)
   econstructor; split.
   + apply exec_straight_one. simpl. eauto.
-  + split.
+  + repeat split.
     * rewrite Pregmap.gss.
       subst v.
       destruct (rs x0); simpl; trivial.
@@ -1553,7 +1555,7 @@ Opaque Int.eq.
       
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
-  exists rs'; split. eexact A. eauto with asmgen.
+  exists rs'; repeat split; eauto with asmgen.
   
 - (* Osel *)
   unfold conditional_move in *.
@@ -1572,72 +1574,73 @@ Opaque Int.eq.
 
   destruct c0; simpl in *.
 
-  all:
-    destruct c; simpl in *; inv EQ2;
-    econstructor; split; try (apply exec_straight_one; constructor);
-    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
-    unfold Val.select; simpl;
-    unfold cmove, cmoveu;   
-    rewrite Pregmap.gss;
-    destruct (rs x1); simpl; trivial;
-    try rewrite int_ltu_to_neq;
-    try rewrite int64_ltu_to_neq;
-    try change (Int64.eq Int64.zero Int64.zero) with true;
-    try destruct Archi.ptr64;
-    repeat rewrite if_neg;
-    simpl;
-    trivial;
-    try destruct (_ || _);
-    trivial;
-    try apply Val.lessdef_normalize.
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ2.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x1); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 
 - (* Oselimm *)
   unfold conditional_move_imm32 in *.
   destruct c0; simpl in *.
 
-  all:
-    destruct c; simpl in *; inv EQ0;
-    econstructor; split; try (apply exec_straight_one; constructor);
-    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
-    unfold Val.select; simpl;
-    unfold cmove, cmoveu;   
-    rewrite Pregmap.gss;
-    destruct (rs x0); simpl; trivial;
-    try rewrite int_ltu_to_neq;
-    try rewrite int64_ltu_to_neq;
-    try change (Int64.eq Int64.zero Int64.zero) with true;
-    try destruct Archi.ptr64;
-    repeat rewrite if_neg;
-    simpl;
-    trivial;
-    try destruct (_ || _);
-    trivial;
-    try apply Val.lessdef_normalize.
-
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ0.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x0); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 
 - (* Osellimm *)
   unfold conditional_move_imm64 in *.
   destruct c0; simpl in *.
 
-  all:
-    destruct c; simpl in *; inv EQ0;
-    econstructor; split; try (apply exec_straight_one; constructor);
-    split; try (simpl; intros; rewrite Pregmap.gso; trivial; assumption);
-    unfold Val.select; simpl;
-    unfold cmove, cmoveu;   
-    rewrite Pregmap.gss;
-    destruct (rs x0); simpl; trivial;
-    try rewrite int_ltu_to_neq;
-    try rewrite int64_ltu_to_neq;
-    try change (Int64.eq Int64.zero Int64.zero) with true;
-    try destruct Archi.ptr64;
-    repeat rewrite if_neg;
-    simpl;
-    trivial;
-    try destruct (_ || _);
-    trivial;
-    try apply Val.lessdef_normalize.
-
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ0.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x0); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 Qed.
 
 (** Memory accesses *)
