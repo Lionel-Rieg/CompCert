@@ -6,4 +6,7 @@ Require Inject.
 Definition gen_injections (f : function) (max_pc : node) (max_reg : reg):
   PTree.t (list Inject.inj_instr) := PTree.empty (list Inject.inj_instr).
 
-Definition transf_program := Inject.transf_program gen_injections.
+Opaque gen_injections.
+
+Definition transf_program : program -> res program :=
+  Inject.transf_program gen_injections.
