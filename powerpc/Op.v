@@ -592,14 +592,20 @@ Definition is_trapping_op (op : operation) :=
   | _ => false
   end.
 
+Definition args_of_operation op :=
+  if eq_operation op Omove
+  then 1%nat
+  else List.length (fst (type_of_operation op)).
+
+
 Lemma is_trapping_op_sound:
   forall op vl sp m,
-    op <> Omove ->
     is_trapping_op op = false ->
-    (List.length vl) = (List.length (fst (type_of_operation op))) ->
+    (List.length vl) = args_of_operation op ->
     eval_operation genv sp op vl m <> None.
 Proof.
-  destruct op; intros; simpl in *; try congruence.
+  unfold args_of_operation.
+  destruct op; destruct eq_operation; intros; simpl in *; try congruence.
   all: try (destruct vl as [ | vh1 vl1]; try discriminate).
   all: try (destruct vl1 as [ | vh2 vl2]; try discriminate).
   all: try (destruct vl2 as [ | vh3 vl3]; try discriminate).
