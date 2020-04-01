@@ -150,8 +150,27 @@ let print_plist l =
     Printf.printf "]"
   end
 
+(* adapted from the above join_points function, but with PTree *)
+let get_join_points code entry =
+  let reached = ref (PTree.map (fun n i -> false) code) in
+  let reached_twice = ref (PTree.map (fun n i -> false) code) in
+  let rec traverse pc =
+    if get_some @@ PTree.get pc !reached then begin
+      if not (get_some @@ PTree.get pc !reached_twice) then
+        reached_twice := PTree.set pc true !reached_twice
+    end else begin
+      reached := PTree.set pc true !reached;
+      traverse_succs (successors_block @@ get_some @@ PTree.get pc code)
+    end
+  and traverse_succs = function
+    | [] -> ()
+    | [pc] -> traverse pc
+    | pc :: l -> traverse pc; traverse_succs l
+  in traverse entry; !reached_twice
+
 let forward_sequences code entry =
   let visited = ref (PTree.map (fun n i -> false) code) in
+  let join_points = get_join_points code entry in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
   let rec traverse_fallthrough code node =
     (* Printf.printf "Traversing %d..\n" (P.to_int node); *)
@@ -164,10 +183,14 @@ let forward_sequences code entry =
           | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
           | Lbuiltin _ -> assert false
           | Ltailcall _ | Lreturn -> begin (* Printf.printf "STOP tailcall/return\n"; *) ([], []) end
-          | Lbranch n -> let ln, rem = traverse_fallthrough code n in (ln, rem)
+          | Lbranch n ->
+              if get_some @@ PTree.get n join_points then ([], [n])
+              else let ln, rem = traverse_fallthrough code n in (ln, rem)
           | Lcond (_, _, ifso, ifnot, info) -> (match info with
             | None -> begin (* Printf.printf "STOP Lcond None\n"; *) ([], [ifso; ifnot]) end
-            | Some false -> let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
+            | Some false ->
+                if get_some @@ PTree.get ifnot join_points then ([], [ifso; ifnot])
+                else let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
             | Some true ->
                 let errstr = Printf.sprintf ("Inconsistency detected in node %d: ifnot is not the preferred branch") (P.to_int node) in
                   failwith errstr)
