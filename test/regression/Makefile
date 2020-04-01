@@ -26,10 +26,10 @@ TESTS_COMP?=attribs1 bitfields1 bitfields2 bitfields3 bitfields4 \
   varargs1 varargs2 varargs3 sections alias aligned\
   packedstruct1 packedstruct2
 
-# FIXME ifeq ($(ARCH),mppa_k1c)
+ifeq ($(ARCH),mppa_k1c)
 	TESTS_COMP:=$(filter-out packedstruct1,$(TESTS_COMP))
 	TESTS_COMP:=$(filter-out packedstruct2,$(TESTS_COMP))
-# endif
+endif
 
 # Can run, both in compiled mode and in interpreter mode,
 # but produce processor-dependent results, so no reference output in Results
@@ -37,7 +37,7 @@ TESTS_COMP?=attribs1 bitfields1 bitfields2 bitfields3 bitfields4 \
 TESTS_DIFF=NaNs
 # FIXME ifeq ($(ARCH),mppa_k1c)
 	TESTS_DIFF:=$(filter-out NaNs,$(TESTS_DIFF))
-# endif endif
+# endif
 
 # Other tests: should compile to .s without errors (but expect warnings)
 
