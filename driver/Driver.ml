@@ -199,6 +199,7 @@ Processing options:
   -fcse2         Perform inter-loop common subexpression elimination [off]
   -fcse3         Perform inter-loop common subexpression elimination [on]
   -fcse3-alias-analysis Perform inter-loop common subexpression elimination with alias analysis [on]
+  -fmove-loop-invariants Perform loop-invariant code motion [off]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
@@ -401,6 +402,7 @@ let cmdline_actions =
   @ f_opt "cse2" option_fcse2
   @ f_opt "cse3" option_fcse3
   @ f_opt "cse3-alias-analysis" option_fcse3_alias_analysis
+  @ f_opt "move-loop-invariants" option_fmove_loop_invariants
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]

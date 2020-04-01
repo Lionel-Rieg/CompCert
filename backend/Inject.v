@@ -81,7 +81,7 @@ Definition inject prog extra_pc injections : code :=
 *)
 
 Section INJECTOR.
-  Variable gen_injections : function -> PTree.t (list inj_instr).
+  Variable gen_injections : function -> node -> reg -> PTree.t (list inj_instr).
 
   Definition valid_injection_instr (max_reg : reg) (i : inj_instr) :=
     match i with
@@ -102,9 +102,9 @@ Section INJECTOR.
     valid_injections1 (max_pc_function f) (max_reg_function f).
   
   Definition transf_function (f : function) : res function :=
-    let injections := PTree.elements (gen_injections f) in
     let max_pc := max_pc_function f in
     let max_reg := max_reg_function f in
+    let injections := PTree.elements (gen_injections f max_pc max_reg) in
     if valid_injections1 max_pc max_reg injections
     then
       OK {| fn_sig := f.(fn_sig);

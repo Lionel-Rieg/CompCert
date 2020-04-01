@@ -48,6 +48,9 @@ Parameter optim_CSE3: unit -> bool.
 (** Flag -fcse3-alias-analysis.  For DMonniaux's common subexpression elimination. *)
 Parameter optim_CSE3_alias_analysis: unit -> bool.
 
+(** Flag -fmove-loop-invariants. *)
+Parameter optim_move_loop_invariants: unit -> bool.
+
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 

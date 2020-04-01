@@ -538,7 +538,7 @@ Qed.
 *)
 
 Section INJECTOR.
-  Variable gen_injections : function -> PTree.t (list inj_instr).
+  Variable gen_injections : function -> node -> reg -> PTree.t (list inj_instr).
 
   Definition match_prog (p tp: RTL.program) :=
     match_program (fun ctx f tf => transf_fundef gen_injections f = OK tf) eq p tp.
@@ -808,10 +808,10 @@ Section INJECTOR.
     Lemma transf_function_inj_starstep_rec :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code
         (FUN : transf_function gen_injections f = OK tf)
-        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+        (INJ : nth_error (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n =
                Some (src_pc, inj_code))
         (POSITION : inject_l_position (Pos.succ (max_pc_function f))
-                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+                                      (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n = inj_pc)
         (k : nat)
         (CUR : (k <= (List.length inj_code))%nat)
         (trs : regset),
@@ -839,7 +839,7 @@ Section INJECTOR.
       injection VALIDATE.
       intro TF.
       symmetry in TF.
-      pose proof (inject_l_injected (PTree.elements (gen_injections f)) (fn_code f) inj_n src_pc inj_code (Pos.succ (max_pc_function f)) ((List.length inj_code) - (S k))%nat) as INJECTED.
+      pose proof (inject_l_injected (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) (fn_code f) inj_n src_pc inj_code (Pos.succ (max_pc_function f)) ((List.length inj_code) - (S k))%nat) as INJECTED.
       lapply INJECTED.
       { clear INJECTED.
         intro INJECTED.
@@ -848,7 +848,7 @@ Section INJECTOR.
         pose proof (INJECTED INJ LESS) as INJ'.
         replace (snd
             (inject_l (fn_code f) (Pos.succ (max_pc_function f))
-                      (PTree.elements (gen_injections f)))) with (fn_code tf) in INJ'.
+                      (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))))) with (fn_code tf) in INJ'.
         2: rewrite TF; simpl; reflexivity.                                              apply transf_function_inj_step with (f:=f) (ts:=ts) (sp:=sp) (trs:=trs) (m := m) in INJ'.
         2: assumption.
         {
@@ -898,10 +898,10 @@ Section INJECTOR.
     Lemma transf_function_inj_starstep :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code
         (FUN : transf_function gen_injections f = OK tf)
-        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+        (INJ : nth_error (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n =
                Some (src_pc, inj_code))
         (POSITION : inject_l_position (Pos.succ (max_pc_function f))
-                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+                                      (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n = inj_pc)
         (trs : regset),
       exists trs',
         match_regs (f : function) trs trs' /\
@@ -920,11 +920,11 @@ Section INJECTOR.
     Lemma transf_function_inj_end :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code i
         (FUN : transf_function gen_injections f = OK tf)
-        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+        (INJ : nth_error (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n =
                Some (src_pc, inj_code))
         (SRC: (fn_code f) ! src_pc = Some i)
         (POSITION : inject_l_position (Pos.succ (max_pc_function f))
-                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+                                      (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n = inj_pc)
         (trs : regset),
         RTL.step tge
           (State ts tf sp (pos_add_nat inj_pc (List.length inj_code)) trs m) E0
@@ -938,13 +938,13 @@ Section INJECTOR.
       injection VALIDATE.
       intro TF.
       symmetry in TF.
-      pose proof (inject_l_injected_end (PTree.elements (gen_injections f)) (fn_code f) inj_n src_pc i inj_code (Pos.succ (max_pc_function f))) as INJECTED.
+      pose proof (inject_l_injected_end (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) (fn_code f) inj_n src_pc i inj_code (Pos.succ (max_pc_function f))) as INJECTED.
       lapply INJECTED.
       2: assumption.
       clear INJECTED.
       intro INJECTED.
       lapply INJECTED.
-      2: apply (PTree.elements_keys_norepet (gen_injections f)); fail.
+      2: apply (PTree.elements_keys_norepet (gen_injections f (max_pc_function f) (max_reg_function f))); fail.
       clear INJECTED.
       intro INJECTED.
       lapply INJECTED.
@@ -954,7 +954,7 @@ Section INJECTOR.
         clear INJECTED.
         replace (snd
                    (inject_l (fn_code f) (Pos.succ (max_pc_function f))
-                             (PTree.elements (gen_injections f)))) with (fn_code tf) in INJ'.
+                             (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))))) with (fn_code tf) in INJ'.
         2: rewrite TF; simpl; reflexivity.
         rewrite POSITION in INJ'.
         apply exec_Inop.
@@ -975,11 +975,11 @@ Section INJECTOR.
     Lemma transf_function_inj_plusstep :
       forall ts f tf sp m inj_n src_pc inj_pc inj_code i
         (FUN : transf_function gen_injections f = OK tf)
-        (INJ : nth_error (PTree.elements (gen_injections f)) inj_n =
+        (INJ : nth_error (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n =
                Some (src_pc, inj_code))
         (SRC: (fn_code f) ! src_pc = Some i)
         (POSITION : inject_l_position (Pos.succ (max_pc_function f))
-                                      (PTree.elements (gen_injections f)) inj_n = inj_pc)
+                                      (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) inj_n = inj_pc)
         (trs : regset),
       exists trs',
         match_regs (f : function) trs trs' /\
@@ -1001,7 +1001,7 @@ Section INJECTOR.
       forall f tf pc 
         (FUN : transf_function gen_injections f = OK tf)
         (LESS : pc <= max_pc_function f)
-        (NOCHANGE : (gen_injections f) ! pc = None),
+        (NOCHANGE : (gen_injections f (max_pc_function f) (max_reg_function f)) ! pc = None),
         (fn_code tf) ! pc = (fn_code f) ! pc.
     Proof.
       intros.
@@ -1027,7 +1027,7 @@ Section INJECTOR.
       forall f tf pc injl ii
         (FUN : transf_function gen_injections f = OK tf)
         (LESS : pc <= max_pc_function f)
-        (INJECTION : (gen_injections f) ! pc = Some injl)
+        (INJECTION : (gen_injections f (max_pc_function f) (max_reg_function f)) ! pc = Some injl)
         (INSTR: (fn_code f) ! pc = Some ii),
       exists pc' : node,
         (fn_code tf) ! pc = Some (alter_successor ii pc') /\
@@ -1043,7 +1043,7 @@ Section INJECTOR.
       apply In_nth_error in INJECTION.
       destruct INJECTION as [injn INJECTION].
       exists (inject_l_position (Pos.succ (max_pc_function f))
-                                (PTree.elements (gen_injections f)) injn).
+                                (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) injn).
       split.
       { unfold transf_function in FUN.
         destruct (valid_injections1) eqn:VALID in FUN.
@@ -1067,7 +1067,7 @@ Section INJECTOR.
       intros.
       pose proof (transf_function_inj_plusstep ts f tf sp m injn pc
                  (inject_l_position (Pos.succ (max_pc_function f))
-                                    (PTree.elements (gen_injections f)) injn)
+                                    (PTree.elements (gen_injections f (max_pc_function f) (max_reg_function f))) injn)
                  injl ii FUN INJECTION INSTR) as TRANS.
       lapply TRANS.
       2: reflexivity.
@@ -1272,7 +1272,7 @@ Section INJECTOR.
     Proof.
       induction 1; intros ts1 MS; inv MS; try (inv TRC).
       - (* nop *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1295,7 +1295,7 @@ Section INJECTOR.
           * constructor; trivial.
             
       - (* op *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1339,7 +1339,7 @@ Section INJECTOR.
             assumption.
 
       - (* load *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1381,7 +1381,7 @@ Section INJECTOR.
             assumption.
         
       - (* load notrap1 *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1421,7 +1421,7 @@ Section INJECTOR.
             assumption.
 
       - (* load notrap2 *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1463,7 +1463,7 @@ Section INJECTOR.
             assumption.
         
       - (* store *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1506,7 +1506,7 @@ Section INJECTOR.
           * constructor; trivial.
       - (* call *)
         destruct (transf_function_preserves_ros f tf pc rs trs ros args res fd pc' (funsig fd) FUN REGS H H0) as [tfd [TFD1 TFD2]].
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1568,7 +1568,7 @@ Section INJECTOR.
         
       -  (* tailcall *)
         destruct (transf_function_preserves_ros_tail f tf pc rs trs ros args fd (funsig fd) FUN REGS H H0) as [tfd [TFD1 TFD2]].
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1606,7 +1606,7 @@ Section INJECTOR.
                apply match_states_call; auto.
 
       - (* builtin *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1642,7 +1642,7 @@ Section INJECTOR.
             assumption.
             
       - (* cond *)
-        destruct ((gen_injections f) ! pc) eqn:INJECTION.
+        destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + destruct b eqn:B.
           ++ exploit transf_function_redirects; eauto.
              { eapply max_pc_function_sound; eauto. }
@@ -1695,7 +1695,7 @@ Section INJECTOR.
                *** reflexivity.
             ** constructor; auto.
                        
-      - destruct ((gen_injections f) ! pc) eqn:INJECTION.
+      - destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
@@ -1718,7 +1718,7 @@ Section INJECTOR.
             eassumption.
           * constructor; trivial.
       - (* return *)
-         destruct ((gen_injections f) ! pc) eqn:INJECTION.
+         destruct ((gen_injections f (max_pc_function f) (max_reg_function f)) ! pc) eqn:INJECTION.
         + exploit transf_function_redirects; eauto.
           { eapply max_pc_function_sound; eauto. }
           intros [pc_inj [ALTER SKIP]].
