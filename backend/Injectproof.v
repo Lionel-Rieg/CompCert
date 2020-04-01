@@ -778,23 +778,20 @@ Section INJECTOR.
           * exists (trs # res <- v).
             split.
             ** apply exec_Iload with (trap := NOTRAP) (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); trivial.
-               rewrite eval_addressing_preserved with (ge1 := ge).
-               assumption.
-               exact symbols_preserved.
+               all: try rewrite eval_addressing_preserved with (ge1 := ge).
+               all: auto using symbols_preserved.
             ** apply assign_above; auto.
           * exists (trs # res <- Vundef).
             split.
             ** apply exec_Iload_notrap2 with (chunk := chunk) (addr := addr) (args := args) (dst := res) (a := a); trivial.
-               rewrite eval_addressing_preserved with (ge1 := ge).
-               assumption.
-               exact symbols_preserved.
+               all: rewrite eval_addressing_preserved with (ge1 := ge).
+               all: auto using symbols_preserved.
             ** apply assign_above; auto.
         + exists (trs # res <- Vundef).
           split.
           * apply exec_Iload_notrap1 with (chunk := chunk) (addr := addr) (args := args) (dst := res); trivial.
-            rewrite eval_addressing_preserved with (ge1 := ge).
-            assumption.
-            exact symbols_preserved.
+            all: rewrite eval_addressing_preserved with (ge1 := ge).
+            all: auto using symbols_preserved.
           * apply assign_above; auto.
     Qed.
 

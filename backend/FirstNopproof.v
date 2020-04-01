@@ -168,26 +168,25 @@ Proof.
     + constructor; auto with firstnop.
   - left. econstructor. split.
     + eapply plus_one. eapply exec_Iload with (v:=v); eauto with firstnop.
-      rewrite <- H0.
-      apply eval_addressing_preserved.
-      apply symbols_preserved.
+      all: rewrite <- H0.
+      all: auto using eval_addressing_preserved, symbols_preserved.
     + constructor; auto with firstnop.
   - left. econstructor. split.
     + eapply plus_one. eapply exec_Iload_notrap1; eauto with firstnop.
-      rewrite <- H0.
-      apply eval_addressing_preserved.
+      all: rewrite <- H0;
+      apply eval_addressing_preserved;
       apply symbols_preserved.
     + constructor; auto with firstnop.
   - left. econstructor. split.
     + eapply plus_one. eapply exec_Iload_notrap2; eauto with firstnop.
-      rewrite <- H0.
-      apply eval_addressing_preserved.
+      all: rewrite <- H0;
+      apply eval_addressing_preserved;
       apply symbols_preserved.
     + constructor; auto with firstnop.
   - left. econstructor. split.
     + eapply plus_one. eapply exec_Istore; eauto with firstnop.
-      rewrite <- H0.
-      apply eval_addressing_preserved.
+      all: rewrite <- H0;
+      apply eval_addressing_preserved;
       apply symbols_preserved.
     + constructor; auto with firstnop.
   - left. econstructor. split.
