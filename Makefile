@@ -91,6 +91,7 @@ BACKEND=\
   CSE2deps.v CSE2depsproof.v \
   CSE2.v CSE2proof.v \
   CSE3analysis.v CSE3analysisproof.v CSE3.v CSE3proof.v \
+  LICM.v LICMproof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \

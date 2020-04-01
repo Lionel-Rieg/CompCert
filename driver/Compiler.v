@@ -41,6 +41,7 @@ Require FirstNop.
 Require Renumber.
 Require Duplicate.
 Require Constprop.
+Require LICM.
 Require CSE.
 Require ForwardMoves.
 Require CSE2.
@@ -68,6 +69,7 @@ Require FirstNopproof.
 Require Renumberproof.
 Require Duplicateproof.
 Require Constpropproof.
+Require LICMproof.
 Require CSEproof.
 Require ForwardMovesproof.
 Require CSE2proof.
@@ -136,7 +138,7 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 1)
   @@@ time "Inlining" Inlining.transf_program
    @@ print (print_RTL 2)
-   @@ time "Inserting initial nop" FirstNop.transf_program
+   @@ total_if Compopts.optim_move_loop_invariants (time "Inserting initial nop" FirstNop.transf_program)
    @@ print (print_RTL 3)
    @@ time "Renumbering" Renumber.transf_program
    @@ print (print_RTL 4)
@@ -144,22 +146,26 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 5)
    @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
    @@ print (print_RTL 6)
-   @@ total_if Compopts.optim_constprop (time "Renumbering" Renumber.transf_program)
+   @@ time "Renumbering pre LICM" Renumber.transf_program
    @@ print (print_RTL 7)
-  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
+  @@@ partial_if Compopts.optim_move_loop_invariants (time "LICM" LICM.transf_program)
    @@ print (print_RTL 8)
-   @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
+   @@ total_if Compopts.optim_move_loop_invariants (time "Renumbering pre CSE" Renumber.transf_program)
    @@ print (print_RTL 9)
-  @@@ partial_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
+  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
    @@ print (print_RTL 10)
-   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
+   @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
    @@ print (print_RTL 11)
-  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
+  @@@ partial_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
    @@ print (print_RTL 12)
-   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
+   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
    @@ print (print_RTL 13)
-  @@@ time "Unused globals" Unusedglob.transform_program
+  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
    @@ print (print_RTL 14)
+   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
+   @@ print (print_RTL 15)
+  @@@ time "Unused globals" Unusedglob.transform_program
+   @@ print (print_RTL 16)
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
    @@ time "Branch tunneling" Tunneling.tunnel_program
@@ -261,10 +267,11 @@ Definition CompCert's_passes :=
   ::: mkpass RTLgenproof.match_prog
   ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
   ::: mkpass Inliningproof.match_prog
-  ::: mkpass FirstNopproof.match_prog
+  ::: mkpass (match_if Compopts.optim_move_loop_invariants FirstNopproof.match_prog)
   ::: mkpass Renumberproof.match_prog
   ::: mkpass (match_if Compopts.optim_duplicate Duplicateproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
+  ::: mkpass (match_if Compopts.optim_move_loop_invariants LICMproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Renumberproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
   ::: mkpass (match_if Compopts.optim_CSE2 CSE2proof.match_prog)
@@ -308,14 +315,19 @@ Proof.
   destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
   destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
   unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
+  ::: mkpass (match_if Compopts.optim_move_loop_invariants LICM.match_prog)
+  ::: mkpass (match_if Compopts.optim_move_loop_invariants Renumberproof.match_prog)
+  ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
   destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
-  set (p9 := FirstNop.transf_program p8) in *.
+  set (p9 := total_if Compopts.optim_move_loop_invariants FirstNop.transf_program p8) in *.
   set (p9bis := Renumber.transf_program p9) in *.
   destruct (partial_if optim_duplicate Duplicate.transf_program p9bis) as [p10|e] eqn:P10; simpl in T; try discriminate.
   set (p11 := total_if optim_constprop Constprop.transf_program p10) in *.
   set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
-  destruct (partial_if optim_CSE CSE.transf_program p12) as [p13|e] eqn:P13; simpl in T; try discriminate.
+  destruct (partial_if optim_move_loop_invariants LICM.transf_program p12) as [p12bis|e] eqn:P12bis; simpl in T; try discriminate.
+  set (p12ter :=(total_if optim_move_loop_invariant Renumber.transf_program p12bis)) in *.
+  destruct (partial_if optim_CSE CSE.transf_program p12ter) as [p13|e] eqn:P13; simpl in T; try discriminate.
   set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
   destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; simpl in T; try discriminate.
   set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
