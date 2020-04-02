@@ -105,6 +105,7 @@ let get_loop_headers code entrypoint = begin
       match (get_some @@ PTree.get node !visited) with
       | Visited -> ()
       | Processed -> begin
+          Printf.printf "Node %d is a loop header\n" (P.to_int node);
           is_loop_header := PTree.set node true !is_loop_header;
           visited := PTree.set node Visited !visited
         end
@@ -238,19 +239,36 @@ let get_loop_info is_loop_header bfs_order code =
         | Icond (_,_,s1,s2,_) -> (explore s1 dest) || (explore s2 dest)
         | Ijumptable _ | Itailcall _ | Ireturn _ -> false
       end
-    in match get_some @@ PTree.get s !loop_info with
-    | None -> begin
-        match get_some @@ PTree.get s code with
-        | Icond (_, _, n1, n2, _) ->
-            let b1 = explore n1 n in
-            let b2 = explore n2 n in
-            if (b1 && b2) then ()
-            else if b1 then loop_info := PTree.set s (Some true) !loop_info
-            else if b2 then loop_info := PTree.set s (Some false) !loop_info
-            else ()
-        | _ -> ()
+    in let rec advance_to_cb src =
+      if (get_some @@ PTree.get src !visited) then None
+      else begin
+        visited := PTree.set src true !visited;
+        match get_some @@ PTree.get src code with
+        | Inop s | Iop (_, _, _, s) | Iload (_,_,_,_,_,s) | Istore (_,_,_,_,s) | Icall (_,_,_,_,s)
+        | Ibuiltin (_,_,_,s) -> advance_to_cb s
+        | Icond _ -> Some src
+        | Ijumptable _ | Itailcall _ | Ireturn _ -> None
       end
-    | Some _ -> ()
+    in begin
+      Printf.printf "Marking path from %d to %d\n" (P.to_int n) (P.to_int s);
+      match advance_to_cb s with
+      | None -> (Printf.printf "Nothing found\n")
+      | Some s -> ( Printf.printf "Advancing to %d\n" (P.to_int s);
+          match get_some @@ PTree.get s !loop_info with
+          | None | Some _ -> begin
+              match get_some @@ PTree.get s code with
+              | Icond (_, _, n1, n2, _) ->
+                  let b1 = explore n1 n in
+                  let b2 = explore n2 n in
+                  if (b1 && b2) then (Printf.printf "both true\n")
+                  else if b1 then (Printf.printf "true privileged\n"; loop_info := PTree.set s (Some true) !loop_info)
+                  else if b2 then (Printf.printf "false privileged\n"; loop_info := PTree.set s (Some false) !loop_info)
+                  else (Printf.printf "none true\n")
+              | _ -> ( Printf.printf "not an icond\n" )
+            end
+          (* | Some _ -> ( Printf.printf "already loop info there\n" ) FIXME - we don't know yet whether a branch to a loop head is a backedge or not *)
+        )
+    end
   in begin
     List.iter (fun n ->
       match get_some @@ PTree.get n code with
@@ -527,7 +545,7 @@ let rec change_pointers code n n' = function
  * n': the integer which should contain the duplicate of n
  * returns: new code, new ptree *)
 let duplicate code ptree parent n preds n' =
-  (* Printf.printf "Duplicating node %d into %d..\n" (P.to_int n) (P.to_int n'); *)
+  Printf.printf "Duplicating node %d into %d..\n" (P.to_int n) (P.to_int n');
   match PTree.get n' code with
   | Some _ -> failwith "The PTree already has a node n'"
   | None ->
@@ -591,8 +609,9 @@ let superblockify_traces code preds traces =
     | [] -> (code, ptree, 0)
     | trace :: traces ->
         let new_code, new_ptree, nb_duplicated = tail_duplicate code preds ptree trace
-        in if (nb_duplicated < max_nb_duplicated) then f new_code new_ptree traces
-           else (Printf.printf "Too many duplicated nodes, aborting tail duplication\n"; (code, ptree, 0))
+        in if (nb_duplicated < max_nb_duplicated)
+          then (Printf.printf "End duplication\n"; f new_code new_ptree traces)
+          else (Printf.printf "Too many duplicated nodes, aborting tail duplication\n"; (code, ptree, 0))
   in let new_code, new_ptree, _ = f code ptree traces
   in (new_code, new_ptree)
 
