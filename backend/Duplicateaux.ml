@@ -413,11 +413,22 @@ let best_successor_of node code is_visited =
       | Some n -> if not (ptree_get_some n is_visited) then Some n else None
 
 (* FIXME - could be improved by selecting in priority the predicted paths *)
-let best_predecessor_of node predecessors order is_visited =
+let best_predecessor_of node predecessors code order is_visited =
   match (PTree.get node predecessors) with
   | None -> failwith "No predecessor list found"
-  | Some lp -> try Some (List.find (fun n -> (List.mem n lp) && (not (ptree_get_some n is_visited))) order)
-               with Not_found -> None
+  | Some lp ->
+      try Some (List.find (fun n ->
+          if (List.mem n lp) && (not (ptree_get_some n is_visited)) then
+            match ptree_get_some n code with
+            | Icond (_, _, n1, n2, ob) -> (match ob with
+              | None -> false
+              | Some false -> n == n2
+              | Some true -> n == n1
+              )
+            | _ -> true
+          else false
+        ) order)
+      with Not_found -> None
 
 let print_trace t = print_intlist t
 
@@ -489,7 +500,7 @@ let select_traces_chang code entrypoint = begin
           current := seed;
           quit_loop := false;
           while not !quit_loop do
-            let s = best_predecessor_of !current predecessors order !is_visited in
+            let s = best_predecessor_of !current predecessors code order !is_visited in
             match s with
             | None -> quit_loop := true (* if (s==0) exit loop *)
             | Some pred -> begin
