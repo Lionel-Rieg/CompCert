@@ -302,7 +302,7 @@ let arith_rec i =
   | PArithR (i, rd) -> arith_r_rec i (IR rd)
 
 let load_rec i = match i with
-  | PLoadRRO (i, rs1, rs2, imm) ->
+  | PLoadRRO (trap, i, rs1, rs2, imm) ->
       { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2)]; imm = (Some (Off imm)) ; is_control = false;
         read_at_id = []; read_at_e1 = [] }
   | PLoadQRRO(rs, ra, imm) ->
@@ -313,7 +313,7 @@ let load_rec i = match i with
      let (((rs0, rs1), rs2), rs3) = gpreg_o_expand rs in
      {  inst = loadorro_real; write_locs = [Reg (IR rs0); Reg (IR rs1); Reg (IR rs2); Reg (IR rs3)]; read_locs = [Mem; Reg (IR ra)];
         imm = (Some (Off imm)) ; is_control = false; read_at_id = []; read_at_e1 = []}
-  | PLoadRRR (i, rs1, rs2, rs3) | PLoadRRRXS (i, rs1, rs2, rs3) ->
+  | PLoadRRR (trap, i, rs1, rs2, rs3) | PLoadRRRXS (trap, i, rs1, rs2, rs3) ->
       { inst = load_real i; write_locs = [Reg (IR rs1)]; read_locs = [Mem; Reg (IR rs2); Reg (IR rs3)]; imm = None ; is_control = false;
         read_at_id = []; read_at_e1 = [] }
 
@@ -442,7 +442,9 @@ let encode_imm (imm:int64) =
     else failwith @@ sprintf "encode_imm: integer too big! (%Ld)" imm
 
 (** Resources *)
-let resource_names = ["ISSUE"; "TINY"; "LITE"; "ALU"; "LSU"; "MAU"; "BCU"; "ACC"; "DATA"; "TCA"; "BRE"; "BRO"; "NOP"]
+type rname = Rissue | Rtiny | Rlite | Rfull | Rlsu | Rmau | Rbcu | Rtca | Rauxr | Rauxw | Rcrrp | Rcrwl | Rcrwh | Rnop
+
+let resource_names = [Rissue; Rtiny; Rlite; Rfull; Rlsu; Rmau; Rbcu; Rtca; Rauxr; Rauxw; Rcrrp; Rcrwl; Rcrwh; Rnop]
 
 let rec find_index elt l =
   match l with
@@ -454,98 +456,110 @@ let resource_id resource : int = find_index resource resource_names
 
 let resource_bound resource : int =
   match resource with
-  | "ISSUE" -> 8
-  | "TINY" -> 4
-  | "LITE" -> 2
-  | "ALU" -> 1
-  | "LSU" -> 1
-  | "MAU" -> 1
-  | "BCU" -> 1
-  | "ACC" -> 1
-  | "DATA" -> 1
-  | "TCA" -> 1
-  | "BRE" -> 1
-  | "BRO" -> 1
-  | "NOP" -> 4
-  | _ -> raise Not_found
+  | Rissue -> 8
+  | Rtiny -> 4
+  | Rlite -> 2
+  | Rfull -> 1
+  | Rlsu -> 1
+  | Rmau -> 1
+  | Rbcu -> 1
+  | Rtca -> 1
+  | Rauxr -> 1
+  | Rauxw -> 1
+  | Rcrrp -> 1
+  | Rcrwl -> 1
+  | Rcrwh -> 1
+  | Rnop -> 4
 
 let resource_bounds : int array = Array.of_list (List.map resource_bound resource_names)
 
 (** Reservation tables *)
-let alu_tiny : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 1 | _ -> 0 
-  in Array.of_list (List.map resmap resource_names)
-
-let alu_tiny_x : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 2 | "TINY" -> 1 | _ -> 0 
-  in Array.of_list (List.map resmap resource_names)
-
-let alu_tiny_y : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 3 | "TINY" -> 1 | _ -> 0 
+let alu_full : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rlite -> 1 | Rfull -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  | Rissue -> 1 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite_x : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
+  | Rissue -> 2 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_lite_y : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LITE" -> 1 |  _ -> 0 
-  in Array.of_list (List.map resmap resource_names)
-
-let alu_full : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LITE" -> 1 | "ALU" -> 1 | _ -> 0
+  | Rissue -> 3 | Rtiny -> 1 | Rlite -> 1 |  _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let alu_nop : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "NOP" -> 1 | _ -> 0 
+  | Rissue -> 1 | Rnop -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let mau : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 1 | "MAU" -> 1 |  _ -> 0 
+let alu_tiny : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let mau_x : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 2 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+let alu_tiny_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let mau_y : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 3 | "TINY" -> 1 | "MAU" -> 1 | _ -> 0 
+let alu_tiny_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let bcu : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "BCU" -> 1 | _ -> 0 
+  | Rissue -> 1 | Rbcu -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 let bcu_tiny_tiny_mau_xnop : int array = let resmap = fun r -> match r with 
-  | "ISSUE" -> 1 | "TINY" -> 2 | "MAU" -> 1 | "BCU" -> 1 | "NOP" -> 4 | _ -> 0 
+  | Rissue -> 1 | Rtiny -> 2 | Rmau -> 1 | Rbcu -> 1 | Rnop -> 4 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_acc : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+let lsu_auxr : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_acc_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+let lsu_auxr_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_acc_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "ACC" -> 1 | _ -> 0
+let lsu_auxr_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | Rlsu -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_data : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 1 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+let lsu_auxw : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_data_x : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 2 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+let lsu_auxw_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
-let lsu_data_y : int array = let resmap = fun r -> match r with
-  | "ISSUE" -> 3 | "TINY" -> 1 | "LSU" -> 1 | "DATA" -> 1 | _ -> 0
+let lsu_auxw_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | Rlsu -> 1 | Rauxw -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rmau -> 1 |  _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | Rmau -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | Rmau -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_auxr : int array = let resmap = fun r -> match r with
+  | Rissue -> 1 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_auxr_x : int array = let resmap = fun r -> match r with
+  | Rissue -> 2 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
+  in Array.of_list (List.map resmap resource_names)
+
+let mau_auxr_y : int array = let resmap = fun r -> match r with
+  | Rissue -> 3 | Rtiny -> 1 | Rmau -> 1 | Rauxr -> 1 | _ -> 0
   in Array.of_list (List.map resmap resource_names)
 
 (** Real instructions *)
@@ -599,10 +613,16 @@ let rec_to_usage r =
                           | Some U27L5 | Some U27L10 -> alu_tiny_x 
                           | Some E27U27L10 -> alu_tiny_y 
                           | _ -> raise InvalidEncoding)
-  | Mulw| Maddw | Msbfw -> (match encoding with None -> mau
+  | Maddw -> (match encoding with None -> mau_auxr
+                | Some U6 | Some S10 | Some U27L5 -> mau_auxr_x
+                | _ -> raise InvalidEncoding)
+  | Maddd -> (match encoding with None | Some U6 | Some S10 -> mau_auxr
+                | Some U27L5 | Some U27L10 -> mau_auxr_x
+                | Some E27U27L10 -> mau_auxr_y)
+  | Mulw| Msbfw -> (match encoding with None -> mau
                                 | Some U6 | Some S10 | Some U27L5 -> mau_x
                                 | _ -> raise InvalidEncoding)
-  | Muld | Maddd | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
+  | Muld | Msbfd -> (match encoding with None | Some U6 | Some S10 -> mau
                                 | Some U27L5 | Some U27L10 -> mau_x
                                 | Some E27U27L10 -> mau_y)
   | Nop -> alu_nop
@@ -612,13 +632,13 @@ let rec_to_usage r =
   | Extfz | Extfs | Insf -> (match encoding with None -> alu_lite | _ -> raise InvalidEncoding)
   | Fixeduwz | Fixedwz | Floatwz | Floatuwz | Fixeddz | Fixedudz | Floatdz | Floatudz -> mau
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 
-      (match encoding with None | Some U6 | Some S10 -> lsu_data 
-                          | Some U27L5 | Some U27L10 -> lsu_data_x 
-                          | Some E27U27L10 -> lsu_data_y)
+      (match encoding with None | Some U6 | Some S10 -> lsu_auxw
+                          | Some U27L5 | Some U27L10 -> lsu_auxw_x
+                          | Some E27U27L10 -> lsu_auxw_y)
   | Sb | Sh | Sw | Sd | Sq | So ->
-      (match encoding with None | Some U6 | Some S10 -> lsu_acc 
-                          | Some U27L5 | Some U27L10 -> lsu_acc_x 
-                          | Some E27U27L10 -> lsu_acc_y)
+      (match encoding with None | Some U6 | Some S10 -> lsu_auxr
+                          | Some U27L5 | Some U27L10 -> lsu_auxr_x
+                          | Some E27U27L10 -> lsu_auxr_y)
   | Icall | Call | Cb | Igoto | Goto | Ret | Set -> bcu
   | Get -> bcu_tiny_tiny_mau_xnop
   | Fnegd | Fnegw | Fabsd | Fabsw | Fwidenlwd

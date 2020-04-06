@@ -410,12 +410,11 @@ Fixpoint convert_builtin_args {A: Type} (al: list (builtin_arg expr)) (rl: list 
       a1' :: convert_builtin_args al rl1
   end.
 
-Definition convert_builtin_res (map: mapping) (oty: option typ) (r: builtin_res ident) : mon (builtin_res reg) :=
-  match r, oty with
-  | BR id, _ => do r <- find_var map id; ret (BR r)
-  | BR_none, None => ret BR_none
-  | BR_none, Some _ => do r <- new_reg; ret (BR r)
-  | _, _ => error (Errors.msg "RTLgen: bad builtin_res")
+Definition convert_builtin_res (map: mapping) (ty: rettype) (r: builtin_res ident) : mon (builtin_res reg) :=
+  match r with
+  | BR id => do r <- find_var map id; ret (BR r)
+  | BR_none => if rettype_eq ty Tvoid then ret BR_none else (do r <- new_reg; ret (BR r))
+  | _ => error (Errors.msg "RTLgen: bad builtin_res")
   end.
 
 (** Translation of an expression.  [transl_expr map a rd nd]
@@ -436,7 +435,7 @@ Fixpoint transl_expr (map: mapping) (a: expr) (rd: reg) (nd: node)
       transl_exprlist map al rl no
   | Eload chunk addr al =>
       do rl <- alloc_regs map al;
-      do no <- add_instr (Iload chunk addr rl rd nd);
+      do no <- add_instr (Iload TRAP chunk addr rl rd nd);
          transl_exprlist map al rl no
   | Econdition a b c =>
       do nfalse <- transl_expr map c rd nd;
@@ -480,7 +479,7 @@ with transl_condexpr (map: mapping) (a: condexpr) (ntrue nfalse: node)
   match a with
   | CEcond c al =>
       do rl <- alloc_regs map al;
-      do nt <- add_instr (Icond c rl ntrue nfalse);
+      do nt <- add_instr (Icond c rl ntrue nfalse None);
          transl_exprlist map al rl nt
   | CEcondition a b c =>
       do nc <- transl_condexpr map c ntrue nfalse;
@@ -667,10 +666,7 @@ Fixpoint reserve_labels (s: stmt) (ms: labelmap * state)
 (** Translation of a CminorSel function. *)
 
 Definition ret_reg (sig: signature) (rd: reg) : option reg :=
-  match sig.(sig_res) with
-  | None => None
-  | Some ty => Some rd
-  end.
+  if rettype_eq sig.(sig_res) Tvoid then None else Some rd.
 
 Definition transl_fun (f: CminorSel.function) (ngoto: labelmap): mon (node * list reg) :=
   do (rparams, map1) <- add_vars init_mapping f.(CminorSel.fn_params);

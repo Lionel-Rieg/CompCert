@@ -251,6 +251,10 @@ module Target (*: TARGET*) =
     | ARegXS _ -> fprintf oc ".xs"
     | _ -> ()
 
+    let lsvariant oc = function
+      | TRAP -> ()
+      | NOTRAP -> output_string oc ".s"
+      
     let icond_name = let open Asmvliw in function
       | ITne | ITneu -> "ne"
       | ITeq | ITequ -> "eq"
@@ -420,18 +424,18 @@ module Target (*: TARGET*) =
          section oc Section_text
 
       (* Load/Store instructions *)
-      | Plb(rd, ra, adr) ->
-         fprintf oc "	lbs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plbu(rd, ra, adr) ->
-         fprintf oc "	lbz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plh(rd, ra, adr) ->
-         fprintf oc "	lhs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plhu(rd, ra, adr) ->
-         fprintf oc "	lhz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
-         fprintf oc "	lws%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
+      | Plb(trap, rd, ra, adr) ->
+         fprintf oc "	lbs%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plbu(trap, rd, ra, adr) ->
+         fprintf oc "	lbz%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plh(trap, rd, ra, adr) ->
+         fprintf oc "	lhs%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plhu(trap, rd, ra, adr) ->
+         fprintf oc "	lhz%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plw(trap, rd, ra, adr) | Plw_a(trap, rd, ra, adr) | Pfls(trap, rd, ra, adr) ->
+         fprintf oc "	lws%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Pld(trap, rd, ra, adr) | Pfld(trap, rd, ra, adr) | Pld_a(trap, rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	ld%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
       | Plq(rd, ra, adr) ->
          fprintf oc "	lq%a	%a = %a[%a]\n" xscale adr gpreg_q rd addressing adr ireg ra
       | Plo(rd, ra, adr) ->

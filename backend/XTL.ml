@@ -30,13 +30,13 @@ type instruction =
   | Xspill of var * var
   | Xparmove of var list * var list * var * var
   | Xop of operation * var list * var
-  | Xload of memory_chunk * addressing * var list * var
+  | Xload of trapping_mode * memory_chunk * addressing * var list * var
   | Xstore of memory_chunk * addressing * var list * var
   | Xcall of signature * (var, ident) sum * var list * var list
   | Xtailcall of signature * (var, ident) sum * var list
   | Xbuiltin of external_function * var builtin_arg list * var builtin_res
   | Xbranch of node
-  | Xcond of condition * var list * node * node
+  | Xcond of condition * var list * node * node * bool option
   | Xjumptable of var * node list
   | Xreturn of var list
 
@@ -105,7 +105,7 @@ let twin_reg r =
 let rec successors_block = function
   | Xbranch s :: _ -> [s]
   | Xtailcall(sg, vos, args) :: _ -> []
-  | Xcond(cond, args, s1, s2) :: _ -> [s1; s2]
+  | Xcond(cond, args, s1, s2, _) :: _ -> [s1; s2]
   | Xjumptable(arg, tbl) :: _ -> tbl
   | Xreturn  _:: _ -> []
   | instr :: blk -> successors_block blk
@@ -159,7 +159,7 @@ let type_instr = function
       let (targs, tres) = type_of_operation op in
       set_vars_type args targs;
       set_var_type res tres
-  | Xload(chunk, addr, args, dst) ->
+  | Xload(trap, chunk, addr, args, dst) ->
       set_vars_type args (type_of_addressing addr);
       set_var_type dst (type_of_chunk chunk)
   | Xstore(chunk, addr, args, src) ->
@@ -179,7 +179,7 @@ let type_instr = function
       type_builtin_res res (proj_sig_res sg)
   | Xbranch s ->
       ()
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       set_vars_type args (type_of_condition cond)
   | Xjumptable(arg, tbl) ->
       set_var_type arg Tint

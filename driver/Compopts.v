@@ -27,6 +27,9 @@ Parameter generate_float_constants: unit -> bool.
 (** For value analysis.  Currently always false. *)
 Parameter va_strict: unit -> bool.
 
+(** Flag -fduplicate. Branch prediction annotation + tail duplication *)
+Parameter optim_duplicate: unit -> bool.
+
 (** Flag -ftailcalls.  For tail call optimization. *)
 Parameter optim_tailcalls: unit -> bool.
 
@@ -35,6 +38,9 @@ Parameter optim_constprop: unit -> bool.
 
 (** Flag -fcse.  For common subexpression elimination. *)
 Parameter optim_CSE: unit -> bool.
+
+(** Flag -fcse2.  For DMonniaux's common subexpression elimination. *)
+Parameter optim_CSE2: unit -> bool.
 
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
@@ -62,3 +68,13 @@ Parameter thumb: unit -> bool.
 
 (** Flag -g.  For insertion of debugging information. *)
 Parameter debug: unit -> bool.
+
+(** Flag -fall-loads-nontrap. Turn user loads into non trapping. *)
+Parameter all_loads_nontrap: unit -> bool.
+
+(** Flag -fforward-moves. Forward moves after CSE. *)
+Parameter optim_forward_moves: unit -> bool.
+
+(* TODO is there a more appropriate place? *)
+Require Import Coqlib.
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.

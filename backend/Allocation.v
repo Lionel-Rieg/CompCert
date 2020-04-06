@@ -58,7 +58,7 @@ Inductive block_shape: Type :=
          (mv2: moves) (s: node)
   | BSopdead (op: operation) (args: list reg) (res: reg)
          (mv: moves) (s: node)
-  | BSload (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
+  | BSload (trap : trapping_mode) (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
          (mv1: moves) (args': list mreg) (dst': mreg)
          (mv2: moves) (s: node)
   | BSloaddead (chunk: memory_chunk) (addr: addressing) (args: list reg) (dst: reg)
@@ -226,15 +226,19 @@ Definition pair_instr_block
       | operation_other _ _ =>
           pair_Iop_block op args res s b
       end
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       let (mv1, b1) := extract_moves nil b in
       match b1 with
-      | Lload chunk' addr' args' dst' :: b2 =>
+      | Lload trap' chunk' addr' args' dst' :: b2 =>
+        assertion (trapping_mode_eq trap' trap);
           if chunk_eq chunk Mint64 && Archi.splitlong then
+            (* TODO: do not support non trapping split loads *)
+            assertion (trapping_mode_eq trap TRAP);
             assertion (chunk_eq chunk' Mint32);
             let (mv2, b3) := extract_moves nil b2 in
             match b3 with
-            | Lload chunk'' addr'' args'' dst'' :: b4 =>
+            | Lload trap'' chunk'' addr'' args'' dst'' :: b4 =>
+              assertion (trapping_mode_eq trap'' TRAP);
                 let (mv3, b5) := extract_moves nil b4 in
                 assertion (chunk_eq chunk'' Mint32);
                 assertion (eq_addressing addr addr');
@@ -254,7 +258,7 @@ Definition pair_instr_block
             assertion (chunk_eq chunk chunk');
             assertion (eq_addressing addr addr');
             assertion (check_succ s b3);
-            Some(BSload chunk addr args dst mv1 args' dst' mv2 s))
+            Some(BSload trap chunk addr args dst mv1 args' dst' mv2 s))
       | _ =>
           assertion (check_succ s b1);
           Some(BSloaddead chunk addr args dst mv1 s)
@@ -310,10 +314,10 @@ Definition pair_instr_block
           Some(BSbuiltin ef args res mv1 args' res' mv2 s)
       | _ => None
       end
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 i =>
       let (mv1, b1) := extract_moves nil b in
       match b1 with
-      | Lcond cond' args' s1' s2' :: b2 =>
+      | Lcond cond' args' s1' s2' i' :: b2 =>
           assertion (eq_condition cond cond');
           assertion (peq s1 s1');
           assertion (peq s2 s2');
@@ -734,11 +738,11 @@ Function add_equations_args (rl: list reg) (tyl: list typ) (ll: list (rpair loc)
 (** [add_equations_res] is similar but is specialized to the case where
   there is only one pseudo-register. *)
 
-Function add_equations_res (r: reg) (oty: option typ) (p: rpair mreg) (e: eqs) : option eqs :=
-  match p, oty with
+Function add_equations_res (r: reg) (ty: typ) (p: rpair mreg) (e: eqs) : option eqs :=
+  match p, ty with
   | One mr, _ =>
       Some (add_equation (Eq Full r (R mr)) e)
-  | Twolong mr1 mr2, Some Tlong =>
+  | Twolong mr1 mr2, Tlong =>
       if Archi.ptr64 then None else
       Some (add_equation (Eq Low r (R mr2)) (add_equation (Eq High r (R mr1)) e))
   | _, _ =>
@@ -1023,7 +1027,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
   | BSopdead op args res mv s =>
       assertion (reg_unconstrained res e);
       track_moves env mv e
-  | BSload chunk addr args dst mv1 args' dst' mv2 s =>
+  | BSload trap chunk addr args dst mv1 args' dst' mv2 s =>
       do e1 <- track_moves env mv2 e;
       do e2 <- transfer_use_def args dst args' dst' (destroyed_by_load chunk addr) e1;
       track_moves env mv1 e2
@@ -1084,7 +1088,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
   | BStailcall sg ros args mv1 ros' =>
       let args' := loc_arguments sg in
       assertion (tailcall_is_possible sg);
-      assertion (opt_typ_eq sg.(sig_res) f.(RTL.fn_sig).(sig_res));
+      assertion (rettype_eq sg.(sig_res) f.(RTL.fn_sig).(sig_res));
       assertion (ros_compatible_tailcall ros');
       do e1 <- add_equation_ros ros ros' empty_eqs;
       do e2 <- add_equations_args args (sig_args sg) args' e1;
@@ -1114,7 +1118,7 @@ Definition transfer_aux (f: RTL.function) (env: regenv)
       track_moves env mv empty_eqs
   | BSreturn (Some arg) mv =>
       let arg' := loc_result (RTL.fn_sig f) in
-      do e1 <- add_equations_res arg (sig_res (RTL.fn_sig f)) arg' empty_eqs;
+      do e1 <- add_equations_res arg (proj_sig_res (RTL.fn_sig f)) arg' empty_eqs;
       track_moves env mv e1
   end.
 
@@ -1263,7 +1267,7 @@ Definition successors_block_shape (bsh: block_shape) : list node :=
   | BShighlong src dst mv s => s :: nil
   | BSop op args res mv1 args' res' mv2 s => s :: nil
   | BSopdead op args res mv s => s :: nil
-  | BSload chunk addr args dst mv1 args' dst' mv2 s => s :: nil
+  | BSload trap chunk addr args dst mv1 args' dst' mv2 s => s :: nil
   | BSload2 addr addr' args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s => s :: nil
   | BSload2_1 addr args dst mv1 args' dst' mv2 s => s :: nil
   | BSload2_2 addr addr' args dst mv1 args' dst' mv2 s => s :: nil

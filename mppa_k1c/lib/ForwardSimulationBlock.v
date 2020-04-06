@@ -21,7 +21,7 @@ Section starN_lemma.
 
 Variable L: semantics.
 
-Local Hint Resolve starN_refl starN_step Eapp_assoc.
+Local Hint Resolve starN_refl starN_step Eapp_assoc: core.
 
 Lemma starN_split n s t s':
   starN (step L) (globalenv L) n s t s' ->
@@ -93,7 +93,7 @@ Hypothesis simu_end_block:
 
 (** Introduction d'une sémantique par bloc sur L1 appelée "memoL1" *)
 
-Local Hint Resolve starN_refl starN_step.
+Local Hint Resolve starN_refl starN_step: core.
 
 Definition follows_in_block (head current: state L1): Prop :=
   dist_end_block head >= dist_end_block current 
@@ -164,7 +164,7 @@ Inductive is_well_memorized (s s': memostate): Prop :=
     memorized s' = None ->
     is_well_memorized s s'.
 
-Local Hint Resolve StartBloc MidBloc ExitBloc.
+Local Hint Resolve StartBloc MidBloc ExitBloc: core.
 
 Definition memoL1 := {| 
   state := memostate;

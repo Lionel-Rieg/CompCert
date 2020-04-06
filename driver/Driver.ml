@@ -190,15 +190,27 @@ Processing options:
   -Os            Optimize for code size in preference to code speed
   -Obranchless   Optimize to generate fewer conditional branches; try to produce
                  branch-free instruction sequences as much as possible
+  -finline-auto-threshold n   Inline functions under size n
   -ftailcalls    Optimize function calls in tail position [on]
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
+  -fcse2         Perform inter-loop common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
+  -fduplicate <nb_nodes> Perform tail duplication to form superblocks on predicted traces
+    nb_nodes control the heuristic deciding to duplicate or not
+    A value of -1 desactivates the entire pass (including branch prediction)
+    A value of 0 desactivates the duplication (but activates the branch prediction)
+    FIXME : this is desactivated by default for now
+    -finvertcond    Invert conditions based on predicted paths (to prefer fallthrough).
+                    Requires -fduplicate to be also activated [on]
+    -ftracelinearize Linearizes based on the traces identified by duplicate phase
+                    It is heavily recommended to activate -finvertcond with this pass [off]
+  -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
@@ -257,8 +269,10 @@ let dump_mnemonics destfile =
   exit 0
 
 let optimization_options = [
-  option_ftailcalls; option_fifconversion; option_fconstprop; option_fcse;
-  option_fpostpass; option_fredundancy; option_finline_functions_called_once;
+    option_ftailcalls; option_fifconversion; option_fconstprop;
+    option_fcse; option_fcse2;
+    option_fpostpass;
+    option_fredundancy; option_finline; option_finline_functions_called_once;
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -313,6 +327,7 @@ let cmdline_actions =
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
+  Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
@@ -381,8 +396,12 @@ let cmdline_actions =
   @ f_opt "if-conversion" option_fifconversion
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
+  @ f_opt "cse2" option_fcse2
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
+  @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]
+  @ f_opt "invertcond" option_finvertcond
+  @ f_opt "tracelinearize" option_ftracelinearize
   @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
@@ -391,6 +410,8 @@ let cmdline_actions =
   @ f_opt "xsaddr" option_fxsaddr
   @ f_opt "addx" option_faddx
   @ f_opt "coalesce-mem" option_fcoalesce_mem
+  @ f_opt "all-loads-nontrap" option_all_loads_nontrap
+  @ f_opt "forward-moves" option_fforward_moves
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)

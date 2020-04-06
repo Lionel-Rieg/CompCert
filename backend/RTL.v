@@ -43,11 +43,12 @@ Inductive instruction: Type :=
       (** [Iop op args dest succ] performs the arithmetic operation [op]
           over the values of registers [args], stores the result in [dest],
           and branches to [succ]. *)
-  | Iload: memory_chunk -> addressing -> list reg -> reg -> node -> instruction
-      (** [Iload chunk addr args dest succ] loads a [chunk] quantity from
+  | Iload: trapping_mode -> memory_chunk -> addressing -> list reg -> reg -> node -> instruction
+      (** [Iload trap chunk addr args dest succ] loads a [chunk] quantity from
           the address determined by the addressing mode [addr] and the
           values of the [args] registers, stores the quantity just read
-          into [dest], and branches to [succ]. *)
+          into [dest], and branches to [succ].
+          If trap=NOTRAP, then failures lead to a default value written to [dest]. *)
   | Istore: memory_chunk -> addressing -> list reg -> reg -> node -> instruction
       (** [Istore chunk addr args src succ] stores the value of register
           [src] in the [chunk] quantity at the
@@ -66,11 +67,12 @@ Inductive instruction: Type :=
       (** [Ibuiltin ef args dest succ] calls the built-in function
           identified by [ef], giving it the values of [args] as arguments.
           It stores the return value in [dest] and branches to [succ]. *)
-  | Icond: condition -> list reg -> node -> node -> instruction
-      (** [Icond cond args ifso ifnot] evaluates the boolean condition
+  | Icond: condition -> list reg -> node -> node -> option bool -> instruction
+      (** [Icond cond args ifso ifnot info] evaluates the boolean condition
           [cond] over the values of registers [args].  If the condition
           is true, it transitions to [ifso].  If the condition is false,
-          it transitions to [ifnot]. *)
+          it transitions to [ifnot]. [info] is a ghost field there to provide
+          information relative to branch prediction. *)
   | Ijumptable: reg -> list node -> instruction
       (** [Ijumptable arg tbl] transitions to the node that is the [n]-th
           element of the list [tbl], where [n] is the unsigned integer
@@ -212,12 +214,25 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State s f sp pc rs m)
         E0 (State s f sp pc' (rs#res <- v) m)
   | exec_Iload:
-      forall s f sp pc rs m chunk addr args dst pc' a v,
-      (fn_code f)!pc = Some(Iload chunk addr args dst pc') ->
+      forall s f sp pc rs m trap chunk addr args dst pc' a v,
+      (fn_code f)!pc = Some(Iload trap chunk addr args dst pc') ->
       eval_addressing ge sp addr rs##args = Some a ->
       Mem.loadv chunk m a = Some v ->
       step (State s f sp pc rs m)
         E0 (State s f sp pc' (rs#dst <- v) m)
+  | exec_Iload_notrap1:
+      forall s f sp pc rs m chunk addr args dst pc',
+      (fn_code f)!pc = Some(Iload NOTRAP chunk addr args dst pc') ->
+      eval_addressing ge sp addr rs##args = None ->
+      step (State s f sp pc rs m)
+        E0 (State s f sp pc' (rs#dst <- (default_notrap_load_value chunk)) m)
+  | exec_Iload_notrap2:
+      forall s f sp pc rs m chunk addr args dst pc' a,
+      (fn_code f)!pc = Some(Iload NOTRAP chunk addr args dst pc') ->
+      eval_addressing ge sp addr rs##args = Some a ->
+      Mem.loadv chunk m a = None->
+      step (State s f sp pc rs m)
+        E0 (State s f sp pc' (rs#dst <- (default_notrap_load_value chunk)) m)
   | exec_Istore:
       forall s f sp pc rs m chunk addr args src pc' a m',
       (fn_code f)!pc = Some(Istore chunk addr args src pc') ->
@@ -248,8 +263,8 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State s f sp pc rs m)
          t (State s f sp pc' (regmap_setres res vres rs) m')
   | exec_Icond:
-      forall s f sp pc rs m cond args ifso ifnot b pc',
-      (fn_code f)!pc = Some(Icond cond args ifso ifnot) ->
+      forall s f sp pc rs m cond args ifso ifnot b pc' predb,
+      (fn_code f)!pc = Some(Icond cond args ifso ifnot predb) ->
       eval_condition cond rs##args m = Some b ->
       pc' = (if b then ifso else ifnot) ->
       step (State s f sp pc rs m)
@@ -299,8 +314,8 @@ Proof.
 Qed.
 
 Lemma exec_Iload':
-  forall s f sp pc rs m chunk addr args dst pc' rs' a v,
-  (fn_code f)!pc = Some(Iload chunk addr args dst pc') ->
+  forall s f sp pc rs m trap chunk addr args dst pc' rs' a v,
+  (fn_code f)!pc = Some(Iload trap chunk addr args dst pc') ->
   eval_addressing ge sp addr rs##args = Some a ->
   Mem.loadv chunk m a = Some v ->
   rs' = (rs#dst <- v) ->
@@ -384,12 +399,12 @@ Definition successors_instr (i: instruction) : list node :=
   match i with
   | Inop s => s :: nil
   | Iop op args res s => s :: nil
-  | Iload chunk addr args dst s => s :: nil
+  | Iload trap chunk addr args dst s => s :: nil
   | Istore chunk addr args src s => s :: nil
   | Icall sig ros args res s => s :: nil
   | Itailcall sig ros args => nil
   | Ibuiltin ef args res s => s :: nil
-  | Icond cond args ifso ifnot => ifso :: ifnot :: nil
+  | Icond cond args ifso ifnot _ => ifso :: ifnot :: nil
   | Ijumptable arg tbl => tbl
   | Ireturn optarg => nil
   end.
@@ -403,14 +418,14 @@ Definition instr_uses (i: instruction) : list reg :=
   match i with
   | Inop s => nil
   | Iop op args res s => args
-  | Iload chunk addr args dst s => args
+  | Iload trap chunk addr args dst s => args
   | Istore chunk addr args src s => src :: args
   | Icall sig (inl r) args res s => r :: args
   | Icall sig (inr id) args res s => args
   | Itailcall sig (inl r) args => r :: args
   | Itailcall sig (inr id) args => args
   | Ibuiltin ef args res s => params_of_builtin_args args
-  | Icond cond args ifso ifnot => args
+  | Icond cond args ifso ifnot _ => args
   | Ijumptable arg tbl => arg :: nil
   | Ireturn None => nil
   | Ireturn (Some arg) => arg :: nil
@@ -422,13 +437,13 @@ Definition instr_defs (i: instruction) : option reg :=
   match i with
   | Inop s => None
   | Iop op args res s => Some res
-  | Iload chunk addr args dst s => Some dst
+  | Iload trap chunk addr args dst s => Some dst
   | Istore chunk addr args src s => None
   | Icall sig ros args res s => Some res
   | Itailcall sig ros args => None
   | Ibuiltin ef args res s =>
       match res with BR r => Some r | _ => None end
-  | Icond cond args ifso ifnot => None
+  | Icond cond args ifso ifnot _ => None
   | Ijumptable arg tbl => None
   | Ireturn optarg => None
   end.
@@ -462,7 +477,7 @@ Definition max_reg_instr (m: positive) (pc: node) (i: instruction) :=
   match i with
   | Inop s => m
   | Iop op args res s => fold_left Pos.max args (Pos.max res m)
-  | Iload chunk addr args dst s => fold_left Pos.max args (Pos.max dst m)
+  | Iload trap chunk addr args dst s => fold_left Pos.max args (Pos.max dst m)
   | Istore chunk addr args src s => fold_left Pos.max args (Pos.max src m)
   | Icall sig (inl r) args res s => fold_left Pos.max args (Pos.max r (Pos.max res m))
   | Icall sig (inr id) args res s => fold_left Pos.max args (Pos.max res m)
@@ -471,7 +486,7 @@ Definition max_reg_instr (m: positive) (pc: node) (i: instruction) :=
   | Ibuiltin ef args res s =>
       fold_left Pos.max (params_of_builtin_args args)
         (fold_left Pos.max (params_of_builtin_res res) m)
-  | Icond cond args ifso ifnot => fold_left Pos.max args m
+  | Icond cond args ifso ifnot _ => fold_left Pos.max args m
   | Ijumptable arg tbl => Pos.max arg m
   | Ireturn None => m
   | Ireturn (Some arg) => Pos.max arg m

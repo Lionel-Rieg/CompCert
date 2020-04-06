@@ -31,13 +31,13 @@ type instruction =
   | Xspill of var * var
   | Xparmove of var list * var list * var * var
   | Xop of operation * var list * var
-  | Xload of memory_chunk * addressing * var list * var
+  | Xload of trapping_mode * memory_chunk * addressing * var list * var
   | Xstore of memory_chunk * addressing * var list * var
   | Xcall of signature * (var, ident) sum * var list * var list
   | Xtailcall of signature * (var, ident) sum * var list
   | Xbuiltin of external_function * var builtin_arg list * var builtin_res
   | Xbranch of node
-  | Xcond of condition * var list * node * node
+  | Xcond of condition * var list * node * node * bool option
   | Xjumptable of var * node list
   | Xreturn of var list
 

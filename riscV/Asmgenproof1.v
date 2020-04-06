@@ -400,22 +400,6 @@ Ltac ArgsInv :=
   | [ H: freg_of _ = OK _ |- _ ] => simpl in *; rewrite (freg_of_eq _ _ H) in *
   end).
 
-Inductive exec_straight_opt: code -> regset -> mem -> code -> regset -> mem -> Prop :=
-  | exec_straight_opt_refl: forall c rs m,
-      exec_straight_opt c rs m c rs m
-  | exec_straight_opt_intro: forall c1 rs1 m1 c2 rs2 m2,
-      exec_straight ge fn c1 rs1 m1 c2 rs2 m2 ->
-      exec_straight_opt c1 rs1 m1 c2 rs2 m2.
-
-Remark exec_straight_opt_right:
-  forall c3 rs3 m3 c1 rs1 m1 c2 rs2 m2,
-  exec_straight_opt c1 rs1 m1 c2 rs2 m2 ->
-  exec_straight ge fn c2 rs2 m2 c3 rs3 m3 ->
-  exec_straight ge fn c1 rs1 m1 c3 rs3 m3.
-Proof.
-  destruct 1; intros. auto. eapply exec_straight_trans; eauto. 
-Qed.
-
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m',
   transl_cbranch cond args lbl k = OK c ->
@@ -423,7 +407,7 @@ Lemma transl_cbranch_correct_1:
   agree ms sp rs ->
   Mem.extends m m' ->
   exists rs', exists insn,
-     exec_straight_opt c rs m' (insn :: k) rs' m'
+     exec_straight_opt ge fn c rs m' (insn :: k) rs' m'
   /\ exec_instr ge fn insn rs' m' = eval_branch fn lbl rs' m' (Some b)
   /\ forall r, r <> PC -> r <> X31 -> rs'#r = rs#r.
 Proof.
@@ -518,7 +502,7 @@ Lemma transl_cbranch_correct_true:
   agree ms sp rs ->
   Mem.extends m m' ->
   exists rs', exists insn,
-     exec_straight_opt c rs m' (insn :: k) rs' m'
+     exec_straight_opt ge fn c rs m' (insn :: k) rs' m'
   /\ exec_instr ge fn insn rs' m' = goto_label fn lbl rs' m'
   /\ forall r, r <> PC -> r <> X31 -> rs'#r = rs#r.
 Proof.
@@ -1051,17 +1035,23 @@ Opaque Int.eq.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
 - (* shrximm *)
-  clear H. exploit Val.shrx_shr_2; eauto. intros E; subst v; clear EV.
+  clear H. exploit Val.shrx_shr_3; eauto. intros E; subst v; clear EV.
   destruct (Int.eq n Int.zero).
 + econstructor; split. apply exec_straight_one. simpl; eauto. auto.
   split; intros; Simpl. 
-+ change (Int.repr 32) with Int.iwordsize. set (n' := Int.sub Int.iwordsize n).
-  econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  apply exec_straight_one. simpl; reflexivity. auto. 
-  split; intros; Simpl.
++ destruct (Int.eq n Int.one).
+  * econstructor; split.
+    eapply exec_straight_step. simpl; reflexivity. auto.
+    eapply exec_straight_step. simpl; reflexivity. auto.
+    apply exec_straight_one. simpl; reflexivity. auto.
+    split; intros; Simpl.
+  * change (Int.repr 32) with Int.iwordsize. set (n' := Int.sub Int.iwordsize n).
+    econstructor; split.
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    apply exec_straight_one. simpl; reflexivity. auto. 
+    split; intros; Simpl.
 - (* longofintu *)
   econstructor; split.
   eapply exec_straight_three. simpl; eauto. simpl; eauto. simpl; eauto. auto. auto. auto.
@@ -1086,17 +1076,24 @@ Opaque Int.eq.
   intros (rs' & A & B & C).
   exists rs'; split; eauto. rewrite B; auto with asmgen.
 - (* shrxlimm *)
-  clear H. exploit Val.shrxl_shrl_2; eauto. intros E; subst v; clear EV.
+  clear H. exploit Val.shrxl_shrl_3; eauto. intros E; subst v; clear EV.
   destruct (Int.eq n Int.zero).
 + econstructor; split. apply exec_straight_one. simpl; eauto. auto.
   split; intros; Simpl. 
-+ change (Int.repr 64) with Int64.iwordsize'. set (n' := Int.sub Int64.iwordsize' n).
-  econstructor; split.
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  eapply exec_straight_step. simpl; reflexivity. auto. 
-  apply exec_straight_one. simpl; reflexivity. auto. 
-  split; intros; Simpl.
++ destruct (Int.eq n Int.one).
+  * econstructor; split.
+    eapply exec_straight_step. simpl; reflexivity. auto.
+    eapply exec_straight_step. simpl; reflexivity. auto.
+    apply exec_straight_one. simpl; reflexivity. auto.
+    split; intros; Simpl.
+
+  * change (Int.repr 64) with Int64.iwordsize'. set (n' := Int.sub Int64.iwordsize' n).
+    econstructor; split.
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    eapply exec_straight_step. simpl; reflexivity. auto. 
+    apply exec_straight_one. simpl; reflexivity. auto. 
+    split; intros; Simpl.
 - (* cond *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
   exists rs'; split. eexact A. eauto with asmgen.
@@ -1108,7 +1105,7 @@ Lemma indexed_memory_access_correct:
   forall mk_instr base ofs k rs m,
   base <> X31 ->
   exists base' ofs' rs',
-     exec_straight_opt (indexed_memory_access mk_instr base ofs k) rs m
+     exec_straight_opt ge fn (indexed_memory_access mk_instr base ofs k) rs m
                        (mk_instr base' ofs' :: k) rs' m
   /\ Val.offset_ptr rs'#base' (eval_offset ge ofs') = Val.offset_ptr rs#base ofs
   /\ forall r, r <> PC -> r <> X31 -> rs'#r = rs#r.
@@ -1258,7 +1255,7 @@ Lemma transl_memory_access_correct:
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   exists base ofs rs',
-     exec_straight_opt c rs m (mk_instr base ofs :: k) rs' m
+     exec_straight_opt ge fn c rs m (mk_instr base ofs :: k) rs' m
   /\ Val.offset_ptr rs'#base (eval_offset ge ofs) = v
   /\ forall r, r <> PC -> r <> X31 -> rs'#r = rs#r.
 Proof.
@@ -1318,8 +1315,8 @@ Proof.
 Qed.
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) m a v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) m a v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -1327,7 +1324,8 @@ Lemma transl_load_correct:
   /\ rs'#(preg_of dst) = v
   /\ forall r, r <> PC -> r <> X31 -> r <> preg_of dst -> rs'#r = rs#r.
 Proof.
-  intros until v; intros TR EV LOAD. 
+  intros until v; intros TR EV LOAD.
+  destruct trap; try (simpl in *; discriminate).
   assert (A: exists mk_instr,
       transl_memory_access mk_instr addr args k = OK c
    /\ forall base ofs rs,

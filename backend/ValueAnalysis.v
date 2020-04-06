@@ -139,9 +139,14 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
   | Some(Iop op args res s) =>
       let a := eval_static_operation op (aregs ae args) in
       VA.State (AE.set res a ae) am
-  | Some(Iload chunk addr args dst s) =>
+  | Some(Iload TRAP chunk addr args dst s) =>
       let a := loadv chunk rm am (eval_static_addressing addr (aregs ae args)) in
       VA.State (AE.set dst a ae) am
+
+  (* TODO: maybe a case analysis on the results of loadv? *)
+               
+  | Some(Iload NOTRAP chunk addr args dst s) =>
+      VA.State (AE.set dst Vtop ae) am
   | Some(Istore chunk addr args src s) =>
       let am' := storev chunk am (eval_static_addressing addr (aregs ae args)) (areg ae src) in
       VA.State ae am'
@@ -151,7 +156,7 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
       VA.Bot
   | Some(Ibuiltin ef args res s) =>
       transfer_builtin ae am rm ef args res
-  | Some(Icond cond args s1 s2) =>
+  | Some(Icond cond args s1 s2 _) =>
       VA.State ae am
   | Some(Ijumptable arg tbl) =>
       VA.State ae am
@@ -1039,9 +1044,8 @@ Proof.
   red; simpl; intros. destruct (plt b (Mem.nextblock m)).
   exploit RO; eauto. intros (R & P & Q).
   split; auto.
-  split. apply bmatch_incr with bc; auto. apply bmatch_inv with m; auto.
-  intros. eapply Mem.loadbytes_unchanged_on_1. eapply external_call_readonly; eauto.
-  auto. intros; red. apply Q.
+  split. apply bmatch_incr with bc; auto. apply bmatch_ext with m; auto.
+  intros. eapply external_call_readonly with (m2 := m'); eauto.
   intros; red; intros; elim (Q ofs).
   eapply external_call_max_perm with (m2 := m'); eauto.
   destruct (j' b); congruence.
@@ -1148,10 +1152,10 @@ Proof.
 - constructor.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_public_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_private_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
   apply bmatch_ext with m; auto. intros. apply INV. xomega. auto. auto. auto.
 Qed.
 
@@ -1268,11 +1272,29 @@ Proof.
   apply ematch_update; auto. eapply eval_static_operation_sound; eauto with va.
 
 - (* load *)
+  destruct trap.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto. eapply loadv_sound; eauto with va.
+    eapply eval_static_addressing_sound; eauto with va.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto.
+    eapply vmatch_top.
+    eapply loadv_sound; try eassumption.
+    eapply eval_static_addressing_sound; eauto with va.
+- (* load notrap1 *)
   eapply sound_succ_state; eauto. simpl; auto.
   unfold transfer; rewrite H. eauto.
-  apply ematch_update; auto. eapply loadv_sound; eauto with va.
-  eapply eval_static_addressing_sound; eauto with va.
-
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
+- (* load notrap2 *)
+  eapply sound_succ_state; eauto. simpl; auto.
+  unfold transfer; rewrite H. eauto.
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
 - (* store *)
   exploit eval_static_addressing_sound; eauto with va. intros VMADDR.
   eapply sound_succ_state; eauto. simpl; auto.
@@ -1362,7 +1384,7 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
 * (* public builtin call *)
   exploit anonymize_stack; eauto.
@@ -1381,7 +1403,7 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
   }
   unfold transfer_builtin in TR.

@@ -449,6 +449,22 @@ Proof.
   eauto. eauto.
   apply eval_add_delta_ranges. traceEq.
   constructor; auto.
+- (* load notrap1 *)
+  econstructor; split.
+  eapply plus_left.
+  eapply exec_Lload_notrap1.
+  rewrite <- H; apply eval_addressing_preserved; exact symbols_preserved.
+  eauto. eauto.
+  apply eval_add_delta_ranges. traceEq.
+  constructor; auto.
+- (* load notrap2 *)
+  econstructor; split.
+  eapply plus_left.
+  eapply exec_Lload_notrap2.
+  rewrite <- H; apply eval_addressing_preserved; exact symbols_preserved.
+  eauto. eauto.
+  apply eval_add_delta_ranges. traceEq.
+  constructor; auto.
 - (* store *)
   econstructor; split.
   eapply plus_left.

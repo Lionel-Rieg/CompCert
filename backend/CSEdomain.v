@@ -43,7 +43,7 @@ Definition eq_list_valnum: forall (x y: list valnum), {x=y}+{x<>y} := list_eq_de
 
 Definition eq_rhs (x y: rhs) : {x=y}+{x<>y}.
 Proof.
-  generalize chunk_eq eq_operation eq_addressing eq_valnum eq_list_valnum.
+  generalize trapping_mode_eq chunk_eq eq_operation eq_addressing eq_valnum eq_list_valnum.
   decide equality.
 Defined.
 
@@ -109,7 +109,16 @@ Inductive rhs_eval_to (valu: valuation) (ge: genv) (sp: val) (m: mem):
   | load_eval_to: forall chunk addr vl a v,
       eval_addressing ge sp addr (map valu vl) = Some a ->
       Mem.loadv chunk m a = Some v ->
-      rhs_eval_to valu ge sp m (Load chunk addr vl) v.
+      rhs_eval_to valu ge sp m (Load chunk addr vl) v
+(*  | load_notrap1_eval_to: forall chunk addr vl,
+      eval_addressing ge sp addr (map valu vl) = None ->
+      rhs_eval_to valu ge sp m (Load NOTRAP chunk addr vl)
+                  (default_notrap_load_value chunk)
+  | load_notrap2_eval_to: forall chunk addr vl a,
+      eval_addressing ge sp addr (map valu vl) = Some a ->
+      Mem.loadv chunk m a = None ->
+      rhs_eval_to valu ge sp m (Load NOTRAP chunk addr vl)
+                  (default_notrap_load_value chunk) *).
 
 Inductive equation_holds (valu: valuation) (ge: genv) (sp: val) (m: mem):
                                                       equation -> Prop :=

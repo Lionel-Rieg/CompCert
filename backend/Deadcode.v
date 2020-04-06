@@ -123,7 +123,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t)
       if is_dead nres then after
       else if is_int_zero nres then (kill res ne, nm)
       else (add_needs args (needs_of_operation op nres) (kill res ne), nm)
-  | Some (Iload chunk addr args dst s) =>
+  | Some (Iload trap chunk addr args dst s) =>
       let ndst := nreg ne dst in
       if is_dead ndst then after
       else if is_int_zero ndst then (kill dst ne, nm)
@@ -142,7 +142,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t)
        nmem_dead_stack f.(fn_stacksize))
   | Some(Ibuiltin ef args res s) =>
       transfer_builtin approx!!pc ef args res ne nm
-  | Some(Icond cond args s1 s2) =>
+  | Some(Icond cond args s1 s2 _) =>
       if peq s1 s2 then after else 
         (add_needs args (needs_of_condition cond) ne, nm)
   | Some(Ijumptable arg tbl) =>
@@ -175,7 +175,7 @@ Definition transf_instr (approx: PMap.t VA.t) (an: PMap.t NA.t)
         end
       else
         instr
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       let ndst := nreg (fst an!!pc) dst in
       if is_dead ndst then
         Inop s
@@ -192,7 +192,7 @@ Definition transf_instr (approx: PMap.t VA.t) (an: PMap.t NA.t)
       if nmem_contains (snd an!!pc) (aaddr_arg approx!!pc dst) sz
       then instr
       else Inop s
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 _ =>
       if peq s1 s2 then Inop s1 else instr
   | _ =>
       instr

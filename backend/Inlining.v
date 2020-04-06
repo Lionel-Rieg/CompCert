@@ -364,9 +364,9 @@ Definition expand_instr (ctx: context) (pc: node) (i: instruction): mon unit :=
   | Iop op args res s =>
       set_instr (spc ctx pc)
                 (Iop (sop ctx op) (sregs ctx args) (sreg ctx res) (spc ctx s))
-  | Iload chunk addr args dst s =>
+  | Iload trap chunk addr args dst s =>
       set_instr (spc ctx pc)
-                (Iload chunk (saddr ctx addr) (sregs ctx args) (sreg ctx dst) (spc ctx s))
+                (Iload trap chunk (saddr ctx addr) (sregs ctx args) (sreg ctx dst) (spc ctx s))
   | Istore chunk addr args src s =>
       set_instr (spc ctx pc)
                 (Istore chunk (saddr ctx addr) (sregs ctx args) (sreg ctx src) (spc ctx s))
@@ -397,9 +397,9 @@ Definition expand_instr (ctx: context) (pc: node) (i: instruction): mon unit :=
   | Ibuiltin ef args res s =>
       set_instr (spc ctx pc)
                 (Ibuiltin ef (map (sbuiltinarg ctx) args) (sbuiltinres ctx res) (spc ctx s))
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 info =>
       set_instr (spc ctx pc)
-                (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2))
+                (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2) info)
   | Ijumptable r tbl =>
       set_instr (spc ctx pc)
                 (Ijumptable (sreg ctx r) (List.map (spc ctx) tbl))

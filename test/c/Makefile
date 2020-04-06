@@ -8,8 +8,9 @@ EXECUTE:=timeout --signal=SIGTERM 20s $(EXECUTE)
 
 LIBS=$(LIBMATH)
 
-#TIME=xtime -o /dev/null -mintime 2.0     # Xavier's hack
-TIME=time >/dev/null                    # Otherwise
+TIME=time >/dev/null
+# FIXME - maybe this is better? From v3.6
+# TIME=ocaml unix.cma ../../tools/xtime.ml -o /dev/null -mintime 2.0 -minruns 4
 
 PROGS?=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
   lists binarytrees fannkuch mandelbrot nbody \
@@ -56,12 +57,12 @@ test_gcc: all_gcc
 
 bench_gcc: all_gcc
 	@for i in $(PROGS); do \
-	   echo -n "$$i: "; $(TIME) ./$$i.gcc; \
+	   $(TIME) -name $$i -- ./$$i.gcc; \
          done
 
 bench: all
 	@for i in $(PROGS); do \
-	   echo -n "$$i: "; $(TIME) ./$$i.compcert; \
+	   $(TIME) -name $$i -- ./$$i.compcert; \
          done
 
 clean:

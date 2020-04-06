@@ -20,9 +20,12 @@ oracle_times.txt: PostpassSchedulingOracle.patch
 	bash build_benches.sh $@
 
 measures.csv:
-	(cd ../../ && make -j20 && make install)
-	bash build_benches.sh
-	bash run_benches.sh $@
+	@echo "Building compcert.."
+	@(cd ../../ && make -s -j20 && make -s install)
+	@echo "Building benches..."
+	@bash build_benches.sh
+	@echo "Benches built. Running benches..."
+	@bash run_benches.sh $@
 
 #compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
 #	python3.5 $^ $@
@@ -32,4 +35,5 @@ measures.csv:
 
 .PHONY:
 clean:
+	@bash clean_benches.sh
 	rm -f verifier_times.txt oracle_times.txt compile_times.pdf measure_times.k1c.pdf measures.csv

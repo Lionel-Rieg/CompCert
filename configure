@@ -57,10 +57,12 @@ Supported targets:
   rv64-linux           (RISC-V 64 bits, Linux)
   k1c-mbr              (Kalray K1c, bare runtime)
   k1c-cos              (Kalray K1c, ClusterOS)
+  aarch64-linux        (AArch64, i.e. ARMv8 in 64-bit mode, Linux)
   manual               (edit configuration file by hand)
 
 For x86 targets, the "x86_32-" prefix can also be written "ia32-" or "i386-".
 For x86 targets, the "x86_64-" prefix can also be written "amd64-".
+For AArch64 targets, the "aarch64-" prefix can also be written "arm64-".
 
 For PowerPC targets, the "ppc-" prefix can be refined into:
   ppc64-               PowerPC 64 bits
@@ -179,6 +181,8 @@ case "$target" in
       arch="riscV"; model="64"; endianness="little"; bitsize=64;;
   k1c-*)
       arch="mppa_k1c"; model="64"; endianness="little"; bitsize=64;;
+  aarch64-*|arm64-*)
+      arch="aarch64"; model="default"; endianness="little"; bitsize=64;;
   manual)
       ;;
   "")
@@ -453,8 +457,8 @@ if test "$arch" = "mppa_k1c"; then
   fi
   osupper=`echo $os|tr a-z A-Z`
   k1base="k1-$os"
-  casm="$k1base-gcc"
-  casm_options="$model_options -c"
+  casm="k1-elf-as"
+  casm_options="$model_options"
   cc="$k1base-gcc $model_options"
   clinker="$k1base-gcc"
   bindir="$HOME/.usr/bin"
@@ -464,6 +468,29 @@ if test "$arch" = "mppa_k1c"; then
   cprepro_options="$model_options -D __K1C_${osupper}__ -std=c99 -E -include ccomp_k1c_fixes.h"
   libmath="-lm"
   system="linux"
+fi
+
+#
+# AArch64 (ARMv8 64 bits) Target Configuration
+#
+if test "$arch" = "aarch64"; then
+  case "$target" in
+    linux)
+        abi="standard"
+        casm="${toolprefix}gcc"
+        casm_options="-c"
+        cc="${toolprefix}gcc"
+        clinker="${toolprefix}gcc"
+        clinker_options=""
+        cprepro="${toolprefix}gcc"
+        cprepro_options="-std=c99 -U__GNUC__ -E"
+        libmath="-lm"
+        system="linux";;
+    *)
+        echo "Error: invalid eabi/system '$target' for architecture AArch64." 1>&2
+        echo "$usage" 1>&2
+        exit 2;;
+  esac
 fi
 
 
@@ -541,14 +568,14 @@ missingtools=false
 echo "Testing Coq... " | tr -d '\n'
 coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
 case "$coq_ver" in
-  8.7.0|8.7.1|8.7.2|8.8.0|8.8.1|8.8.2|8.9.0|8.9.1|8.10)
+  8.9.0|8.9.1|8.10.0|8.10.1|8.10.2|8.11.0)
         echo "version $coq_ver -- good!";;
   ?*)
         echo "version $coq_ver -- UNSUPPORTED"
         if $ignore_coq_version; then
             echo "Warning: this version of Coq is unsupported, proceed at your own risks."
         else
-            echo "Error: CompCert requires one of the following Coq versions: 8.10, 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0, 8.7.2, 8.7.1, 8.7.0"
+            echo "Error: CompCert requires one of the following Coq versions: 8.11.0, 8.10.2, 8.10.1, 8.10.0, 8.9.1, 8.9.0, 8.8.2, 8.8.1, 8.8.0"
             missingtools=true
         fi;;
   "")
@@ -560,24 +587,19 @@ esac
 echo "Testing OCaml... " | tr -d '\n'
 ocaml_ver=`ocamlopt -version 2>/dev/null`
 case "$ocaml_ver" in
-  4.00.*|4.01.*)
+  4.00.*|4.01.*| 4.02.*|4.03.*|4.04.*)
         echo "version $ocaml_ver -- UNSUPPORTED"
-        echo "Error: CompCert requires OCaml version 4.02 or later."
+        echo "Error: CompCert requires OCaml version 4.05 or later."
         missingtools=true;;
-  4.02.*|4.03.*|4.04.*)
-      echo "version $ocaml_ver -- good!"
-      echo "WARNING: some Intel processors of the Skylake and Kaby Lake generations"
-      echo "have a hardware bug that can be triggered by this version of OCaml."
-      echo "To avoid this risk, it is recommended to use OCaml 4.05 or later.";;
-  4.0*)
+  4.*)
         echo "version $ocaml_ver -- good!";;
   ?.*)
         echo "version $ocaml_ver -- UNSUPPORTED"
-        echo "Error: CompCert requires OCaml version 4.02 or later."
+        echo "Error: CompCert requires OCaml version 4.05 or later."
         missingtools=true;;
   *)
         echo "NOT FOUND"
-        echo "Error: make sure OCaml version 4.02 or later is installed."
+        echo "Error: make sure OCaml version 4.05 or later is installed."
         missingtools=true;;
 esac
 
@@ -598,8 +620,8 @@ case "$menhir_ver" in
   20[0-9][0-9][0-9][0-9][0-9][0-9])
       if test "$menhir_ver" -ge $MENHIR_REQUIRED; then
           echo "version $menhir_ver -- good!"
-          menhir_include_dir=$(menhir --suggest-menhirLib | tr -d '\r' | tr '\\' '/')
-          if test -z "$menhir_include_dir"; then
+          menhir_dir=$(menhir --suggest-menhirLib | tr -d '\r' | tr '\\' '/')
+          if test -z "$menhir_dir"; then
               echo "Error: cannot determine the location of the Menhir API library."
               echo "This can be due to an incorrect Menhir package."
               echo "Consider using the OPAM package for Menhir."
@@ -693,7 +715,7 @@ MANDIR=$sharedir/man
 SHAREDIR=$sharedir
 COQDEVDIR=$coqdevdir
 OCAML_OPT_COMP=$ocaml_opt_comp
-MENHIR_INCLUDES=-I "$menhir_include_dir"
+MENHIR_DIR=$menhir_dir
 COMPFLAGS=-bin-annot
 EOF
 
@@ -728,6 +750,8 @@ cat >> Makefile.config <<'EOF'
 # ARCH=powerpc
 # ARCH=arm
 # ARCH=x86
+# ARCH=riscV
+# ARCH=aarch6
 ARCH=
 
 # Hardware variant
@@ -741,23 +765,24 @@ ARCH=
 # MODEL=armv7m      # for ARM
 # MODEL=32sse2      # for x86 in 32-bit mode
 # MODEL=64          # for x86 in 64-bit mode
+# MODEL=default     # for others
 MODEL=
 
 # Target ABI
 # ABI=eabi          # for PowerPC / Linux and other SVR4 or EABI platforms
 # ABI=eabi          # for ARM
 # ABI=hardfloat     # for ARM
-# ABI=standard      # for x86
+# ABI=standard      # for others
 ABI=
 
 # Target bit width
-# BITSIZE=64        # for x86 in 64-bit mode
+# BITSIZE=64        # for x86 in 64-bit mode, RiscV in 64-bit mode, AArch64
 # BITSIZE=32        # otherwise
 BITSIZE=
 
 # Target endianness
 # ENDIANNESS=big     # for ARM or PowerPC
-# ENDIANNESS=little  # for ARM or x86
+# ENDIANNESS=little  # for ARM or x86 or RiscV or AArch64
 ENDIANNESS=
 
 # Target operating system and development environment
@@ -766,7 +791,7 @@ ENDIANNESS=
 # SYSTEM=linux
 # SYSTEM=diab
 #
-# Possible choices for ARM:
+# Possible choices for ARM, AArch64, RiscV:
 # SYSTEM=linux
 #
 # Possible choices for x86:
@@ -820,7 +845,7 @@ EXECUTE=k1-cluster --syscall=libstd_scalls.so --
 CFLAGS= -D __K1C_COS__
 SIMU=k1-cluster -- 
 BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
-    Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v\\
+    Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v Asmblockprops.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\
     Asmblockdeps.v DecBoolOps.v Chunks.v Peephole.v ExtValues.v ExtFloats.v\\
     AbstractBasicBlocksDef.v SeqSimuTheory.v ImpSimuTest.v Parallelizability.v\\
@@ -881,6 +906,4 @@ cat <<EOF
     Coq development will not be installed
 EOF
 fi
-
 fi
-

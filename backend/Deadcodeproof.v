@@ -829,6 +829,83 @@ Ltac UseTransfer :=
   apply eagree_update; eauto 2 with na.
   eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
 
+- (* load notrap1 *)
+  TransfInstr; UseTransfer.
+  destruct (is_dead (nreg ne dst)) eqn:DEAD;
+  [idtac|destruct (is_int_zero (nreg ne dst)) eqn:INTZERO];
+  simpl in *.
++ (* dead instruction, turned into a nop *)
+  econstructor; split.
+  eapply exec_Inop; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update_dead; auto with na.
++ (* instruction with needs = [I Int.zero], turned into a load immediate of zero. *)
+  econstructor; split.
+  eapply exec_Iop with (v := Vint Int.zero); eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; auto.
+  rewrite is_int_zero_sound by auto.
+  unfold default_notrap_load_value.
+  constructor.
++ (* preserved *)
+  exploit eval_addressing_lessdef_none. eapply add_needs_all_lessdef; eauto. eassumption.
+  intro Hnone'.
+  assert (eval_addressing tge (Vptr sp0 Ptrofs.zero) addr te ## args = None) as Hnone2'.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  assumption.
+  exact symbols_preserved.
+  
+  econstructor; split.
+  eapply exec_Iload_notrap1; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+
+- (* load notrap2 *)
+  TransfInstr; UseTransfer.
+  
+  destruct (is_dead (nreg ne dst)) eqn:DEAD;
+  [idtac|destruct (is_int_zero (nreg ne dst)) eqn:INTZERO];
+  simpl in *.
++ (* dead instruction, turned into a nop *)
+  econstructor; split.
+  eapply exec_Inop; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update_dead; auto with na.
++ (* instruction with needs = [I Int.zero], turned into a load immediate of zero. *)
+  econstructor; split.
+  eapply exec_Iop with (v := Vint Int.zero); eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; auto.
+  rewrite is_int_zero_sound by auto.
+  unfold default_notrap_load_value.
+  constructor.
++ (* preserved *)
+  exploit eval_addressing_lessdef. eapply add_needs_all_lessdef; eauto. eauto.
+  intros (ta & U & V).
+  destruct (Mem.loadv chunk tm ta) eqn:Hchunk2.
+  {
+  econstructor; split.
+  eapply exec_Iload. eauto.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  eassumption.
+  exact symbols_preserved.
+  eassumption.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+  }
+  {
+  econstructor; split.
+  eapply exec_Iload_notrap2. eauto.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  eassumption.
+  exact symbols_preserved.
+  eassumption.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+  }
 - (* store *)
   TransfInstr; UseTransfer.
   destruct (nmem_contains nm (aaddressing (vanalyze cu f) # pc addr args)

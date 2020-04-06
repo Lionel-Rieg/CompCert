@@ -235,11 +235,11 @@ Proof.
 Qed.
 
 Remark transl_load_label:
-  forall chunk addr args dest k c,
-  transl_load chunk addr args dest k = OK c ->
+  forall trap chunk addr args dest k c,
+  transl_load trap chunk addr args dest k = OK c ->
   tail_nolabel k c.
 Proof.
-  intros. monadInv H. destruct chunk; TailNoLabel.
+  intros. destruct trap; try discriminate. monadInv H. destruct chunk; TailNoLabel.
 Qed.
 
 Remark transl_store_label:
@@ -567,6 +567,12 @@ Opaque loadind.
   split. eapply agree_set_undef_mreg; eauto. congruence.
   simpl; congruence.
 
+- (* Mload notrap *) (* isn't there a nicer way? *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+  
 - (* Mstore *)
   assert (eval_addressing tge sp addr rs##args = Some a).
     rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.

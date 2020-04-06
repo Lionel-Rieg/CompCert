@@ -116,6 +116,19 @@ Module Type TREE.
     forall (m1: t A) (m2: t B) (i: elt),
     get i (combine f m1 m2) = f (get i m1) (get i m2).
 
+  Parameter combine_null :
+    forall (A B C: Type) (f: A -> B -> option C),
+    t A -> t B -> t C.
+
+  Axiom gcombine_null:
+    forall (A B C: Type) (f: A -> B -> option C),
+    forall (m1: t A) (m2: t B) (i: elt),
+      get i (combine_null f m1 m2) =
+      match (get i m1), (get i m2) with
+      | (Some x1), (Some x2) => f x1 x2
+      | _, _ => None
+      end.
+
   (** Enumerating the bindings of a tree. *)
   Parameter elements:
     forall (A: Type), t A -> list (elt * A).
@@ -151,6 +164,12 @@ Module Type TREE.
     forall (A B: Type) (f: B -> A -> B) (v: B) (m: t A),
     fold1 f m v =
     List.fold_left (fun a p => f a (snd p)) (elements m) v.
+
+  Parameter bempty_canon :
+    forall (A : Type), t A -> bool.
+  Axiom bempty_canon_correct:
+    forall (A : Type) (tr : t A) (i : elt),
+      bempty_canon tr = true -> get i tr = None.
 End TREE.
 
 (** * The abstract signatures of maps *)
@@ -261,6 +280,12 @@ Module PTree <: TREE.
     induction i; simpl; auto.
   Qed.
 
+  Definition bempty_canon (A : Type) (tr : t A) : bool :=
+    match tr with
+    | Leaf => true
+    | _ => false
+    end.
+
   Theorem gss:
     forall (A: Type) (i: positive) (x: A) (m: t A), get i (set i x m) = Some x.
   Proof.
@@ -269,7 +294,16 @@ Module PTree <: TREE.
 
     Lemma gleaf : forall (A : Type) (i : positive), get i (Leaf : t A) = None.
     Proof. exact gempty. Qed.
-
+    
+  Lemma bempty_canon_correct:
+    forall (A : Type) (tr : t A) (i : elt),
+      bempty_canon tr = true -> get i tr = None.
+  Proof.
+    destruct tr; intros.
+    - rewrite gleaf; trivial.
+    - discriminate.
+  Qed.
+  
   Theorem gso:
     forall (A: Type) (i j: positive) (x: A) (m: t A),
     i <> j -> get i (set j x m) = get i m.
@@ -625,7 +659,81 @@ Module PTree <: TREE.
      auto.
   Qed.
 
-    Fixpoint xelements (A : Type) (m : t A) (i : positive)
+  Section COMBINE_NULL.
+
+  Variables A B C: Type.
+  Variable f: A -> B -> option C.
+
+  
+  Fixpoint combine_null (m1: t A) (m2: t B) {struct m1} : t C :=
+    match m1, m2 with
+    | (Node l1 o1 r1), (Node l2 o2 r2) =>
+      Node' (combine_null l1 l2)
+            (match o1, o2 with
+             | (Some x1), (Some x2) => f x1 x2
+             | _, _ => None
+             end)
+            (combine_null r1 r2)
+    | _, _ => Leaf
+    end.
+
+  Theorem gcombine_null:
+      forall (m1: t A) (m2: t B) (i: positive),
+        get i (combine_null m1 m2) =
+        match (get i m1), (get i m2) with
+        | (Some x1), (Some x2) => f x1 x2
+        | _, _ => None
+        end.
+  Proof.
+    induction m1; intros; simpl.
+    - rewrite gleaf. rewrite gleaf.
+      reflexivity.
+    - destruct m2; simpl.
+      + rewrite gleaf. rewrite gleaf.
+        destruct get; reflexivity.
+      + rewrite gnode'.
+        destruct i; simpl; try rewrite IHm1_1; try rewrite IHm1; trivial.
+  Qed.
+
+  End COMBINE_NULL.
+
+  Section REMOVE_TREE.
+
+  Variables A B: Type.
+
+  Fixpoint remove_t (m1: t A) (m2: t B) {struct m1} : t A :=
+    match m1, m2 with
+    | Leaf, _ | _, Leaf => m1
+    | (Node l1 o1 r1), (Node l2 o2 r2) =>
+      Node' (remove_t l1 l2)
+            (match o2 with
+             | Some _ => None
+             | None => o1
+             end)
+            (remove_t r1 r2)
+    end.
+
+  Theorem gremove_t:
+    forall m1 : t A,
+    forall m2 : t B,
+    forall i : positive,
+      get i (remove_t m1 m2) = match get i m2 with
+                               | None => get i m1
+                               | Some _ => None
+                               end.
+  Proof.
+    induction m1; intros; simpl.
+    - rewrite gleaf.
+      destruct get; reflexivity.
+    - destruct m2; simpl.
+      + rewrite gleaf.
+        reflexivity.
+      + rewrite gnode'.
+        destruct i; simpl; try rewrite IHm1_1; try rewrite IHm1; trivial.
+  Qed.      
+  End REMOVE_TREE.
+  
+  Fixpoint xelements (A : Type) (m : t A) (i : positive)
                        (k: list (positive * A)) {struct m}
                        : list (positive * A) :=
       match m with
@@ -958,6 +1066,36 @@ Module PTree <: TREE.
     intros. apply fold1_xelements with (l := @nil (positive * A)).
   Qed.
 
+  Local Open Scope positive.
+  Lemma set_disjoint1:
+    forall (A: Type)(i d : elt) (m: t A)  (x y: A),
+      set (i + d) y (set i x m) = set i x (set (i + d) y m).
+  Proof.
+    induction i; destruct d; destruct m; intro; simpl; trivial;
+      intro; congruence.
+  Qed.
+  
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type)(i j : elt) (m: t A)  (x y: A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros.
+    destruct (Pos.compare_spec i j) as [Heq | Hlt | Hlt].
+    { congruence. }
+    {
+      rewrite (Pos.lt_iff_add i j) in Hlt.
+      destruct Hlt as [d Hd].
+      subst j.
+      apply set_disjoint1.
+    }
+      rewrite (Pos.lt_iff_add j i) in Hlt.
+      destruct Hlt as [d Hd].
+      subst i.
+      symmetry.
+      apply set_disjoint1.
+  Qed.
 End PTree.
 
 (** * An implementation of maps over type [positive] *)
@@ -1035,6 +1173,15 @@ Module PMap <: MAP.
     intros. unfold set. simpl. decEq. apply PTree.set2.
   Qed.
 
+  Local Open Scope positive.
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. decEq. apply PTree.set_disjoint. assumption.
+  Qed.
+
 End PMap.
 
 (** * An implementation of maps over any type that injects into type [positive] *)
@@ -1102,6 +1249,16 @@ Module IMap(X: INDEXED_TYPE).
     intros. unfold set. apply PMap.set2.
   Qed.
 
+  Lemma set_disjoint:
+    forall (A: Type) (i j : elt) (x y: A) (m: t A),
+      i <> j ->
+      set j y (set i x m) = set i x (set j y m).
+  Proof.
+    intros. unfold set. apply PMap.set_disjoint.
+    intro INEQ.
+    assert (i = j) by (apply X.index_inj; auto).
+    auto.
+  Qed.
 End IMap.
 
 Module ZIndexed.

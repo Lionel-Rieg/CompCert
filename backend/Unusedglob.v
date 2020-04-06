@@ -46,14 +46,14 @@ Definition ref_instruction (i: instruction) : list ident :=
   match i with
   | Inop _ => nil
   | Iop op _ _ _ => globals_operation op
-  | Iload _ addr _ _ _ => globals_addressing addr
+  | Iload _ _ addr _ _ _ => globals_addressing addr
   | Istore _ addr _ _ _ => globals_addressing addr
   | Icall _ (inl r) _ _ _ => nil
   | Icall _ (inr id) _ _ _ => id :: nil
   | Itailcall _ (inl r) _ => nil
   | Itailcall _ (inr id) _ => id :: nil
   | Ibuiltin _ args _ _ => globals_of_builtin_args args
-  | Icond cond _ _ _ => nil
+  | Icond cond _ _ _ _ => nil
   | Ijumptable _ _ => nil
   | Ireturn _ => nil
   end.

@@ -69,7 +69,7 @@ Fixpoint successor_rec (n: nat) (f: function) (ae: AE.t) (pc: node) : node :=
       match f.(fn_code)!pc with
       | Some (Inop s) =>
           successor_rec n' f ae s
-      | Some (Icond cond args s1 s2) =>
+      | Some (Icond cond args s1 s2 _) =>
           match resolve_branch (eval_static_condition cond (aregs ae args)) with
           | Some b => successor_rec n' f ae (if b then s1 else s2)
           | None => pc
@@ -181,7 +181,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               let (op', args') := op_strength_reduction op args aargs in
               Iop op' args' res s'
           end
-      | Iload chunk addr args dst s =>
+      | Iload TRAP chunk addr args dst s =>
           let aargs := aregs ae args in
           let a := ValueDomain.loadv chunk rm am (eval_static_addressing addr aargs) in
           match const_for_result a with
@@ -189,7 +189,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               Iop cop nil dst s
           | None =>
               let (addr', args') := addr_strength_reduction addr args aargs in
-              Iload chunk addr' args' dst s
+              Iload TRAP chunk addr' args' dst s
           end
       | Istore chunk addr args src s =>
           let aargs := aregs ae args in
@@ -217,14 +217,14 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
              end
           | _, _ => dfl
           end
-      | Icond cond args s1 s2 =>
+      | Icond cond args s1 s2 i =>
           let aargs := aregs ae args in
           match resolve_branch (eval_static_condition cond aargs) with
           | Some b =>
               if b then Inop s1 else Inop s2
           | None =>
               let (cond', args') := cond_strength_reduction cond args aargs in
-              Icond cond' args' s1 s2
+              Icond cond' args' s1 s2 i
           end
       | Ijumptable arg tbl =>
           match areg ae arg with

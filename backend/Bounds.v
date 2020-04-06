@@ -67,7 +67,7 @@ Definition instr_within_bounds (i: instruction) :=
   | Lgetstack sl ofs ty r => slot_within_bounds sl ofs ty /\ mreg_within_bounds r
   | Lsetstack r sl ofs ty => slot_within_bounds sl ofs ty
   | Lop op args res => mreg_within_bounds res
-  | Lload chunk addr args dst => mreg_within_bounds dst
+  | Lload trap chunk addr args dst => mreg_within_bounds dst
   | Lcall sig ros => size_arguments sig <= bound_outgoing b
   | Lbuiltin ef args res =>
        (forall r, In r (params_of_builtin_res res) \/ In r (destroyed_by_builtin ef) -> mreg_within_bounds r)
@@ -104,7 +104,7 @@ Definition record_regs_of_instr (u: RegSet.t) (i: instruction) : RegSet.t :=
   | Lgetstack sl ofs ty r => record_reg u r
   | Lsetstack r sl ofs ty => record_reg u r
   | Lop op args res => record_reg u res
-  | Lload chunk addr args dst => record_reg u dst
+  | Lload trap chunk addr args dst => record_reg u dst
   | Lstore chunk addr args src => u
   | Lcall sig ros => u
   | Ltailcall sig ros => u
@@ -280,7 +280,7 @@ Definition defined_by_instr (r': mreg) (i: instruction) :=
   match i with
   | Lgetstack sl ofs ty r => r' = r
   | Lop op args res => r' = res
-  | Lload chunk addr args dst => r' = dst
+  | Lload trap chunk addr args dst => r' = dst
   | Lbuiltin ef args res => In r' (params_of_builtin_res res) \/ In r' (destroyed_by_builtin ef)
   | _ => False
   end.

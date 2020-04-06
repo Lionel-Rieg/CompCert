@@ -80,14 +80,19 @@ BACKEND=\
   Tailcall.v Tailcallproof.v \
   Inlining.v Inliningspec.v Inliningproof.v \
   Renumber.v Renumberproof.v \
+  Duplicate.v Duplicateproof.v \
   RTLtyping.v \
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
   ConstpropOp.v Constprop.v ConstpropOpproof.v Constpropproof.v \
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
+  CSE2deps.v CSE2depsproof.v \
+  CSE2.v CSE2proof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
+  ForwardMoves.v ForwardMovesproof.v \
+  Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \
   Linear.v Lineartyping.v \
@@ -262,7 +267,7 @@ endif
 
 
 clean:
-	rm -f $(patsubst %, %/*.vo, $(DIRS))
+	rm -f $(patsubst %, %/*.vo*, $(DIRS))
 	rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	rm -rf doc/html doc/*.glob
 	rm -f driver/Version.ml

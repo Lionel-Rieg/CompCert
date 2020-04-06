@@ -27,6 +27,14 @@ let name_of_type = function
   | Tany32 -> "any32"
   | Tany64 -> "any64"
 
+let name_of_rettype = function
+  | Tret t -> name_of_type t
+  | Tvoid -> "void"
+  | Tint8signed -> "int8s"
+  | Tint8unsigned -> "int8u"
+  | Tint16signed -> "int16s"
+  | Tint16unsigned -> "int16u"
+
 let name_of_chunk = function
   | Mint8signed -> "int8s"
   | Mint8unsigned -> "int8u"
@@ -90,3 +98,7 @@ let rec print_builtin_res px oc = function
       fprintf oc "splitlong(%a, %a)"
                  (print_builtin_res px) hi (print_builtin_res px) lo
 
+let print_trapping_mode oc = function
+  | TRAP -> ()
+  | NOTRAP -> output_string oc " [notrap]"
+                

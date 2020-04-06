@@ -1,7 +1,7 @@
 
-// typedef void * va_list;
-// unsigned int __compcert_va_int32(va_list * ap);
-// unsigned long long __compcert_va_int64(va_list * ap);
+# typedef void * va_list;
+# unsigned int __compcert_va_int32(va_list * ap);
+# unsigned long long __compcert_va_int64(va_list * ap);
 
 	.text
 	.balign 2

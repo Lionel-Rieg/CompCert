@@ -79,7 +79,7 @@ Definition transfer
             reg_list_live args (reg_dead res after)
           else
             after
-      | Iload chunk addr args dst s =>
+      | Iload trap chunk addr args dst s =>
           if Regset.mem dst after then
             reg_list_live args (reg_dead dst after)
           else
@@ -94,7 +94,7 @@ Definition transfer
       | Ibuiltin ef args res s =>
           reg_list_live (params_of_builtin_args args)
             (reg_list_dead (params_of_builtin_res res) after)
-      | Icond cond args ifso ifnot =>
+      | Icond cond args ifso ifnot _ =>
           reg_list_live args after
       | Ijumptable arg tbl =>
           reg_live arg after
