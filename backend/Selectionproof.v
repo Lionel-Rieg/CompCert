@@ -196,12 +196,12 @@ Variable e: env.
 Variable m: mem.
 
 Lemma eval_condexpr_of_expr:
-  forall a le v b,
+  forall expected a le v b,
   eval_expr tge sp e m le a v ->
   Val.bool_of_val v b ->
-  eval_condexpr tge sp e m le (condexpr_of_expr a) b.
+  eval_condexpr tge sp e m le (condexpr_of_expr a expected) b.
 Proof.
-  intros until a. functional induction (condexpr_of_expr a); intros.
+  intros until a. functional induction (condexpr_of_expr a expected); intros.
 (* compare *)
   inv H. econstructor; eauto.
   simpl in H6. inv H6. apply Val.bool_of_val_of_optbool. auto.

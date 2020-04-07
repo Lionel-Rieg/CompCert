@@ -35,12 +35,13 @@ Local Open Scope error_monad_scope.
 
 (** Conversion of conditions *)
 
-Function condexpr_of_expr (e: expr) : condexpr :=
+Function condexpr_of_expr (e: expr) (expected : option bool) : condexpr :=
   match e with
-  | Eop (Ocmp c) el => CEcond c el
-  | Econdition a b c => CEcondition a (condexpr_of_expr b) (condexpr_of_expr c)
-  | Elet a b => CElet a (condexpr_of_expr b)
-  | _ => CEcond (Ccompuimm Cne Int.zero) (e ::: Enil)
+  | Eop (Ocmp c) el => CEcond c expected el
+  | Econdition a b c => CEcondition a (condexpr_of_expr b expected)
+                                      (condexpr_of_expr c expected)
+  | Elet a b => CElet a (condexpr_of_expr b expected)
+  | _ => CEcond (Ccompuimm Cne Int.zero) expected (e ::: Enil)
   end.
 
 Function condition_of_expr (e: expr) : condition * exprlist :=
@@ -167,7 +168,7 @@ Definition sel_select (ty: typ) (cnd ifso ifnot: expr) : expr :=
    let (cond, args) := condition_of_expr cnd in
    match SelectOp.select ty cond args ifso ifnot with
    | Some a => a
-   | None => Econdition (condexpr_of_expr cnd) ifso ifnot
+   | None => Econdition (condexpr_of_expr cnd None) ifso ifnot
    end.
 
 (** Conversion from Cminor expression to Cminorsel expressions *)
@@ -293,16 +294,16 @@ Fixpoint sel_switch (arg: nat) (t: comptree): exitexpr :=
   | CTaction act =>
       XEexit act
   | CTifeq key act t' =>
-      XEcondition (condexpr_of_expr (make_cmp_eq (Eletvar arg) key))
+      XEcondition (condexpr_of_expr (make_cmp_eq (Eletvar arg) key) None)
                   (XEexit act)
                   (sel_switch arg t')
   | CTiflt key t1 t2 =>
-      XEcondition (condexpr_of_expr (make_cmp_ltu (Eletvar arg) key))
+      XEcondition (condexpr_of_expr (make_cmp_ltu (Eletvar arg) key) None)
                   (sel_switch arg t1)
                   (sel_switch arg t2)
   | CTjumptable ofs sz tbl t' =>
       XElet (make_sub (Eletvar arg) ofs)
-        (XEcondition (condexpr_of_expr (make_cmp_ltu (Eletvar O) sz))
+        (XEcondition (condexpr_of_expr (make_cmp_ltu (Eletvar O) sz) None)
                      (XEjumptable (make_to_int (Eletvar O)) tbl)
                      (sel_switch (S arg) t'))
   end.
@@ -377,6 +378,22 @@ Definition if_conversion
   | _, _ => None
   end.
 
+Definition extract_expect1 (e : Cminor.expr) : option bool :=
+  match e with
+  | Cminor.Ebinop (Cminor.Oexpect ty) e1 (Cminor.Econst (Cminor.Ointconst c)) =>
+    Some (if Int.eq_dec c Int.zero then false else true)
+  | Cminor.Ebinop (Cminor.Oexpect ty) e1 (Cminor.Econst (Cminor.Olongconst c)) =>
+    Some (if Int64.eq_dec c Int64.zero then false else true)
+  | _ => None
+  end.
+
+Definition extract_expect (e : Cminor.expr) : option bool :=
+  match e with
+  | Cminor.Ebinop (Cminor.Ocmpu Cne) e1 (Cminor.Econst (Cminor.Ointconst c)) =>
+    if Int.eq_dec c Int.zero then extract_expect1 e1 else None
+  | _ => extract_expect1 e
+  end.
+
 (** Conversion from Cminor statements to Cminorsel statements. *)
 
 Fixpoint sel_stmt (ki: known_idents) (env: typenv) (s: Cminor.stmt) : res stmt :=
@@ -404,8 +421,10 @@ Fixpoint sel_stmt (ki: known_idents) (env: typenv) (s: Cminor.stmt) : res stmt :
       match if_conversion ki env e ifso ifnot with
       | Some s => OK s
       | None =>
-          do ifso' <- sel_stmt ki env ifso; do ifnot' <- sel_stmt ki env ifnot;
-          OK (Sifthenelse (condexpr_of_expr (sel_expr e)) ifso' ifnot')
+        do ifso' <- sel_stmt ki env ifso;
+        do ifnot' <- sel_stmt ki env ifnot;
+        OK (Sifthenelse (condexpr_of_expr (sel_expr e)
+                          (extract_expect e)) ifso' ifnot')
       end
   | Cminor.Sloop body =>
       do body' <- sel_stmt ki env body; OK (Sloop body')
