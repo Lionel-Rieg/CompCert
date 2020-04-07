@@ -900,6 +900,14 @@ let rec convertExpr env e =
   | C.ECompound(ty1, ie) ->
       unsupported "compound literals"; ezero
 
+  | C.ECall({edesc = C.EVar {name = "__builtin_expect"}}, args) ->
+     (match args with
+      | [e1; e2] ->
+         ewrap (Ctyping.ebinop Cop.Oexpect (convertExpr env e1) (convertExpr env e2))
+      | _ -> 
+       error "__builtin_expect wants two arguments";
+       ezero)
+
   | C.ECall({edesc = C.EVar {name = "__builtin_debug"}}, args) when List.length args < 2 ->
       error "too few arguments to function call, expected at least 2, have 0";
       ezero

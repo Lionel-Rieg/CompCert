@@ -770,53 +770,53 @@ Proof.
 (* val *)
   simpl in H. destruct v; monadInv H; exists (@nil ident); split; auto with gensym.
 Opaque makeif.
-  intros. destruct dst; simpl in *; inv H2.
+- intros. destruct dst; simpl in *; inv H2.
     constructor. auto. intros; constructor.
     constructor.
     constructor. auto. intros; constructor.
-  intros. destruct dst; simpl in *; inv H2.
+- intros. destruct dst; simpl in *; inv H2.
     constructor. auto. intros; constructor.
     constructor.
     constructor. auto. intros; constructor.
-  intros. destruct dst; simpl in *; inv H2.
+- intros. destruct dst; simpl in *; inv H2.
     constructor. auto. intros; constructor.
     constructor.
     constructor. auto. intros; constructor.
-  intros. destruct dst; simpl in *; inv H2.
+- intros. destruct dst; simpl in *; inv H2.
     constructor. auto. intros; constructor.
     constructor.
     constructor. auto. intros; constructor.
 (* var *)
-  monadInv H; econstructor; split; auto with gensym. UseFinish. constructor.
+- monadInv H; econstructor; split; auto with gensym. UseFinish. constructor.
 (* field *)
-  monadInv H0. exploit H; eauto. auto. intros [tmp [A B]]. UseFinish.
+- monadInv H0. exploit H; eauto. auto. intros [tmp [A B]]. UseFinish.
   econstructor; split; eauto. intros; apply tr_expr_add_dest. constructor; auto.
 (* valof *)
-  monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
   exploit transl_valof_meets_spec; eauto. intros [tmp2 [Csyntax D]]. UseFinish.
   exists (tmp1 ++ tmp2); split.
   intros; apply tr_expr_add_dest. econstructor; eauto with gensym.
   eauto with gensym.
 (* deref *)
-  monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
+- monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
   econstructor; split; eauto. intros; apply tr_expr_add_dest. constructor; auto.
 (* addrof *)
-  monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
+- monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
   econstructor; split; eauto. intros; apply tr_expr_add_dest. econstructor; eauto.
 (* unop *)
-  monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
+- monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
   econstructor; split; eauto. intros; apply tr_expr_add_dest. constructor; auto.
 (* binop *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto. intros [tmp2 [Csyntax D]]. UseFinish.
   exists (tmp1 ++ tmp2); split.
   intros; apply tr_expr_add_dest. econstructor; eauto with gensym.
   eauto with gensym.
 (* cast *)
-  monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
+- monadInv H0. exploit H; eauto. intros [tmp [A B]]. UseFinish.
   econstructor; split; eauto. intros; apply tr_expr_add_dest. constructor; auto.
 (* seqand *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   destruct dst; monadInv EQ0.
   (* for value *)
   exploit H0; eauto with gensym. intros [tmp2 [C D]].
@@ -840,7 +840,7 @@ Opaque makeif.
   apply list_disjoint_cons_r; eauto with gensym.
   apply contained_app; eauto with gensym.
 (* seqor *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   destruct dst; monadInv EQ0.
   (* for value *)
   exploit H0; eauto with gensym. intros [tmp2 [Csyntax D]].
@@ -864,7 +864,7 @@ Opaque makeif.
   apply list_disjoint_cons_r; eauto with gensym.
   apply contained_app; eauto with gensym.
 (* condition *)
-  monadInv H2. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H2. exploit H; eauto. intros [tmp1 [A B]].
   destruct dst; monadInv EQ0.
   (* for value *)
   exploit H0; eauto with gensym. intros [tmp2 [C D]].
@@ -896,13 +896,13 @@ Opaque makeif.
   apply contained_app; eauto with gensym.
   apply contained_app; eauto with gensym.
 (* sizeof *)
-  monadInv H. UseFinish.
+- monadInv H. UseFinish.
   exists (@nil ident); split; auto with gensym. constructor.
 (* alignof *)
-  monadInv H. UseFinish.
+- monadInv H. UseFinish.
   exists (@nil ident); split; auto with gensym. constructor.
 (* assign *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto. intros [tmp2 [Csyntax D]].
   destruct dst; monadInv EQ2; simpl add_dest in *.
   (* for value *)
@@ -921,7 +921,7 @@ Opaque makeif.
   apply contained_cons. eauto with gensym.
   apply contained_app; eauto with gensym.
 (* assignop *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto. intros [tmp2 [Csyntax D]].
   exploit transl_valof_meets_spec; eauto. intros [tmp3 [E F]].
   destruct dst; monadInv EQ3; simpl add_dest in *.
@@ -941,7 +941,7 @@ Opaque makeif.
   apply contained_cons. eauto with gensym.
   apply contained_app; eauto with gensym.
 (* postincr *)
-  monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
   destruct dst; monadInv EQ0; simpl add_dest in *.
   (* for value *)
   exists (x0 :: tmp1); split.
@@ -958,7 +958,7 @@ Opaque makeif.
   econstructor; eauto with gensym.
   apply contained_cons; eauto with gensym.
 (* comma *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto with gensym. intros [tmp2 [Csyntax D]].
   exists (tmp1 ++ tmp2); split.
   econstructor; eauto with gensym.
@@ -968,7 +968,7 @@ Opaque makeif.
   destruct dst; simpl; auto with gensym.
   apply contained_app; eauto with gensym.
 (* call *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto. intros [tmp2 [Csyntax D]].
   destruct dst; monadInv EQ2; simpl add_dest in *.
   (* for value *)
@@ -986,7 +986,7 @@ Opaque makeif.
   apply contained_cons. eauto with gensym.
   apply contained_app; eauto with gensym.
 (* builtin *)
-  monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H0. exploit H; eauto. intros [tmp1 [A B]].
   destruct dst; monadInv EQ0; simpl add_dest in *.
   (* for value *)
   exists (x0 :: tmp1); split.
@@ -1001,13 +1001,13 @@ Opaque makeif.
   repeat rewrite app_ass. econstructor; eauto with gensym. congruence.
   apply contained_cons; eauto with gensym.
 (* loc *)
-  monadInv H.
+- monadInv H.
 (* paren *)
-  monadInv H0.
+- monadInv H0.
 (* nil *)
-  monadInv H; exists (@nil ident); split; auto with gensym. constructor.
+- monadInv H; exists (@nil ident); split; auto with gensym. constructor.
 (* cons *)
-  monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
+- monadInv H1. exploit H; eauto. intros [tmp1 [A B]].
   exploit H0; eauto. intros [tmp2 [Csyntax D]].
   exists (tmp1 ++ tmp2); split.
   econstructor; eauto with gensym.
