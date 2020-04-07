@@ -64,6 +64,7 @@ Definition type_binop (op: binary_operation) : typ * typ * typ :=
   | Ocmpf _ => (Tfloat, Tfloat, Tint)
   | Ocmpfs _ => (Tsingle, Tsingle, Tint)
   | Ocmpl _ | Ocmplu _ => (Tlong, Tlong, Tint)
+  | Oexpect ty => (ty, ty, ty)
   end.
 
 Module RTLtypes <: TYPE_ALGEBRA.

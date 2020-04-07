@@ -120,6 +120,7 @@ Definition sel_unop (op: Cminor.unary_operation) (arg: expr) : expr :=
 
 Definition sel_binop (op: Cminor.binary_operation) (arg1 arg2: expr) : expr :=
   match op with
+  | Cminor.Oexpect ty => arg1
   | Cminor.Oadd => add arg1 arg2
   | Cminor.Osub => sub arg1 arg2
   | Cminor.Omul => mul arg1 arg2
@@ -244,7 +245,7 @@ Function sel_known_builtin (bf: builtin_function) (args: exprlist) :=
   match bf, args with
   | BI_platform b, _ =>
     SelectOp.platform_builtin b args
-  | BI_standard BI_expect, a1 ::: a2 ::: Enil => Some a1
+(*  | BI_standard BI_expect, a1 ::: a2 ::: Enil => Some a1 *)
   | BI_standard (BI_select ty), a1 ::: a2 ::: a3 ::: Enil =>
       Some (sel_select ty a1 a2 a3)
   | BI_standard BI_fabs, a1 ::: Enil =>
