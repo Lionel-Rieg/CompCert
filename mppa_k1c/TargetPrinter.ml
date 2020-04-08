@@ -241,9 +241,7 @@ module Target (*: TARGET*) =
   *)
 
     (* Profiling *)
-
-    let profiling_counter_table_name = ".compcert_profiling_counters"
-    and profiling_id_table_name = ".compcert_profiling_ids"
+    
     let profiling_table : (Digest.t, int) Hashtbl.t = Hashtbl.create 1000;;
     let next_profiling_position = ref 0;;
     let profiling_position (x : Digest.t) : int =
@@ -270,6 +268,11 @@ module Target (*: TARGET*) =
         if i < 15 then output_char oc ','
       done;
       output_char oc '\n';;
+
+    let profiling_counter_table_name = ".compcert_profiling_counters"
+    and profiling_id_table_name = ".compcert_profiling_ids"
+    and profiling_write_table = ".compcert_profiling_write_table"
+    and profiling_write_table_helper = "_compcert_write_profiling_table";;
       
     let print_profiling oc =
       let nr_items = !next_profiling_position in
@@ -280,7 +283,17 @@ module Target (*: TARGET*) =
             profiling_counter_table_name (nr_items * 16);
           fprintf oc "	.section	.rodata\n";
           fprintf oc "%s:\n" profiling_id_table_name;
-          Array.iter (print_profiling_id oc) (profiling_ids ())
+          Array.iter (print_profiling_id oc) (profiling_ids ());
+          fprintf oc "	.text\n";
+          fprintf oc "%s:\n" profiling_write_table;
+          fprintf oc "	make $r0 = %d\n" nr_items;
+          fprintf oc "	make $r1 = %s\n" profiling_id_table_name;
+          fprintf oc "	make $r2 = %s\n" profiling_counter_table_name;
+          fprintf oc "	goto	%s\n" profiling_write_table_helper;
+          fprintf oc "	;;\n";
+          fprintf oc "	.section	.dtors.65435,\"aw\",@progbits\n";
+          fprintf oc "	.align 8\n";
+          fprintf oc "	.8byte	%s\n" profiling_write_table
         end;;
     
     (* Offset part of a load or store *)

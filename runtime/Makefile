@@ -38,6 +38,8 @@ OBJS=i64_dtos.o i64_dtou.o i64_sar.o i64_sdiv.o i64_shl.o \
   vararg.o
 endif
 
+OBJS+=write_profiling_table.o
+
 LIB=libcompcert.a
 
 INCLUDES=include/float.h include/stdarg.h include/stdbool.h \
