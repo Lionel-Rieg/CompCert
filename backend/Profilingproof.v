@@ -194,7 +194,7 @@ Proof.
   destruct fd; simpl; trivial.
 Qed.
 
-Hint Resolve symbols_preserved funsig_preserved : profiling.
+Hint Resolve symbols_preserved funsig_preserved external_call_symbols_preserved senv_preserved : profiling.
 
 Lemma step_simulation:
   forall s1 t s2 (STEP : step ge s1 t s2)
@@ -254,7 +254,13 @@ Proof.
       apply find_function_translated with (fd := fd).
       all: eauto with profiling.
     + constructor; auto.
-  - admit.
+  - econstructor; split.
+    + apply plus_one.
+      apply exec_Ibuiltin with (ef:=ef) (args:=args) (vargs:=vargs).
+      erewrite transf_function_at; eauto. apply I.
+      apply eval_builtin_args_preserved with (ge1:=ge).
+      all: eauto with profiling.
+    + constructor; auto.
   - admit.
   - admit.
   - admit.
