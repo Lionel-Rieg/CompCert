@@ -1569,7 +1569,7 @@ Definition external_call (ef: external_function): extcall_sem :=
   | EF_annot_val kind txt targ => extcall_annot_val_sem txt targ
   | EF_inline_asm txt sg clb => inline_assembly_sem txt sg
   | EF_debug kind txt targs => extcall_debug_sem
-  | EF_profiling id       => extcall_profiling_sem
+  | EF_profiling id kind  => extcall_profiling_sem
   end.
 
 Theorem external_call_spec:

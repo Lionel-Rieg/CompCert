@@ -223,6 +223,7 @@ Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -falign-branch-targets <n>  Set alignment (in bytes) of branch targets
   -falign-cond-branches <n>  Set alignment (in bytes) of conditional branches
   -fcommon       Put uninitialized globals in the common section [on].
+  -fprofile-arcs  Profile branches [off].
 |} ^
  target_help ^
  toolchain_help ^
@@ -412,7 +413,8 @@ let cmdline_actions =
   @ f_opt "coalesce-mem" option_fcoalesce_mem
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
   @ f_opt "forward-moves" option_fforward_moves
-(* Code generation options *)
+ (* Code generation options *)
+  @ f_opt "profile-arcs" option_profile_arcs  
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
   @ [

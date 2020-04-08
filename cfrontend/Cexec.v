@@ -535,7 +535,7 @@ Definition do_external (ef: external_function):
   | EF_annot_val kind text targ => do_ef_annot_val text targ
   | EF_inline_asm text sg clob => do_inline_assembly text sg ge
   | EF_debug kind text targs => do_ef_debug kind text targs
-  | EF_profiling id => do_ef_profiling id
+  | EF_profiling id kind => do_ef_profiling id
   end.
 
 Lemma do_ef_external_sound:

@@ -75,6 +75,9 @@ Parameter all_loads_nontrap: unit -> bool.
 (** Flag -fforward-moves. Forward moves after CSE. *)
 Parameter optim_forward_moves: unit -> bool.
 
+(** Flag -fprofile-arcs. Add profiling logger. *)
+Parameter profile_arcs : unit -> bool.
+
 (* TODO is there a more appropriate place? *)
 Require Import Coqlib.
 Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.

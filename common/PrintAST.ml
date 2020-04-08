@@ -62,8 +62,8 @@ let name_of_external = function
   | EF_inline_asm(text, sg, clob) -> sprintf "inline_asm %S" (camlstring_of_coqstring text)
   | EF_debug(kind, text, targs) ->
      sprintf "debug%d %S" (P.to_int kind) (extern_atom text)
-  | EF_profiling(id) ->
-     sprintf "profiling %LX" (Z.to_int64 id)
+  | EF_profiling(id, kind) ->
+     sprintf "profiling %LX %d" (Z.to_int64 id) (Z.to_int kind)
 
 let rec print_builtin_arg px oc = function
   | BA x -> px oc x
