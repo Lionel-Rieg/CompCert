@@ -187,12 +187,36 @@ Inductive match_states: RTL.state -> RTL.state -> Prop :=
       match_states (Returnstate stk v m)
                    (Returnstate stk' v m).
 
+Hint Resolve symbols_preserved : profiling.
+
 Lemma step_simulation:
   forall s1 t s2 (STEP : step ge s1 t s2)
   s1' (MS: match_states s1 s1'),
   exists s2', plus step tge s1' t s2' /\ match_states s2 s2'.
 Proof.
   induction 1; intros; inv MS.
+  - econstructor; split.
+    + apply plus_one. apply exec_Inop.
+      erewrite transf_function_at; eauto. apply I.
+    + constructor; auto.
+  - econstructor; split.
+    + apply plus_one. apply exec_Iop with (op:=op) (args:=args).
+      * erewrite transf_function_at; eauto. apply I.
+      * rewrite eval_operation_preserved with (ge1:=ge);
+          eauto with profiling.
+    + constructor; auto.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
 (*
