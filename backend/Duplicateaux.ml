@@ -1,3 +1,9 @@
+(* Oracle for Duplicate pass.
+ * - Add static prediction information to Icond nodes
+ * - Performs tail duplication on interesting traces to form superblocks
+ * - (TODO: perform partial loop unrolling inside innermost loops)
+ *)
+
 open RTL
 open Maps
 open Camlcoq
@@ -5,6 +11,13 @@ open Camlcoq
 let get_some = function
 | None -> failwith "Did not get some"
 | Some thing -> thing
+
+let rtl_successors = function
+| Itailcall _ | Ireturn _ -> []
+| Icall(_,_,_,_,n) | Ibuiltin(_,_,_,n) | Inop n | Iop (_,_,_,n)
+| Iload (_,_,_,_,_,n) | Istore (_,_,_,_,n) -> [n]
+| Icond (_,_,n1,n2,_) -> [n1; n2]
+| Ijumptable (_,ln) -> ln
 
 let bfs code entrypoint = begin
   Printf.printf "bfs\n"; flush stdout;
@@ -22,13 +35,8 @@ let bfs code entrypoint = begin
         | None -> failwith "No such node"
         | Some i ->
             bfs_list := !node :: !bfs_list;
-            match i with
-            | Icall(_, _, _, _, n) -> Queue.add n to_visit
-            | Ibuiltin(_, _, _, n) -> Queue.add n to_visit
-            | Ijumptable(_, ln) -> List.iter (fun n -> Queue.add n to_visit) ln
-            | Itailcall _ | Ireturn _ -> ()
-            | Icond (_, _, n1, n2, _) -> Queue.add n1 to_visit; Queue.add n2 to_visit
-            | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> Queue.add n to_visit
+            let succ = rtl_successors i in
+            List.iter (fun n -> Queue.add n to_visit) succ
       end
     done;
     List.rev !bfs_list
@@ -43,12 +51,7 @@ let get_predecessors_rtl code = begin
   Printf.printf "get_predecessors_rtl\n"; flush stdout;
   let preds = ref (PTree.map (fun n i -> []) code) in
   let process_inst (node, i) =
-    let succ = match i with
-      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
-      | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
-      | Icond (_,_,n1,n2,_) -> [n1;n2]
-      | Ijumptable (_,ln) -> ln
-      | Itailcall _ | Ireturn _ -> []
+    let succ = rtl_successors i
     in List.iter (fun s ->
       let previous_preds = ptree_get_some s !preds in
       if optbool @@ List.find_opt (fun e -> e == node) previous_preds then ()
@@ -113,13 +116,7 @@ let get_loop_headers code entrypoint = begin
           visited := PTree.set node Processed !visited;
           match PTree.get node code with
           | None -> failwith "No such node"
-          | Some i -> let next_visits = (match i with
-            | Icall (_, _, _, _, n) | Ibuiltin (_, _, _, n) | Inop n | Iop (_, _, _, n)
-            | Iload (_, _, _, _, _, n) | Istore (_, _, _, _, n) -> [n]
-            | Icond (_, _, n1, n2, _) -> [n1; n2]
-            | Itailcall _ | Ireturn _ -> []
-            | Ijumptable (_, ln) -> ln
-            ) in dfs_visit code next_visits;
+          | Some i -> let next_visits = rtl_successors i in dfs_visit code next_visits;
           visited := PTree.set node Visited !visited;
           dfs_visit code ln
         end
@@ -143,16 +140,13 @@ let ptree_printbool pt =
  * the given predicate *)
 let rec look_ahead code node is_loop_header predicate =
   if (predicate node) then true
-  else match (get_some @@ PTree.get node code) with
-    | Ireturn _ | Itailcall _ | Icond _ | Ijumptable _ -> false
-    | Inop n | Iop (_, _, _, n) | Iload (_, _, _, _, _, n)
-    | Istore (_, _, _, _, n) | Icall (_, _, _, _, n)
-    | Ibuiltin (_, _, _, n) ->
-      if (predicate n) then true
-      else (
-        if (get_some @@ PTree.get n is_loop_header) then false
-        else look_ahead code n is_loop_header predicate
-      )
+  else match (rtl_successors @@ get_some @@ PTree.get node code) with
+    | [n] -> if (predicate n) then true
+        else (
+          if (get_some @@ PTree.get n is_loop_header) then false
+          else look_ahead code n is_loop_header predicate
+        )
+    | _ -> false
 
 let do_call_heuristic code cond ifso ifnot is_loop_header =
   begin
@@ -233,11 +227,11 @@ let get_loop_info is_loop_header bfs_order code =
       else if src == dest then true
       else begin
         visited := PTree.set src true !visited;
-        match get_some @@ PTree.get src code with
-        | Inop s | Iop (_, _, _, s) | Iload (_,_,_,_,_,s) | Istore (_,_,_,_,s) | Icall (_,_,_,_,s)
-        | Ibuiltin (_,_,_,s) -> explore s dest
-        | Icond (_,_,s1,s2,_) -> (explore s1 dest) || (explore s2 dest)
-        | Ijumptable _ | Itailcall _ | Ireturn _ -> false
+        match rtl_successors @@ get_some @@ PTree.get src code with
+        | [] -> false
+        | [s] -> explore s dest
+        | [s1; s2] -> (explore s1 dest) || (explore s2 dest)
+        | _ -> false
       end
     in let rec advance_to_cb src =
       if (get_some @@ PTree.get src !visited) then None
@@ -275,14 +269,14 @@ let get_loop_info is_loop_header bfs_order code =
       | Inop s | Iop (_,_,_,s) | Iload (_,_,_,_,_,s) | Istore (_,_,_,_,s) | Icall (_,_,_,_,s)
       | Ibuiltin (_, _, _, s) ->
           if get_some @@ PTree.get s is_loop_header then mark_path s n
-      | Icond _ -> () (* loop backedges are never Icond in CompCert *)
+      | Icond _ -> () (* loop backedges are never Icond in CompCert RTL.3 *)
       | Ijumptable _ -> ()
       | Itailcall _ | Ireturn _ -> ()
     ) bfs_order;
     !loop_info
   end
 
-  (* Remark - compared to the original paper, we don't use the store heuristic *)
+(* Remark - compared to the original paper, we don't use the store heuristic *)
 let get_directions code entrypoint = begin
   Printf.printf "get_directions\n"; flush stdout;
   let bfs_order = bfs code entrypoint in
@@ -373,24 +367,6 @@ let dfs code entrypoint = begin
   in dfs_list code [entrypoint]
 end
 
-(*
-let get_predecessors_ttl code =
-  let preds = ref (PTree.map (fun n i -> []) code) in
-  let process_inst (node, ti) = match ti with
-  | Tleaf _ -> ()
-  | Tnext (_, i) -> let succ = match i with
-      | Inop n | Iop (_,_,_,n) | Iload (_, _,_,_,_,n) | Istore (_,_,_,_,n)
-      | Icall (_,_,_,_,n) | Ibuiltin (_, _, _, n) -> [n]
-      | Icond (_,_,n1,n2,_) -> [n1;n2]
-      | Ijumptable (_,ln) -> ln
-      | _ -> []
-      in List.iter (fun s -> preds := PTree.set s (node::(get_some @@ PTree.get s !preds)) !preds) succ
-  in begin
-    List.iter process_inst (PTree.elements code);
-    !preds
-  end
-*)
-
 let rec select_unvisited_node is_visited = function
 | [] -> failwith "Empty list"
 | n :: ln -> if not (ptree_get_some n is_visited) then n else select_unvisited_node is_visited ln
@@ -400,12 +376,8 @@ let best_successor_of node code is_visited =
   | None -> failwith "No such node in the code"
   | Some i ->
       let next_node = match i with
-      | Inop n -> Some n
-      | Iop (_, _, _, n) -> Some n
-      | Iload (_, _, _, _, _, n) -> Some n
-      | Istore (_, _, _, _, n) -> Some n
-      | Icall (_, _, _, _, n) -> Some n
-      | Ibuiltin (_, _, _, n) -> Some n
+      | Inop n | Iop (_,_,_,n) | Iload (_,_,_,_,_,n) | Istore(_,_,_,_,n)
+      | Icall (_,_,_,_,n) | Ibuiltin (_,_,_,n) -> Some n
       | Icond (_, _, n1, n2, ob) -> (match ob with None -> None | Some false -> Some n2 | Some true -> Some n1)
       | _ -> None
       in match next_node with
