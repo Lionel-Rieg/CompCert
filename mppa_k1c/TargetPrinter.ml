@@ -243,6 +243,7 @@ module Target (*: TARGET*) =
     (* Profiling *)
 
     let profiling_counter_table_name = ".compcert_profiling_counters"
+    and profiling_id_table_name = ".compcert_profiling_ids"
     let profiling_table : (Digest.t, int) Hashtbl.t = Hashtbl.create 1000;;
     let next_profiling_position = ref 0;;
     let profiling_position (x : Digest.t) : int =
@@ -253,14 +254,33 @@ module Target (*: TARGET*) =
                 y
       | Some y -> y;;
 
-    
+    let profiling_ids () =
+      let nr_items = !next_profiling_position in
+      let ar = Array.make nr_items "" in
+      Hashtbl.iter
+        (fun x y -> ar.(y) <- x)
+        profiling_table;
+      ar;;
+
+    let print_profiling_id oc id =
+      assert (String.length id = 16);
+      output_string oc "	.byte";
+      for i=0 to 15 do
+        fprintf oc " 0x%02x" (Char.code (String.get id i));
+        if i < 15 then output_char oc ','
+      done;
+      output_char oc '\n';;
+      
     let print_profiling oc =
       let nr_items = !next_profiling_position in
       if nr_items > 0
       then
         begin
-          fprintf oc "	.lcomm %s, %d\n"
-            profiling_counter_table_name (nr_items * 16)
+          fprintf oc "	.lcomm	%s, %d\n"
+            profiling_counter_table_name (nr_items * 16);
+          fprintf oc "	.section	.rodata\n";
+          fprintf oc "%s:\n" profiling_id_table_name;
+          Array.iter (print_profiling_id oc) (profiling_ids ())
         end;;
     
     (* Offset part of a load or store *)
