@@ -138,7 +138,9 @@ Extract Constant Compopts.va_strict =>
 Extract Constant Compopts.all_loads_nontrap =>
   "fun _ -> !Clflags.option_all_loads_nontrap".
 Extract Constant Compopts.profile_arcs =>
-  "fun _ -> !Clflags.option_profile_arcs".
+"fun _ -> !Clflags.option_profile_arcs".
+Extract Constant Compopts.branch_probabilities =>
+  "fun _ -> !Clflags.option_fbranch_probabilities".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -156,6 +158,9 @@ Extract Constant AST.profiling_id => "Digest.t".
 Extract Constant AST.profiling_id_eq => "Digest.equal".
 Extract Constant Profiling.function_id => "Profilingaux.function_id".
 Extract Constant Profiling.branch_id => "Profilingaux.branch_id".
+Extract Constant ProfilingExploit.function_id => "Profilingaux.function_id".
+Extract Constant ProfilingExploit.branch_id => "Profilingaux.branch_id".
+Extract Constant ProfilingExploit.condition_oracle => "Profilingaux.condition_oracle".
 
 (* Cabs *)
 Extract Constant Cabs.loc =>

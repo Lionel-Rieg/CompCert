@@ -48,7 +48,13 @@ let load_profiling_info (filename : string) : unit =
       let id : identifier = really_input_string ic 16 in
       let counter0 = input_counter ic in
       let counter1 = input_counter ic in
-      Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id counter0 counter1; 
+      (* Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id counter0 counter1; *)
       add_profiling_counts id counter0 counter1
     done
   with End_of_file -> close_in ic;;
+
+let condition_oracle (id : identifier) : bool option =
+  let (count0, count1) = get_counts id in
+  Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1;
+  if count0 = count1 then None
+  else Some(count1 > count0);;

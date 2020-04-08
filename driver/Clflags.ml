@@ -84,3 +84,4 @@ let option_all_loads_nontrap = ref false
 let option_inline_auto_threshold = ref 0
 
 let option_profile_arcs = ref false
+let option_fbranch_probabilities = ref true

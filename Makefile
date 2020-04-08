@@ -80,6 +80,7 @@ BACKEND=\
   Tailcall.v Tailcallproof.v \
   Inlining.v Inliningspec.v Inliningproof.v \
   Profiling.v Profilingproof.v \
+  ProfilingExploit.v ProfilingExploitproof.v \
   Renumber.v Renumberproof.v \
   Duplicate.v Duplicateproof.v \
   RTLtyping.v \
