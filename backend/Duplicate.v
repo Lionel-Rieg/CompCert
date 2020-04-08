@@ -134,8 +134,8 @@ Definition verify_match_inst dupmap inst tinst :=
           else Error (msg "Different ef in Ibuiltin")
       | _ => Error (msg "verify_match_inst Ibuiltin") end
 
-  | Icond cond lr n1 n2 => match tinst with
-      | Icond cond' lr' n1' n2' =>
+  | Icond cond lr n1 n2 i => match tinst with
+      | Icond cond' lr' n1' n2' i' =>
           if (list_eq_dec Pos.eq_dec lr lr') then
             if (eq_condition cond cond') then
               do u1 <- verify_is_copy dupmap n1 n1';

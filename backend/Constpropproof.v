@@ -142,8 +142,8 @@ Inductive match_pc (f: function) (rs: regset) (m: mem): nat -> node -> node -> P
       f.(fn_code)!pc = Some (Inop s) ->
       match_pc f rs m n s pcx ->
       match_pc f rs m (S n) pc pcx
-  | match_pc_cond: forall n pc cond args s1 s2 pcx,
-      f.(fn_code)!pc = Some (Icond cond args s1 s2) ->
+  | match_pc_cond: forall n pc cond args s1 s2 pcx i,
+      f.(fn_code)!pc = Some (Icond cond args s1 s2 i) ->
       (forall b,
         eval_condition cond rs##args m = Some b ->
         match_pc f rs m n (if b then s1 else s2) pcx) ->

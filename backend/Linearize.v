@@ -179,7 +179,7 @@ Fixpoint linearize_block (b: LTL.bblock) (k: code) : code :=
       Lbuiltin ef args res :: linearize_block b' k
   | LTL.Lbranch s :: b' =>
       add_branch s k
-  | LTL.Lcond cond args s1 s2 :: b' =>
+  | LTL.Lcond cond args s1 s2 _ :: b' =>
       if starts_with s1 k then
         Lcond (negate_condition cond) args s2 :: add_branch s1 k
       else

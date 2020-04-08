@@ -156,7 +156,7 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
       VA.Bot
   | Some(Ibuiltin ef args res s) =>
       transfer_builtin ae am rm ef args res
-  | Some(Icond cond args s1 s2) =>
+  | Some(Icond cond args s1 s2 _) =>
       VA.State ae am
   | Some(Ijumptable arg tbl) =>
       VA.State ae am
