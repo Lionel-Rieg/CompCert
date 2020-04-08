@@ -152,6 +152,8 @@ Extract Constant Compopts.time  => "Timing.time_coq".
 (*Extraction Inline Compiler.apply_total Compiler.apply_partial.*)
 
 (* Profiling *)
+Extract Constant AST.profiling_id => "Digest.t".
+Extract Constant AST.profiling_id_eq => "Digest.equal".
 Extract Constant Profiling.function_id => "Profilingaux.function_id".
 Extract Constant Profiling.branch_id => "Profilingaux.branch_id".
 

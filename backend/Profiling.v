@@ -4,15 +4,15 @@ Require Import Memory Registers Op RTL.
 
 Local Open Scope positive.
 
-Parameter function_id : function -> Z.
-Parameter branch_id : Z -> node -> Z.
+Parameter function_id : function -> AST.profiling_id.
+Parameter branch_id : AST.profiling_id -> node -> AST.profiling_id.
 
 Section PER_FUNCTION_ID.
-  Variable function_id : Z.
+  Variable f_id : AST.profiling_id.
   
   Definition inject_profiling_call (prog : code)
              (pc extra_pc ifso ifnot : node) : node * code :=
-    let id := branch_id function_id pc in
+    let id := branch_id f_id pc in
     let extra_pc' := Pos.succ extra_pc in
     let prog' := PTree.set extra_pc
                            (Ibuiltin (EF_profiling id 0%Z) nil BR_none ifso) prog in

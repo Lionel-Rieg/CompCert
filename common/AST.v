@@ -465,7 +465,8 @@ Qed.
 (** * External functions *)
 
 (* Identifiers for profiling information *)
-Definition profiling_id := Z.t.
+Parameter profiling_id : Type.
+Axiom profiling_id_eq : forall (x y : profiling_id), {x=y} + {x<>y}.
 Definition profiling_kind := Z.t.
 
 (** For most languages, the functions composing the program are either
@@ -577,7 +578,7 @@ Definition ef_reloads (ef: external_function) : bool :=
 
 Definition external_function_eq: forall (ef1 ef2: external_function), {ef1=ef2} + {ef1<>ef2}.
 Proof.
-  generalize ident_eq string_dec signature_eq chunk_eq typ_eq list_eq_dec zeq Int.eq_dec; intros.
+  generalize profiling_id_eq ident_eq string_dec signature_eq chunk_eq typ_eq list_eq_dec zeq Int.eq_dec; intros.
   decide equality.
 Defined.
 Global Opaque external_function_eq.
