@@ -62,8 +62,8 @@ Definition transf_instr (fmap : PMap.t RB.t)
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>
     Itailcall sig ros (subst_args fmap pc args)
-  | Icond cond args s1 s2 =>
-    Icond cond (subst_args fmap pc args) s1 s2
+  | Icond cond args s1 s2 expected =>
+    Icond cond (subst_args fmap pc args) s1 s2 expected
   | Ijumptable arg tbl =>
     Ijumptable (subst_arg fmap pc arg) tbl
   | Ireturn (Some arg) =>
