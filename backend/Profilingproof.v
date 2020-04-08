@@ -137,6 +137,96 @@ Proof.
     lia.
 Qed.
 
+Fixpoint inject_l_position extra_pc
+         (injections : list node)
+         (k : nat) {struct injections} : node :=
+  match injections with
+  | nil => extra_pc
+  | pc::l' =>
+    match k with
+    | O => extra_pc
+    | S k' => inject_l_position (extra_pc + 2) l' k'
+    end
+  end.
+
+Lemma inject_l_position_increases : forall injections pc k,
+    pc <= inject_l_position pc injections k.
+Proof.
+  induction injections; simpl; intros.
+  lia.
+  destruct k.
+  lia.
+  specialize IHinjections with (pc := pc + 2) (k := k).
+  lia.
+Qed.
+
+Lemma inject_l_injected0:
+  forall f_id  cond args ifso ifnot expected injections body injnum pc extra_pc
+         (INSTR : body ! pc = Some  (Icond cond args ifso ifnot expected))
+         (BELOW : forallb (fun pc => pc <? extra_pc) injections = true)
+         (NOREPET : list_norepet injections)
+         (NUMBER : nth_error injections injnum = Some pc),
+    PTree.get (inject_l_position extra_pc injections injnum)
+              (snd (inject_l f_id body extra_pc injections)) =
+    Some (Ibuiltin (EF_profiling (branch_id f_id pc) 0%Z) nil BR_none ifso).
+Proof.
+  induction injections; intros.
+  { rewrite nth_error_nil in NUMBER.
+    discriminate NUMBER. }
+  simpl in BELOW.
+  rewrite andb_true_iff in BELOW.
+  destruct BELOW as [BELOW1 BELOW2].
+  unfold inject_l.
+  simpl fold_left.
+  rewrite pair_expand with (p := inject_at f_id body a extra_pc).
+  progress fold (inject_l f_id (snd (inject_at f_id body a extra_pc))
+              (fst (inject_at f_id body a extra_pc))
+              injections).
+  destruct injnum as [ | injnum']; simpl in NUMBER.
+  { inv NUMBER.
+    rewrite inject_l_preserves; simpl.
+    - unfold inject_at.
+      rewrite INSTR.
+      unfold inject_profiling_call. simpl.
+      rewrite PTree.gso by lia.
+      apply PTree.gss.
+    - rewrite inject_at_increases.
+      lia.
+    -  rewrite forallb_forall.
+      rewrite forallb_forall in BELOW2.
+      intros loc IN.
+      specialize BELOW2 with loc.
+      apply BELOW2 in IN.
+      destruct peq as [EQ | ]; trivial.
+      rewrite EQ in IN.
+      rewrite Pos.ltb_lt in IN.
+      lia.
+  }
+  simpl.
+  rewrite inject_at_increases.
+  
+  apply IHinjections.
+  - rewrite inject_at_preserves; trivial.
+    + rewrite forallb_forall in BELOW2.
+      rewrite <- Pos.ltb_lt.
+      apply nth_error_In in NUMBER.
+      auto.
+    + inv NOREPET.
+      intro ZZZ.
+      subst a.
+      apply nth_error_In in NUMBER.
+      auto.
+
+  - rewrite forallb_forall in BELOW2.
+    rewrite forallb_forall.
+    intros.
+    specialize BELOW2 with x.
+    rewrite Pos.ltb_lt in *.
+    intuition lia.
+  - inv NOREPET. trivial.
+  - trivial.
+Qed.
+  
 Lemma transf_function_at:
   forall f pc i
     (CODE : f.(fn_code)!pc = Some i)
