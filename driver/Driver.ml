@@ -417,7 +417,8 @@ let cmdline_actions =
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
   @ f_opt "forward-moves" option_fforward_moves
  (* Code generation options *)
-  @ f_opt "profile-arcs" option_profile_arcs  
+  @ f_opt "profile-arcs" option_profile_arcs
+  @ f_opt "branch-probabilities" option_fbranch_probabilities
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
   @ [
