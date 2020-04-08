@@ -13,6 +13,12 @@
 open LTL
 open Maps
 
+let debug_flag = ref false
+
+let debug fmt =
+  if !debug_flag then Printf.eprintf fmt
+  else Printf.ifprintf stderr fmt
+
 (* Trivial enumeration, in decreasing order of PC *)
 
 (***
@@ -115,18 +121,11 @@ let enumerate_aux_flat f reach =
   flatten_blocks (basic_blocks f (join_points f))
 
 (**
- * Enumeration based on traces as identified by Duplicate.v 
+ * Alternate enumeration based on traces as identified by Duplicate.v 
  *
- * The Duplicate phase heuristically identifies the most frequented paths. Each
- * Icond is modified so that the preferred condition is a fallthrough (ifnot)
- * rather than a branch (ifso).
- *
- * The enumeration below takes advantage of this - preferring to layout nodes
- * following the fallthroughs of the Lcond branches.
- *
- * It is slightly adapted from the work of Petris and Hansen 90 on intraprocedural
- * code positioning - only we do it on a broader grain, since we don't have the exact
- * frequencies (we only know which branch is the preferred one)
+ * This is a slight alteration to the above heuristic, ensuring that any
+ * superblock will be contiguous in memory, while still following the original
+ * heuristic
  *)
 
 let get_some = function
@@ -145,9 +144,11 @@ let print_plist l =
   | [] -> ()
   | n :: l -> Printf.printf "%d, " (P.to_int n); f l
   in begin
-    Printf.printf "[";
-    f l;
-    Printf.printf "]"
+    if !debug_flag then begin
+      Printf.printf "[";
+      f l;
+      Printf.printf "]"
+    end
   end
 
 (* adapted from the above join_points function, but with PTree *)
@@ -173,7 +174,7 @@ let forward_sequences code entry =
   let join_points = get_join_points code entry in
   (* returns the list of traversed nodes, and a list of nodes to start traversing next *)
   let rec traverse_fallthrough code node =
-    (* Printf.printf "Traversing %d..\n" (P.to_int node); *)
+    (* debug "Traversing %d..\n" (P.to_int node); *)
     if not (get_some @@ PTree.get node !visited) then begin
       visited := PTree.set node true !visited;
       match PTree.get node code with
@@ -182,19 +183,19 @@ let forward_sequences code entry =
           let ln, rem = match (last_element bb) with
           | Lop _ | Lload _ | Lgetstack _ | Lsetstack _ | Lstore _ | Lcall _
           | Lbuiltin _ -> assert false
-          | Ltailcall _ | Lreturn -> begin (* Printf.printf "STOP tailcall/return\n"; *) ([], []) end
+          | Ltailcall _ | Lreturn -> begin (* debug "STOP tailcall/return\n"; *) ([], []) end
           | Lbranch n ->
               if get_some @@ PTree.get n join_points then ([], [n])
               else let ln, rem = traverse_fallthrough code n in (ln, rem)
           | Lcond (_, _, ifso, ifnot, info) -> (match info with
-            | None -> begin (* Printf.printf "STOP Lcond None\n"; *) ([], [ifso; ifnot]) end
+            | None -> begin (* debug "STOP Lcond None\n"; *) ([], [ifso; ifnot]) end
             | Some false ->
                 if get_some @@ PTree.get ifnot join_points then ([], [ifso; ifnot])
                 else let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
             | Some true ->
                 let errstr = Printf.sprintf ("Inconsistency detected in node %d: ifnot is not the preferred branch") (P.to_int node) in
                   failwith errstr)
-          | Ljumptable(_, ln) -> begin (* Printf.printf "STOP Ljumptable\n"; *) ([], ln) end
+          | Ljumptable(_, ln) -> begin (* debug "STOP Ljumptable\n"; *) ([], ln) end
           in ([node] @ ln, rem)
       end
     else ([], [])
@@ -355,15 +356,19 @@ end
 module ISet = Set.Make(Int)
 
 let print_iset s = begin
-  Printf.printf "{";
-  ISet.iter (fun e -> Printf.printf "%d, " e) s;
-  Printf.printf "}"
+  if !debug_flag then begin
+    Printf.printf "{";
+    ISet.iter (fun e -> Printf.printf "%d, " e) s;
+    Printf.printf "}"
+  end
 end
 
 let print_depmap dm = begin
-  Printf.printf "[|";
-  Array.iter (fun s -> print_iset s; Printf.printf ", ") dm;
-  Printf.printf "|]\n"
+  if !debug_flag then begin
+    Printf.printf "[|";
+    Array.iter (fun s -> print_iset s; Printf.printf ", ") dm;
+    Printf.printf "|]\n"
+  end
 end
 
 let construct_depmap code entry fs =
@@ -381,7 +386,7 @@ let construct_depmap code entry fs =
       !index
     end
   in let check_and_update_depmap from target =
-    (* Printf.printf "From %d to %d\n" (P.to_int from) (P.to_int target); *)
+    (* debug "From %d to %d\n" (P.to_int from) (P.to_int target); *)
     if not (ppmap_is_true (from, target) is_loop_edge) then
       let in_index_fs = find_index_of_node from in
       let out_index_fs = find_index_of_node target in
@@ -423,14 +428,18 @@ let construct_depmap code entry fs =
   end
 
 let print_sequence s =
-  Printf.printf "[";
-  List.iter (fun n -> Printf.printf "%d, " (P.to_int n)) s;
-  Printf.printf "]\n"
+  if !debug_flag then begin
+    Printf.printf "[";
+    List.iter (fun n -> Printf.printf "%d, " (P.to_int n)) s;
+    Printf.printf "]\n"
+  end
 
 let print_ssequence ofs =
-  Printf.printf "[";
-  List.iter (fun s -> print_sequence s) ofs;
-  Printf.printf "]\n"
+  if !debug_flag then begin
+    Printf.printf "[";
+    List.iter (fun s -> print_sequence s) ofs;
+    Printf.printf "]\n"
+  end
 
 let order_sequences code entry fs =
   let fs_a = Array.of_list fs in
@@ -442,13 +451,13 @@ let order_sequences code entry fs =
       assert (not fs_evaluated.(s_id));
       ordered_fs := fs_a.(s_id) :: !ordered_fs;
       fs_evaluated.(s_id) <- true;
-      (* Printf.printf "++++++\n";
-      Printf.printf "Scheduling %d\n" s_id;
-      Printf.printf "Initial depmap: "; print_depmap depmap; *)
+      (* debug "++++++\n";
+      debug "Scheduling %d\n" s_id;
+      debug "Initial depmap: "; print_depmap depmap; *)
       Array.iteri (fun i deps ->
         depmap.(i) <- ISet.remove s_id deps
       ) depmap;
-      (* Printf.printf "Final depmap: "; print_depmap depmap; *)
+      (* debug "Final depmap: "; print_depmap depmap; *)
     end
   in let choose_best_of candidates =
     let current_best_id = ref None in
@@ -478,7 +487,7 @@ let order_sequences code entry fs =
     begin
       Array.iteri (fun i deps ->
         begin
-          (* Printf.printf "Deps of %d: " i; print_iset deps; Printf.printf "\n"; *)
+          (* debug "Deps of %d: " i; print_iset deps; debug "\n"; *)
           (* FIXME - if we keep it that way (no dependency check), remove all the unneeded stuff *)
           if ((* deps == ISet.empty && *) not fs_evaluated.(i)) then
             candidates := i :: !candidates
@@ -492,14 +501,14 @@ let order_sequences code entry fs =
       get_some (choose_best_of !candidates)
     end
   in begin
-    Printf.printf "-------------------------------\n";
-    Printf.printf "depmap: "; print_depmap depmap;
-    Printf.printf "forward sequences identified: "; print_ssequence fs;
+    debug "-------------------------------\n";
+    debug "depmap: "; print_depmap depmap;
+    debug "forward sequences identified: "; print_ssequence fs;
     while List.length !ordered_fs != List.length fs do
       let next_id = select_next () in
       evaluate next_id
     done;
-    Printf.printf "forward sequences ordered: "; print_ssequence (List.rev (!ordered_fs));
+    debug "forward sequences ordered: "; print_ssequence (List.rev (!ordered_fs));
     List.rev (!ordered_fs)
   end
 
