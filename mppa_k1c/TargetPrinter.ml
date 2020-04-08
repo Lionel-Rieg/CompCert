@@ -239,7 +239,31 @@ module Target (*: TARGET*) =
   (*let w oc =
       if Archi.ptr64 then output_string oc "w"
   *)
-(* Offset part of a load or store *)
+
+    (* Profiling *)
+
+    let profiling_counter_table_name = ".compcert_profiling_counters"
+    let profiling_table : (Digest.t, int) Hashtbl.t = Hashtbl.create 1000;;
+    let next_profiling_position = ref 0;;
+    let profiling_position (x : Digest.t) : int =
+      match Hashtbl.find_opt profiling_table x with
+      | None -> let y = !next_profiling_position in
+                next_profiling_position := succ y;
+                Hashtbl.add profiling_table x y;
+                y
+      | Some y -> y;;
+
+    
+    let print_profiling oc =
+      let nr_items = !next_profiling_position in
+      if nr_items > 0
+      then
+        begin
+          fprintf oc "	.lcomm %s, %d\n"
+            profiling_counter_table_name (nr_items * 16)
+        end;;
+    
+    (* Offset part of a load or store *)
 
     let offset oc n = ptrofs oc n 
 
@@ -328,9 +352,18 @@ module Target (*: TARGET*) =
               fprintf oc "%s begin inline assembly\n\t" comment;
               print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
-          | EF_profiling(id, kind) ->
+          | EF_profiling(id, coq_kind) ->
+             let kind = Z.to_int coq_kind in
+             assert (kind >= 0);
+             assert (kind <= 1);
              fprintf oc "%s profiling %a %d\n" comment
-               Profilingaux.pp_id id (Z.to_int kind)
+               Profilingaux.pp_id id kind;
+             fprintf oc "	make	$r63 = %s\n" profiling_counter_table_name;
+             fprintf oc "	make	$r62 = 1\n";
+             fprintf oc "	;;\n";
+             fprintf oc "	afaddd	%d[$r63] = $r62\n"
+               (((profiling_position id)*2 + kind)*8);
+             fprintf oc "	;;\n"
           | _ ->
               assert false
          end
@@ -792,8 +825,9 @@ module Target (*: TARGET*) =
       if !Clflags.option_g then begin
         section oc Section_text;
       end
-
+       
     let print_epilogue oc =
+      print_profiling oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;
