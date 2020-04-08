@@ -219,14 +219,16 @@ module Target (*: TARGET*) =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
         if C2C.atom_is_thread_local id then begin
-            fprintf oc "	addd	%a = $r13, @tprel(%s)\n" ireg r (extern_atom id)
+            (* fprintf oc "	addd	%a = $r13, @tprel(%s)\n" ireg r (extern_atom id) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%s)\n" ireg r (extern_atom id)
         end else begin
             fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
         end
      end else
      begin
         if C2C.atom_is_thread_local id then begin
-            fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs)         
+            (* fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%a)\n" ireg r symbol_offset (id, ofs)
         end else begin            
             fprintf oc "	make	%a = %a\n" ireg r symbol_offset (id, ofs)
         end
