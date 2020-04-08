@@ -248,7 +248,12 @@ Proof.
     + constructor; auto.
       constructor; auto.
       constructor.
-  - admit.
+  - econstructor; split.
+    + apply plus_one. apply exec_Itailcall with (sig:=(funsig fd)) (ros:=ros).
+      erewrite transf_function_at; eauto. apply I.
+      apply find_function_translated with (fd := fd).
+      all: eauto with profiling.
+    + constructor; auto.
   - admit.
   - admit.
   - admit.
