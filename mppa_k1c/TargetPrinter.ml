@@ -328,6 +328,9 @@ module Target (*: TARGET*) =
               fprintf oc "%s begin inline assembly\n\t" comment;
               print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
+          | EF_profiling(id, kind) ->
+             fprintf oc "%s profiling %LX %d\n" comment
+               (Z.to_int64 id) (Z.to_int kind)
           | _ ->
               assert false
          end
