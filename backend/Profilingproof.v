@@ -5,6 +5,8 @@ Require Import Registers Op RTL.
 Require Import Profiling.
 Require Import Lia.
 
+Local Open Scope positive.
+
 Definition match_prog (p tp: RTL.program) :=
   match_program (fun ctx f tf => tf = transf_fundef f) eq p tp.
 
@@ -59,6 +61,82 @@ Proof.
   eapply function_ptr_translated; eauto.
 Qed.
 
+Lemma pair_expand:
+  forall { A B : Type } (p : A*B),
+    p = ((fst p), (snd p)).
+Proof.
+  destruct p; simpl; trivial.
+Qed.
+
+Lemma inject_profiling_call_preserves:
+  forall id body pc extra_pc ifso ifnot pc0,
+    pc0 < extra_pc ->
+    PTree.get pc0 (snd (inject_profiling_call id body pc extra_pc ifso ifnot)) = PTree.get pc0 body.
+Proof.
+  intros. simpl.
+  rewrite PTree.gso by lia.
+  apply PTree.gso.
+  lia.
+Qed.
+    
+Lemma inject_at_preserves :
+  forall id body pc extra_pc pc0,
+    pc0 < extra_pc ->
+    pc0 <> pc ->
+    PTree.get pc0 (snd (inject_at id body pc extra_pc)) = PTree.get pc0 body.
+Proof.
+  intros. unfold inject_at.
+  destruct (PTree.get pc body) eqn:GET.
+  - destruct i.
+    all: try (rewrite inject_profiling_call_preserves; trivial; fail).
+    rewrite inject_profiling_call_preserves by trivial.
+    apply PTree.gso; lia.
+  - apply inject_profiling_call_preserves; trivial.
+Qed.
+
+Lemma inject_profiling_call_increases:
+  forall id body pc extra_pc ifso ifnot,
+    fst (inject_profiling_call id body pc extra_pc ifso ifnot) = extra_pc + 2.
+Proof.
+  intros.
+  simpl.
+  lia.
+Qed.
+
+Lemma inject_at_increases:
+  forall id body pc extra_pc,
+    (fst (inject_at id body pc extra_pc)) = extra_pc + 2.
+Proof.
+  intros. unfold inject_at.
+  destruct (PTree.get pc body).
+  - destruct i; apply inject_profiling_call_increases.
+  - apply inject_profiling_call_increases.
+Qed.
+
+Lemma inject_l_preserves :
+  forall id injections body extra_pc pc0,
+    pc0 < extra_pc ->
+    List.forallb (fun injection => if peq injection pc0 then false else true) injections = true ->
+    PTree.get pc0 (snd (inject_l id body extra_pc injections)) = PTree.get pc0 body.
+Proof.
+  induction injections;
+    intros until pc0; intros BEFORE ALL; simpl; trivial.
+  unfold inject_l.
+  simpl in ALL.
+  rewrite andb_true_iff in ALL.
+  destruct ALL as [NEQ ALL].
+  simpl.
+  rewrite pair_expand with (p := inject_at id body a extra_pc).
+  progress fold (inject_l id (snd (inject_at id body a extra_pc))
+              (fst (inject_at id body a extra_pc))
+              injections).
+  rewrite IHinjections; trivial.
+  - apply inject_at_preserves; trivial.
+    destruct (peq a pc0); congruence.
+  - rewrite inject_at_increases.
+    lia.
+Qed.
+
 (*
 Lemma transf_function_at:
   forall hash f pc i,
@@ -99,7 +177,6 @@ Inductive match_states: RTL.state -> RTL.state -> Prop :=
         (STACKS: list_forall2 match_frames stk stk'),
       match_states (Returnstate stk v m)
                    (Returnstate stk' v m).
-
 
 Lemma step_simulation:
   forall s1 t s2 (STEP : step ge s1 t s2)
