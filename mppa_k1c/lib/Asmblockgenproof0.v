@@ -414,7 +414,7 @@ Proof.
 Qed.
 
 
-Local Hint Resolve code_tail_0 code_tail_S.
+Local Hint Resolve code_tail_0 code_tail_S: core.
 
 Lemma code_tail_next:
   forall fn ofs c0,
@@ -458,7 +458,7 @@ Proof.
   omega.
 Qed.
 
-Local Hint Resolve code_tail_next.
+Local Hint Resolve code_tail_next: core.
 
 Lemma code_tail_next_int:
   forall fn ofs bi c,

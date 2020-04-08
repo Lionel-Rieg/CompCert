@@ -139,11 +139,11 @@ Inductive wt_instr : instruction -> Prop :=
       valid_successor s ->
       wt_instr (Ibuiltin ef args res s)
   | wt_Icond:
-      forall cond args s1 s2,
+      forall cond args s1 s2 i,
       map env args = type_of_condition cond ->
       valid_successor s1 ->
       valid_successor s2 ->
-      wt_instr (Icond cond args s1 s2)
+      wt_instr (Icond cond args s1 s2 i)
   | wt_Ijumptable:
       forall arg tbl,
       env arg = Tint ->
@@ -313,7 +313,7 @@ Definition type_instr (e: S.typenv) (i: instruction) : res S.typenv :=
         | _ => type_builtin_args e args sig.(sig_args)
         end;
       type_builtin_res e1 res (proj_sig_res sig)
- | Icond cond args s1 s2 =>
+ | Icond cond args s1 s2 _ =>
       do x1 <- check_successor s1;
       do x2 <- check_successor s2;
       S.set_list e args (type_of_condition cond)

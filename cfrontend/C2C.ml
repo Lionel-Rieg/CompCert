@@ -1272,7 +1272,7 @@ let convertFundef loc env fd =
     { a_storage = fd.fd_storage;
       a_alignment = None;
       a_size = None;
-      a_sections = Sections.for_function env id' fd.fd_attrib;
+      a_sections = Sections.for_function env loc id' fd.fd_attrib;
       a_access = Sections.Access_default;
       a_inline = inline;
       a_loc = loc };
@@ -1358,7 +1358,7 @@ let convertGlobvar loc env (sto, id, ty, optinit) =
     | Some i ->
         convertInitializer env ty i in
   let (section, access) =
-    Sections.for_variable env id' ty (optinit <> None)
+    Sections.for_variable env loc id' ty (optinit <> None)
       (match sto with
        | Storage_thread_local | Storage_thread_local_extern
        | Storage_thread_local_static -> true

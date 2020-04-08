@@ -6,7 +6,7 @@ David Monniaux, CNRS, VERIMAG
 
 Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
-Require Import Memory Registers Op RTL Maps.
+Require Import Memory Registers Op RTL Maps CSE2deps.
 
 (* Static analysis *)
 
@@ -265,7 +265,7 @@ Definition kill_sym_val (dst : reg) (sv : sym_val) :=
 Definition kill_reg (dst : reg) (rel : RELATION.t) :=
   PTree.filter1 (fun x => negb (kill_sym_val dst x))
                 (PTree.remove dst rel).
-
+  
 Definition kill_sym_val_mem (sv: sym_val) :=
   match sv with
   | SMove _ => false
@@ -273,15 +273,27 @@ Definition kill_sym_val_mem (sv: sym_val) :=
   | SLoad _ _ _ => true
   end.
 
+Definition kill_sym_val_store chunk addr args (sv: sym_val) :=
+  match sv with
+  | SMove _ => false
+  | SOp op _ => op_depends_on_memory op
+  | SLoad chunk' addr' args' => may_overlap chunk addr args chunk' addr' args'
+  end.
+
 Definition kill_mem (rel : RELATION.t) :=
   PTree.filter1 (fun x => negb (kill_sym_val_mem x)) rel.
-
 
 Definition forward_move (rel : RELATION.t) (x : reg) : reg :=
   match rel ! x with
   | Some (SMove org) => org
   | _ => x
   end.
+
+Definition kill_store1 chunk addr args rel :=
+  PTree.filter1 (fun x => negb (kill_sym_val_store chunk addr args x)) rel.
+
+Definition kill_store chunk addr args rel :=
+  kill_store1 chunk addr (List.map (forward_move rel) args) rel.
 
 Definition move (src dst : reg) (rel : RELATION.t) :=
   PTree.set dst (SMove (forward_move rel src)) (kill_reg dst rel).
@@ -393,9 +405,9 @@ Qed.
 Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
-  | Icond _ _ _ _
+  | Icond _ _ _ _ _
   | Ijumptable _ _ => Some rel
-  | Istore _ _ _ _ _ => Some (kill_mem rel)
+  | Istore chunk addr args _ _ => Some (kill_store chunk addr args rel)
   | Iop op args dst _ => Some (gen_oper op dst args rel)
   | Iload trap chunk addr args dst _ => Some (load chunk addr dst args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
@@ -457,7 +469,7 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
   match instr with
   | Iop op args dst s =>
     let args' := subst_args fmap pc args in
-    match find_op_in_fmap fmap pc op args' with
+    match (if is_trivial_op op then None else find_op_in_fmap fmap pc op args') with
     | None => Iop op args' dst s
     | Some src => Iop Omove (src::nil) dst s
     end
@@ -473,8 +485,8 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>
     Itailcall sig ros (subst_args fmap pc args)
-  | Icond cond args s1 s2 =>
-    Icond cond (subst_args fmap pc args) s1 s2
+  | Icond cond args s1 s2 i =>
+    Icond cond (subst_args fmap pc args) s1 s2 i
   | Ijumptable arg tbl =>
     Ijumptable (subst_arg fmap pc arg) tbl
   | Ireturn (Some arg) =>

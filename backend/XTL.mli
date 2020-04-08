@@ -37,7 +37,7 @@ type instruction =
   | Xtailcall of signature * (var, ident) sum * var list
   | Xbuiltin of external_function * var builtin_arg list * var builtin_res
   | Xbranch of node
-  | Xcond of condition * var list * node * node
+  | Xcond of condition * var list * node * node * bool option
   | Xjumptable of var * node list
   | Xreturn of var list
 

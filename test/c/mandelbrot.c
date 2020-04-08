@@ -59,7 +59,6 @@ int main (int argc, char **argv)
 
             if(bit_num == 8)
             {
-                printf("%c", byte_acc);
                 putc(byte_acc,stdout);
 #ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
                 fflush(stdout);
@@ -70,7 +69,6 @@ int main (int argc, char **argv)
             else if(x == w-1)
             {
                 byte_acc <<= (8-w%8);
-                printf("%c", byte_acc);
                 putc(byte_acc,stdout);
 #ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
                 fflush(stdout);

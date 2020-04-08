@@ -397,9 +397,9 @@ Definition expand_instr (ctx: context) (pc: node) (i: instruction): mon unit :=
   | Ibuiltin ef args res s =>
       set_instr (spc ctx pc)
                 (Ibuiltin ef (map (sbuiltinarg ctx) args) (sbuiltinres ctx res) (spc ctx s))
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 info =>
       set_instr (spc ctx pc)
-                (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2))
+                (Icond cond (sregs ctx args) (spc ctx s1) (spc ctx s2) info)
   | Ijumptable r tbl =>
       set_instr (spc ctx pc)
                 (Ijumptable (sreg ctx r) (List.map (spc ctx) tbl))

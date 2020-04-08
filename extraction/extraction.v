@@ -106,7 +106,7 @@ Extract Constant Compopts.generate_float_constants =>
 Extract Constant Compopts.optim_tailcalls =>
   "fun _ -> !Clflags.option_ftailcalls".
 Extract Constant Compopts.optim_duplicate =>
-  "fun _ -> !Clflags.option_fduplicate".
+  "fun _ -> (if !Clflags.option_fduplicate = -1 then false else true)".
 Extract Constant Compopts.optim_constprop =>
   "fun _ -> !Clflags.option_fconstprop".
 Extract Constant Compopts.optim_CSE =>

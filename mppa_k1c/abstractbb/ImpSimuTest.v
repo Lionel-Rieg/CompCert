@@ -304,12 +304,12 @@ Proof.
       rewrite <- EQT; eauto.
     + exploit smem_valid_set_decompose_1; eauto.
   - clear DM0. unfold hsmem_post_eval, hsmem_post_eval in * |- *; simpl.
-    Local Hint Resolve smem_valid_set_decompose_1.
+    Local Hint Resolve smem_valid_set_decompose_1: core.
     intros; case (R.eq_dec x x0).
     + intros; subst; rewrite !Dict.set_spec_eq; simpl; eauto.
     + intros; rewrite !Dict.set_spec_diff; simpl; eauto.
 Qed.
-Local Hint Resolve naive_set_correct.
+Local Hint Resolve naive_set_correct: core.
 
 Definition equiv_hsmem ge (hd1 hd2: hsmem) := 
       (forall m, allvalid ge hd1.(hpre) m <-> allvalid ge hd2.(hpre) m)
@@ -523,7 +523,7 @@ Lemma hinst_smem_correct i: forall hd hod,
   WHEN hinst_smem i hd hod ~> hd' THEN
     forall ge od d, smem_model ge od hod -> smem_model ge d hd -> (forall m, smem_valid ge d m -> smem_valid ge od m) -> smem_model ge (inst_smem i d od) hd'.
 Proof.
-  Local Hint Resolve smem_valid_set_proof.
+  Local Hint Resolve smem_valid_set_proof: core.
   induction i; simpl; wlp_simplify; eauto 15 with wlp.
 Qed.
 Global Opaque hinst_smem.
@@ -563,7 +563,7 @@ Definition bblock_hsmem: bblock -> ?? hsmem
 Lemma bblock_hsmem_correct p:
   WHEN bblock_hsmem p ~> hd THEN forall ge, smem_model ge (bblock_smem p) hd.
 Proof.
-  Local Hint Resolve hsmem_empty_correct.
+  Local Hint Resolve hsmem_empty_correct: core.
   wlp_simplify.
 Qed.
 Global Opaque bblock_hsmem.
@@ -775,7 +775,7 @@ Proof.
   intro H; erewrite <- list_term_eval_set_hid; rewrite H. apply list_term_eval_set_hid.
 Qed.
 
-Local Hint Resolve term_eval_set_hid_equiv list_term_eval_set_hid_equiv.
+Local Hint Resolve term_eval_set_hid_equiv list_term_eval_set_hid_equiv: core.
 
 Program Definition bblock_simu_test (p1 p2: bblock): ?? bool :=
   DO log <~ count_logger ();;
@@ -802,7 +802,7 @@ Obligation 2.
   wlp_simplify.
 Qed.
 
-Local Hint Resolve g_bblock_simu_test_correct.
+Local Hint Resolve g_bblock_simu_test_correct: core.
 
 Theorem bblock_simu_test_correct p1 p2:
   WHEN bblock_simu_test p1 p2 ~> b THEN b=true -> forall ge, bblock_simu ge p1 p2.
@@ -1123,7 +1123,7 @@ Definition get {A} (d:t A) (x:R.t): option A
 Definition set {A} (d:t A) (x:R.t) (v:A): t A
  := PositiveMap.add x v d.
 
-Local Hint Unfold PositiveMap.E.eq.
+Local Hint Unfold PositiveMap.E.eq: core.
 
 Lemma set_spec_eq A d x (v: A):
   get (set d x v) x = Some v.

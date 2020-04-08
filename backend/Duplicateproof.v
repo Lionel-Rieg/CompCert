@@ -23,12 +23,12 @@ Inductive match_inst (dupmap: PTree.t node): instruction -> instruction -> Prop 
       match_inst dupmap (Itailcall s ri lr) (Itailcall s ri lr)
   | match_inst_builtin: forall n n' ef la br,
       dupmap!n' = (Some n) -> match_inst dupmap (Ibuiltin ef la br n) (Ibuiltin ef la br n')
-  | match_inst_cond: forall ifso ifso' ifnot ifnot' c lr,
+  | match_inst_cond: forall ifso ifso' ifnot ifnot' c lr i i',
       dupmap!ifso' = (Some ifso) -> dupmap!ifnot' = (Some ifnot) ->
-      match_inst dupmap (Icond c lr ifso ifnot) (Icond c lr ifso' ifnot')
-  | match_inst_revcond: forall ifso ifso' ifnot ifnot' c lr,
+      match_inst dupmap (Icond c lr ifso ifnot i) (Icond c lr ifso' ifnot' i')
+  | match_inst_revcond: forall ifso ifso' ifnot ifnot' c lr i i',
       dupmap!ifso' = (Some ifso) -> dupmap!ifnot' = (Some ifnot) ->
-      match_inst dupmap (Icond c lr ifso ifnot) (Icond (negate_condition c) lr ifnot' ifso')
+      match_inst dupmap (Icond c lr ifso ifnot i) (Icond (negate_condition c) lr ifnot' ifso' i')
   | match_inst_jumptable: forall ln ln' r,
       list_forall2 (fun n n' => (dupmap!n' = (Some n))) ln ln' ->
       match_inst dupmap (Ijumptable r ln) (Ijumptable r ln')
@@ -378,7 +378,7 @@ Theorem step_simulation:
      step tge s2 t s2'
   /\ match_states s1' s2'.
 Proof.
-  Local Hint Resolve transf_fundef_correct.
+  Local Hint Resolve transf_fundef_correct: core.
   induction 1; intros; inv MS.
 (* Inop *)
   - eapply dupmap_correct in DUPLIC; eauto.

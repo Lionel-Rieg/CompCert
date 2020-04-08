@@ -555,6 +555,8 @@ Inductive ar_instruction : Type :=
   | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
 
+Module PArithCoercions.
+
 Coercion PArithR:       arith_name_r        >-> Funclass.
 Coercion PArithRR:      arith_name_rr       >-> Funclass.
 Coercion PArithRI32:    arith_name_ri32     >-> Funclass.
@@ -568,6 +570,8 @@ Coercion PArithARRR:    arith_name_arrr     >-> Funclass.
 Coercion PArithARR:     arith_name_arr      >-> Funclass.
 Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
 Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
+
+End PArithCoercions.
 
 Inductive basic : Type :=
   | PArith          (i: ar_instruction)
@@ -1709,7 +1713,7 @@ Proof.
 Qed.
 
 
-Local Hint Resolve parexec_bblock_write_in_order.
+Local Hint Resolve parexec_bblock_write_in_order: core.
 
 Lemma det_parexec_write_in_order f b rs m rs' m':
    det_parexec f b rs m rs' m' -> parexec_wio_bblock f b rs m = Next rs' m'.

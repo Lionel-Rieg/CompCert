@@ -339,7 +339,7 @@ Proof.
   }
   destruct (Mem.load _ m1 _ _) in *; destruct (Mem.load _ m0 _ _) in *; congruence.
 Qed.
-             
+
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
   | None => None
@@ -1005,7 +1005,7 @@ Theorem bisimu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
 Proof.
 
 (* a little tactic to automate reasoning on preg_eq *)
-Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr: core.
 Local Ltac preg_eq_discr r rd :=
   destruct (preg_eq r rd); try (subst r; rewrite assign_eq, Pregmap.gss; auto);
   rewrite (assign_diff _ (#rd) (#r) _); auto;
@@ -1053,7 +1053,7 @@ Local Ltac preg_eq_discr r rd :=
         preg_eq_discr r rd0. }
 
     (* Load Octuple word *)
-    + Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+    + Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr: core.
       unfold parexec_load_o_offset.
       destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3]; destruct Ge; simpl.
       rewrite H0, H.
@@ -1423,7 +1423,7 @@ Section SECT_BBLOCK_EQUIV.
 
 Variable Ge: genv.
 
-Local Hint Resolve trans_state_match.
+Local Hint Resolve trans_state_match: core.
 
 Lemma bblock_simu_reduce:
   forall p1 p2 ge fn,

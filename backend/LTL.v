@@ -37,7 +37,7 @@ Inductive instruction: Type :=
   | Ltailcall (sg: signature) (ros: mreg + ident)
   | Lbuiltin (ef: external_function) (args: list (builtin_arg loc)) (res: builtin_res mreg)
   | Lbranch (s: node)
-  | Lcond (cond: condition) (args: list mreg) (s1 s2: node)
+  | Lcond (cond: condition) (args: list mreg) (s1 s2: node) (info: option bool)
   | Ljumptable (arg: mreg) (tbl: list node)
   | Lreturn.
 
@@ -263,11 +263,11 @@ Inductive step: state -> trace -> state -> Prop :=
   | exec_Lbranch: forall s f sp pc bb rs m,
       step (Block s f sp (Lbranch pc :: bb) rs m)
         E0 (State s f sp pc rs m)
-  | exec_Lcond: forall s f sp cond args pc1 pc2 bb rs b pc rs' m,
+  | exec_Lcond: forall s f sp cond args pc1 pc2 bb rs b pc rs' m i,
       eval_condition cond (reglist rs args) m = Some b ->
       pc = (if b then pc1 else pc2) ->
       rs' = undef_regs (destroyed_by_cond cond) rs ->
-      step (Block s f sp (Lcond cond args pc1 pc2 :: bb) rs m)
+      step (Block s f sp (Lcond cond args pc1 pc2 i :: bb) rs m)
         E0 (State s f sp pc rs' m)
   | exec_Ljumptable: forall s f sp arg tbl bb rs m n pc rs',
       rs (R arg) = Vint n ->
@@ -328,7 +328,7 @@ Fixpoint successors_block (b: bblock) : list node :=
   | nil => nil                          (**r should never happen *)
   | Ltailcall _ _ :: _ => nil
   | Lbranch s :: _ => s :: nil
-  | Lcond _ _ s1 s2 :: _ => s1 :: s2 :: nil
+  | Lcond _ _ s1 s2 _ :: _ => s1 :: s2 :: nil
   | Ljumptable _ tbl :: _ => tbl
   | Lreturn :: _ => nil
   | instr :: b' => successors_block b'
