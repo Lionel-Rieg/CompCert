@@ -160,6 +160,72 @@ Proof.
   lia.
 Qed.
 
+Lemma inject_l_injected_pc:
+  forall f_id injections cond args ifso ifnot expected body injnum pc extra_pc
+         (INSTR : body ! pc = Some  (Icond cond args ifso ifnot expected))
+         (BELOW : forallb (fun pc => pc <? extra_pc) injections = true)
+         (NOREPET : list_norepet injections)
+         (NUMBER : nth_error injections injnum = Some pc),
+    PTree.get pc (snd (inject_l f_id body extra_pc injections)) =
+    Some (Icond cond args
+                (Pos.succ (inject_l_position extra_pc injections injnum))
+                (inject_l_position extra_pc injections injnum) expected).
+Proof.
+  induction injections; simpl; intros.
+  { rewrite nth_error_nil in NUMBER.
+    discriminate NUMBER. }
+  simpl in BELOW.
+  rewrite andb_true_iff in BELOW.
+  destruct BELOW as [BELOW1 BELOW2].
+  rewrite Pos.ltb_lt in BELOW1.
+  unfold inject_l.
+  simpl fold_left.
+  rewrite pair_expand with (p := inject_at f_id body a extra_pc).
+  progress fold (inject_l f_id (snd (inject_at f_id body a extra_pc))
+              (fst (inject_at f_id body a extra_pc))
+              injections).
+  destruct injnum as [ | injnum']; simpl in NUMBER.
+  { inv NUMBER.
+    rewrite inject_l_preserves; simpl.
+    - unfold inject_at.
+      rewrite INSTR.
+      unfold inject_profiling_call. simpl.
+      rewrite PTree.gso by lia.
+      rewrite PTree.gso by lia.
+      apply PTree.gss.
+    - rewrite inject_at_increases.
+      lia.
+    - inv NOREPET.
+      rewrite forallb_forall.
+      intros x IN.
+      destruct peq as [EQ | ]; trivial.
+      subst x.
+      contradiction.
+  }
+  simpl.
+  rewrite inject_at_increases.
+  apply IHinjections with (ifso := ifso) (ifnot := ifnot).
+  - rewrite inject_at_preserves; trivial.
+    + rewrite forallb_forall in BELOW2.
+      rewrite <- Pos.ltb_lt.
+      apply nth_error_In in NUMBER.
+      auto.
+    + inv NOREPET.
+      intro ZZZ.
+      subst a.
+      apply nth_error_In in NUMBER.
+      auto.
+
+  - rewrite forallb_forall in BELOW2.
+    rewrite forallb_forall.
+    intros.
+    specialize BELOW2 with x.
+    rewrite Pos.ltb_lt in *.
+    intuition lia.
+  - inv NOREPET. trivial.
+  - trivial.
+Qed.
+ 
 Lemma inject_l_injected0:
   forall f_id  cond args ifso ifnot expected injections body injnum pc extra_pc
          (INSTR : body ! pc = Some  (Icond cond args ifso ifnot expected))
@@ -424,7 +490,11 @@ Proof.
       apply eval_builtin_args_preserved with (ge1:=ge).
       all: eauto with profiling.
     + constructor; auto.
-  - admit.
+  - destruct b.
+    + econstructor; split.
+      * eapply plus_two.
+        ++ eapply exec_Icond with (cond := cond) (args := args) (predb := predb) (b := true).
+           
   - econstructor; split.
     + apply plus_one.
       apply exec_Ijumptable with (arg:=arg) (tbl:=tbl) (n:=n).
