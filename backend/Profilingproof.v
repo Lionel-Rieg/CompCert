@@ -234,7 +234,7 @@ Lemma inject_l_injected0:
          (NUMBER : nth_error injections injnum = Some pc),
     PTree.get (inject_l_position extra_pc injections injnum)
               (snd (inject_l f_id body extra_pc injections)) =
-    Some (Ibuiltin (EF_profiling (branch_id f_id pc) 0%Z) nil BR_none ifso).
+    Some (Ibuiltin (EF_profiling (branch_id f_id pc) 0%Z) nil BR_none ifnot).
 Proof.
   induction injections; intros.
   { rewrite nth_error_nil in NUMBER.
@@ -301,7 +301,7 @@ Lemma inject_l_injected1:
          (NUMBER : nth_error injections injnum = Some pc),
     PTree.get (Pos.succ (inject_l_position extra_pc injections injnum))
               (snd (inject_l f_id body extra_pc injections)) =
-    Some (Ibuiltin (EF_profiling (branch_id f_id pc) 1%Z) nil BR_none ifnot).
+    Some (Ibuiltin (EF_profiling (branch_id f_id pc) 1%Z) nil BR_none ifso).
 Proof.
   induction injections; intros.
   { rewrite nth_error_nil in NUMBER.
@@ -491,10 +491,144 @@ Proof.
       all: eauto with profiling.
     + constructor; auto.
   - destruct b.
-    + econstructor; split.
+    + assert (In pc (gen_conditions (fn_code f))) as IN.
+              { unfold gen_conditions.
+                rewrite in_map_iff.
+                exists (pc,  (Icond cond args ifso ifnot predb)).
+                split; simpl; trivial.
+                apply PTree.elements_correct.
+                rewrite PTree.gfilter1.
+                rewrite H.
+                reflexivity.
+              }
+      apply In_nth_error in IN.
+      destruct IN as [n IN].
+      econstructor; split.
       * eapply plus_two.
         ++ eapply exec_Icond with (cond := cond) (args := args) (predb := predb) (b := true).
-           
+           unfold transf_function. simpl.
+           erewrite inject_l_injected_pc with (cond := cond) (args := args).
+           ** reflexivity.
+           ** eassumption.
+           ** unfold gen_conditions.
+              rewrite forallb_forall.
+              intros x INx.
+              rewrite in_map_iff in INx.
+              destruct INx as [[x' i'] [EQ INx]].
+              simpl in EQ.
+              subst x'.
+              apply PTree.elements_complete in INx.
+              rewrite PTree.gfilter1 in INx.
+              assert (x <= max_pc_function f) as MAX.
+              { destruct ((fn_code f) ! x) eqn:CODEx.
+                2: discriminate.
+                apply max_pc_function_sound with (i:=i).
+                assumption.
+              }
+              rewrite Pos.ltb_lt.
+              lia.
+           ** unfold gen_conditions.
+              apply PTree.elements_keys_norepet.
+           ** exact IN.
+           ** assumption.
+           ** reflexivity.
+        ++ apply exec_Ibuiltin with (ef :=  (EF_profiling (branch_id (function_id f) pc) 1%Z)) (args := nil) (vargs := nil).
+           apply inject_l_injected1 with (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot) (expected := predb).
+           ** exact H.
+           ** unfold gen_conditions.
+              rewrite forallb_forall.
+              intros x INx.
+              rewrite in_map_iff in INx.
+              destruct INx as [[x' i'] [EQ INx]].
+              simpl in EQ.
+              subst x'.
+              apply PTree.elements_complete in INx.
+              rewrite PTree.gfilter1 in INx.
+              assert (x <= max_pc_function f) as MAX.
+              { destruct ((fn_code f) ! x) eqn:CODEx.
+                2: discriminate.
+                apply max_pc_function_sound with (i:=i).
+                assumption.
+              }
+              rewrite Pos.ltb_lt.
+              lia.
+           ** unfold gen_conditions.
+              apply PTree.elements_keys_norepet.
+           ** exact IN.
+           ** constructor.
+           ** constructor.
+        ++ reflexivity.
+      * simpl. constructor; auto.
+        
+    + assert (In pc (gen_conditions (fn_code f))) as IN.
+              { unfold gen_conditions.
+                rewrite in_map_iff.
+                exists (pc,  (Icond cond args ifso ifnot predb)).
+                split; simpl; trivial.
+                apply PTree.elements_correct.
+                rewrite PTree.gfilter1.
+                rewrite H.
+                reflexivity.
+              }
+      apply In_nth_error in IN.
+      destruct IN as [n IN].
+      econstructor; split.
+      * eapply plus_two.
+        ++ eapply exec_Icond with (cond := cond) (args := args) (predb := predb) (b := false).
+           unfold transf_function. simpl.
+           erewrite inject_l_injected_pc with (cond := cond) (args := args).
+           ** reflexivity.
+           ** eassumption.
+           ** unfold gen_conditions.
+              rewrite forallb_forall.
+              intros x INx.
+              rewrite in_map_iff in INx.
+              destruct INx as [[x' i'] [EQ INx]].
+              simpl in EQ.
+              subst x'.
+              apply PTree.elements_complete in INx.
+              rewrite PTree.gfilter1 in INx.
+              assert (x <= max_pc_function f) as MAX.
+              { destruct ((fn_code f) ! x) eqn:CODEx.
+                2: discriminate.
+                apply max_pc_function_sound with (i:=i).
+                assumption.
+              }
+              rewrite Pos.ltb_lt.
+              lia.
+           ** unfold gen_conditions.
+              apply PTree.elements_keys_norepet.
+           ** exact IN.
+           ** assumption.
+           ** reflexivity.
+        ++ apply exec_Ibuiltin with (ef :=  (EF_profiling (branch_id (function_id f) pc) 0%Z)) (args := nil) (vargs := nil).
+           apply inject_l_injected0 with (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot) (expected := predb).
+           ** exact H.
+           ** unfold gen_conditions.
+              rewrite forallb_forall.
+              intros x INx.
+              rewrite in_map_iff in INx.
+              destruct INx as [[x' i'] [EQ INx]].
+              simpl in EQ.
+              subst x'.
+              apply PTree.elements_complete in INx.
+              rewrite PTree.gfilter1 in INx.
+              assert (x <= max_pc_function f) as MAX.
+              { destruct ((fn_code f) ! x) eqn:CODEx.
+                2: discriminate.
+                apply max_pc_function_sound with (i:=i).
+                assumption.
+              }
+              rewrite Pos.ltb_lt.
+              lia.
+           ** unfold gen_conditions.
+              apply PTree.elements_keys_norepet.
+           ** exact IN.
+           ** constructor.
+           ** constructor.
+        ++ reflexivity.
+      * simpl. constructor; auto.
+        
   - econstructor; split.
     + apply plus_one.
       apply exec_Ijumptable with (arg:=arg) (tbl:=tbl) (n:=n).
@@ -519,7 +653,7 @@ Proof.
     econstructor; split.
     + apply plus_one. apply exec_return.
     + constructor; auto.
-Admitted.
+Qed.
 
 (*
   - left. econstructor. split.
