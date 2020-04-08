@@ -194,7 +194,14 @@ Proof.
   destruct fd; simpl; trivial.
 Qed.
 
-Hint Resolve symbols_preserved funsig_preserved external_call_symbols_preserved senv_preserved : profiling.
+Lemma stacksize_preserved:
+  forall f,
+    fn_stacksize (transf_function f) = fn_stacksize f.
+Proof.
+  destruct f; simpl; trivial.
+Qed.
+
+Hint Resolve symbols_preserved funsig_preserved external_call_symbols_preserved senv_preserved stacksize_preserved : profiling.
 
 Lemma step_simulation:
   forall s1 t s2 (STEP : step ge s1 t s2)
@@ -262,8 +269,19 @@ Proof.
       all: eauto with profiling.
     + constructor; auto.
   - admit.
-  - admit.
-  - admit.
+  - econstructor; split.
+    + apply plus_one.
+      apply exec_Ijumptable with (arg:=arg) (tbl:=tbl) (n:=n).
+      erewrite transf_function_at; eauto. apply I.
+      all: eauto with profiling.
+    + constructor; auto.
+  - econstructor; split.
+    + apply plus_one.
+      apply exec_Ireturn.
+      erewrite transf_function_at; eauto. apply I.
+      rewrite stacksize_preserved.
+      eassumption.
+    + constructor; auto.
   - admit.
   - admit.
   - inv STACKS. inv H1.
