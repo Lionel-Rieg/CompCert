@@ -464,6 +464,9 @@ Qed.
 
 (** * External functions *)
 
+(* Identifiers for profiling information *)
+Definition profiling_id := Z.t.
+
 (** For most languages, the functions composing the program are either
   internal functions, defined within the language, or external functions,
   defined outside.  External functions include system calls but also
@@ -514,10 +517,13 @@ Inductive external_function : Type :=
          used with caution, as it can invalidate the semantic
          preservation theorem.  Generated only if [-finline-asm] is
          given. *)
-  | EF_debug (kind: positive) (text: ident) (targs: list typ).
+  | EF_debug (kind: positive) (text: ident) (targs: list typ)
      (** Transport debugging information from the front-end to the generated
          assembly.  Takes zero, one or several arguments like [EF_annot].
          Unlike [EF_annot], produces no observable event. *)
+  | EF_profiling (id: profiling_id).
+     (** Count one profiling event for this identifier.
+         Takes no argument. Produces no observable event. *)
 
 (** The type signature of an external function. *)
 
@@ -535,6 +541,7 @@ Definition ef_sig (ef: external_function): signature :=
   | EF_annot_val kind text targ => mksignature (targ :: nil) targ cc_default
   | EF_inline_asm text sg clob => sg
   | EF_debug kind text targs => mksignature targs Tvoid cc_default
+  | EF_profiling id => mksignature nil Tvoid cc_default
   end.
 
 (** Whether an external function should be inlined by the compiler. *)
@@ -553,6 +560,7 @@ Definition ef_inline (ef: external_function) : bool :=
   | EF_annot_val kind Text rg => true
   | EF_inline_asm text sg clob => true
   | EF_debug kind text targs => true
+  | EF_profiling id => true
   end.
 
 (** Whether an external function must reload its arguments. *)

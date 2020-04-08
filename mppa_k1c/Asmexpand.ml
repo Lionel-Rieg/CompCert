@@ -591,6 +591,7 @@ let expand_instruction instr =
      | EF_external _ -> failwith "asmexpand: external"
      | EF_inline_asm _ -> emit instr
      | EF_runtime _ -> failwith "asmexpand: runtime"
+     | EF_profiling _ -> emit instr
      end
   | _ ->
      emit instr
