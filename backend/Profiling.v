@@ -4,7 +4,7 @@ Require Import Memory Registers Op RTL.
 
 Local Open Scope positive.
 
-Parameter fundef_id : fundef -> Z.
+Parameter function_id : function -> Z.
 Parameter branch_id : Z -> node -> Z.
 
 Section PER_FUNCTION_ID.
@@ -47,20 +47,19 @@ Section PER_FUNCTION_ID.
                                        | Icond cond args ifso ifnot expected => true
                                        | _ => false
                                        end) prog)).
-
-  Definition transf_function (f : function) : function :=
-    let max_pc := max_pc_function f in
-    let conditions := gen_conditions (fn_code f) in
-    {| fn_sig := f.(fn_sig);
-       fn_params := f.(fn_params);
-       fn_stacksize := f.(fn_stacksize);
-       fn_code := snd (inject_l (fn_code f) (Pos.succ max_pc) conditions);
-       fn_entrypoint := f.(fn_entrypoint) |}.
-
 End PER_FUNCTION_ID.
 
+Definition transf_function (f : function) : function :=
+  let max_pc := max_pc_function f in
+  let conditions := gen_conditions (fn_code f) in
+  {| fn_sig := f.(fn_sig);
+     fn_params := f.(fn_params);
+     fn_stacksize := f.(fn_stacksize);
+     fn_code := snd (inject_l (function_id f) (fn_code f) (Pos.succ max_pc) conditions);
+     fn_entrypoint := f.(fn_entrypoint) |}.
+
 Definition transf_fundef (fd: fundef) : fundef :=
-  AST.transf_fundef (transf_function (fundef_id fd)) fd.
+  AST.transf_fundef transf_function fd.
 
 Definition transf_program (p: program) : program :=
   transform_program transf_fundef p.

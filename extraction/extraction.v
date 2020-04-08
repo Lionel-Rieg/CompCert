@@ -137,6 +137,8 @@ Extract Constant Compopts.va_strict =>
   "fun _ -> false".
 Extract Constant Compopts.all_loads_nontrap =>
   "fun _ -> !Clflags.option_all_loads_nontrap".
+Extract Constant Compopts.profile_arcs =>
+  "fun _ -> !Clflags.option_profile_arcs".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -147,8 +149,11 @@ Extract Constant Compiler.print_Mach => "PrintMach.print_if".
 Extract Constant Compiler.print => "fun (f: 'a -> unit) (x: 'a) -> f x; x".
 Extract Constant Compiler.time  => "Timing.time_coq".
 Extract Constant Compopts.time  => "Timing.time_coq".
-
 (*Extraction Inline Compiler.apply_total Compiler.apply_partial.*)
+
+(* Profiling *)
+Extract Constant Profiling.function_id => "Profilingaux.function_id".
+Extract Constant Profiling.branch_id => "Profilingaux.branch_id".
 
 (* Cabs *)
 Extract Constant Cabs.loc =>

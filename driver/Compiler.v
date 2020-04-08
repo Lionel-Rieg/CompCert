@@ -37,6 +37,7 @@ Require Selection.
 Require RTLgen.
 Require Tailcall.
 Require Inlining.
+Require Profiling.
 Require Renumber.
 Require Duplicate.
 Require Constprop.
@@ -62,6 +63,7 @@ Require Selectionproof.
 Require RTLgenproof.
 Require Tailcallproof.
 Require Inliningproof.
+Require Profilingproof.
 Require Renumberproof.
 Require Duplicateproof.
 Require Constpropproof.
@@ -132,26 +134,28 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    @@ print (print_RTL 1)
   @@@ time "Inlining" Inlining.transf_program
    @@ print (print_RTL 2)
-   @@ time "Renumbering" Renumber.transf_program
+   @@ total_if Compopts.profile_arcs (time "Profiling insertion" Profiling.transf_program)
    @@ print (print_RTL 3)
-  @@@ partial_if Compopts.optim_duplicate (time "Tail-duplicating" Duplicate.transf_program)
+   @@ time "Renumbering" Renumber.transf_program
    @@ print (print_RTL 4)
-   @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
+  @@@ partial_if Compopts.optim_duplicate (time "Tail-duplicating" Duplicate.transf_program)
    @@ print (print_RTL 5)
-   @@ total_if Compopts.optim_constprop (time "Renumbering" Renumber.transf_program)
+   @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
    @@ print (print_RTL 6)
-  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
+   @@ total_if Compopts.optim_constprop (time "Renumbering" Renumber.transf_program)
    @@ print (print_RTL 7)
-   @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
+  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
    @@ print (print_RTL 8)
-   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
+   @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
    @@ print (print_RTL 9)
-  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
+   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
    @@ print (print_RTL 10)
-   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
+  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
    @@ print (print_RTL 11)
-  @@@ time "Unused globals" Unusedglob.transform_program
+   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
    @@ print (print_RTL 12)
+  @@@ time "Unused globals" Unusedglob.transform_program
+   @@ print (print_RTL 13)
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
    @@ time "Branch tunneling" Tunneling.tunnel_program
@@ -253,6 +257,7 @@ Definition CompCert's_passes :=
   ::: mkpass RTLgenproof.match_prog
   ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
   ::: mkpass Inliningproof.match_prog
+  ::: mkpass (match_if Compopts.profile_arcs Profilingproof.match_prog)
   ::: mkpass Renumberproof.match_prog
   ::: mkpass (match_if Compopts.optim_duplicate Duplicateproof.match_prog)
   ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
@@ -300,7 +305,8 @@ Proof.
   unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
   destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
-  set (p9 := Renumber.transf_program p8) in *.
+  set (p8bis := total_if profile_arcs Profiling.transf_program p8) in *.
+  set (p9 := Renumber.transf_program p8bis) in *.
   destruct (partial_if optim_duplicate Duplicate.transf_program p9) as [p10|e] eqn:P10; simpl in T; try discriminate.
   set (p11 := total_if optim_constprop Constprop.transf_program p10) in *.
   set (p12 := total_if optim_constprop Renumber.transf_program p11) in *.
@@ -325,6 +331,7 @@ Proof.
   exists p6; split. apply RTLgenproof.transf_program_match; auto.
   exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
   exists p8; split. apply Inliningproof.transf_program_match; auto.
+  exists p8bis; split. apply total_if_match. apply Profilingproof.transf_program_match; auto.
   exists p9; split. apply Renumberproof.transf_program_match; auto.
   exists p10; split. eapply partial_if_match; eauto. apply Duplicateproof.transf_program_match; auto.
   exists p11; split. apply total_if_match. apply Constpropproof.transf_program_match.
@@ -392,7 +399,7 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p25)).
+  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p26)).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -410,6 +417,8 @@ Ltac DestructM :=
     eapply match_if_simulation. eassumption. exact Tailcallproof.transf_program_correct.
   eapply compose_forward_simulations.
     eapply Inliningproof.transf_program_correct; eassumption.
+  eapply compose_forward_simulations.
+    eapply match_if_simulation. eassumption. exact Profilingproof.transf_program_correct.
   eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply match_if_simulation. eassumption. exact Duplicateproof.transf_program_correct.
