@@ -187,7 +187,14 @@ Inductive match_states: RTL.state -> RTL.state -> Prop :=
       match_states (Returnstate stk v m)
                    (Returnstate stk' v m).
 
-Hint Resolve symbols_preserved : profiling.
+Lemma funsig_preserved:
+  forall fd,
+    funsig (transf_fundef fd) = funsig fd.
+Proof.
+  destruct fd; simpl; trivial.
+Qed.
+
+Hint Resolve symbols_preserved funsig_preserved : profiling.
 
 Lemma step_simulation:
   forall s1 t s2 (STEP : step ge s1 t s2)
@@ -226,8 +233,21 @@ Proof.
       rewrite eval_addressing_preserved with (ge1:=ge).
       all: eauto with profiling.
     + constructor; auto.
-  - admit.
-  - admit.
+  -  econstructor; split.
+    + apply plus_one. apply exec_Istore with (chunk:=chunk) (src := src)
+                                            (addr:=addr) (args:=args) (a:=a).
+      erewrite transf_function_at; eauto. apply I.
+      rewrite eval_addressing_preserved with (ge1:=ge).
+      all: eauto with profiling.
+    + constructor; auto.
+  - econstructor; split.
+    + apply plus_one. apply exec_Icall with (sig:=(funsig fd)) (ros:=ros).
+      erewrite transf_function_at; eauto. apply I.
+      apply find_function_translated with (fd := fd).
+      all: eauto with profiling.
+    + constructor; auto.
+      constructor; auto.
+      constructor.
   - admit.
   - admit.
   - admit.
