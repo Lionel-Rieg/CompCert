@@ -137,27 +137,36 @@ Proof.
     lia.
 Qed.
 
-(*
 Lemma transf_function_at:
-  forall hash f pc i,
-    f.(fn_code)!pc = Some i ->
-    (match i with
-     | Icond _ _ _ _ _ => False
-     | _ => True) ->
-    (transf_function hash f).(fn_code)!pc = Some i.
+  forall f pc i
+    (CODE : f.(fn_code)!pc = Some i)
+    (INSTR : match i with
+             | Icond _ _ _ _ _ => False
+             | _ => True
+             end),
+    (transf_function f).(fn_code)!pc = Some i.
 Proof.
-  intros until i. intro Hcode.
+  intros.
   unfold transf_function; simpl.
-  destruct (peq pc (Pos.succ (max_pc_function f))) as [EQ | NEQ].
-  { assert (pc <= (max_pc_function f))%positive as LE by (eapply max_pc_function_sound; eassumption).
-    subst pc.
-    lia.
-  }
-  rewrite PTree.gso by congruence.
+  rewrite inject_l_preserves.
   assumption.
+  - pose proof (max_pc_function_sound f pc i CODE) as LE.
+    unfold Ple in LE.
+    lia.
+  - rewrite forallb_forall.
+    intros x IN.
+    destruct peq; trivial.
+    subst x.
+    unfold gen_conditions in IN.
+    rewrite in_map_iff in IN.
+    destruct IN as [[pc' i'] [EQ IN]].
+    simpl in EQ.
+    subst pc'.
+    apply PTree.elements_complete in IN.
+    rewrite PTree.gfilter1 in IN.
+    rewrite CODE in IN.
+    destruct i; try discriminate; contradiction.
 Qed.
- *)
-
 
 Inductive match_frames: RTL.stackframe -> RTL.stackframe -> Prop :=
 | match_frames_intro: forall res f sp pc rs,
