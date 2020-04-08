@@ -279,11 +279,16 @@ Proof.
     + apply plus_one.
       apply exec_Ireturn.
       erewrite transf_function_at; eauto. apply I.
-      rewrite stacksize_preserved.
-      eassumption.
+      rewrite stacksize_preserved. eassumption.
     + constructor; auto.
-  - admit.
-  - admit.
+  - econstructor; split.
+    + apply plus_one. apply exec_function_internal.
+      rewrite stacksize_preserved. eassumption.
+    + constructor; auto.
+  - econstructor; split.
+    + apply plus_one. apply exec_function_external.
+      eauto with profiling.
+    + constructor; auto.
   - inv STACKS. inv H1.
     econstructor; split.
     + apply plus_one. apply exec_return.
