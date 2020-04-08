@@ -205,6 +205,27 @@ Proof.
       * rewrite eval_operation_preserved with (ge1:=ge);
           eauto with profiling.
     + constructor; auto.
+  - econstructor; split.
+    + apply plus_one. apply exec_Iload with (trap:=trap) (chunk:=chunk)
+                                            (addr:=addr) (args:=args) (a:=a).
+      erewrite transf_function_at; eauto. apply I.
+      rewrite eval_addressing_preserved with (ge1:=ge).
+      all: eauto with profiling.
+    + constructor; auto.
+  - econstructor; split.
+    + apply plus_one. apply exec_Iload_notrap1 with (chunk:=chunk)
+                                            (addr:=addr) (args:=args).
+      erewrite transf_function_at; eauto. apply I.
+      rewrite eval_addressing_preserved with (ge1:=ge).
+      all: eauto with profiling.
+    + constructor; auto.
+  -  econstructor; split.
+    + apply plus_one. apply exec_Iload_notrap2 with (chunk:=chunk)
+                                            (addr:=addr) (args:=args) (a:=a).
+      erewrite transf_function_at; eauto. apply I.
+      rewrite eval_addressing_preserved with (ge1:=ge).
+      all: eauto with profiling.
+    + constructor; auto.
   - admit.
   - admit.
   - admit.
@@ -214,9 +235,10 @@ Proof.
   - admit.
   - admit.
   - admit.
-  - admit.
-  - admit.
-  - admit.
+  - inv STACKS. inv H1.
+    econstructor; split.
+    + apply plus_one. apply exec_return.
+    + constructor; auto.
 Admitted.
 
 (*
