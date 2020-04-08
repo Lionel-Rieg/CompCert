@@ -248,7 +248,7 @@ module Target (*: TARGET*) =
       match Hashtbl.find_opt profiling_table x with
       | None -> let y = !next_profiling_position in
                 next_profiling_position := succ y;
-                Hashtbl.add profiling_table x y;
+                Hashtbl.replace profiling_table x y;
                 y
       | Some y -> y;;
 

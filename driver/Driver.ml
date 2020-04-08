@@ -328,6 +328,7 @@ let cmdline_actions =
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
+  Exact "-fprofile-use=", String (fun s -> Profilingaux.load_profiling_info s);
   Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);

@@ -18,7 +18,7 @@ static void write_counter(FILE *fp, uint64_t counter) {
   putc(BYTE(counter, 4), fp);
   putc(BYTE(counter, 5), fp);
   putc(BYTE(counter, 6), fp);
-  putc(BYTE(counter, 8), fp);
+  putc(BYTE(counter, 7), fp);
 }
 
 void _compcert_write_profiling_table(unsigned int nr_items,
