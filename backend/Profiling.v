@@ -15,9 +15,9 @@ Section PER_FUNCTION_ID.
     let id := branch_id f_id pc in
     let extra_pc' := Pos.succ extra_pc in
     let prog' := PTree.set extra_pc
-                           (Ibuiltin (EF_profiling id 0%Z) nil BR_none ifso) prog in
+                           (Ibuiltin (EF_profiling id 0%Z) nil BR_none ifnot) prog in
     let prog'':= PTree.set extra_pc'
-                           (Ibuiltin (EF_profiling id 1%Z) nil BR_none ifnot) prog' in
+                           (Ibuiltin (EF_profiling id 1%Z) nil BR_none ifso) prog' in
     (Pos.succ extra_pc', prog'').
   
   Definition inject_at (prog : code) (pc extra_pc : node) : node * code :=
@@ -25,7 +25,7 @@ Section PER_FUNCTION_ID.
     | Some (Icond cond args ifso ifnot expected) =>
       inject_profiling_call
         (PTree.set pc
-                   (Icond cond args extra_pc (Pos.succ extra_pc) expected) prog)
+                   (Icond cond args (Pos.succ extra_pc) extra_pc expected) prog)
         pc extra_pc ifso ifnot
     | _ => inject_profiling_call prog pc extra_pc 1 1 (* does not happen *)
     end.
