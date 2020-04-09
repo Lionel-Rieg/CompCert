@@ -30,7 +30,8 @@ Local Unset Case Analysis Schemes.
   [bot], and an upper bound operation [lub].
   Note that we do not demand that [lub] computes the least upper bound. *)
 
-Module Type SEMILATTICE.
+
+Module Type SEMILATTICE_WITHOUT_BOTTOM.
 
   Parameter t: Type.
   Parameter eq: t -> t -> Prop.
@@ -42,24 +43,123 @@ Module Type SEMILATTICE.
   Parameter ge: t -> t -> Prop.
   Axiom ge_refl: forall x y, eq x y -> ge x y.
   Axiom ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
-  Parameter bot: t.
-  Axiom ge_bot: forall x, ge x bot.
   Parameter lub: t -> t -> t.
   Axiom ge_lub_left: forall x y, ge (lub x y) x.
   Axiom ge_lub_right: forall x y, ge (lub x y) y.
 
+End SEMILATTICE_WITHOUT_BOTTOM.
+
+Module Type SEMILATTICE.
+  Include SEMILATTICE_WITHOUT_BOTTOM.
+  Parameter bot: t.
+  Axiom ge_bot: forall x, ge x bot.
 End SEMILATTICE.
 
 (** A semi-lattice ``with top'' is similar, but also has a greatest
   element [top]. *)
 
 Module Type SEMILATTICE_WITH_TOP.
-
   Include SEMILATTICE.
   Parameter top: t.
   Axiom ge_top: forall x, ge top x.
-
 End SEMILATTICE_WITH_TOP.
+
+
+Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM) <: SEMILATTICE.
+  Definition t := option L.t.
+  Definition eq (a b : t) :=
+    match a, b with
+    | None, None => True
+    | Some x, Some y => L.eq x y
+    | Some _, None | None, Some _ => False
+    end.
+  
+  Lemma eq_refl: forall x, eq x x.
+  Proof.
+    unfold eq; destruct x; trivial.
+    apply L.eq_refl.
+  Qed.
+
+  Lemma eq_sym: forall x y, eq x y -> eq y x.
+  Proof.
+    unfold eq; destruct x; destruct y; trivial.
+    apply L.eq_sym.
+  Qed.
+  
+  Lemma eq_trans: forall x y z, eq x y -> eq y z -> eq x z.
+  Proof.
+    unfold eq; destruct x; destruct y; destruct z; trivial.
+    - apply L.eq_trans.
+    - contradiction.
+  Qed.
+  
+  Definition beq (x y : t) :=
+    match x, y with
+    | None, None => true
+    | Some x, Some y => L.beq x y
+    | Some _, None | None, Some _ => false
+    end.
+  
+  Lemma beq_correct: forall x y, beq x y = true -> eq x y.
+  Proof.
+    unfold beq, eq.
+    destruct x; destruct y; trivial; try congruence.
+    apply L.beq_correct.
+  Qed.
+  
+  Definition ge (x y : t) :=
+    match x, y with
+    | None, Some _ => False
+    | _, None => True
+    | Some a, Some b => L.ge a b
+    end.
+  
+  Lemma ge_refl: forall x y, eq x y -> ge x y.
+  Proof.
+    unfold eq, ge.
+    destruct x; destruct y; trivial.
+    apply L.ge_refl.
+  Qed.
+  
+  Lemma ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
+  Proof.
+    unfold ge.
+    destruct x; destruct y; destruct z; trivial; try contradiction.
+    apply L.ge_trans.
+  Qed.
+  
+  Definition bot: t := None.
+  Lemma ge_bot: forall x, ge x bot.
+  Proof.
+    unfold ge, bot.
+    destruct x; trivial.
+  Qed.
+  
+  Definition lub (a b : t) :=
+    match a, b with
+    | None, _ => b
+    | _, None => a
+    | (Some x), (Some y) => Some (L.lub x y)
+    end.
+
+  Lemma ge_lub_left: forall x y, ge (lub x y) x.
+  Proof.
+    unfold ge, lub.
+    destruct x; destruct y; trivial.
+    - apply L.ge_lub_left.
+    - apply L.ge_refl.
+      apply L.eq_refl.
+  Qed.
+  
+  Lemma ge_lub_right: forall x y, ge (lub x y) y.
+  Proof.
+    unfold ge, lub.
+    destruct x; destruct y; trivial.
+    - apply L.ge_lub_right.
+    - apply L.ge_refl.
+      apply L.eq_refl.
+  Qed.
+End ADD_BOTTOM.
 
 (** * Semi-lattice over maps *)
 

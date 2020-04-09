@@ -42,6 +42,12 @@ Parameter optim_CSE: unit -> bool.
 (** Flag -fcse2.  For DMonniaux's common subexpression elimination. *)
 Parameter optim_CSE2: unit -> bool.
 
+(** Flag -fcse3.  For DMonniaux's common subexpression elimination. *)
+Parameter optim_CSE3: unit -> bool.
+
+(** Flag -fcse3-alias-analysis.  For DMonniaux's common subexpression elimination. *)
+Parameter optim_CSE3_alias_analysis: unit -> bool.
+
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 

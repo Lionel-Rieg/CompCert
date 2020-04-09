@@ -57,6 +57,7 @@ FLOCQ=\
 # General-purpose libraries (in lib/)
 
 VLIB=Axioms.v Coqlib.v Intv.v Maps.v Heaps.v Lattice.v Ordered.v \
+  HashedSet.v \
   Iteration.v Zbits.v Integers.v Archi.v IEEE754_extra.v Floats.v \
   Parmov.v UnionFind.v Wfsimpl.v \
   Postorder.v FSetAVLplus.v IntvSets.v Decidableplus.v BoolEqual.v
@@ -88,10 +89,12 @@ BACKEND=\
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
   CSE2deps.v CSE2depsproof.v \
   CSE2.v CSE2proof.v \
+  CSE3analysis.v CSE3analysisproof.v CSE3.v CSE3proof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
   ForwardMoves.v ForwardMovesproof.v \
+  FirstNop.v \
   Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \
