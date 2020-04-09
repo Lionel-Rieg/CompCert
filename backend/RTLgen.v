@@ -477,9 +477,9 @@ with transl_exprlist (map: mapping) (al: exprlist) (rl: list reg) (nd: node)
 with transl_condexpr (map: mapping) (a: condexpr) (ntrue nfalse: node)
                      {struct a} : mon node :=
   match a with
-  | CEcond c al =>
+  | CEcond c expected al =>
       do rl <- alloc_regs map al;
-      do nt <- add_instr (Icond c rl ntrue nfalse None);
+      do nt <- add_instr (Icond c rl ntrue nfalse expected);
          transl_exprlist map al rl nt
   | CEcondition a b c =>
       do nc <- transl_condexpr map c ntrue nfalse;

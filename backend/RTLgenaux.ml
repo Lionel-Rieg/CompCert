@@ -41,7 +41,7 @@ and size_exprs = function
   | Econs(e1, el) -> size_expr e1 + size_exprs el
 
 and size_condexpr = function
-  | CEcond(c, args) -> size_exprs args
+  | CEcond(c, expected, args) -> size_exprs args
   | CEcondition(c1, c2, c3) ->
       1 + size_condexpr c1 + size_condexpr c2 + size_condexpr c3
   | CElet(a, c) ->

@@ -111,6 +111,7 @@ Definition comparison_type (ty1 ty2: type) (m: string): res type :=
 
 Definition type_binop (op: binary_operation) (ty1 ty2: type) : res type :=
   match op with
+  | Oexpect => binarith_type ty1 ty2 "__builtin_expect"
   | Oadd =>
       match classify_add ty1 ty2 with
       | add_case_pi ty _ | add_case_ip _ ty
@@ -1546,6 +1547,8 @@ Lemma pres_sem_binop:
 Proof.
   intros until m; intros TY SEM WT1 WT2.
   destruct op; simpl in TY; simpl in SEM.
+- (* expect *)
+  unfold sem_expect in SEM. eapply pres_sem_binarith; eauto; intros; exact I.    
 - (* add *)
   unfold sem_add, sem_add_ptr_int, sem_add_ptr_long in SEM; DestructCases; auto with ty.
   eapply pres_sem_binarith; eauto; intros; exact I.

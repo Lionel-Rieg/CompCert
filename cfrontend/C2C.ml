@@ -181,9 +181,10 @@ let ais_annot_functions =
 let builtins_generic = {
   builtin_typedefs = [];
   builtin_functions =
-    ais_annot_functions
-      @
+    ais_annot_functions @
     [
+    "__builtin_expect",
+    (TInt(ILong, []), [TInt(ILong, []); TInt(ILong, [])], false);
     (* Integer arithmetic *)
     "__builtin_bswap64",
     (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
@@ -911,6 +912,14 @@ let rec convertExpr env e =
       ewrap (Ctyping.ecast (convertTyp env ty1) (convertExpr env e1))
   | C.ECompound(ty1, ie) ->
       unsupported "compound literals"; ezero
+
+  | C.ECall({edesc = C.EVar {name = "__builtin_expect"}}, args) ->
+     (match args with
+      | [e1; e2] ->
+         ewrap (Ctyping.ebinop Cop.Oexpect (convertExpr env e1) (convertExpr env e2))
+      | _ -> 
+       error "__builtin_expect wants two arguments";
+       ezero)
 
   | C.ECall({edesc = C.EVar {name = "__builtin_debug"}}, args) when List.length args < 2 ->
       error "too few arguments to function call, expected at least 2, have 0";

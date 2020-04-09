@@ -34,6 +34,7 @@ let precedence = function
   | Ebinop((Oadd|Osub|Oaddf|Osubf|Oaddfs|Osubfs|Oaddl|Osubl), _, _) -> (12, LtoR)
   | Ebinop((Oshl|Oshr|Oshru|Oshll|Oshrl|Oshrlu), _, _) -> (11, LtoR)
   | Ebinop((Ocmp _|Ocmpu _|Ocmpf _|Ocmpfs _|Ocmpl _|Ocmplu _), _, _) -> (10, LtoR)
+  | Ebinop((Oexpect _), _, _) -> (9, LtoR)
   | Ebinop((Oand|Oandl), _, _) -> (8, LtoR)
   | Ebinop((Oxor|Oxorl), _, _) -> (7, LtoR)
   | Ebinop((Oor|Oorl), _, _) -> (6, LtoR)
@@ -89,6 +90,7 @@ let comparison_name = function
   | Cge -> ">="
 
 let name_of_binop = function
+  | Oexpect _ -> "expect"
   | Oadd -> "+"
   | Osub -> "-"
   | Omul -> "*"
