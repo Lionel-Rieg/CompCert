@@ -32,7 +32,7 @@ $(GCDAFILES): gcda
 minisat.gcc-O3.profiled.exe: $(CFILES) $(GCDAFILES)
 	$(GCC) $(GCCFLAGS) -O3 -fprofile-use $(CFILES) -o $@ $(LIBS)
 
-minisat.ccomp.trace_linearize.exe: $(CFILES)
+minisat.ccomp.trace-linearize.exe: $(CFILES)
 	$(CCOMP) $(CCOMPFLAGS) -ftracelinearize $(CFILES) -o $@ $(LIBS)
 
 $(PROFILING_DAT): minisat.ccomp.profile-arcs.exe
