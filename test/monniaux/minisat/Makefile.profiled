@@ -8,7 +8,7 @@ EXECUTE=k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 EXAMPLE=sudoku.sat
 
-ALL=minisat.ccomp.log minisat.branch_linearize.log minisat.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
+ALL=minisat.ccomp.log minisat.ccomp.branch_linearize.log minisat.ccomp.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
 
 all: $(ALL)
 
