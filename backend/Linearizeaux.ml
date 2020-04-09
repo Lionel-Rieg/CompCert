@@ -193,8 +193,9 @@ let forward_sequences code entry =
                 if get_some @@ PTree.get ifnot join_points then ([], [ifso; ifnot])
                 else let ln, rem = traverse_fallthrough code ifnot in (ln, [ifso] @ rem)
             | Some true ->
-                let errstr = Printf.sprintf ("Inconsistency detected in node %d: ifnot is not the preferred branch") (P.to_int node) in
-                  failwith errstr)
+                if get_some @@ PTree.get ifso join_points then ([], [ifso; ifnot])
+                else let ln, rem = traverse_fallthrough code ifso in (ln, [ifnot] @ rem)
+            )
           | Ljumptable(_, ln) -> begin (* debug "STOP Ljumptable\n"; *) ([], ln) end
           in ([node] @ ln, rem)
       end
