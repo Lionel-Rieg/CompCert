@@ -7,12 +7,15 @@ PROFILING_DAT=compcert_profiling.dat
 EXECUTE=k1-cluster --
 EXAMPLE=sudoku.sat
 
-ALL=minisat.ccomp minisat.branch_linearize minisat.profiled minisat.gcc-O3 minisat.gcc-O3.profiled
+ALL=minisat.ccomp minisat.branch_linearize minisat.profiled minisat.gcc-O3 minisat.gcc-O3.profiled minisat.gcc-O3.profile-arcs minisat.profile-arcs
 
 all: $(ALL)
 
 minisat.ccomp: $(CFILES)
 	$(CCOMP) $(CCOMPFLAGS) $(CFILES) -o $@ $(LIBS)
+
+minisat.profile-arcs: $(CFILES)
+	$(CCOMP) $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
 
 minisat.gcc-O3: $(CFILES)
 	$(GCC) $(GCCFLAGS) -O3 $(CFILES) -o $@ $(LIBS)
@@ -20,16 +23,18 @@ minisat.gcc-O3: $(CFILES)
 minisat.gcc-O3.profile-arcs: $(CFILES)
 	$(GCC) $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
 
-$(GCDAFILES): minisat.gcc-O3.profile-arcs
+gcda: minisat.gcc-O3.profile-arcs
 	$(EXECUTE) $< $(EXAMPLE)
+
+$(GCDAFILES): gcda
 
 minisat.gcc-O3.profiled: $(CFILES) $(GCDAFILES)
 	$(GCC) $(GCCFLAGS) -O3 -fprofile-use $(CFILES) -o $@ $(LIBS)
 
 minisat.branch_linearize: $(CFILES)
-	$(CCOMP) $(CCOMPFLAGS) -fbranchlinearize $(CFILES) -o $@ $(LIBS)
+	$(CCOMP) $(CCOMPFLAGS) -ftracelinearize $(CFILES) -o $@ $(LIBS)
 
-$(PROFILING_DAT): minisat.profile_arcs
+$(PROFILING_DAT): minisat.profile-arcs
 	-rm -f $(PROFILING_DAT)
 	$(EXECUTE) $< $(EXAMPLE)
 
@@ -39,4 +44,4 @@ minisat.profiled: $(CFILES) $(PROFILING_DAT)
 clean:
 	-rm -f $(ALL) $(PROFILING_DAT) $(GCDAFILES)
 
-.PHONY: clean
+.PHONY: clean gcda
