@@ -157,8 +157,12 @@ module Target (*: TARGET*) =
 
     let name_of_section = function
       | Section_text         -> ".text"
-      | Section_data i | Section_small_data i ->
-          if i then ".data" else "COMM"
+      | Section_data(true, true) ->
+         ".section .tdata,\"awT\",@progbits"
+      | Section_data(false, true) ->        
+         ".section .tbss,\"awT\",@nobits"
+      | Section_data(i, false) | Section_small_data(i) ->
+         (if i then ".data" else "COMM")
       | Section_const i | Section_small_const i ->
           if i then ".section	.rodata" else "COMM"
       | Section_string       -> ".section	.rodata"
@@ -211,14 +215,20 @@ module Target (*: TARGET*) =
 
 (* Generate code to load the address of id + ofs in register r *)
 
-(* FIXME DMonniaux ugly ugly hack to get at standard __thread data *)
     let loadsymbol oc r id ofs =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
-        fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
-      end else begin
-        if (extern_atom id) = "_impure_thread_data" then begin
-            fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs)         
+        if C2C.atom_is_thread_local id then begin
+            (* fprintf oc "	addd	%a = $r13, @tprel(%s)\n" ireg r (extern_atom id) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%s)\n" ireg r (extern_atom id)
+        end else begin
+            fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
+        end
+     end else
+     begin
+        if C2C.atom_is_thread_local id then begin
+            (* fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%a)\n" ireg r symbol_offset (id, ofs)
         end else begin            
             fprintf oc "	make	%a = %a\n" ireg r symbol_offset (id, ofs)
         end

@@ -86,8 +86,11 @@ type attributes = attribute list
 
 type storage =
   | Storage_default (* used for toplevel names without explicit storage *)
+  | Storage_thread_local
   | Storage_extern
   | Storage_static
+  | Storage_thread_local_extern
+  | Storage_thread_local_static
   | Storage_auto    (* used for block-scoped names without explicit storage *)
   | Storage_register
 

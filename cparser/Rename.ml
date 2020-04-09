@@ -257,13 +257,16 @@ let rec reserve_public env = function
         match dcl.gdesc with
         | Gdecl(sto, id, _, _) ->
             begin match sto with
-            | Storage_default | Storage_extern -> enter_public env id
+            | Storage_default  | Storage_thread_local
+            | Storage_extern   | Storage_thread_local_extern ->
+               enter_public env id
             | Storage_static -> env
             | _ -> assert false
             end
         | Gfundef f ->
             begin match f.fd_storage with
-            | Storage_default | Storage_extern -> enter_public env f.fd_name
+            | Storage_default | Storage_extern
+              -> enter_public env f.fd_name
             | Storage_static -> env
             | _ -> assert false
             end

@@ -152,6 +152,9 @@ let name_of_storage_class = function
   | Storage_default -> "<default>"
   | Storage_extern -> "'extern'"
   | Storage_static -> "'static'"
+  | Storage_thread_local -> "'_Thread_local'"
+  | Storage_thread_local_extern -> "'_Thread_local extern'"
+  | Storage_thread_local_static -> "'_Thread_local static'"
   | Storage_auto -> "'auto'"
   | Storage_register -> "'register'"
 
@@ -177,15 +180,29 @@ let combine_toplevel_definitions loc env s old_sto old_ty sto ty =
     | Storage_static,Storage_static
     | Storage_extern,Storage_extern
     | Storage_default,Storage_default -> sto
-    | _,Storage_static ->
+    | Storage_thread_local_static,Storage_thread_local_static
+    | Storage_thread_local_extern,Storage_thread_local_extern
+    | Storage_thread_local,Storage_thread_local -> sto
+    | _,Storage_static | _,Storage_thread_local_static ->
 	error loc "static declaration of '%s' follows non-static declaration" s;
         sto
     | Storage_static,_ -> Storage_static (* Static stays static *)
-    | Storage_extern,_ -> if is_function_type env new_ty then Storage_extern else sto
+    | Storage_thread_local_static,_ -> Storage_thread_local_static (* Thread-local static stays static *)
+    | (Storage_extern|Storage_thread_local_extern),_ -> if is_function_type env new_ty then Storage_extern else sto
     | Storage_default,Storage_extern ->
       if is_global_defined s && is_function_type env ty then
         warning loc Extern_after_definition "this extern declaration follows a non-extern definition and is ignored";
       Storage_extern
+    | Storage_thread_local,Storage_thread_local_extern ->
+      if is_global_defined s && is_function_type env ty then
+        warning loc Extern_after_definition "this extern declaration follows a non-extern definition and is ignored";
+      Storage_extern
+    | Storage_thread_local, Storage_default ->
+       error loc "Non thread-local declaration follows thread-local";
+       sto
+    | Storage_default, (Storage_thread_local|Storage_thread_local_extern) ->
+       error loc "Thread-local declaration follows non thread-local";
+       sto
     | _,Storage_extern -> old_sto
     (* "auto" and "register" don't appear in toplevel definitions.
        Normally this was checked earlier.  Generate error message
@@ -639,13 +656,26 @@ let rec elab_specifier ?(only = false) loc env specifier =
       restrict := cv = CV_RESTRICT;
       attr := add_attributes (elab_cvspec env cv) !attr
   | SpecStorage st ->
-      if !sto <> Storage_default && st <> TYPEDEF then
+      if !sto <> Storage_default && st <> TYPEDEF && st <> THREAD_LOCAL then
         error loc "multiple storage classes in declaration specifier";
       begin match st with
       | AUTO -> sto := Storage_auto
       | STATIC -> sto := Storage_static
       | EXTERN -> sto := Storage_extern
       | REGISTER -> sto := Storage_register
+      | THREAD_LOCAL ->
+         sto := (match !sto with
+                 | Storage_static | Storage_thread_local_static ->
+                    Storage_thread_local_static
+                 | Storage_extern | Storage_thread_local_extern ->
+                    Storage_thread_local_extern
+                 | Storage_default | Storage_thread_local ->
+                    Storage_thread_local
+                 | Storage_auto|Storage_register ->
+                    error loc "_Thread_local on auto or register variable";
+                    !sto
+                )
+
       | TYPEDEF ->
           if !typedef then
             error loc "multiple uses of 'typedef'";

@@ -72,6 +72,7 @@ let () =
       ("goto", fun loc -> GOTO loc);
       ("if", fun loc -> IF loc);
       ("inline", fun loc -> INLINE loc);
+      ("_Thread_local", fun loc -> THREAD_LOCAL loc);
       ("_Noreturn", fun loc -> NORETURN loc);
       ("int", fun loc -> INT loc);
       ("long", fun loc -> LONG loc);
@@ -542,6 +543,7 @@ and singleline_comment = parse
       | Pre_parser.IF loc -> loop (Parser.IF_ loc)
       | Pre_parser.INC loc -> loop (Parser.INC loc)
       | Pre_parser.INLINE loc -> loop (Parser.INLINE loc)
+      | Pre_parser.THREAD_LOCAL loc -> loop (Parser.THREAD_LOCAL loc)
       | Pre_parser.INT loc -> loop (Parser.INT loc)
       | Pre_parser.LBRACE loc -> loop (Parser.LBRACE loc)
       | Pre_parser.LBRACK loc -> loop (Parser.LBRACK loc)

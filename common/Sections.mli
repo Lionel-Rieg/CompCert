@@ -18,7 +18,8 @@
 
 type section_name =
   | Section_text
-  | Section_data of bool          (* true = init data, false = uninit data *)
+  | Section_data of bool (* true = init data, false = uninit data *)
+                  * bool (* thread local? *)
   | Section_small_data of bool
   | Section_const of bool
   | Section_small_const of bool
@@ -46,7 +47,7 @@ val define_section:
          -> ?writable:bool -> ?executable:bool -> ?access:access_mode -> unit -> unit
 val use_section_for: AST.ident -> string -> bool
 
-val for_variable: Env.t -> C.location -> AST.ident -> C.typ -> bool ->
+val for_variable: Env.t -> C.location -> AST.ident -> C.typ -> bool -> bool ->
                                           section_name * access_mode
 val for_function: Env.t -> C.location -> AST.ident -> C.attributes -> section_name list
 val for_stringlit: unit -> section_name

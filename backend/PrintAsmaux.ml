@@ -303,6 +303,7 @@ let print_version_and_options oc comment =
     fprintf oc " %s" Commandline.argv.(i)
   done;
   fprintf oc "\n"
+  
 (** Get the name of the common section if it is used otherwise the given section
     name, with bss as default *)
 
