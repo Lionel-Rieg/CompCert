@@ -1,0 +1,21 @@
+CFILES=main.c solver.c ../clock.c
+CCOMP=../../../ccomp
+CCOMPFLAGS=
+PROFILING_DAT=compcert_profiling.dat
+EXECUTE=k1-cluster --
+EXAMPLE=sudoku.sat
+
+all: minisat.ccomp minisat.branch_linearize minisat.profiled
+
+minisat.ccomp: $(CFILES)
+	$(CCOMP) $(CCOMPFLAGS) $(CFILES) -o $@
+
+minisat.branch_linearize: $(CFILES)
+	$(CCOMP) $(CCOMPFLAGS) -fbranchlinearize $(CFILES) -o $@
+
+$(PROFILING_DAT): minisat.profile_arcs
+	-rm -f $(PROFILING_DAT)
+	$(EXECUTE) $< $(EXAMPLE)
+
+minisat.profiled: $(CFILES) $(PROFILING_DAT)
+	$(CCOMP) $(CCOMPFLAGS) -fprofile-use= $(PROFILING_DAT) -fbranchlinearize $(CFILES) -o $@
