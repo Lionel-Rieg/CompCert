@@ -20,13 +20,13 @@ minisat.ccomp.exe: $(CFILES)
 	$(CCOMP) $(CCOMPFLAGS) $(CFILES) -o $@ $(LIBS)
 
 minisat.ccomp.profile-arcs.exe: $(CFILES)
-	$(CCOMP) -DAMD_NO_PRIVILEGE $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
+	$(CCOMP) -DARM_NO_PRIVILEGE $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
 
 minisat.gcc-O3.exe: $(CFILES)
 	$(GCC) $(GCCFLAGS) -O3 $(CFILES) -o $@ $(LIBS)
 
 minisat.gcc-O3.profile-arcs.exe: $(CFILES)
-	$(GCC) -DAMD_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
+	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
 
 gcda: minisat.gcc-O3.profile-arcs.exe
 	$(EXECUTE) $< $(EXAMPLE)

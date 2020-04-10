@@ -602,7 +602,6 @@ module Target : TARGET =
     let aarch64_profiling_stub oc nr_items
           profiling_id_table_name
           profiling_counter_table_name =
-	fprintf oc "	ret\n";
 	fprintf oc "	adrp	x2, %s\n" profiling_counter_table_name;
 	fprintf oc "	adrp	x1, %s\n" profiling_id_table_name;
 	fprintf oc "	add	x2, x2, :lo12:%s\n" profiling_counter_table_name;

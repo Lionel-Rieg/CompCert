@@ -73,7 +73,7 @@ $(LIB): $(OBJS)
 # generated assembly
 
 %.o: c/%.c c/i64.h ../ccomp
-	../ccomp -O2 -S -o $*.s -I./c c/$*.c
+	../ccomp -g -O2 -S -o $*.s -I./c c/$*.c
 	sed -i -e 's/i64_/__compcert_i64_/g' $*.s
 	$(CASMRUNTIME) -o $*.o $*.s
 	@rm $*.s

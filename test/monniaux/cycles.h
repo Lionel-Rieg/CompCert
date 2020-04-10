@@ -50,7 +50,7 @@ static inline cycle_t get_cycle(void) {
 typedef uint32_t cycle_t;
 #define PRcycle PRId32
 
-#ifdef ARM_NOPRIVILEGE
+#ifdef ARM_NO_PRIVILEGE
 static inline cycle_t get_cycle(void) {
   return 0;
 }
@@ -67,7 +67,7 @@ static inline cycle_t get_cycle(void) {
 #define PRcycle PRId64
 typedef uint64_t cycle_t;
 
-#ifdef ARM_NOPRIVILEGE
+#ifdef ARM_NO_PRIVILEGE
 static inline cycle_t get_cycle(void) {
   return 0;
 }
