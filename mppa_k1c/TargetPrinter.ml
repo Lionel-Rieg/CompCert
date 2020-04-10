@@ -351,7 +351,7 @@ module Target (*: TARGET*) =
              fprintf oc "	make	$r62 = 1\n";
              fprintf oc "	;;\n";
              fprintf oc "	afaddd	%d[$r63] = $r62\n"
-               (((profiling_position id)*2 + kind)*8);
+               (profiling_offset id kind);
              fprintf oc "	;;\n"
           | _ ->
               assert false

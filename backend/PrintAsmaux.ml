@@ -344,7 +344,8 @@ let profiling_counter_table_name = ".compcert_profiling_counters"
 and profiling_id_table_name = ".compcert_profiling_ids"
 and profiling_write_table = ".compcert_profiling_write_table"
 and profiling_write_table_helper = "_compcert_write_profiling_table"
-and dtor_section = ".dtors.65435";;
+and dtor_section = ".dtors.65435,\"aw\",@progbits"
+and fini_section = ".fini_array.00100,\"aw\"";;
 
 let print_profiling finalizer_section print_profiling_stub oc =
   let nr_items = !next_profiling_position in
@@ -361,7 +362,14 @@ let print_profiling finalizer_section print_profiling_stub oc =
       print_profiling_stub oc nr_items
         profiling_id_table_name
         profiling_counter_table_name;
-      fprintf oc "	.section	%s,\"aw\",@progbits\n" finalizer_section;
+      fprintf oc "	.type	%s, @function\n" profiling_write_table;
+      fprintf oc "	.size	%s, . - %s\n" profiling_write_table profiling_write_table;
+      fprintf oc "	.section	%s\n" finalizer_section;
       fprintf oc "	.align 8\n";
-      fprintf oc "	.8byte	%s\n" profiling_write_table
+      (if Archi.ptr64
+      then fprintf oc "	.8byte	%s\n" profiling_write_table
+      else fprintf oc "	.4byte	%s\n" profiling_write_table)
     end;;
+
+let profiling_offset id kind =
+  ((profiling_position id)*2 + kind)*8;;

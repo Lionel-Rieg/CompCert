@@ -19,6 +19,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 // Modified to compile with MS Visual Studio 6.0 by Alan Mishchenko
 
+#include <stdint.h>
+
 #ifndef solver_h
 #define solver_h
 
@@ -39,11 +41,14 @@ static const bool  false     = 0;
 typedef int                lit;
 typedef char               lbool;
 
+#if 0
 #ifdef _WIN32
 typedef signed __int64     uint64;   // compatible with MS VS 6.0
 #else
 typedef unsigned long long uint64;
 #endif
+#endif
+typedef uint64_t uint64;
 
 static const int   var_Undef = -1;
 static const lit   lit_Undef = -2;

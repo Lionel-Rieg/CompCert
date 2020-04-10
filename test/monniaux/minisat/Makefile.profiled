@@ -1,28 +1,32 @@
+# -*- mode: makefile; -*-
+
 CFILES=main.c solver.c clock.c
 GCDAFILES=$(CFILES:.c=.gcda)
 CCOMP=../../../ccomp
-GCC=k1-cos-gcc
+GCC=aarch64-linux-gnu-gcc  # k1-cos-gcc
 LIBS=-lm
 PROFILING_DAT=compcert_profiling.dat
-EXECUTE=k1-cluster --
+EXECUTE=qemu-aarch64 # k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 EXAMPLE=sudoku.sat
-CCOMPFLAGS=-finline-auto-threshold 50
+CCOMPFLAGS=-finline-auto-threshold 50 -static -finline-asm
+GCCFLAGS=-static
 ALL=minisat.ccomp.log minisat.ccomp.trace-linearize.log minisat.ccomp.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
 
 all: $(ALL)
+exe: $(ALL:.log=.exe)
 
 minisat.ccomp.exe: $(CFILES)
 	$(CCOMP) $(CCOMPFLAGS) $(CFILES) -o $@ $(LIBS)
 
 minisat.ccomp.profile-arcs.exe: $(CFILES)
-	$(CCOMP) $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
+	$(CCOMP) -DAMD_NO_PRIVILEGE $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
 
 minisat.gcc-O3.exe: $(CFILES)
 	$(GCC) $(GCCFLAGS) -O3 $(CFILES) -o $@ $(LIBS)
 
 minisat.gcc-O3.profile-arcs.exe: $(CFILES)
-	$(GCC) $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
+	$(GCC) -DAMD_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
 
 gcda: minisat.gcc-O3.profile-arcs.exe
 	$(EXECUTE) $< $(EXAMPLE)
@@ -48,6 +52,6 @@ minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
 clean:
 	-rm -f *.log *.exe $(PROFILING_DAT) $(GCDAFILES)
 
-.PHONY: clean gcda
+.PHONY: clean gcda exe all
 
 .SECONDARY:
