@@ -816,7 +816,7 @@ module Target (*: TARGET*) =
       end
        
     let print_epilogue oc =
-      print_profiling dtor_section k1c_profiling_stub oc;
+      print_profiling_epilogue Dtors k1c_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;

@@ -342,12 +342,27 @@ let print_profiling_id oc id =
 
 let profiling_counter_table_name = ".compcert_profiling_counters"
 and profiling_id_table_name = ".compcert_profiling_ids"
-and profiling_write_table = ".compcert_profiling_write_table"
+and profiling_write_table = ".compcert_profiling_save_for_this_object"
+and profiling_init = ".compcert_profiling_init"
 and profiling_write_table_helper = "_compcert_write_profiling_table"
 and dtor_section = ".dtors.65435,\"aw\",@progbits"
-and fini_section = ".fini_array.00100,\"aw\"";;
+(* and fini_section = ".fini_array_00100,\"aw\"" *)
+and init_section = ".init_array,\"aw\"";;
 
-let print_profiling finalizer_section print_profiling_stub oc =
+type finalizer_call_method =
+  | Dtors
+  | Init_atexit of (out_channel -> string -> unit);;
+
+let write_symbol_pointer oc sym =
+  if Archi.ptr64
+  then fprintf oc "	.8byte	%s\n" sym
+  else fprintf oc "	.4byte	%s\n" sym;;
+
+let declare_function oc name =
+  fprintf oc "	.type	%s, @function\n" name;
+  fprintf oc "	.size	%s, . - %s\n" name name;;
+
+let print_profiling_epilogue finalizer_call_method print_profiling_stub oc =
   let nr_items = !next_profiling_position in
   if nr_items > 0
   then
@@ -362,12 +377,18 @@ let print_profiling finalizer_section print_profiling_stub oc =
       print_profiling_stub oc nr_items
         profiling_id_table_name
         profiling_counter_table_name;
-      fprintf oc "	.type	%s, @function\n" profiling_write_table;
-      fprintf oc "	.size	%s, . - %s\n" profiling_write_table profiling_write_table;
-      fprintf oc "	.section	%s\n" finalizer_section;
-      (if Archi.ptr64
-      then fprintf oc "	.8byte	%s\n" profiling_write_table
-      else fprintf oc "	.4byte	%s\n" profiling_write_table)
+      declare_function oc profiling_write_table;
+      match finalizer_call_method with
+      | Dtors ->
+         fprintf oc "	.section	%s\n" dtor_section;
+         write_symbol_pointer oc profiling_write_table
+      | Init_atexit(atexit_call) ->
+         fprintf oc "	.section	%s\n" init_section;
+         write_symbol_pointer oc profiling_init;
+         fprintf oc "	.text\n";
+         fprintf oc "%s:\n" profiling_init;
+         atexit_call oc profiling_write_table;
+         declare_function oc profiling_init
     end;;
 
 let profiling_offset id kind =

@@ -608,9 +608,15 @@ module Target : TARGET =
 	fprintf oc "	add	x1, x1, :lo12:%s\n" profiling_id_table_name;
 	fprintf oc "	mov	w0, %d\n" nr_items;
         fprintf oc "	b	%s\n" profiling_write_table_helper ;;
+
+    let print_atexit oc to_be_called =
+      	fprintf oc "	adrp	x0, %s\n" to_be_called;
+	fprintf oc "	add	x0, x0, :lo12:%s\n" to_be_called;
+	fprintf oc "	b	atexit\n";;
         
+
     let print_epilogue oc =
-      print_profiling fini_section aarch64_profiling_stub oc;
+      print_profiling_epilogue (Init_atexit print_atexit) aarch64_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;
