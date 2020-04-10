@@ -3,11 +3,15 @@
 CFILES=main.c solver.c clock.c
 GCDAFILES=$(CFILES:.c=.gcda)
 CCOMP=../../../ccomp
-GCC=aarch64-linux-gnu-gcc  # k1-cos-gcc
+
+GCC=aarch64-linux-gnu-gcc
+GCC=k1-cos-gcc
+EXECUTE=qemu-aarch64
+EXECUTE=k1-cluster --
+EXECUTE_CYCLES=k1-cluster --cycle-based --
+
 LIBS=-lm
 PROFILING_DAT=compcert_profiling.dat
-EXECUTE=qemu-aarch64 # k1-cluster --
-EXECUTE_CYCLES=k1-cluster --cycle-based --
 EXAMPLE=sudoku.sat
 CCOMPFLAGS=-finline-auto-threshold 50 -static -finline-asm
 GCCFLAGS=-static
@@ -37,11 +41,11 @@ minisat.gcc-O3.profiled.exe: $(CFILES) $(GCDAFILES)
 	$(GCC) $(GCCFLAGS) -O3 -fprofile-use $(CFILES) -o $@ $(LIBS)
 
 minisat.ccomp.trace-linearize.exe: $(CFILES)
-	$(CCOMP) $(CCOMPFLAGS) -ftracelinearize $(CFILES) -o $@ $(LIBS)
+	$(CCOMP) $(CCOMPFLAGS) -fduplicate 0 -ftracelinearize $(CFILES) -o $@ $(LIBS)
 
 $(PROFILING_DAT): minisat.ccomp.profile-arcs.exe
 	-rm -f $(PROFILING_DAT)
-	$(EXECUTE) $< $(EXAMPLE) || true
+	$(EXECUTE) $< $(EXAMPLE)
 
 minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
 	$(CCOMP) $(CCOMPFLAGS) -fprofile-use= $(PROFILING_DAT) -ftracelinearize $(CFILES) -o $@ $(LIBS)
