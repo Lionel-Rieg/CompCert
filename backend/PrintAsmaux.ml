@@ -310,4 +310,58 @@ let common_section ?(sec = ".bss") () =
   if !Clflags.option_fcommon then
     "COMM"
   else
-    sec
+    sec;;
+
+(* Profiling *)
+let profiling_table : (Digest.t, int) Hashtbl.t = Hashtbl.create 1000;;
+let next_profiling_position = ref 0;;
+let profiling_position (x : Digest.t) : int =
+  match Hashtbl.find_opt profiling_table x with
+  | None -> let y = !next_profiling_position in
+            next_profiling_position := succ y;
+            Hashtbl.replace profiling_table x y;
+            y
+  | Some y -> y;;
+
+let profiling_ids () =
+  let nr_items = !next_profiling_position in
+  let ar = Array.make nr_items "" in
+  Hashtbl.iter
+    (fun x y -> ar.(y) <- x)
+    profiling_table;
+  ar;;
+
+let print_profiling_id oc id =
+  assert (String.length id = 16);
+  output_string oc "	.byte";
+  for i=0 to 15 do
+    fprintf oc " 0x%02x" (Char.code (String.get id i));
+    if i < 15 then output_char oc ','
+  done;
+  output_char oc '\n';;
+
+let profiling_counter_table_name = ".compcert_profiling_counters"
+and profiling_id_table_name = ".compcert_profiling_ids"
+and profiling_write_table = ".compcert_profiling_write_table"
+and profiling_write_table_helper = "_compcert_write_profiling_table"
+and dtor_section = ".dtors.65435";;
+
+let print_profiling finalizer_section print_profiling_stub oc =
+  let nr_items = !next_profiling_position in
+  if nr_items > 0
+  then
+    begin
+      fprintf oc "	.lcomm	%s, %d\n"
+        profiling_counter_table_name (nr_items * 16);
+      fprintf oc "	.section	.rodata\n";
+      fprintf oc "%s:\n" profiling_id_table_name;
+      Array.iter (print_profiling_id oc) (profiling_ids ());
+      fprintf oc "	.text\n";
+      fprintf oc "%s:\n" profiling_write_table;
+      print_profiling_stub oc nr_items
+        profiling_id_table_name
+        profiling_counter_table_name;
+      fprintf oc "	.section	%s,\"aw\",@progbits\n" finalizer_section;
+      fprintf oc "	.align 8\n";
+      fprintf oc "	.8byte	%s\n" profiling_write_table
+    end;;
