@@ -365,7 +365,6 @@ let print_profiling finalizer_section print_profiling_stub oc =
       fprintf oc "	.type	%s, @function\n" profiling_write_table;
       fprintf oc "	.size	%s, . - %s\n" profiling_write_table profiling_write_table;
       fprintf oc "	.section	%s\n" finalizer_section;
-      fprintf oc "	.align 8\n";
       (if Archi.ptr64
       then fprintf oc "	.8byte	%s\n" profiling_write_table
       else fprintf oc "	.4byte	%s\n" profiling_write_table)

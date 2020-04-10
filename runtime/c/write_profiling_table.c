@@ -27,6 +27,7 @@ void _compcert_write_profiling_table(unsigned int nr_items,
   errno = 0;
   
   FILE *fp = fopen("compcert_profiling.dat", "a");
+  fprintf(stderr, "successfully opened profiling file\n");
   if (fp == NULL) {
     perror("open CompCert profiling data for writing");
     return;
@@ -37,10 +38,13 @@ void _compcert_write_profiling_table(unsigned int nr_items,
     write_counter(fp, counter_table[i][0]);
     write_counter(fp, counter_table[i][1]);
   }
+  fprintf(stderr, "successfully written profiling file\n");
 
   fclose(fp);
+  fprintf(stderr, "successfully closed profiling file\n");
   if (errno != 0) {
     perror("write CompCert profiling data");
     return;
   }
+  fprintf(stderr, "no error\n");
 }
