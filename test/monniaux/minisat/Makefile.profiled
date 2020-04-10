@@ -1,13 +1,12 @@
 # -*- mode: makefile; -*-
 
 CFILES=main.c solver.c clock.c
-GCDAFILES=$(CFILES:.c=.gcda)
 CCOMP=../../../ccomp
 
 GCC=aarch64-linux-gnu-gcc
-GCC=k1-cos-gcc
+#GCC=k1-cos-gcc
 EXECUTE=qemu-aarch64
-EXECUTE=k1-cluster --
+#EXECUTE=k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 
 LIBS=-lm
@@ -29,13 +28,16 @@ minisat.ccomp.profile-arcs.exe: $(CFILES)
 minisat.gcc-O3.exe: $(CFILES)
 	$(GCC) $(GCCFLAGS) -O3 $(CFILES) -o $@ $(LIBS)
 
-minisat.gcc-O3.profile-arcs.exe: $(CFILES)
-	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $(CFILES) -o $@ $(LIBS)
+clock.gcc-O3.noprofile.o : clock.c
+	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -O3 -c $< -o @
+
+minisat.gcc-O3.profile-arcs.exe: main.c solver.c clock.gcc-O3.noprofile.o
+	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $+ -o $@ $(LIBS)
 
 gcda: minisat.gcc-O3.profile-arcs.exe
 	$(EXECUTE) $< $(EXAMPLE)
 
-$(GCDAFILES): gcda
+main.gcda solver.gcda: gcda
 
 minisat.gcc-O3.profiled.exe: $(CFILES) $(GCDAFILES)
 	$(GCC) $(GCCFLAGS) -O3 -fprofile-use $(CFILES) -o $@ $(LIBS)
