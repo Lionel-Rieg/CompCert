@@ -41,7 +41,7 @@ minisat.ccomp.trace-linearize.exe: $(CFILES)
 
 $(PROFILING_DAT): minisat.ccomp.profile-arcs.exe
 	-rm -f $(PROFILING_DAT)
-	$(EXECUTE) $< $(EXAMPLE)
+	$(EXECUTE) $< $(EXAMPLE) || true
 
 minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
 	$(CCOMP) $(CCOMPFLAGS) -fprofile-use= $(PROFILING_DAT) -ftracelinearize $(CFILES) -o $@ $(LIBS)

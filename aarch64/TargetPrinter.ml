@@ -230,7 +230,7 @@ module Target : TARGET =
     let next_profiling_label =
       let atomic_incr_counter = ref 0 in
       fun () ->
-      let r = sprintf ".compcert_atomic_incr%d" !atomic_incr_counter in
+      let r = sprintf ".Lcompcert_atomic_incr%d" !atomic_incr_counter in
       incr atomic_incr_counter; r;;
                 
     let print_profiling_logger oc id kind =

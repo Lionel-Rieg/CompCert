@@ -46,5 +46,5 @@ void _compcert_write_profiling_table(unsigned int nr_items,
     perror("write CompCert profiling data");
     return;
   }
-  //fprintf(stderr, "no error\n");
+  fprintf(stderr, "write CompCert profiling data: no error\n");
 }
