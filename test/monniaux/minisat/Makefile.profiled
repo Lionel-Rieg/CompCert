@@ -7,7 +7,7 @@ PROFILING_DAT=compcert_profiling.dat
 EXECUTE=k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 EXAMPLE=sudoku.sat
-
+CCOMPFLAGS=-finline-auto-threshold 50
 ALL=minisat.ccomp.log minisat.ccomp.trace-linearize.log minisat.ccomp.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
 
 all: $(ALL)
@@ -46,7 +46,7 @@ minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
 	$(EXECUTE_CYCLES) $< $(EXAMPLE) 2>&1 | tee $@
 
 clean:
-	-rm -f $(ALL) $(PROFILING_DAT) $(GCDAFILES)
+	-rm -f *.log *.exe $(PROFILING_DAT) $(GCDAFILES)
 
 .PHONY: clean gcda
 

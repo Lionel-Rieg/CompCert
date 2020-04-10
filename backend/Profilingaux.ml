@@ -55,6 +55,6 @@ let load_profiling_info (filename : string) : unit =
 
 let condition_oracle (id : identifier) : bool option =
   let (count0, count1) = get_counts id in
-  Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1;
+  (* Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1; *)
   if count0 = count1 then None
   else Some(count1 > count0);;

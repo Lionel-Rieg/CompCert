@@ -272,9 +272,19 @@ module Target (*: TARGET*) =
     let profiling_counter_table_name = ".compcert_profiling_counters"
     and profiling_id_table_name = ".compcert_profiling_ids"
     and profiling_write_table = ".compcert_profiling_write_table"
-    and profiling_write_table_helper = "_compcert_write_profiling_table";;
-      
-    let print_profiling oc =
+    and profiling_write_table_helper = "_compcert_write_profiling_table"
+    and dtor_section = ".dtors.65435";;
+
+    let k1c_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+          fprintf oc "	make $r0 = %d\n" nr_items;
+          fprintf oc "	make $r1 = %s\n" profiling_id_table_name;
+          fprintf oc "	make $r2 = %s\n" profiling_counter_table_name;
+          fprintf oc "	goto	%s\n" profiling_write_table_helper;
+          fprintf oc "	;;\n";;
+
+    let print_profiling finalizer_section print_profiling_stub oc =
       let nr_items = !next_profiling_position in
       if nr_items > 0
       then
@@ -286,12 +296,10 @@ module Target (*: TARGET*) =
           Array.iter (print_profiling_id oc) (profiling_ids ());
           fprintf oc "	.text\n";
           fprintf oc "%s:\n" profiling_write_table;
-          fprintf oc "	make $r0 = %d\n" nr_items;
-          fprintf oc "	make $r1 = %s\n" profiling_id_table_name;
-          fprintf oc "	make $r2 = %s\n" profiling_counter_table_name;
-          fprintf oc "	goto	%s\n" profiling_write_table_helper;
-          fprintf oc "	;;\n";
-          fprintf oc "	.section	.dtors.65435,\"aw\",@progbits\n";
+          print_profiling_stub oc nr_items
+            profiling_id_table_name
+            profiling_counter_table_name;
+          fprintf oc "	.section	%s,\"aw\",@progbits\n" finalizer_section;
           fprintf oc "	.align 8\n";
           fprintf oc "	.8byte	%s\n" profiling_write_table
         end;;
@@ -860,7 +868,7 @@ module Target (*: TARGET*) =
       end
        
     let print_epilogue oc =
-      print_profiling oc;
+      print_profiling dtor_section k1c_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;
