@@ -5,8 +5,8 @@ CCOMP=../../../ccomp
 
 GCC=aarch64-linux-gnu-gcc
 #GCC=k1-cos-gcc
-#EXECUTE=qemu-aarch64
-EXECUTE=qemu-arm
+EXECUTE=qemu-aarch64
+#EXECUTE=qemu-arm
 #EXECUTE=k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 
