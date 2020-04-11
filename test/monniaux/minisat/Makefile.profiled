@@ -3,17 +3,17 @@
 CFILES=main.c solver.c clock.c
 CCOMP=../../../ccomp
 
-GCC=aarch64-linux-gnu-gcc
-#GCC=k1-cos-gcc
-EXECUTE=qemu-aarch64
+#GCC=aarch64-linux-gnu-gcc
+GCC=k1-cos-gcc
+#EXECUTE=qemu-aarch64
 #EXECUTE=qemu-arm
-#EXECUTE=k1-cluster --
+EXECUTE=k1-cluster --
 EXECUTE_CYCLES=k1-cluster --cycle-based --
 
 LIBS=-lm
 PROFILING_DAT=compcert_profiling.dat
 EXAMPLE=sudoku.sat
-CCOMPFLAGS=-finline-auto-threshold 50 -static -finline-asm
+CCOMPFLAGS=-static -finline-asm -finline-auto-threshold 50 
 GCCFLAGS=-static
 ALL=minisat.ccomp.log minisat.ccomp.trace-linearize.log minisat.ccomp.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
 

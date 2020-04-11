@@ -1,25 +1,35 @@
 open Camlcoq
 open RTL
-
+open Maps
+   
 type identifier = Digest.t
-                
-let function_id (f : coq_function) : identifier =
-  Digest.string (Marshal.to_string f []);;
-
-let branch_id (f_id : identifier) (node : P.t) : identifier =
-  Digest.string (f_id ^ (Int64.to_string (P.to_int64 node)));;
 
 let pp_id channel (x : identifier) =
+  assert(String.length x = 16);
   for i=0 to 15 do
     Printf.fprintf channel "%02x" (Char.code (String.get x i))
   done
 
-let spp_id () (x : identifier) : string =
-  let s = ref "" in
-  for i=0 to 15 do
-    s := Printf.sprintf "%02x%s" (Char.code (String.get x i)) !s
-  done;
-  !s;;
+let print_anonymous_function pp f =
+  let instrs =
+    List.sort
+      (fun (pc1, _) (pc2, _) -> compare pc2 pc1)
+      (List.rev_map
+        (fun (pc, i) -> (P.to_int pc, i))
+        (PTree.elements f.fn_code)) in
+  PrintRTL.print_succ pp f.fn_entrypoint
+    (match instrs with (pc1, _) :: _ -> pc1 | [] -> -1);
+  List.iter (PrintRTL.print_instruction pp) instrs;
+  Printf.fprintf pp "}\n\n"
+  
+let function_id (f : coq_function) : identifier =
+  let digest = Digest.string (Marshal.to_string f []) in
+  Printf.fprintf stderr "FUNCTION hash = %a\n" pp_id digest;
+  print_anonymous_function stderr f;
+  digest
+
+let branch_id (f_id : identifier) (node : P.t) : identifier =
+  Digest.string (f_id ^ (Int64.to_string (P.to_int64 node)));;
 
 let profiling_counts : (identifier, (Int64.t*Int64.t)) Hashtbl.t = Hashtbl.create 1000;;
 
@@ -55,7 +65,7 @@ let load_profiling_info (filename : string) : unit =
 
 let condition_oracle (id : identifier) : bool option =
   let (count0, count1) = get_counts id in
-  (if count0 <> 0L || count1 <> 0L then
+  ( (* if count0 <> 0L || count1 <> 0L then *)
   Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1);
   if count0 = count1 then None
   else Some(count1 > count0);;
