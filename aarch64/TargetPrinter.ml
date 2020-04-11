@@ -616,7 +616,7 @@ module Target : TARGET =
         
 
     let print_epilogue oc =
-      print_profiling_epilogue (Init_atexit print_atexit) aarch64_profiling_stub oc;
+      print_profiling_epilogue elf_text_print_fun_info (Init_atexit print_atexit) aarch64_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;

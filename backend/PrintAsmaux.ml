@@ -111,6 +111,10 @@ let elf_symbol_offset oc (symb, ofs) =
   if ofs <> 0L then fprintf oc " + %Ld" ofs
 
 (* Functions for fun and var info *)
+let elf_text_print_fun_info oc name =
+  fprintf oc "	.type	%s, @function\n" name;
+  fprintf oc "	.size	%s, . - %s\n" name name
+
 let elf_print_fun_info oc name =
   fprintf oc "	.type	%a, @function\n" elf_symbol name;
   fprintf oc "	.size	%a, . - %a\n" elf_symbol name elf_symbol name
