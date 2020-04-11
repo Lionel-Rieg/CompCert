@@ -45,7 +45,7 @@ static inline cycle_t get_cycle(void) {
   return cycles;
 }
 
-#elif defined (__ARM_ARCH) && (__ARM_ARCH >= 6)
+#elif defined (__ARM_ARCH) // && (__ARM_ARCH >= 6)
 #if (__ARM_ARCH < 8)
 typedef uint32_t cycle_t;
 #define PRcycle PRId32
