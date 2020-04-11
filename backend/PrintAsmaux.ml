@@ -358,11 +358,7 @@ let write_symbol_pointer oc sym =
   then fprintf oc "	.8byte	%s\n" sym
   else fprintf oc "	.4byte	%s\n" sym;;
 
-let declare_function oc name =
-  fprintf oc "	.type	%s, @function\n" name;
-  fprintf oc "	.size	%s, . - %s\n" name name;;
-
-let print_profiling_epilogue finalizer_call_method print_profiling_stub oc =
+let print_profiling_epilogue declare_function finalizer_call_method print_profiling_stub oc =
   let nr_items = !next_profiling_position in
   if nr_items > 0
   then
