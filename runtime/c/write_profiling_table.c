@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 
 typedef uint8_t md5_hash[16];
@@ -25,8 +26,15 @@ void _compcert_write_profiling_table(unsigned int nr_items,
 				      md5_hash id_table[],
 				      condition_counters counter_table[]) {
   errno = 0;
+
+  const char *filename = getenv("COMPCERT_PROFILING_DATA");
+  if (filename) {
+    if (!*filename) return;
+  } else {
+    filename = "compcert_profiling.dat";
+  }
   
-  FILE *fp = fopen("compcert_profiling.dat", "a");
+  FILE *fp = fopen(filename, "a");
   //fprintf(stderr, "successfully opened profiling file\n");
   if (fp == NULL) {
     perror("open CompCert profiling data for writing");
@@ -46,5 +54,5 @@ void _compcert_write_profiling_table(unsigned int nr_items,
     perror("write CompCert profiling data");
     return;
   }
-  fprintf(stderr, "write CompCert profiling data: no error\n");
+  // fprintf(stderr, "write CompCert profiling data: no error\n");
 }
