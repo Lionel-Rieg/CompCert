@@ -7,8 +7,8 @@ CCOMP=../../../ccomp
 GCC=k1-cos-gcc
 #EXECUTE=qemu-aarch64
 #EXECUTE=qemu-arm
-EXECUTE=k1-cluster --
-EXECUTE_CYCLES=k1-cluster --cycle-based --
+#EXECUTE=k1-cluster --
+#EXECUTE_CYCLES=k1-cluster --cycle-based --
 
 LIBS=-lm
 PROFILING_DAT=compcert_profiling.dat
@@ -36,7 +36,7 @@ minisat.gcc-O3.profile-arcs.exe: main.c solver.c clock.gcc-O3.noprofile.o
 	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $+ -o $@ $(LIBS)
 
 gcda: minisat.gcc-O3.profile-arcs.exe
-	$(EXECUTE) $< $(EXAMPLE)
+	$(EXECUTE) ./$< $(EXAMPLE)
 
 main.gcda solver.gcda: gcda
 
@@ -48,7 +48,7 @@ minisat.ccomp.trace-linearize.exe: $(CFILES)
 
 $(PROFILING_DAT): minisat.ccomp.profile-arcs.exe
 	-rm -f $(PROFILING_DAT)
-	$(EXECUTE) $< $(EXAMPLE)
+	$(EXECUTE) ./$< $(EXAMPLE)
 
 minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
 	$(CCOMP) $(CCOMPFLAGS) -fprofile-use= $(PROFILING_DAT) -ftracelinearize $(CFILES) -o $@ $(LIBS)
