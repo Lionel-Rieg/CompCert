@@ -176,7 +176,8 @@ module ELF_System : SYSTEM =
         begin
           fprintf oc "	pushl	$%s\n" to_be_called;
           fprintf oc "	call	atexit\n";
-          fprintf oc "	addl	$4, %%esp\n"
+          fprintf oc "	addl	$4, %%esp\n";
+          fprintf oc "	ret\n"
         end
 
     let x86_profiling_stub oc nr_items
@@ -196,7 +197,8 @@ module ELF_System : SYSTEM =
 	  fprintf oc "	pushl	$%s\n" profiling_id_table_name;
 	  fprintf oc "	pushl	$%d\n" nr_items;
           fprintf oc "	call	%s\n" profiling_write_table_helper ;
-          fprintf oc "	addl	$12, %%esp\n"
+          fprintf oc "	addl	$12, %%esp\n";
+          fprintf oc "	ret\n"
         end;;
     
     let print_epilogue oc =
