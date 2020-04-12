@@ -13,6 +13,8 @@ This version may experience significant slowdown compared to normally compiled c
 
 At the end of execution of the program, frequency information will be logged to a file whose default name is `compcert_profiling.dat` (in the current directory). Another name may be used by specifying it using the `COMPCERT_PROFILING_DATA` environment variable. If this variable contains an empty string, no logging is done (but the slowdown still applies).
 
+Data are appended to the log file, never deleted, so it is safe to run the program several times on several test cases to accumulate data.
+
 Depending on the platform, this logging system is or is not thread-safe and is or is not compatible with position-independent code (PIC). In non thread-safe configurations, if two different execution threads execute code to be profiled, the profiling counters may end up with incorrect values.
 
 | Target platform | Available? | Thread-safe | PIC |
@@ -27,4 +29,6 @@ Depending on the platform, this logging system is or is not thread-safe and is o
 | Risc-V 64       | No         |             |     |
 | x86-64          | Yes        | Yes         | Yes |
 
-For recompiling the program using profiling information, use `-fprofile-use compcert_profiling.dat -ftracelinearize` (substitute the appropriate filename for `compcert_profiling.dat` if needed). Experiments show performance improvement on K1c, not on other platforms.
+For recompiling the program using profiling information, use `-fprofile-use= compcert_profiling.dat -ftracelinearize` (substitute the appropriate filename for `compcert_profiling.dat` if needed). Experiments show performance improvement on K1c, not on other platforms.
+
+The same options (except for `-fprofile-use=` and `-fprofile-arcs`) should be used to compile the logging and optimized versions of the program: only functions that are exactly the same in the intermediate representation will be optimized according to profiling information.
