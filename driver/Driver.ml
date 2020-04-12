@@ -224,7 +224,10 @@ Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -falign-functions <n>  Set alignment (in bytes) of function entry points
   -falign-branch-targets <n>  Set alignment (in bytes) of branch targets
   -falign-cond-branches <n>  Set alignment (in bytes) of conditional branches
-  -fcommon       Put uninitialized globals in the common section [on].
+  -fcommon       Put uninitialized globals in the common section [on]
+  -fprofile-arcs  Profile branches [off].
+  -fprofile-use= filename  Use profiling information in filename
+  -fbranch-probabilities Use profiling information (if available) for branches [on]
 |} ^
  target_help ^
  toolchain_help ^
@@ -329,6 +332,7 @@ let cmdline_actions =
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
+  Exact "-fprofile-use=", String (fun s -> Profilingaux.load_profiling_info s);
   Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
@@ -416,7 +420,9 @@ let cmdline_actions =
   @ f_opt "coalesce-mem" option_fcoalesce_mem
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
   @ f_opt "forward-moves" option_fforward_moves
-(* Code generation options *)
+ (* Code generation options *)
+  @ f_opt "profile-arcs" option_profile_arcs
+  @ f_opt "branch-probabilities" option_fbranch_probabilities
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
   @ [

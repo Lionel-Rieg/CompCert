@@ -38,6 +38,8 @@ OBJS=i64_dtos.o i64_dtou.o i64_sar.o i64_sdiv.o i64_shl.o \
   vararg.o
 endif
 
+OBJS+=write_profiling_table.o
+
 LIB=libcompcert.a
 
 INCLUDES=include/float.h include/stdarg.h include/stdbool.h \
@@ -71,7 +73,7 @@ $(LIB): $(OBJS)
 # generated assembly
 
 %.o: c/%.c c/i64.h ../ccomp
-	../ccomp -O2 -S -o $*.s -I./c c/$*.c
+	../ccomp -g -O2 -S -o $*.s -I./c c/$*.c
 	sed -i -e 's/i64_/__compcert_i64_/g' $*.s
 	$(CASMRUNTIME) -o $*.o $*.s
 	@rm $*.s

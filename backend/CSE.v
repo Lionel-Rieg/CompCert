@@ -493,7 +493,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
               | _ =>
                   empty_numbering
               end
-          | EF_vload _ | EF_annot _ _ _ | EF_annot_val _ _ _ | EF_debug _ _ _ =>
+          | EF_vload _ | EF_annot _ _ _ | EF_annot_val _ _ _ | EF_debug _ _ _ | EF_profiling _ _ =>
               set_res_unknown before res
           end
       | Icond cond args ifso ifnot _ =>

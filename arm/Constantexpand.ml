@@ -106,6 +106,7 @@ let estimate_size = function
   | Pbuiltin (ef,_,_) ->
     begin match ef with
     | EF_inline_asm _ -> 256
+    | EF_profiling _ -> 40
     | _ -> 0 end
   | Pcfi_adjust _
   | Pcfi_rel_offset _

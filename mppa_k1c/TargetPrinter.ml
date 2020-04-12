@@ -249,7 +249,20 @@ module Target (*: TARGET*) =
   (*let w oc =
       if Archi.ptr64 then output_string oc "w"
   *)
-(* Offset part of a load or store *)
+
+    (* Profiling *)
+    
+
+    let k1c_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+          fprintf oc "	make $r0 = %d\n" nr_items;
+          fprintf oc "	make $r1 = %s\n" profiling_id_table_name;
+          fprintf oc "	make $r2 = %s\n" profiling_counter_table_name;
+          fprintf oc "	goto	%s\n" profiling_write_table_helper;
+          fprintf oc "	;;\n";;
+
+    (* Offset part of a load or store *)
 
     let offset oc n = ptrofs oc n 
 
@@ -338,6 +351,18 @@ module Target (*: TARGET*) =
               fprintf oc "%s begin inline assembly\n\t" comment;
               print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
+          | EF_profiling(id, coq_kind) ->
+             let kind = Z.to_int coq_kind in
+             assert (kind >= 0);
+             assert (kind <= 1);
+             fprintf oc "%s profiling %a %d\n" comment
+               Profilingaux.pp_id id kind;
+             fprintf oc "	make	$r63 = %s\n" profiling_counter_table_name;
+             fprintf oc "	make	$r62 = 1\n";
+             fprintf oc "	;;\n";
+             fprintf oc "	afaddd	%d[$r63] = $r62\n"
+               (profiling_offset id kind);
+             fprintf oc "	;;\n"
           | _ ->
               assert false
          end
@@ -799,8 +824,9 @@ module Target (*: TARGET*) =
       if !Clflags.option_g then begin
         section oc Section_text;
       end
-
+       
     let print_epilogue oc =
+      print_profiling_epilogue elf_text_print_fun_info Dtors k1c_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;

@@ -171,6 +171,7 @@ Definition destroyed_by_builtin (ef: external_function): list mreg :=
     if Z.leb sz 15
     then R62 :: R63 :: R61 :: nil
     else R62 :: R63 :: R61 :: R60 :: nil
+  | EF_profiling _ _ => R62 :: R63 ::nil
   | _ => nil
   end.
 

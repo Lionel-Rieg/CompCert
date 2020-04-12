@@ -464,6 +464,11 @@ Qed.
 
 (** * External functions *)
 
+(* Identifiers for profiling information *)
+Parameter profiling_id : Type.
+Axiom profiling_id_eq : forall (x y : profiling_id), {x=y} + {x<>y}.
+Definition profiling_kind := Z.t.
+
 (** For most languages, the functions composing the program are either
   internal functions, defined within the language, or external functions,
   defined outside.  External functions include system calls but also
@@ -514,10 +519,13 @@ Inductive external_function : Type :=
          used with caution, as it can invalidate the semantic
          preservation theorem.  Generated only if [-finline-asm] is
          given. *)
-  | EF_debug (kind: positive) (text: ident) (targs: list typ).
+  | EF_debug (kind: positive) (text: ident) (targs: list typ)
      (** Transport debugging information from the front-end to the generated
          assembly.  Takes zero, one or several arguments like [EF_annot].
          Unlike [EF_annot], produces no observable event. *)
+  | EF_profiling (id: profiling_id) (kind : profiling_kind).
+     (** Count one profiling event for this identifier and kind.
+         Takes no argument. Produces no observable event. *)
 
 (** The type signature of an external function. *)
 
@@ -535,6 +543,7 @@ Definition ef_sig (ef: external_function): signature :=
   | EF_annot_val kind text targ => mksignature (targ :: nil) targ cc_default
   | EF_inline_asm text sg clob => sg
   | EF_debug kind text targs => mksignature targs Tvoid cc_default
+  | EF_profiling id kind => mksignature nil Tvoid cc_default
   end.
 
 (** Whether an external function should be inlined by the compiler. *)
@@ -553,6 +562,7 @@ Definition ef_inline (ef: external_function) : bool :=
   | EF_annot_val kind Text rg => true
   | EF_inline_asm text sg clob => true
   | EF_debug kind text targs => true
+  | EF_profiling id kind => true
   end.
 
 (** Whether an external function must reload its arguments. *)
@@ -568,7 +578,7 @@ Definition ef_reloads (ef: external_function) : bool :=
 
 Definition external_function_eq: forall (ef1 ef2: external_function), {ef1=ef2} + {ef1<>ef2}.
 Proof.
-  generalize ident_eq string_dec signature_eq chunk_eq typ_eq list_eq_dec zeq Int.eq_dec; intros.
+  generalize profiling_id_eq ident_eq string_dec signature_eq chunk_eq typ_eq list_eq_dec zeq Int.eq_dec; intros.
   decide equality.
 Defined.
 Global Opaque external_function_eq.

@@ -1,0 +1,16 @@
+EXE=minisat.ccomp.exe minisat.ccomp.trace-linearize.exe \
+  minisat.gcc-O3.exe \
+  minisat.ccomp.profiled.exe      minisat.gcc-O3.profiled.exe
+
+LOG=$(EXE:.exe=.dat)
+
+all: $(LOG)
+
+%.log : %.exe
+	rm -f $@
+	for i in `seq 1 1000` ; do ./$< sudoku.sat >> $@; done
+
+%.dat : %.log
+	grep 'time cycles: ' $< | sed -e 's/time cycles: //' | awk '{ total += $$1; count++ } END { print total/count }' > $@
+
+.SECONDARY:

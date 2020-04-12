@@ -1378,9 +1378,48 @@ Inductive extcall_debug_sem (ge: Senv.t):
   | extcall_debug_sem_intro: forall vargs m,
       extcall_debug_sem ge vargs m E0 Vundef m.
 
+Inductive extcall_profiling_sem (ge: Senv.t):
+              list val -> mem -> trace -> val -> mem -> Prop :=
+  | extcall_profiling_sem_intro: forall vargs m,
+      extcall_profiling_sem ge vargs m E0 Vundef m.
+
 Lemma extcall_debug_ok:
   forall targs,
   extcall_properties extcall_debug_sem
+                     (mksignature targs Tvoid cc_default).
+Proof.
+  intros; constructor; intros.
+(* well typed *)
+- inv H. simpl. auto.
+(* symbols *)
+- inv H0. econstructor; eauto.
+(* valid blocks *)
+- inv H; auto.
+(* perms *)
+- inv H; auto.
+(* readonly *)
+- inv H; auto.
+(* mem extends *)
+- inv H.
+  exists Vundef; exists m1'; intuition.
+  econstructor; eauto.
+(* mem injects *)
+- inv H0.
+  exists f; exists Vundef; exists m1'; intuition.
+  econstructor; eauto.
+  red; intros; congruence.
+(* trace length *)
+- inv H; simpl; omega.
+(* receptive *)
+- inv H; inv H0. exists Vundef, m1; constructor.
+(* determ *)
+- inv H; inv H0.
+  split. constructor. auto.
+Qed.
+
+Lemma extcall_profiling_ok:
+  forall targs,
+  extcall_properties extcall_profiling_sem
                      (mksignature targs Tvoid cc_default).
 Proof.
   intros; constructor; intros.
@@ -1530,6 +1569,7 @@ Definition external_call (ef: external_function): extcall_sem :=
   | EF_annot_val kind txt targ => extcall_annot_val_sem txt targ
   | EF_inline_asm txt sg clb => inline_assembly_sem txt sg
   | EF_debug kind txt targs => extcall_debug_sem
+  | EF_profiling id kind  => extcall_profiling_sem
   end.
 
 Theorem external_call_spec:
@@ -1537,18 +1577,19 @@ Theorem external_call_spec:
   extcall_properties (external_call ef) (ef_sig ef).
 Proof.
   intros. unfold external_call, ef_sig; destruct ef.
-  apply external_functions_properties.
-  apply builtin_or_external_sem_ok.
-  apply builtin_or_external_sem_ok.
-  apply volatile_load_ok.
-  apply volatile_store_ok.
-  apply extcall_malloc_ok.
-  apply extcall_free_ok.
-  apply extcall_memcpy_ok.
-  apply extcall_annot_ok.
-  apply extcall_annot_val_ok.
-  apply inline_assembly_properties.
-  apply extcall_debug_ok.
+- apply external_functions_properties.
+- apply builtin_or_external_sem_ok.
+- apply builtin_or_external_sem_ok.
+- apply volatile_load_ok.
+- apply volatile_store_ok.
+- apply extcall_malloc_ok.
+- apply extcall_free_ok.
+- apply extcall_memcpy_ok.
+- apply extcall_annot_ok.
+- apply extcall_annot_val_ok.
+- apply inline_assembly_properties.
+- apply extcall_debug_ok.
+- apply extcall_profiling_ok.
 Qed.
 
 Definition external_call_well_typed_gen ef := ec_well_typed (external_call_spec ef).
