@@ -496,7 +496,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           | EF_vload _ | EF_annot _ _ _ | EF_annot_val _ _ _ | EF_debug _ _ _ =>
               set_res_unknown before res
           end
-      | Icond cond args ifso ifnot =>
+      | Icond cond args ifso ifnot _ =>
           before
       | Ijumptable arg tbl =>
           before
@@ -549,10 +549,10 @@ Definition transf_instr (n: numbering) (instr: instruction) :=
       let (n1, vl) := valnum_regs n args in
       let (addr', args') := reduce _ combine_addr n1 addr args vl in
       Istore chunk addr' args' src s
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 i =>
       let (n1, vl) := valnum_regs n args in
       let (cond', args') := reduce _ combine_cond n1 cond args vl in
-      Icond cond' args' s1 s2
+      Icond cond' args' s1 s2 i
   | _ =>
       instr
   end.

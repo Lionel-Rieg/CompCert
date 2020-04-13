@@ -67,11 +67,12 @@ Inductive instruction: Type :=
       (** [Ibuiltin ef args dest succ] calls the built-in function
           identified by [ef], giving it the values of [args] as arguments.
           It stores the return value in [dest] and branches to [succ]. *)
-  | Icond: condition -> list reg -> node -> node -> instruction
-      (** [Icond cond args ifso ifnot] evaluates the boolean condition
+  | Icond: condition -> list reg -> node -> node -> option bool -> instruction
+      (** [Icond cond args ifso ifnot info] evaluates the boolean condition
           [cond] over the values of registers [args].  If the condition
           is true, it transitions to [ifso].  If the condition is false,
-          it transitions to [ifnot]. *)
+          it transitions to [ifnot]. [info] is a ghost field there to provide
+          information relative to branch prediction. *)
   | Ijumptable: reg -> list node -> instruction
       (** [Ijumptable arg tbl] transitions to the node that is the [n]-th
           element of the list [tbl], where [n] is the unsigned integer
@@ -262,8 +263,8 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State s f sp pc rs m)
          t (State s f sp pc' (regmap_setres res vres rs) m')
   | exec_Icond:
-      forall s f sp pc rs m cond args ifso ifnot b pc',
-      (fn_code f)!pc = Some(Icond cond args ifso ifnot) ->
+      forall s f sp pc rs m cond args ifso ifnot b pc' predb,
+      (fn_code f)!pc = Some(Icond cond args ifso ifnot predb) ->
       eval_condition cond rs##args m = Some b ->
       pc' = (if b then ifso else ifnot) ->
       step (State s f sp pc rs m)
@@ -403,7 +404,7 @@ Definition successors_instr (i: instruction) : list node :=
   | Icall sig ros args res s => s :: nil
   | Itailcall sig ros args => nil
   | Ibuiltin ef args res s => s :: nil
-  | Icond cond args ifso ifnot => ifso :: ifnot :: nil
+  | Icond cond args ifso ifnot _ => ifso :: ifnot :: nil
   | Ijumptable arg tbl => tbl
   | Ireturn optarg => nil
   end.
@@ -424,7 +425,7 @@ Definition instr_uses (i: instruction) : list reg :=
   | Itailcall sig (inl r) args => r :: args
   | Itailcall sig (inr id) args => args
   | Ibuiltin ef args res s => params_of_builtin_args args
-  | Icond cond args ifso ifnot => args
+  | Icond cond args ifso ifnot _ => args
   | Ijumptable arg tbl => arg :: nil
   | Ireturn None => nil
   | Ireturn (Some arg) => arg :: nil
@@ -442,7 +443,7 @@ Definition instr_defs (i: instruction) : option reg :=
   | Itailcall sig ros args => None
   | Ibuiltin ef args res s =>
       match res with BR r => Some r | _ => None end
-  | Icond cond args ifso ifnot => None
+  | Icond cond args ifso ifnot _ => None
   | Ijumptable arg tbl => None
   | Ireturn optarg => None
   end.
@@ -485,7 +486,7 @@ Definition max_reg_instr (m: positive) (pc: node) (i: instruction) :=
   | Ibuiltin ef args res s =>
       fold_left Pos.max (params_of_builtin_args args)
         (fold_left Pos.max (params_of_builtin_res res) m)
-  | Icond cond args ifso ifnot => fold_left Pos.max args m
+  | Icond cond args ifso ifnot _ => fold_left Pos.max args m
   | Ijumptable arg tbl => Pos.max arg m
   | Ireturn None => m
   | Ireturn (Some arg) => Pos.max arg m

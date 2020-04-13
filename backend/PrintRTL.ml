@@ -75,10 +75,11 @@ let print_instruction pp (pc, i) =
         (name_of_external ef)
         (print_builtin_args reg) args;
       print_succ pp s (pc - 1)
-  | Icond(cond, args, s1, s2) ->
-      fprintf pp "if (%a) goto %d else goto %d\n"
+  | Icond(cond, args, s1, s2, info) ->
+      fprintf pp "if (%a) goto %d else goto %d (prediction: %s)\n"
         (PrintOp.print_condition reg) (cond, args)
         (P.to_int s1) (P.to_int s2)
+        (match info with None -> "none" | Some true -> "branch" | Some false -> "fallthrough")
   | Ijumptable(arg, tbl) ->
       let tbl = Array.of_list tbl in
       fprintf pp "jumptable (%a)\n" reg arg;

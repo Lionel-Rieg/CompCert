@@ -169,11 +169,11 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
                          (Ibuiltin ef args res s)
                          (expand_moves mv1
                            (Lbuiltin ef args' res' :: expand_moves mv2 (Lbranch s :: k)))
-  | ebs_cond: forall cond args mv args' s1 s2 k,
+  | ebs_cond: forall cond args mv args' s1 s2 k i i',
       wf_moves mv ->
       expand_block_shape (BScond cond args mv args' s1 s2)
-                         (Icond cond args s1 s2)
-                         (expand_moves mv (Lcond cond args' s1 s2 :: k))
+                         (Icond cond args s1 s2 i)
+                         (expand_moves mv (Lcond cond args' s1 s2 i' :: k))
   | ebs_jumptable: forall arg mv arg' tbl k,
       wf_moves mv ->
       expand_block_shape (BSjumptable arg mv arg' tbl)
