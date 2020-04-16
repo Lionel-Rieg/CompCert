@@ -869,6 +869,36 @@ Section SOUNDNESS.
 
   Hint Resolve store_sound : cse3.
 
+  Lemma kill_builtin_res_sound:
+    forall res (m : mem) (rs : regset) vres (rel : RELATION.t)
+           (REL : sem_rel rel rs m),
+      (sem_rel (kill_builtin_res (ctx:=ctx) res rel)
+               (regmap_setres res vres rs) m).
+  Proof.
+    destruct res; simpl; intros; trivial.
+    apply kill_reg_sound; trivial.
+  Qed.
+
+  Hint Resolve kill_builtin_res_sound : cse3.
+
+  Lemma external_call_sound:
+    forall ge ef (rel : RELATION.t) (m m' : mem) (rs : regset) vargs t vres
+           (REL : sem_rel rel rs m)
+           (CALL : external_call ef ge vargs m t vres m'),
+      sem_rel (apply_external_call (ctx:=ctx) ef rel) rs m'.
+  Proof.
+    destruct ef; intros; simpl in *.
+    all: eauto using kill_mem_sound.
+    all: unfold builtin_or_external_sem in *.
+    1, 2: destruct (Builtins.lookup_builtin_function name sg);
+      eauto using kill_mem_sound;
+      inv CALL; eauto using kill_mem_sound.
+    all: inv CALL.
+    all: eauto using kill_mem_sound.
+  Qed.
+
+  Hint Resolve external_call_sound : cse3.
+
   Section INDUCTIVENESS.
     Variable fn : RTL.function.
     Variable tenv : typing_env.

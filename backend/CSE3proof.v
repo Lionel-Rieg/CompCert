@@ -224,7 +224,6 @@ Proof.
   eapply function_ptr_translated; eauto.
 Qed.
 
-Check sem_rel_b.
 Inductive match_stackframes: list stackframe -> list stackframe -> signature -> Prop :=
   | match_stackframes_nil: forall sg,
       sg.(sig_res) = Tint ->
@@ -428,8 +427,8 @@ Ltac IND_STEP :=
         destruct ((fst (preanalysis tenv fn)) # mpc) as [zinv | ];
         simpl in *;
         intuition;
-        eapply rel_ge; eauto with cse3;
-        idtac mpc mpc' fn minstr
+        eapply rel_ge; eauto with cse3 (* ; for printing
+        idtac mpc mpc' fn minstr *)
       end.
 
 Lemma if_same : forall {T : Type} (b : bool) (x : T),
@@ -753,6 +752,9 @@ Proof.
     + econstructor; eauto.
       * eapply wt_exec_Ibuiltin with (f:=f); eauto with wt.
       * IND_STEP.
+        apply kill_builtin_res_sound; eauto with cse3.
+        eapply external_call_sound; eauto with cse3.
+        
   - (* Icond *)
     econstructor. split.
     + eapply exec_Icond with (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); try eassumption.
