@@ -381,6 +381,23 @@ Fixpoint kill_builtin_res res rel :=
   | _ => rel
   end.
 
+Definition apply_external_call ef (rel : RELATION.t) : RELATION.t :=
+  match ef with
+  | EF_builtin name sg
+  | EF_runtime name sg =>
+    match Builtins.lookup_builtin_function name sg with
+    | Some bf => rel
+    | None => kill_mem rel
+    end
+  | EF_malloc (* FIXME *)
+  | EF_external _ _
+  | EF_vstore _ 
+  | EF_free (* FIXME *)
+  | EF_memcpy _ _ (* FIXME *)
+  | EF_inline_asm _ _ _ => kill_mem rel
+  | _ => rel
+  end.
+                              
 Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
@@ -390,7 +407,7 @@ Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   | Iop op args dst _ => Some (gen_oper op dst args rel)
   | Iload trap chunk addr args dst _ => Some (load chunk addr dst args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
-  | Ibuiltin _ _ res _ => Some (kill_builtin_res res (kill_mem rel))
+  | Ibuiltin ef _ res _ => Some (kill_builtin_res res (apply_external_call ef rel))
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
 
