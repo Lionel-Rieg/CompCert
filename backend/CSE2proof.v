@@ -1033,7 +1033,16 @@ Proof.
     assumption.
   }
   intuition congruence.
-Qed. 
+Qed.
+
+Lemma kill_builtin_res_sound:
+  forall res (m : mem) (rs : regset) vres (rel : RELATION.t)
+         (REL : sem_rel m rel rs),
+         (sem_rel m (kill_builtin_res res rel) (regmap_setres res vres rs)).
+Proof.
+  destruct res; simpl; intros; trivial.
+  apply kill_reg_sound; trivial.
+Qed.
 End SOUNDNESS.
 
 Definition match_prog (p tp: RTL.program) :=
@@ -1578,9 +1587,9 @@ Proof.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
   
-  apply sem_rel_b_ge with (rb2 := Some RELATION.top).
+  apply sem_rel_b_ge with (rb2 := Some (kill_builtin_res res (kill_mem mpc))).
   {
-    replace (Some RELATION.top) with (apply_instr' (fn_code f) pc (map # pc)).
+    replace (Some (kill_builtin_res res (kill_mem mpc))) with (apply_instr' (fn_code f) pc (map # pc)).
     {
       eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
       2: apply apply_instr'_bot.
@@ -1591,8 +1600,9 @@ Proof.
     rewrite MPC.
     reflexivity.
   }
-  apply top_ok.
-  
+  apply kill_builtin_res_sound.
+  apply kill_mem_sound with (m := m).
+  assumption.
 
 (* cond *)
 - econstructor; split.

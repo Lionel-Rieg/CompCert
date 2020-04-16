@@ -375,33 +375,12 @@ Definition load (chunk: memory_chunk) (addr : addressing)
   | None => load1 chunk addr dst args rel
   end.
 
-(* NO LONGER NEEDED
-Fixpoint list_represents { X : Type } (l : list (positive*X)) (tr : PTree.t X) : Prop :=
-  match l with
-  | nil => True
-  | (r,sv)::tail => (tr ! r) = Some sv /\ list_represents tail tr
+Fixpoint kill_builtin_res res rel :=
+  match res with
+  | BR r => kill_reg r rel
+  | _ => rel
   end.
 
-Lemma elements_represent :
-  forall { X : Type },
-  forall tr : (PTree.t X),
-    (list_represents (PTree.elements tr) tr).
-Proof.
-  intros.
-  generalize (PTree.elements_complete tr).
-  generalize (PTree.elements tr).
-  induction l; simpl; trivial.
-  intro COMPLETE.
-  destruct a as [ r sv ].
-  split.
-  {
-    apply COMPLETE.
-    left; reflexivity.
-  }
-  apply IHl; auto.
-Qed.
-*)
-    
 Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
@@ -411,7 +390,7 @@ Definition apply_instr instr (rel : RELATION.t) : RB.t :=
   | Iop op args dst _ => Some (gen_oper op dst args rel)
   | Iload trap chunk addr args dst _ => Some (load chunk addr dst args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
-  | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
+  | Ibuiltin _ _ res _ => Some (kill_builtin_res res (kill_mem rel))
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
 
