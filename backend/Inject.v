@@ -34,7 +34,7 @@ Definition successor (i : instruction) : node :=
   | Istore _ _ _ _ pc' => pc'
   | Icall _ _ _ _ pc' => pc'
   | Ibuiltin _ _ _ pc' => pc'
-  | Icond _ _ pc' _ => pc'
+  | Icond _ _ pc' _ _ => pc'
   | Itailcall _ _ _
   | Ijumptable _ _
   | Ireturn _ => 1
@@ -47,7 +47,7 @@ Definition alter_successor (i : instruction) (pc' : node) : instruction :=
   | Iload trap chunk addr args dst _ => Iload trap chunk addr args dst pc'
   | Istore chunk addr args src _ => Istore chunk addr args src pc'
   | Ibuiltin ef args res _ => Ibuiltin ef args res pc'
-  | Icond cond args _ pc2 => Icond cond args pc' pc2
+  | Icond cond args _ pc2 expected => Icond cond args pc' pc2 expected
   | Icall sig ros args res _ => Icall sig ros args res pc'
   | Itailcall _ _ _
   | Ijumptable _ _

@@ -328,7 +328,7 @@ Section OPERATIONS.
   Definition apply_instr (tenv : typing_env) (instr : RTL.instruction) (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
-  | Icond _ _ _ _
+  | Icond _ _ _ _ _
   | Ijumptable _ _ => Some rel
   | Istore chunk addr args src _ =>
     Some (store chunk addr args src (tenv src) rel)

@@ -1651,9 +1651,9 @@ Section INJECTOR.
              destruct SKIP as [trs' [MATCH PLUS]].
              econstructor; split.
              * eapply Smallstep.plus_left.
-               ** apply exec_Icond with (b := true) (cond := cond) (args := args) (ifso := pc_inj) (ifnot := ifnot).
+               ** apply exec_Icond with (b := true) (cond := cond) (args := args) (ifso := pc_inj) (ifnot := ifnot) (predb := predb).
                    exact ALTER.
-                   replace args with (instr_uses (Icond cond args ifso ifnot)) by reflexivity.
+                   replace args with (instr_uses (Icond cond args ifso ifnot predb)) by reflexivity.
                    rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                    simpl. reflexivity.
                ** apply Smallstep.plus_star.
@@ -1669,28 +1669,28 @@ Section INJECTOR.
              destruct SKIP as [trs' [MATCH PLUS]].
              econstructor; split.
              * eapply Smallstep.plus_one.
-               apply exec_Icond with (b := false) (cond := cond) (args := args) (ifso := pc_inj) (ifnot := ifnot).
+               apply exec_Icond with (b := false) (cond := cond) (args := args) (ifso := pc_inj) (ifnot := ifnot) (predb := predb).
                exact ALTER.
-               replace args with (instr_uses (Icond cond args ifso ifnot)) by reflexivity.
+               replace args with (instr_uses (Icond cond args ifso ifnot predb)) by reflexivity.
                rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                simpl. reflexivity.
              * simpl. constructor; auto.
         + destruct b eqn:B.
           * econstructor; split.
             ** eapply Smallstep.plus_one.
-               apply exec_Icond with (b := true) (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot).
+               apply exec_Icond with (b := true) (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot) (predb := predb).
                *** rewrite transf_function_preserves with (f:=f); eauto.
                    eapply max_pc_function_sound; eauto.
-               *** replace args with (instr_uses (Icond cond args ifso ifnot)) by reflexivity.
+               *** replace args with (instr_uses (Icond cond args ifso ifnot predb)) by reflexivity.
                    rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                *** reflexivity.
             ** constructor; auto.
           *  econstructor; split.
             ** eapply Smallstep.plus_one.
-               apply exec_Icond with (b := false) (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot).
+               apply exec_Icond with (b := false) (cond := cond) (args := args) (ifso := ifso) (ifnot := ifnot) (predb := predb).
                *** rewrite transf_function_preserves with (f:=f); eauto.
                    eapply max_pc_function_sound; eauto.
-               *** replace args with (instr_uses (Icond cond args ifso ifnot)) by reflexivity.
+               *** replace args with (instr_uses (Icond cond args ifso ifnot predb)) by reflexivity.
                    rewrite transf_function_preserves_uses with (f := f) (tf := tf) (pc := pc) (rs := rs); trivial.
                *** reflexivity.
             ** constructor; auto.
