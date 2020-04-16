@@ -384,3 +384,19 @@ Section MAP2_IDEM.
       end
     end.
   
+  Lemma gmap2_idem: forall a b i,
+      get i (map2_idem a b) = f (get i a) (get i b).
+  Proof.
+    induction a as [ | a0 IHa0 af a1 IHa1]; intros; simpl.
+    { rewrite gmap2_idem_Empty.
+      rewrite gempty.
+      reflexivity. }
+    destruct b as [ | b0 bf b1 ]; simpl; rewrite gnode.
+    - destruct i; simpl.
+      + rewrite IHa1. rewrite gempty.
+        reflexivity.
+      + rewrite IHa0. rewrite gempty.
+        reflexivity.
+      + reflexivity.
+    - destruct i; simpl; congruence.
+  Qed.
