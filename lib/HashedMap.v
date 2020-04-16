@@ -331,72 +331,118 @@ Qed.
 
 Hint Resolve gro : pmap.
 
-Section MAP2_IDEM.
+Section MAP2.
+  
   Variable f : option T -> option T -> option T.
-  Hypothesis f_idem : forall x, f x x = x.
 
-  Fixpoint map2_idem_Empty (b : pmap) :=
-    match b with
-    | Empty => Empty
-    | Node b0 bf b1 =>
-      node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1)
-    end.
+  Section NONE_NONE.
+    Hypothesis f_none_none : f None None = None.
 
-  Lemma gmap2_idem_Empty: forall i b,
-      get i (map2_idem_Empty b) = f None (get i b).
-  Proof.
-    induction i; destruct b as [ | b0 bf b1]; intros; simpl in *.
-    all: try congruence.
-    - replace
-       (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
-        | Empty => None
-        | Node _ _ c1 => get i c1
-        end)
-        with (get (xI i) (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
-      + rewrite gnode.
-        simpl. apply IHi.
-      + destruct node; auto with pmap.
-    - replace
-       (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
-        | Empty => None
-        | Node c0 _ _ => get i c0
-        end)
-        with (get (xO i) (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
-      + rewrite gnode.
-        simpl. apply IHi.
-      + destruct node; auto with pmap.
-    - change (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
-        | Empty => None
-        | Node _ cf _ => cf
-              end) with (get xH (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
-      rewrite gnode. reflexivity.
-  Qed.
-  
-  Fixpoint map2_idem (a b : pmap) :=
-    match a with
-    | Empty => map2_idem_Empty b
-    | (Node a0 af a1) =>
+    Fixpoint map2_Empty (b : pmap) :=
       match b with
-      | (Node b0 bf b1) =>
-        node (map2_idem a0 b0) (f af bf) (map2_idem a1 b1)
-      | Empty =>
-        node (map2_idem a0 Empty) (f af None) (map2_idem a1 Empty)
-      end
-    end.
+      | Empty => Empty
+      | Node b0 bf b1 =>
+        node (map2_Empty b0) (f None bf) (map2_Empty b1)
+      end.
+
+    Lemma gmap2_Empty: forall i b,
+        get i (map2_Empty b) = f None (get i b).
+    Proof.
+      induction i; destruct b as [ | b0 bf b1]; intros; simpl in *.
+      all: try congruence.
+      - replace
+          (match node (map2_Empty b0) (f None bf) (map2_Empty b1) with
+           | Empty => None
+           | Node _ _ c1 => get i c1
+           end)
+          with (get (xI i) (node (map2_Empty b0) (f None bf) (map2_Empty b1))).
+        + rewrite gnode.
+          simpl. apply IHi.
+        + destruct node; auto with pmap.
+      - replace
+          (match node (map2_Empty b0) (f None bf) (map2_Empty b1) with
+           | Empty => None
+           | Node c0 _ _ => get i c0
+           end)
+          with (get (xO i) (node (map2_Empty b0) (f None bf) (map2_Empty b1))).
+        + rewrite gnode.
+          simpl. apply IHi.
+        + destruct node; auto with pmap.
+      - change (match node (map2_Empty b0) (f None bf) (map2_Empty b1) with
+                | Empty => None
+                | Node _ cf _ => cf
+                end) with (get xH (node (map2_Empty b0) (f None bf) (map2_Empty b1))).
+        rewrite gnode. reflexivity.
+    Qed.
+    
+    Fixpoint map2 (a b : pmap) :=
+      match a with
+      | Empty => map2_Empty b
+      | (Node a0 af a1) =>
+        match b with
+        | (Node b0 bf b1) =>
+          node (map2 a0 b0) (f af bf) (map2 a1 b1)
+        | Empty =>
+          node (map2 a0 Empty) (f af None) (map2 a1 Empty)
+        end
+      end.
   
-  Lemma gmap2_idem: forall a b i,
-      get i (map2_idem a b) = f (get i a) (get i b).
-  Proof.
-    induction a as [ | a0 IHa0 af a1 IHa1]; intros; simpl.
-    { rewrite gmap2_idem_Empty.
-      rewrite gempty.
-      reflexivity. }
-    destruct b as [ | b0 bf b1 ]; simpl; rewrite gnode.
-    - destruct i; simpl.
-      + rewrite IHa1. rewrite gempty.
-        reflexivity.
-      + rewrite IHa0. rewrite gempty.
-        reflexivity.
-      + reflexivity.
-    - destruct i; simpl; congruence.
-  Qed.
+    Lemma gmap2: forall a b i,
+        get i (map2 a b) = f (get i a) (get i b).
+    Proof.
+      induction a as [ | a0 IHa0 af a1 IHa1]; intros; simpl.
+      { rewrite gmap2_Empty.
+        rewrite gempty.
+        reflexivity. }
+      destruct b as [ | b0 bf b1 ]; simpl; rewrite gnode.
+      - destruct i; simpl.
+        + rewrite IHa1. rewrite gempty.
+          reflexivity.
+        + rewrite IHa0. rewrite gempty.
+          reflexivity.
+        + reflexivity.
+      - destruct i; simpl; congruence.
+    Qed.
+  End NONE_NONE.
+
+  Section IDEM.
+    Hypothesis f_idem : forall x, f x x = x.
+    
+    Fixpoint map2_idem (a b : pmap) :=
+      if pmap_eq a b then a else
+      match a with
+      | Empty => map2_Empty b
+      | (Node a0 af a1) =>
+        match b with
+        | (Node b0 bf b1) =>
+          node (map2_idem a0 b0) (f af bf) (map2_idem a1 b1)
+        | Empty =>
+          node (map2_idem a0 Empty) (f af None) (map2_idem a1 Empty)
+        end
+      end.
+ 
+    Lemma gmap2_idem: forall a b i,
+        get i (map2_idem a b) = f (get i a) (get i b).
+    Proof.
+      induction a as [ | a0 IHa0 af a1 IHa1]; intros; simpl.
+      { destruct pmap_eq.
+        - subst b. rewrite gempty. congruence.
+        - rewrite gempty.
+          rewrite gmap2_Empty by congruence.
+          reflexivity.
+      }
+      destruct pmap_eq.
+      { subst b.
+        congruence.
+      }
+      destruct b as [ | b0 bf b1 ]; simpl; rewrite gnode.
+      - destruct i; simpl.
+        + rewrite IHa1. rewrite gempty.
+          reflexivity.
+        + rewrite IHa0. rewrite gempty.
+          reflexivity.
+        + reflexivity.
+      - destruct i; simpl; congruence.
+    Qed.
+  End IDEM.
+End MAP2.
