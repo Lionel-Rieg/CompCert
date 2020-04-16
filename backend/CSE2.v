@@ -262,7 +262,7 @@ Definition load (chunk: memory_chunk) (addr : addressing)
   | None => load1 chunk addr dst args rel
   end.
 
-Fixpoint kill_builtin_res res rel :=
+Definition kill_builtin_res res rel :=
   match res with
   | BR r => kill_reg r rel
   | _ => rel

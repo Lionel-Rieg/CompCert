@@ -325,6 +325,29 @@ Section OPERATIONS.
              (rel : RELATION.t) : RELATION.t :=
     store1 chunk addr (forward_move_l rel args) src ty rel.
 
+  Definition kill_builtin_res res rel :=
+    match res with
+    | BR r => kill_reg r rel
+    | _ => rel
+    end.
+
+  Definition apply_external_call ef (rel : RELATION.t) : RELATION.t :=
+    match ef with
+    | EF_builtin name sg
+    | EF_runtime name sg =>
+      match Builtins.lookup_builtin_function name sg with
+      | Some bf => rel
+      | None => kill_mem rel
+      end
+    | EF_malloc (* FIXME *)
+    | EF_external _ _
+    | EF_vstore _ 
+    | EF_free (* FIXME *)
+    | EF_memcpy _ _ (* FIXME *)
+    | EF_inline_asm _ _ _ => kill_mem rel
+    | _ => rel
+    end.
+
   Definition apply_instr (tenv : typing_env) (instr : RTL.instruction) (rel : RELATION.t) : RB.t :=
   match instr with
   | Inop _
@@ -335,7 +358,7 @@ Section OPERATIONS.
   | Iop op args dst _ => Some (oper dst (SOp op) args rel)
   | Iload trap chunk addr args dst _ => Some (oper dst (SLoad chunk addr) args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))
-  | Ibuiltin _ _ res _ => Some (RELATION.top) (* TODO (kill_builtin_res res x) *)
+  | Ibuiltin ef _ res _ => Some (kill_builtin_res res (apply_external_call ef rel))
   | Itailcall _ _ _ | Ireturn _ => RB.bot
   end.
   End PER_NODE.
