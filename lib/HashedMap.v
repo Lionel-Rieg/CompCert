@@ -330,3 +330,57 @@ Proof.
 Qed.
 
 Hint Resolve gro : pmap.
+
+Section MAP2_IDEM.
+  Variable f : option T -> option T -> option T.
+  Hypothesis f_idem : forall x, f x x = x.
+
+  Fixpoint map2_idem_Empty (b : pmap) :=
+    match b with
+    | Empty => Empty
+    | Node b0 bf b1 =>
+      node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1)
+    end.
+
+  Lemma gmap2_idem_Empty: forall i b,
+      get i (map2_idem_Empty b) = f None (get i b).
+  Proof.
+    induction i; destruct b as [ | b0 bf b1]; intros; simpl in *.
+    all: try congruence.
+    - replace
+       (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
+        | Empty => None
+        | Node _ _ c1 => get i c1
+        end)
+        with (get (xI i) (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
+      + rewrite gnode.
+        simpl. apply IHi.
+      + destruct node; auto with pmap.
+    - replace
+       (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
+        | Empty => None
+        | Node c0 _ _ => get i c0
+        end)
+        with (get (xO i) (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
+      + rewrite gnode.
+        simpl. apply IHi.
+      + destruct node; auto with pmap.
+    - change (match node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1) with
+        | Empty => None
+        | Node _ cf _ => cf
+              end) with (get xH (node (map2_idem_Empty b0) (f None bf) (map2_idem_Empty b1))).
+      rewrite gnode. reflexivity.
+  Qed.
+  
+  Fixpoint map2_idem (a b : pmap) :=
+    match a with
+    | Empty => map2_idem_Empty b
+    | (Node a0 af a1) =>
+      match b with
+      | (Node b0 bf b1) =>
+        node (map2_idem a0 b0) (f af bf) (map2_idem a1 b1)
+      | Empty =>
+        node (map2_idem a0 Empty) (f af None) (map2_idem a1 Empty)
+      end
+    end.
+  
