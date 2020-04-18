@@ -107,16 +107,19 @@ let inner_loops (f : coq_function) : PSet.t PTree.t =
   and predecessors = Kildall.make_predecessors f.fn_code RTL.successors_instr in
   PTree.map (filter_dominated_part predecessors) parts;;
 
-let pp_pset oc s =
+let pp_list pp_item oc l =
   output_string oc "{ ";
   let first = ref true in
   List.iter (fun x ->
       (if !first
        then first := false
        else output_string oc ", ");
-      Printf.printf "%d" x)
-    (List.sort (fun x y -> y - x) (List.map P.to_int (PSet.elements s)));
+      pp_item oc x) l;
   output_string oc " }";;
+
+let pp_pset oc s =
+  pp_list (fun oc -> Printf.fprintf oc "%d") oc
+    (List.sort (fun x y -> y - x) (List.map P.to_int (PSet.elements s)));;
 
 let print_dominated_parts oc f =
   List.iter (fun (header, nodes) ->
