@@ -2,6 +2,7 @@ open RTL;;
 open Camlcoq;;
 open Maps;;
 open Kildall;;
+open HashedSet;;
 
 type reg = P.t;;
 
@@ -41,7 +42,7 @@ let apply_dominator (is_marked : node -> bool) (pc : node)
      then Dominator.Dominated (P.to_int pc)
      else before;;
 
-let dominated_parts (f : coq_function) :
+let dominated_parts1 (f : coq_function) :
       (bool PTree.t) * (Dominator.t PMap.t option) =
   let headers = Duplicateaux.get_loop_headers f.fn_code f.fn_entrypoint in
   let dominated = Dominator_Solver.fixpoint f.fn_code RTL.successors_instr
@@ -51,8 +52,20 @@ let dominated_parts (f : coq_function) :
     Dominator.top in
   (headers, dominated);;
 
+(* unfinished *)
+let dominated_parts (f : coq_function) :
+      PSet.t PTree.t =
+  let (headers, dominated) = dominated_parts1 f in
+  match dominated with
+  | None -> failwith "dominated_parts"
+  | Some dominated ->
+     PTree.fold (fun before pc flag ->
+         if flag
+         then PTree.set pc PSet.empty before
+         else before) headers PTree.empty;;
+
 let print_dominated_parts oc f =
-  match snd (dominated_parts f) with
+  match snd (dominated_parts1 f) with
   | None -> output_string oc "error\n"
   | Some parts ->
      List.iter
