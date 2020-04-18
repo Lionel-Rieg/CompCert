@@ -41,16 +41,18 @@ let apply_dominator (is_marked : node -> bool) (pc : node)
      then Dominator.Dominated (P.to_int pc)
      else before;;
 
-let dominated_parts (f : coq_function) : Dominator.t PMap.t option =
+let dominated_parts (f : coq_function) :
+      (bool PTree.t) * (Dominator.t PMap.t option) =
   let headers = Duplicateaux.get_loop_headers f.fn_code f.fn_entrypoint in
-  Dominator_Solver.fixpoint f.fn_code RTL.successors_instr
+  let dominated = Dominator_Solver.fixpoint f.fn_code RTL.successors_instr
     (apply_dominator (fun pc -> match PTree.get pc headers with
                                 | Some x -> x
                                 | None -> false)) f.fn_entrypoint
-    Dominator.top;;
+    Dominator.top in
+  (headers, dominated);;
 
 let print_dominated_parts oc f =
-  match dominated_parts f with
+  match snd (dominated_parts f) with
   | None -> output_string oc "error\n"
   | Some parts ->
      List.iter
