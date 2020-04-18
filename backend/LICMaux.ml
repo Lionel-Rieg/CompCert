@@ -57,14 +57,40 @@ let dominated_parts (f : coq_function) :
       PSet.t PTree.t =
   let (headers, dominated) = dominated_parts1 f in
   match dominated with
-  | None -> failwith "dominated_parts"
+  | None -> failwith "dominated_parts 1"
   | Some dominated ->
-     PTree.fold (fun before pc flag ->
+     let singletons =
+       PTree.fold (fun before pc flag ->
          if flag
-         then PTree.set pc PSet.empty before
-         else before) headers PTree.empty;;
+         then PTree.set pc (PSet.add pc PSet.empty) before
+         else before) headers PTree.empty in
+     PTree.fold (fun before pc ii ->
+         match PMap.get pc dominated with
+         | Dominator.Dominated x ->
+            let px = P.of_int x in
+            (match PTree.get px before with
+             | None -> failwith "dominated_parts 2"
+             | Some old ->
+                PTree.set px (PSet.add pc old) before)
+         | _ -> before) f.fn_code singletons;;
+
+let pp_pset oc s =
+  output_string oc "{ ";
+  let first = ref true in
+  List.iter (fun x ->
+      (if !first
+       then first := false
+       else output_string oc ", ");
+      Printf.printf "%d" x)
+    (List.sort (fun x y -> y - x) (List.map P.to_int (PSet.elements s)));
+  output_string oc " }";;
 
 let print_dominated_parts oc f =
+  List.iter (fun (header, nodes) ->
+      Printf.fprintf oc "%d : %a\n" (P.to_int header) pp_pset nodes)
+    (PTree.elements (dominated_parts f));;
+
+let print_dominated_parts1 oc f =
   match snd (dominated_parts1 f) with
   | None -> output_string oc "error\n"
   | Some parts ->
