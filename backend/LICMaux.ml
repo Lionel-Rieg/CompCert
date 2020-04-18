@@ -53,8 +53,7 @@ let dominated_parts1 (f : coq_function) :
   (headers, dominated);;
 
 (* unfinished *)
-let dominated_parts (f : coq_function) :
-      PSet.t PTree.t =
+let dominated_parts (f : coq_function) : PSet.t PTree.t =
   let (headers, dominated) = dominated_parts1 f in
   match dominated with
   | None -> failwith "dominated_parts 1"
@@ -73,6 +72,36 @@ let dominated_parts (f : coq_function) :
              | Some old ->
                 PTree.set px (PSet.add pc old) before)
          | _ -> before) f.fn_code singletons;;
+
+let graph_traversal (initial_node : P.t)
+  (successor_iterator : P.t -> (P.t -> unit) -> unit) : PSet.t =
+  let seen = ref PSet.empty
+  and stack = Stack.create () in
+  Stack.push initial_node stack;
+  while not (Stack.is_empty stack)
+  do
+    let vertex = Stack.pop stack in
+    if not (PSet.contains !seen vertex)
+    then
+      begin
+        seen := PSet.add vertex !seen;
+        successor_iterator vertex (fun x -> Stack.push x stack) 
+      end
+  done;
+  !seen;;
+
+let filter_dominated_part (predecessors : P.t list PTree.t)
+      (header : P.t) (dominated_part : PSet.t) =
+  graph_traversal header
+    (fun (vertex : P.t) (f : P.t -> unit) ->
+      match PTree.get vertex predecessors with
+      | None -> ()
+      | Some l ->
+         List.iter
+           (fun x ->
+             if PSet.contains dominated_part x
+             then f x) l
+    );;
 
 let pp_pset oc s =
   output_string oc "{ ";
