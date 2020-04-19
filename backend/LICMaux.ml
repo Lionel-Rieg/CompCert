@@ -147,18 +147,40 @@ let rewrite_loop_body (last_alloc : reg ref)
                                  new_res));
                 PTree.set res new_res mapper
              | _ -> mapper in
-           List.iter (fun x -> Stack.push (x, mapper') stack)
+           List.iter (fun x ->
+               if PSet.contains loop_body x
+               then Stack.push (x, mapper') stack)
              (successors_instr ii)
       end
   done;
   List.rev !rewritten;;
 
-(*
-| INJnop
-| INJop of operation * reg list * reg
-| INJload of memory_chunk * addressing * reg list * reg
- *)
+let pp_inj_instr (oc : out_channel) (ii : inj_instr) =
+  match ii with
+  | INJnop -> output_string oc "nop"
+  | INJop(op, args, res) ->
+     Printf.fprintf oc "%a = %a"
+       PrintRTL.reg res (PrintOp.print_operation PrintRTL.reg) (op, args)
+  | INJload(chunk, addr, args, dst) ->
+     Printf.fprintf oc "%a = %s[%a]"
+       PrintRTL.reg dst (PrintAST.name_of_chunk chunk)
+         (PrintOp.print_addressing PrintRTL.reg) (addr, args);;
 
+let pp_inj_list (oc : out_channel) (l : inj_instr list) =
+  List.iter (Printf.fprintf oc "%a; " pp_inj_instr) l;;
+
+let pp_injections (oc : out_channel) (injections : inj_instr list PTree.t) =
+  List.iter
+    (fun (pc, injl) ->
+      Printf.fprintf oc "%d : %a\n" (P.to_int pc) pp_inj_list injl)
+    (PTree.elements injections);;
+
+let compute_injections (f : coq_function) =
+  let loop_bodies = inner_loops f
+  and last_alloc = ref (max_reg_function f) in
+  PTree.map
+    (rewrite_loop_body last_alloc f.fn_code) loop_bodies;;
+  
 let pp_list pp_item oc l =
   output_string oc "{ ";
   let first = ref true in
@@ -206,7 +228,7 @@ let print_loop_headers f =
 
 let gen_injections (f : coq_function) (coq_max_pc : node) (coq_max_reg : reg):
       (Inject.inj_instr list) PTree.t =
-  let _ = print_inner_loops stdout f in
+  let _ = pp_injections stdout (compute_injections f) in
   PTree.empty;;
 (*
   let max_reg = P.to_int coq_max_reg in
