@@ -224,4 +224,5 @@ Separate Extraction
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
    Parser.translation_unit_file
-   Compopts.optim_postpass.
+   Compopts.optim_postpass
+   Archi.has_notrap_loads.
