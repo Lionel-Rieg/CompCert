@@ -3,6 +3,7 @@ open Camlcoq;;
 open Maps;;
 open Kildall;;
 open HashedSet;;
+open Inject;;
 
 type reg = P.t;;
 
@@ -106,6 +107,57 @@ let inner_loops (f : coq_function) : PSet.t PTree.t =
   let parts = dominated_parts f
   and predecessors = Kildall.make_predecessors f.fn_code RTL.successors_instr in
   PTree.map (filter_dominated_part predecessors) parts;;
+
+let map_reg mapper r =
+  match PTree.get r mapper with
+  | None -> r
+  | Some x -> x;;
+
+let rewrite_loop_body (last_alloc : reg ref)
+      (insns : RTL.code) (header : P.t) (loop_body : PSet.t) =
+  let seen = ref PSet.empty
+  and stack = Stack.create ()
+  and rewritten = ref [] in
+  let add_inj ii = rewritten := ii::!rewritten in
+  Stack.push (header, PTree.empty) stack;
+  while not (Stack.is_empty stack)
+  do
+    let (pc, mapper) = Stack.pop stack in
+    if not (PSet.contains !seen pc)
+    then
+      begin
+        seen := PSet.add pc !seen;
+        match PTree.get pc insns with
+        | None -> ()
+        | Some ii ->
+           let mapper' =
+             match ii with
+             | Iop(op, args, res, pc') ->
+                let new_res = P.succ !last_alloc in
+                last_alloc := new_res;
+                add_inj (INJop(op,
+                               (List.map (map_reg mapper) args),
+                               new_res));
+                PTree.set res new_res mapper
+             | Iload(trap, chunk, addr, args, res, pc') ->
+                let new_res = P.succ !last_alloc in
+                last_alloc := new_res;
+                add_inj (INJload(chunk, addr,
+                                 (List.map (map_reg mapper) args),
+                                 new_res));
+                PTree.set res new_res mapper
+             | _ -> mapper in
+           List.iter (fun x -> Stack.push (x, mapper') stack)
+             (successors_instr ii)
+      end
+  done;
+  List.rev !rewritten;;
+
+(*
+| INJnop
+| INJop of operation * reg list * reg
+| INJload of memory_chunk * addressing * reg list * reg
+ *)
 
 let pp_list pp_item oc l =
   output_string oc "{ ";
