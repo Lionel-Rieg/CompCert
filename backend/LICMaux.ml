@@ -247,5 +247,5 @@ let print_loop_headers f =
 let gen_injections (f : coq_function) (coq_max_pc : node) (coq_max_reg : reg):
       (Inject.inj_instr list) PTree.t =
   let injections = compute_injections f in
-  let () = pp_injections stdout injections in
+  (* let () = pp_injections stdout injections in *)
   injections;;
