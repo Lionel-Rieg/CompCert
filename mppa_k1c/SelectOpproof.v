@@ -350,13 +350,19 @@ Proof.
     apply eval_addimm. EvalOp.
     repeat rewrite Val.add_assoc. reflexivity.
   - (* Omadd *)
-    subst. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
   - (* Omadd rev *)
-    subst. rewrite Val.add_commut. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
+    simpl. rewrite Val.add_commut. reflexivity.
   - (* Omaddimm *)
-    subst. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
   - (* Omaddimm rev *)
-    subst. rewrite Val.add_commut. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
+    simpl. rewrite Val.add_commut. reflexivity.
     (* Oaddx *)
   - subst. pose proof eval_addx as ADDX.
     unfold binary_constructor_sound in ADDX.
@@ -380,11 +386,14 @@ Proof.
   - subst. rewrite Val.sub_add_l. apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_r. apply eval_addimm; EvalOp.
   - TrivialExists. simpl. subst. reflexivity.
-  - TrivialExists. simpl. subst.
-    rewrite sub_add_neg.
-    rewrite neg_mul_distr_r.
-    unfold Val.neg.
-    reflexivity.
+  - destruct (Compopts.optim_madd tt).
+    + TrivialExists. simpl. subst.
+      rewrite sub_add_neg.
+      rewrite neg_mul_distr_r.
+      unfold Val.neg.
+      reflexivity.
+    + TrivialExists. repeat (eauto; econstructor).
+      simpl. subst. reflexivity.
   - TrivialExists.
 Qed.
 

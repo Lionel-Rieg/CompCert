@@ -142,6 +142,8 @@ Extract Constant Compopts.optim_xsaddr =>
   "fun _ -> !Clflags.option_fxsaddr".
 Extract Constant Compopts.optim_addx =>
   "fun _ -> !Clflags.option_faddx".
+Extract Constant Compopts.optim_madd =>
+  "fun _ -> !Clflags.option_fmadd".
 Extract Constant Compopts.optim_coalesce_mem =>
   "fun _ -> !Clflags.option_fcoalesce_mem".
 Extract Constant Compopts.optim_forward_moves =>

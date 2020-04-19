@@ -415,6 +415,8 @@ let cmdline_actions =
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
   @ f_opt "addx" option_faddx
+  @ f_opt "madd" option_fmadd
+  @ f_opt "nontrap-loads" option_fnontrap_loads
   @ f_opt "coalesce-mem" option_fcoalesce_mem
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
   @ f_opt "forward-moves" option_fforward_moves

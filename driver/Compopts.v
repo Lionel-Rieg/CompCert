@@ -69,6 +69,9 @@ Parameter optim_xsaddr: unit -> bool.
 (** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
 Parameter optim_coalesce_mem: unit -> bool.
 
+(* FIXME TEMPORARY Flag -faddx. Fuse (default true) *)
+Parameter optim_madd: unit -> bool.
+
 (** FIXME TEMPORARY Flag -faddx. Fuse (default false) *)
 Parameter optim_addx: unit -> bool.
 

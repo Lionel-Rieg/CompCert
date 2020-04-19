@@ -141,7 +141,8 @@ let rewrite_loop_body (last_alloc : reg ref)
                                new_res));
                 PTree.set res new_res mapper
              | Iload(trap, chunk, addr, args, res, pc')
-               when Archi.has_notrap_loads ->
+                  when Archi.has_notrap_loads &&
+                       !Clflags.option_fnontrap_loads ->
                 let new_res = P.succ !last_alloc in
                 last_alloc := new_res;
                 add_inj (INJload(chunk, addr,
