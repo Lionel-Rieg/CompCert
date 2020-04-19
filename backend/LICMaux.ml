@@ -53,7 +53,7 @@ let dominated_parts1 (f : coq_function) :
     Dominator.top in
   (headers, dominated);;
 
-let dominated_parts (f : coq_function) : PSet.t PTree.t =
+let dominated_parts (f : coq_function) : Dominator.t PMap.t * PSet.t PTree.t =
   let (headers, dominated) = dominated_parts1 f in
   match dominated with
   | None -> failwith "dominated_parts 1"
@@ -63,6 +63,7 @@ let dominated_parts (f : coq_function) : PSet.t PTree.t =
          if flag
          then PTree.set pc (PSet.add pc PSet.empty) before
          else before) headers PTree.empty in
+     (dominated,
      PTree.fold (fun before pc ii ->
          match PMap.get pc dominated with
          | Dominator.Dominated x ->
@@ -71,7 +72,7 @@ let dominated_parts (f : coq_function) : PSet.t PTree.t =
              | None -> failwith "dominated_parts 2"
              | Some old ->
                 PTree.set px (PSet.add pc old) before)
-         | _ -> before) f.fn_code singletons;;
+         | _ -> before) f.fn_code singletons);;
 
 let graph_traversal (initial_node : P.t)
   (successor_iterator : P.t -> (P.t -> unit) -> unit) : PSet.t =
@@ -103,10 +104,10 @@ let filter_dominated_part (predecessors : P.t list PTree.t)
              then f x) l
     );;
 
-let inner_loops (f : coq_function) : PSet.t PTree.t =
-  let parts = dominated_parts f
+let inner_loops (f : coq_function) =
+  let (dominated, parts) = dominated_parts f
   and predecessors = Kildall.make_predecessors f.fn_code RTL.successors_instr in
-  PTree.map (filter_dominated_part predecessors) parts;;
+  (dominated, predecessors, PTree.map (filter_dominated_part predecessors) parts);;
 
 let map_reg mapper r =
   match PTree.get r mapper with
@@ -175,11 +176,27 @@ let pp_injections (oc : out_channel) (injections : inj_instr list PTree.t) =
       Printf.fprintf oc "%d : %a\n" (P.to_int pc) pp_inj_list injl)
     (PTree.elements injections);;
 
-let compute_injections (f : coq_function) =
-  let loop_bodies = inner_loops f
+let compute_injections1 (f : coq_function) =
+  let (dominated, predecessors, loop_bodies) = inner_loops f
   and last_alloc = ref (max_reg_function f) in
-  PTree.map
-    (rewrite_loop_body last_alloc f.fn_code) loop_bodies;;
+  (dominated, predecessors,
+   PTree.map (fun header body ->
+    (body, rewrite_loop_body last_alloc f.fn_code header body)) loop_bodies);;
+
+let compute_injections (f : coq_function) : inj_instr list PTree.t =
+  let (dominated, predecessors, injections) = compute_injections1 f in
+  let output_map = ref PTree.empty in
+  List.iter
+    (fun (header, (body, inj)) ->
+      match PTree.get header predecessors with
+      | None -> failwith "compute_injections"
+      | Some l ->
+         List.iter (fun predecessor ->
+             if (PMap.get predecessor dominated)<>Dominator.Unreachable &&
+                  not (PSet.contains body predecessor)
+             then output_map := PTree.set predecessor inj !output_map) l)
+    (PTree.elements injections);
+  !output_map;;
   
 let pp_list pp_item oc l =
   output_string oc "{ ";
@@ -198,12 +215,12 @@ let pp_pset oc s =
 let print_dominated_parts oc f =
   List.iter (fun (header, nodes) ->
       Printf.fprintf oc "%d : %a\n" (P.to_int header) pp_pset nodes)
-    (PTree.elements (dominated_parts f));;
+    (PTree.elements (snd (dominated_parts f)));;
 
 let print_inner_loops oc f =
   List.iter (fun (header, nodes) ->
       Printf.fprintf oc "%d : %a\n" (P.to_int header) pp_pset nodes)
-    (PTree.elements (inner_loops f));;
+    (PTree.elements (let (_,_,l) = (inner_loops f) in l));;
 
 let print_dominated_parts1 oc f =
   match snd (dominated_parts1 f) with
