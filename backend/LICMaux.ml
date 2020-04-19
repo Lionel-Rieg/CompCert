@@ -133,14 +133,15 @@ let rewrite_loop_body (last_alloc : reg ref)
         | Some ii ->
            let mapper' =
              match ii with
-             | Iop(op, args, res, pc') ->
+             | Iop(op, args, res, pc') when not (Op.is_trapping_op op) ->
                 let new_res = P.succ !last_alloc in
                 last_alloc := new_res;
                 add_inj (INJop(op,
                                (List.map (map_reg mapper) args),
                                new_res));
                 PTree.set res new_res mapper
-             | Iload(trap, chunk, addr, args, res, pc') ->
+             | Iload(trap, chunk, addr, args, res, pc')
+               when Archi.has_notrap_loads ->
                 let new_res = P.succ !last_alloc in
                 last_alloc := new_res;
                 add_inj (INJload(chunk, addr,
@@ -245,9 +246,6 @@ let print_loop_headers f =
 
 let gen_injections (f : coq_function) (coq_max_pc : node) (coq_max_reg : reg):
       (Inject.inj_instr list) PTree.t =
-  let _ = pp_injections stdout (compute_injections f) in
-  PTree.empty;;
-(*
-  let max_reg = P.to_int coq_max_reg in
-  PTree.set coq_max_pc [Inject.INJload(AST.Mint32, (Op.Aindexed (Ptrofs.of_int (Z.of_sint 0))), [P.of_int 1], P.of_int (max_reg+1))] PTree.empty;;
- *)
+  let injections = compute_injections f in
+  let () = pp_injections stdout injections in
+  injections;;

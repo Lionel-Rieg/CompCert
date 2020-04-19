@@ -86,3 +86,5 @@ Global Opaque ptr64 big_endian splitlong
 (** Whether to generate position-independent code or not *)
 
 Parameter pic_code: unit -> bool.
+
+Definition has_notrap_loads := false.
