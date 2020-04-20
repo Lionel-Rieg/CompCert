@@ -10,7 +10,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Correctness proof for RISC-V generation: main proof. *)
+(** Correctness proof for Asmgen *)
 
 Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
@@ -35,7 +35,7 @@ Proof.
   intros p tp H.
   unfold Asmgen.transf_program in H. apply bind_inversion in H. destruct H.
   inversion_clear H. apply bind_inversion in H1. destruct H1.
-  inversion_clear H. inversion H2. remember (Machblockgen.transf_program p) as mbp.
+  inversion_clear H. inversion H2. unfold time, Compopts.time in *. remember (Machblockgen.transf_program p) as mbp.
   unfold match_prog; simpl.
   exists mbp; split. apply Machblockgenproof.transf_program_match; auto.
   exists x; split. apply Asmblockgenproof.transf_program_match; auto.

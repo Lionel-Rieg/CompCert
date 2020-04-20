@@ -23,6 +23,11 @@
  * works regardless of which command line style is used.
  */
 
+#define VERIMAG
+#ifdef VERIMAG
+#include "../clock.h"
+#endif
+
 #include "cdjpeg.h"		/* Common decls for cjpeg/djpeg applications */
 #include "jversion.h"		/* for version message */
 
@@ -572,6 +577,11 @@ main (int argc, char **argv)
   }
   dest_mgr->output_file = output_file;
 
+#ifdef VERIMAG
+  clock_prepare();
+  clock_start();
+#endif
+
   /* Start decompressor */
   (void) jpeg_start_decompress(&cinfo);
 
@@ -584,6 +594,10 @@ main (int argc, char **argv)
 					dest_mgr->buffer_height);
     (*dest_mgr->put_pixel_rows) (&cinfo, dest_mgr, num_scanlines);
   }
+#ifdef VERIMAG
+  clock_stop();
+  printerr_total_clock();
+#endif
 
 #ifdef PROGRESS_REPORT
   /* Hack: count final pass as done in case finish_output does an extra pass.

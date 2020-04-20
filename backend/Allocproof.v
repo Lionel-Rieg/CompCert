@@ -96,44 +96,44 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
       expand_block_shape (BSopdead op args res mv s)
                          (Iop op args res s)
                          (expand_moves mv (Lbranch s :: k))
-  | ebs_load: forall chunk addr args dst mv1 args' dst' mv2 s k,
+  | ebs_load: forall trap chunk addr args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
-      expand_block_shape (BSload chunk addr args dst mv1 args' dst' mv2 s)
-                         (Iload chunk addr args dst s)
+      expand_block_shape (BSload trap chunk addr args dst mv1 args' dst' mv2 s)
+                         (Iload trap chunk addr args dst s)
                          (expand_moves mv1
-                           (Lload chunk addr args' dst' :: expand_moves mv2 (Lbranch s :: k)))
+                           (Lload trap chunk addr args' dst' :: expand_moves mv2 (Lbranch s :: k)))
   | ebs_load2: forall addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s k,
       wf_moves mv1 -> wf_moves mv2 -> wf_moves mv3 ->
       Archi.splitlong = true ->
       offset_addressing addr 4 = Some addr2 ->
       expand_block_shape (BSload2 addr addr2 args dst mv1 args1' dst1' mv2 args2' dst2' mv3 s)
-                         (Iload Mint64 addr args dst s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload Mint32 addr args1' dst1' ::
+                           (Lload TRAP Mint32 addr args1' dst1' ::
                            expand_moves mv2
-                             (Lload Mint32 addr2 args2' dst2' ::
+                             (Lload TRAP Mint32 addr2 args2' dst2' ::
                               expand_moves mv3 (Lbranch s :: k))))
   | ebs_load2_1: forall addr args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
       Archi.splitlong = true ->
       expand_block_shape (BSload2_1 addr args dst mv1 args' dst' mv2 s)
-                         (Iload Mint64 addr args dst s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload Mint32 addr args' dst' ::
+                           (Lload TRAP Mint32 addr args' dst' ::
                             expand_moves mv2 (Lbranch s :: k)))
   | ebs_load2_2: forall addr addr2 args dst mv1 args' dst' mv2 s k,
       wf_moves mv1 -> wf_moves mv2 ->
       Archi.splitlong = true ->
       offset_addressing addr 4 = Some addr2 ->
       expand_block_shape (BSload2_2 addr addr2 args dst mv1 args' dst' mv2 s)
-                         (Iload Mint64 addr args dst s)
+                         (Iload TRAP Mint64 addr args dst s)
                          (expand_moves mv1
-                           (Lload Mint32 addr2 args' dst' ::
+                           (Lload TRAP Mint32 addr2 args' dst' ::
                             expand_moves mv2 (Lbranch s :: k)))
-  | ebs_load_dead: forall chunk addr args dst mv s k,
+  | ebs_load_dead: forall trap chunk addr args dst mv s k,
       wf_moves mv ->
       expand_block_shape (BSloaddead chunk addr args dst mv s)
-                         (Iload chunk addr args dst s)
+                         (Iload trap chunk addr args dst s)
                          (expand_moves mv (Lbranch s :: k))
   | ebs_store: forall chunk addr args src mv1 args' src' s k,
       wf_moves mv1 ->
@@ -169,11 +169,11 @@ Inductive expand_block_shape: block_shape -> RTL.instruction -> LTL.bblock -> Pr
                          (Ibuiltin ef args res s)
                          (expand_moves mv1
                            (Lbuiltin ef args' res' :: expand_moves mv2 (Lbranch s :: k)))
-  | ebs_cond: forall cond args mv args' s1 s2 k,
+  | ebs_cond: forall cond args mv args' s1 s2 k i i',
       wf_moves mv ->
       expand_block_shape (BScond cond args mv args' s1 s2)
-                         (Icond cond args s1 s2)
-                         (expand_moves mv (Lcond cond args' s1 s2 :: k))
+                         (Icond cond args s1 s2 i)
+                         (expand_moves mv (Lcond cond args' s1 s2 i' :: k))
   | ebs_jumptable: forall arg mv arg' tbl k,
       wf_moves mv ->
       expand_block_shape (BSjumptable arg mv arg' tbl)
@@ -1301,10 +1301,10 @@ Proof.
 Qed.
 
 Lemma add_equations_res_lessdef:
-  forall r oty l e e' rs ls,
-  add_equations_res r oty l e = Some e' ->
+  forall r ty l e e' rs ls,
+  add_equations_res r ty l e = Some e' ->
   satisf rs ls e' ->
-  Val.has_type rs#r (match oty with Some ty => ty | None => Tint end) ->
+  Val.has_type rs#r ty ->
   Val.lessdef rs#r (Locmap.getpair (map_rpair R l) ls).
 Proof.
   intros. functional inversion H; simpl.
@@ -1892,7 +1892,7 @@ Qed.
 
 Inductive match_stackframes: list RTL.stackframe -> list LTL.stackframe -> signature -> Prop :=
   | match_stackframes_nil: forall sg,
-      sg.(sig_res) = Some Tint ->
+      sg.(sig_res) = Tint ->
       match_stackframes nil nil sg
   | match_stackframes_cons:
       forall res f sp pc rs s tf bb ls ts sg an e env
@@ -1970,8 +1970,8 @@ Ltac UseShape :=
   end.
 
 Remark addressing_not_long:
-  forall env f addr args dst s r,
-  wt_instr f env (Iload Mint64 addr args dst s) -> Archi.splitlong = true ->
+  forall trap env f addr args dst s r,
+  wt_instr f env (Iload trap Mint64 addr args dst s) -> Archi.splitlong = true ->
   In r args -> r <> dst.
 Proof.
   intros. inv H.
@@ -1981,7 +1981,7 @@ Proof.
   { rewrite <- H5. apply in_map; auto. }
   assert (C: env r = Tint).
   { apply A in B. rewrite B. unfold Tptr. rewrite Archi.splitlong_ptr32 by auto. auto. }
-  red; intros; subst r. rewrite C in H8; discriminate.
+  red; intros; subst r. rewrite C in H9; discriminate.
 Qed.
 
 (** The proof of semantic preservation is a simulation argument of the
@@ -2082,8 +2082,8 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iop; eauto.
 
-(* load regular *)
-- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
+(* load regular TRAP *)
+- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
   exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
   exploit transfer_use_def_satisf; eauto. intros [X Y].
   exploit eval_addressing_lessdef; eauto. intros [a' [F G]].
@@ -2100,7 +2100,7 @@ Proof.
   econstructor; eauto.
 
 (* load pair *)
-- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
+- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
   exploit loadv_int64_split; eauto. intros (v1 & v2 & LOAD1 & LOAD2 & V1 & V2).
   set (v2' := if Archi.big_endian then v2 else v1) in *.
   set (v1' := if Archi.big_endian then v1 else v2) in *.
@@ -2155,7 +2155,7 @@ Proof.
   econstructor; eauto.
 
 (* load first word of a pair *)
-- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
+- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
   exploit loadv_int64_split; eauto. intros (v1 & v2 & LOAD1 & LOAD2 & V1 & V2).
   set (v2' := if Archi.big_endian then v2 else v1) in *.
   set (v1' := if Archi.big_endian then v1 else v2) in *.
@@ -2185,7 +2185,7 @@ Proof.
   econstructor; eauto.
 
 (* load second word of a pair *)
-- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
+- generalize (wt_exec_Iload _ _ _ _ _ _ _ _ _ _ _ _ WTI H1 WTRS). intros WTRS'.
   exploit loadv_int64_split; eauto. intros (v1 & v2 & LOAD1 & LOAD2 & V1 & V2).
   set (v2' := if Archi.big_endian then v2 else v1) in *.
   set (v1' := if Archi.big_endian then v1 else v2) in *.
@@ -2229,6 +2229,79 @@ Proof.
   econstructor; eauto.
   eapply wt_exec_Iload; eauto.
 
+- (* load notrap1 *)
+  generalize (wt_exec_Iload_notrap _ _ _ _ _ _ _ _ WTI WTRS).
+  intro WTRS'.
+  exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
+  exploit transfer_use_def_satisf; eauto. intros [X Y].
+  exploit eval_addressing_lessdef_none; eauto. intro Haddr.
+  exploit (exec_moves mv2); eauto.  intros [ls2 [A2 B2]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_trans. eexact A1.
+  eapply star_left. eapply exec_Lload_notrap1. rewrite <- Haddr.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto.
+  
+  eapply star_right. eexact A2. constructor.
+  eauto. eauto. eauto. traceEq.
+  exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
+  econstructor; eauto.
+
+(* load notrap1 dead *)
+- exploit exec_moves; eauto. intros [ls1 [X Y]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_right. eexact X. econstructor; eauto.
+  eauto. traceEq.
+  exploit satisf_successors. eauto. eauto. simpl; eauto. eauto.
+  eapply reg_unconstrained_satisf; eauto.
+  intros [enext [U V]].
+  econstructor; eauto.
+  eapply wt_exec_Iload_notrap; eauto.
+
+(* load regular notrap2 *)
+- generalize (wt_exec_Iload_notrap _ _ _ _ _ _ _ _ WTI WTRS).
+  intro WTRS'.
+  exploit (exec_moves mv1); eauto. intros [ls1 [A1 B1]].
+  exploit transfer_use_def_satisf; eauto. intros [X Y].
+  exploit eval_addressing_lessdef; eauto. intros [a' [F G]].
+  destruct (Mem.loadv chunk m' a') as [v' |] eqn:Hload.
+  { exploit (exec_moves mv2 env (rs # dst <- Vundef)); eauto.  intros [ls2 [A2 B2]].
+      econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_trans. eexact A1.
+  eapply star_left. econstructor. instantiate (1 := a'). rewrite <- F.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto. eauto.
+  eapply star_right. eexact A2. constructor.
+  eauto. eauto. eauto. traceEq.
+  exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
+  econstructor; eauto.
+  }
+  { exploit (exec_moves mv2 env (rs # dst <- Vundef)); eauto.  intros [ls2 [A2 B2]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_trans. eexact A1.
+  eapply star_left. eapply exec_Lload_notrap2. rewrite <- F.
+  apply eval_addressing_preserved. exact symbols_preserved. assumption.
+  eauto.
+  eapply star_right. eexact A2. constructor.
+  eauto. eauto. eauto. traceEq.
+  exploit satisf_successors; eauto. simpl; eauto. intros [enext [U V]].
+  econstructor; eauto.
+  }
+  
+- (* load notrap2 dead *)
+  exploit exec_moves; eauto. intros [ls1 [X Y]].
+  econstructor; split.
+  eapply plus_left. econstructor; eauto.
+  eapply star_right. eexact X. econstructor; eauto.
+  eauto. traceEq.
+  exploit satisf_successors. eauto. eauto. simpl; eauto. eauto.
+  eapply reg_unconstrained_satisf; eauto.
+  intros [enext [U V]].
+  econstructor; eauto.
+  eapply wt_exec_Iload_notrap; eauto.
+  
 (* store *)
 - exploit exec_moves; eauto. intros [ls1 [X Y]].
   exploit add_equations_lessdef; eauto. intros LD. simpl in LD. inv LD.
@@ -2425,13 +2498,13 @@ Proof.
                           (return_regs (parent_locset ts) ls1))
   with (Locmap.getpair (map_rpair R (loc_result (RTL.fn_sig f))) ls1).
   eapply add_equations_res_lessdef; eauto.
-  rewrite H13. apply WTRS.
+  rewrite <- H14. apply WTRS.
   generalize (loc_result_caller_save (RTL.fn_sig f)).
   destruct (loc_result (RTL.fn_sig f)); simpl.
   intros A; rewrite A; auto.
   intros [A B]; rewrite A, B; auto.
   apply return_regs_agree_callee_save.
-  unfold proj_sig_res. rewrite <- H11; rewrite H13. apply WTRS.
+  rewrite <- H11, <- H14. apply WTRS.
 
 (* internal function *)
 - monadInv FUN. simpl in *.
@@ -2463,7 +2536,8 @@ Proof.
   simpl. destruct (loc_result (ef_sig ef)) eqn:RES; simpl.
   rewrite Locmap.gss; auto.
   generalize (loc_result_pair (ef_sig ef)); rewrite RES; intros (A & B & C & D & E).
-  exploit external_call_well_typed; eauto. unfold proj_sig_res; rewrite B. intros WTRES'.
+  assert (WTRES': Val.has_type v' Tlong).
+  { rewrite <- B. eapply external_call_well_typed; eauto. }
   rewrite Locmap.gss. rewrite Locmap.gso by (red; auto). rewrite Locmap.gss.
   rewrite val_longofwords_eq_1 by auto. auto.
   red; intros. rewrite (AG l H0).

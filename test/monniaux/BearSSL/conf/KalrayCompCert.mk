@@ -37,7 +37,7 @@ RM = rm -f
 MKDIR = mkdir -p
 
 # C compiler and flags.
-CC = ../../../ccomp -fstruct-passing
+CC = ../../../ccomp -fstruct-passing -fpostpass= ilp -U__SIZEOF_INT128__ -U__SIZEOF_FLOAT128__
 CFLAGS = -W -Wall -Wno-c11-extensions -O3 -D_POSIX_C_SOURCE=200909L
 CCOUT = -c -o 
 

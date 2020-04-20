@@ -12,7 +12,11 @@ int fib(int n)
 int main(int argc, char ** argv)
 {
   int n, r;
+#ifdef __K1C__
+  if (argc >= 2) n = atoi(argv[1]); else n = 15;
+#else
   if (argc >= 2) n = atoi(argv[1]); else n = 35;
+#endif
   r = fib(n);
   printf("fib(%d) = %d\n", n, r);
   return 0;

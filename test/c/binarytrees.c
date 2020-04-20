@@ -7,6 +7,7 @@
        icc -O3 -ip -unroll -static binary-trees.c -lm
 */
 
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@ treeNode* NewTreeNode(treeNode* left, treeNode* right, long item)
     treeNode*    new;
 
     new = (treeNode*)malloc(sizeof(treeNode));
+    assert(new != NULL && "NewTreeNode: new malloc failed");
 
     new->left = left;
     new->right = right;
@@ -73,7 +75,11 @@ int main(int argc, char* argv[])
     unsigned   N, depth, minDepth, maxDepth, stretchDepth;
     treeNode   *stretchTree, *longLivedTree, *tempTree;
 
+#ifdef __K1C__
+    N = argc < 2 ? 6 : atol(argv[1]);
+#else
     N = argc < 2 ? 12 : atol(argv[1]);
+#endif
 
     minDepth = 4;
 

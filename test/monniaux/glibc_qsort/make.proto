@@ -1,3 +1,0 @@
-objdeps: [{name: glibc_qsort_run, compiler: gcc}]
-target: glibc_qsort
-measures: [quicksort_time]

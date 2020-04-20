@@ -185,20 +185,36 @@ Processing options:
 {|Optimization options: (use -fno-<opt> to turn off -f<opt>)
   -O             Optimize the compiled code [on by default]
   -O0            Do not optimize the compiled code
-  -O1 -O2 -O3    Synonymous for -O
+  -O1            Perform all optimization passes except scheduling
+  -O2 -O3        Synonymous for -O
   -Os            Optimize for code size in preference to code speed
+  -Obranchless   Optimize to generate fewer conditional branches; try to produce
+                 branch-free instruction sequences as much as possible
+  -finline-auto-threshold n   Inline functions under size n
   -ftailcalls    Optimize function calls in tail position [on]
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
+  -fcse2         Perform inter-loop common subexpression elimination [on]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
                    (<optim>=list: list scheduling, <optim>=ilp: ILP, <optim>=greedy: just packing bundles)
+  -fduplicate <nb_nodes> Perform tail duplication to form superblocks on predicted traces
+    nb_nodes control the heuristic deciding to duplicate or not
+    A value of -1 desactivates the entire pass (including branch prediction)
+    A value of 0 desactivates the duplication (but activates the branch prediction)
+    FIXME : this is desactivated by default for now
+    -finvertcond    Invert conditions based on predicted paths (to prefer fallthrough).
+                    Requires -fduplicate to be also activated [on]
+    -ftracelinearize Linearizes based on the traces identified by duplicate phase
+                    It is heavily recommended to activate -finvertcond with this pass [off]
+  -fforward-moves   Forward moves after CSE
   -finline       Perform inlining of functions [on]
   -finline-functions-called-once Integrate functions only required by their
                  single caller [on]
+  -fif-conversion Perform if-conversion (generation of conditional moves) [on]
 Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -ffpu          Use FP registers for some integer operations [on]
   -fsmall-data <n>  Set maximal size <n> for allocation in small data area
@@ -206,6 +222,7 @@ Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -falign-functions <n>  Set alignment (in bytes) of function entry points
   -falign-branch-targets <n>  Set alignment (in bytes) of branch targets
   -falign-cond-branches <n>  Set alignment (in bytes) of conditional branches
+  -fcommon       Put uninitialized globals in the common section [on].
 |} ^
  target_help ^
  toolchain_help ^
@@ -252,7 +269,10 @@ let dump_mnemonics destfile =
   exit 0
 
 let optimization_options = [
-  option_ftailcalls; option_fconstprop; option_fcse; option_fredundancy; option_fpostpass; option_finline_functions_called_once;
+    option_ftailcalls; option_fifconversion; option_fconstprop;
+    option_fcse; option_fcse2;
+    option_fpostpass;
+    option_fredundancy; option_finline; option_finline_functions_called_once;
 ]
 
 let set_all opts () = List.iter (fun r -> r := true) opts
@@ -265,14 +285,18 @@ let num_input_files = ref 0
 let cmdline_actions =
   let f_opt name ref =
     [Exact("-f" ^ name), Set ref; Exact("-fno-" ^ name), Unset ref] in
-  let f_opt_str name ref strref default =
+  let f_opt_str name ref strref =
     [Exact("-f" ^ name ^ "="), String 
-      (fun s -> (strref := (if s == "" then default else s)); ref := true)
+      (fun s -> (strref := (if s == "" then "list" else s)); ref := true)
      ] in
   let f_str name strref default =
     [Exact("-f" ^ name ^ "="), String 
       (fun s -> (strref := (if s == "" then default else s)))
      ] in
+  let check_align n =
+    if n <= 0 || ((n land (n - 1)) <> 0) then
+      error no_loc "requested alignment %d is not a power of 2" n
+    in
   [
 (* Getting help *)
   Exact "-help", Unit print_usage_and_exit;
@@ -303,14 +327,18 @@ let cmdline_actions =
  [
   Exact "-O0", Unit (unset_all optimization_options);
   Exact "-O", Unit (set_all optimization_options);
+  _Regexp "-O1", Self (fun _ -> set_all optimization_options (); option_fpostpass := false);
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
+  Exact "-Obranchless", Set option_Obranchless;
+  Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
-  Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n);
-  Exact "-falign-functions", Integer(fun n -> option_falignfunctions := Some n);
-  Exact "-falign-branch-targets", Integer(fun n -> option_falignbranchtargets := n);
-  Exact "-falign-cond-branches", Integer(fun n -> option_faligncondbranchs := n);] @
+  Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
+  Exact "-falign-functions", Integer(fun n -> check_align n; option_falignfunctions := Some n);
+  Exact "-falign-branch-targets", Integer(fun n -> check_align n; option_falignbranchtargets := n);
+  Exact "-falign-cond-branches", Integer(fun n -> check_align n; option_faligncondbranchs := n);] @
+      f_opt "common" option_fcommon @
 (* Target processor options *)
   (if Configuration.arch = "arm" then
     if Configuration.model = "armv6" then
@@ -369,19 +397,27 @@ let cmdline_actions =
 (* Optimization options *)
 (* -f options: come in -f and -fno- variants *)
   @ f_opt "tailcalls" option_ftailcalls
+  @ f_opt "if-conversion" option_fifconversion
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
+  @ f_opt "cse2" option_fcse2
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
-  @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched "list"
+  @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]
+  @ f_opt "invertcond" option_finvertcond
+  @ f_opt "tracelinearize" option_ftracelinearize
+  @ f_opt_str "postpass" option_fpostpass option_fpostpass_sched
   @ f_opt "inline" option_finline
   @ f_opt "inline-functions-called-once" option_finline_functions_called_once
   @ f_opt "globaladdrtmp" option_fglobaladdrtmp
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
-  @ f_opt "coalesce-mem" option_coalesce_mem
   @ f_str "div-i32" option_div_i32 "stsud"
   @ f_str "div-i64" option_div_i64 "stsud"
+  @ f_opt "addx" option_faddx
+  @ f_opt "coalesce-mem" option_fcoalesce_mem
+  @ f_opt "all-loads-nontrap" option_all_loads_nontrap
+  @ f_opt "forward-moves" option_fforward_moves
 (* Code generation options *)
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)

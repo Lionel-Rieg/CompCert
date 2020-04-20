@@ -1,0 +1,62 @@
+# CompCert Install Instructions
+
+## Dependencies
+### Additional dependencies
+Replace with the package manager for your distribution
+```
+sudo <pkg-manager> install -y mercurial darcs ocaml
+
+```
+
+### Opam
+```
+sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
+```
+
+## Post-install
+Run
+```
+eval `opam config env`
+```
+Add this to your `.bashrc` or `.bash_profile`
+```
+. /nfs/home/mschuh/.opam/opam-init/init.sh > /dev/null 2> /dev/null || true
+```
+Switch to last compiler version
+```
+opam switch 4.07.0
+```
+Install dependecies available through opam
+```
+opam install coq menhir
+```
+
+## Compilation
+Pre-compilation configure replace the placeholder with your desired platform
+(for Kalray it is k1c-cos or k1c-mbr)
+```
+./configure <platform>
+```
+If using Kalray's platform, make sure that the k1 tools are on your path
+Compile (adapt -j# to the number of cores and available RAM)
+```
+make -j12
+make install
+```
+
+## Utilization
+`ccomp` binaries are installed at `$(HOME)/.usr/bin`
+Make sure to add that to your path to ease its use
+Now you may use it like a regular compiler
+```
+ccomp -O3 test.c -S
+ccomp -O3 test.c -o test.bin
+```
+
+## Changing platform
+If you decide to change the platform, for instance from k1c-cos to k1c-mbr, you
+should change the `compcert.ini` file with the respective tools and then run
+```
+make install
+```
+

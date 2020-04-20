@@ -13,7 +13,7 @@ int main (void) {
   heapsort(vec, len);
   heapsort_time = get_cycle() - heapsort_time;
   printf("sorted=%s\n"
-	 "heapsort_time:%" PRIu64 "\n",
+	 "time cycles:%" PRIu64 "\n",
 	 data_vec_is_sorted(vec, len)?"true":"false",
 	 heapsort_time);
   free(vec);

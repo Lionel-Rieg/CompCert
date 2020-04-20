@@ -915,7 +915,7 @@ Proof.
             /\ Val.inject j a ta).
   { apply eval_addressing_inj with (ge1 := ge) (sp1 := Vptr sp0 Ptrofs.zero) (vl1 := rs##args).
     intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
-    apply KEPT. red. exists pc, (Iload chunk addr args dst pc'); auto.
+    apply KEPT. red. exists pc, (Iload trap chunk addr args dst pc'); auto.
     econstructor; eauto.
     apply regs_inject; auto.
     assumption. }
@@ -924,6 +924,36 @@ Proof.
   econstructor; split. eapply exec_Iload; eauto.
   econstructor; eauto. apply set_reg_inject; auto.
 
+- (* load notrap1 *)
+  assert (eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = None).
+  { eapply eval_addressing_inj_none.
+    intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
+    apply KEPT. red. exists pc, (Iload NOTRAP chunk addr args dst pc'); auto.
+    econstructor; eauto.
+    rewrite Ptrofs.add_zero; reflexivity.
+    apply regs_inject; auto.
+    eassumption.
+    assumption. }
+ 
+  econstructor; split. eapply exec_Iload_notrap1; eauto.
+  econstructor; eauto. apply set_reg_inject; auto.
+
+- (* load notrap2 *)
+  assert (A: exists ta,
+               eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = Some ta
+            /\ Val.inject j a ta).
+  { apply eval_addressing_inj with (ge1 := ge) (sp1 := Vptr sp0 Ptrofs.zero) (vl1 := rs##args).
+    intros. apply symbol_address_inject. eapply match_stacks_preserves_globals; eauto.
+    apply KEPT. red. exists pc, (Iload NOTRAP chunk addr args dst pc'); auto.
+    econstructor; eauto.
+    apply regs_inject; auto.
+    assumption. }
+  destruct A as (ta & B & C).
+  destruct (Mem.loadv chunk tm ta) eqn:Echunk2.
+  + econstructor; split. eapply exec_Iload; eauto.
+    econstructor; eauto. apply set_reg_inject; auto.
+  + econstructor; split. eapply exec_Iload_notrap2; eauto.
+    econstructor; eauto. apply set_reg_inject; auto.
 - (* store *)
   assert (A: exists ta,
                eval_addressing tge (Vptr tsp Ptrofs.zero) addr trs##args = Some ta
@@ -1160,10 +1190,10 @@ Local Transparent Mem.loadbytes.
   generalize (S1 NO). unfold Mem.loadbytes. destruct Mem.range_perm_dec; intros E1; inv E1.
   generalize (S2 NO). unfold Mem.loadbytes. destruct Mem.range_perm_dec; intros E2; inv E2.
   rewrite Z.add_0_r.
-  apply Mem_getN_forall2 with (p := 0) (n := nat_of_Z (init_data_list_size (gvar_init v))).
+  apply Mem_getN_forall2 with (p := 0) (n := Z.to_nat (init_data_list_size (gvar_init v))).
   rewrite H3, H4. apply bytes_of_init_inject. auto.
   omega.
-  rewrite nat_of_Z_eq by (apply init_data_list_size_pos). omega.
+  rewrite Z2Nat.id by (apply Z.ge_le; apply init_data_list_size_pos). omega.
 Qed.
 
 Lemma init_mem_inj_2:
@@ -1373,9 +1403,9 @@ Proof.
   * apply Y with id; auto.
   * exists gd1; auto.
   * exists gd2; auto.
-  * eapply used_not_defined_2 in GD1; eauto. eapply used_not_defined_2 in GD2; eauto.
+  * eapply used_not_defined_2 in GD1; [ | eauto | congruence ].
+    eapply used_not_defined_2 in GD2; [ | eauto | congruence ].
     tauto.
-    congruence.
   }
   destruct E as [g LD].
   left. unfold prog_defs_names; simpl.

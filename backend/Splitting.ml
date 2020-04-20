@@ -151,8 +151,8 @@ let ren_instr f maps pc i =
   | Inop s -> Inop s
   | Iop(op, args, res, s) ->
       Iop(op, ren_regs before args, ren_reg after res, s)
-  | Iload(chunk, addr, args, dst, s) ->
-      Iload(chunk, addr, ren_regs before args, ren_reg after dst, s)
+  | Iload(trap, chunk, addr, args, dst, s) ->
+      Iload(trap, chunk, addr, ren_regs before args, ren_reg after dst, s)
   | Istore(chunk, addr, args, src, s) ->
       Istore(chunk, addr, ren_regs before args, ren_reg before src, s)
   | Icall(sg, ros, args, res, s) ->
@@ -162,8 +162,8 @@ let ren_instr f maps pc i =
   | Ibuiltin(ef, args, res, s) ->
       Ibuiltin(ef, List.map (AST.map_builtin_arg (ren_reg before)) args,
                    AST.map_builtin_res (ren_reg after) res, s)
-  | Icond(cond, args, s1, s2) ->
-      Icond(cond, ren_regs before args, s1, s2)
+  | Icond(cond, args, s1, s2, i) ->
+      Icond(cond, ren_regs before args, s1, s2, i)
   | Ijumptable(arg, tbl) ->
       Ijumptable(ren_reg before arg, tbl)
   | Ireturn optarg ->

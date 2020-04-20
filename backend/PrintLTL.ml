@@ -61,9 +61,10 @@ let print_succ pp s dfl =
 let print_instruction pp succ = function
   | Lop(op, args, res) ->
       fprintf pp "%a = %a" mreg res (print_operation mreg) (op, args)
-  | Lload(chunk, addr, args, dst) ->
-      fprintf pp "%a = %s[%a]"
-         mreg dst (name_of_chunk chunk) (print_addressing mreg) (addr, args)
+  | Lload(trap,chunk, addr, args, dst) ->
+      fprintf pp "%a = %s[%a]%a"
+        mreg dst (name_of_chunk chunk) (print_addressing mreg) (addr, args)
+        print_trapping_mode trap
   | Lgetstack(sl, ofs, ty, dst) ->
       fprintf pp "%a = %a" mreg dst slot (sl, ofs, ty)
   | Lsetstack(src, sl, ofs, ty) ->
@@ -82,10 +83,11 @@ let print_instruction pp succ = function
         (print_builtin_args loc) args
   | Lbranch s ->
       print_succ pp s succ
-  | Lcond(cond, args, s1, s2) ->
-      fprintf pp "if (%a) goto %d else goto %d"
+  | Lcond(cond, args, s1, s2, info) ->
+      fprintf pp "if (%a) goto %d else goto %d (prediction: %s)"
         (print_condition mreg) (cond, args)
         (P.to_int s1) (P.to_int s2)
+        (match info with None -> "none" | Some true -> "branch" | Some false -> "fallthrough")
   | Ljumptable(arg, tbl) ->
       let tbl = Array.of_list tbl in
       fprintf pp "jumptable (%a)" mreg arg;
@@ -112,7 +114,7 @@ let print_function pp id f =
   fprintf pp "%s() {\n" (extern_atom id);
   let instrs =
     List.sort
-      (fun (pc1, _) (pc2, _) -> Pervasives.compare pc2 pc1)
+      (fun (pc1, _) (pc2, _) -> compare pc2 pc1)
       (List.rev_map
         (fun (pc, i) -> (P.to_int pc, i))
         (PTree.elements f.fn_code)) in

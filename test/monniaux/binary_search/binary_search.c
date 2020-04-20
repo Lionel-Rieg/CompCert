@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "../clock.h"
-#include "../ternary.h"
 
 typedef int data;
 typedef unsigned index;
@@ -31,8 +30,8 @@ int my_bsearch2 (data *a, index n, data x) {
         index k = (i + j) / 2;
 	index kp1 = k+1, km1 = k-1;
 	data ak = a[k];
-	i = TERNARY32(ak < x, kp1, i);
-	j = TERNARY32(ak > x, km1, j);
+	i = ak < x ? kp1 : i;
+        j = ak > x ? km1 : j;
         if (ak == x) {
             return k;
         }
@@ -47,8 +46,8 @@ int my_bsearch3 (data *a, index n, data x) {
 	index kp1 = k+1, km1 = k-1;
 	data ak = a[k];
 	_Bool lt = ak < x, gt = ak > x;
-	i = TERNARY32(lt, kp1, i);
-	j = TERNARY32(gt, km1, j);
+	i = lt ? kp1 : i;
+	j = gt ? km1 : j;
         if (ak == x) {
             return k;
         }
@@ -63,8 +62,8 @@ int my_bsearch4 (data *a, index n, data x) {
     index kp1 = k+1, km1 = k-1;
     data ak = a[k];
     _Bool lt = ak < x, gt = ak > x;
-    i = TERNARY32(lt, kp1, i);
-    j = TERNARY32(gt, km1, j);
+    i = lt ? kp1 : i;
+    j = gt ? km1 : j;
     if (ak == x) {
       goto end;
     }
@@ -81,7 +80,7 @@ void random_ascending_fill(data *a, index n) {
   for(index i=0; i<n; i++) {
     a[i] = v;
     v++;
-    v = TERNARY32(r & 0x40000000, v+1, v);
+    v = (r & 0x40000000) ? (v+1) : v;
     r = r * 97 + 5;
   }
 }
@@ -119,7 +118,7 @@ int main () {
 	 "position2: %d\n"
 	 "position3: %d\n"
 	 "position4: %d\n"
-	 "random fill cycles: %" PRIu64 "\n"
+	 "randomfill cycles: %" PRIu64 "\n"
 	 "search1 cycles: %" PRIu64 "\n"
 	 "search2 cycles: %" PRIu64 "\n"
 	 "search3 cycles: %" PRIu64 "\n"

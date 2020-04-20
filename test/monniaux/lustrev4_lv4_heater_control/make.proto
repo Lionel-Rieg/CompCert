@@ -1,0 +1,3 @@
+sources: "$(wildcard *.c)"
+target: lv4_heater_control
+measures: [cycles]

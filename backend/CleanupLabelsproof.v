@@ -255,6 +255,18 @@ Proof.
   left; econstructor; split.
   econstructor; eauto.
   econstructor; eauto with coqlib.
+(* Lload notrap1 *)
+  assert (eval_addressing tge sp addr (LTL.reglist rs args) = None).
+    rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
+  left; econstructor; split.
+  eapply exec_Lload_notrap1; eauto.
+  econstructor; eauto with coqlib.
+(* Lload notrap2 *)
+  assert (eval_addressing tge sp addr (LTL.reglist rs args) = Some a).
+    rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.
+  left; econstructor; split.
+  eapply exec_Lload_notrap2; eauto.
+  econstructor; eauto with coqlib.
 (* Lstore *)
   assert (eval_addressing tge sp addr (LTL.reglist rs args) = Some a).
     rewrite <- H. apply eval_addressing_preserved. exact symbols_preserved.

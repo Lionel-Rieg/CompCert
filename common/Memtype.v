@@ -104,7 +104,7 @@ Parameter alloc: forall (m: mem) (lo hi: Z), mem * block.
 
 (** [free m b lo hi] frees (deallocates) the range of offsets from [lo]
   included to [hi] excluded in block [b].  Returns the updated memory
-  state, or [None] if the freed addresses are not writable. *)
+  state, or [None] if the freed addresses are not freeable. *)
 Parameter free: forall (m: mem) (b: block) (lo hi: Z), option mem.
 
 (** [load chunk m b ofs] reads a memory quantity [chunk] from
@@ -300,6 +300,11 @@ Axiom load_type:
   load chunk m b ofs = Some v ->
   Val.has_type v (type_of_chunk chunk).
 
+Axiom load_rettype:
+  forall m chunk b ofs v,
+  load chunk m b ofs = Some v ->
+  Val.has_rettype v (rettype_of_chunk chunk).
+
 (** For a small integer or float type, the value returned by [load]
   is invariant under the corresponding cast. *)
 Axiom load_cast:
@@ -358,7 +363,7 @@ Axiom load_loadbytes:
 Axiom loadbytes_length:
   forall m b ofs n bytes,
   loadbytes m b ofs n = Some bytes ->
-  length bytes = nat_of_Z n.
+  length bytes = Z.to_nat n.
 
 Axiom loadbytes_empty:
   forall m b ofs n,

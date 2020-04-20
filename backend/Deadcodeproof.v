@@ -106,7 +106,7 @@ Local Transparent Mem.loadbytes.
   unfold Mem.loadbytes; intros. destruct H.
   destruct (Mem.range_perm_dec m1 b ofs (ofs + n) Cur Readable); inv H0.
   rewrite pred_dec_true. econstructor; split; eauto.
-  apply GETN. intros. rewrite nat_of_Z_max in H.
+  apply GETN. intros. rewrite Z_to_nat_max in H.
   assert (ofs <= i < ofs + n) by xomega.
   apply ma_memval0; auto.
   red; intros; eauto.
@@ -829,6 +829,83 @@ Ltac UseTransfer :=
   apply eagree_update; eauto 2 with na.
   eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
 
+- (* load notrap1 *)
+  TransfInstr; UseTransfer.
+  destruct (is_dead (nreg ne dst)) eqn:DEAD;
+  [idtac|destruct (is_int_zero (nreg ne dst)) eqn:INTZERO];
+  simpl in *.
++ (* dead instruction, turned into a nop *)
+  econstructor; split.
+  eapply exec_Inop; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update_dead; auto with na.
++ (* instruction with needs = [I Int.zero], turned into a load immediate of zero. *)
+  econstructor; split.
+  eapply exec_Iop with (v := Vint Int.zero); eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; auto.
+  rewrite is_int_zero_sound by auto.
+  unfold default_notrap_load_value.
+  constructor.
++ (* preserved *)
+  exploit eval_addressing_lessdef_none. eapply add_needs_all_lessdef; eauto. eassumption.
+  intro Hnone'.
+  assert (eval_addressing tge (Vptr sp0 Ptrofs.zero) addr te ## args = None) as Hnone2'.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  assumption.
+  exact symbols_preserved.
+  
+  econstructor; split.
+  eapply exec_Iload_notrap1; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+
+- (* load notrap2 *)
+  TransfInstr; UseTransfer.
+  
+  destruct (is_dead (nreg ne dst)) eqn:DEAD;
+  [idtac|destruct (is_int_zero (nreg ne dst)) eqn:INTZERO];
+  simpl in *.
++ (* dead instruction, turned into a nop *)
+  econstructor; split.
+  eapply exec_Inop; eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update_dead; auto with na.
++ (* instruction with needs = [I Int.zero], turned into a load immediate of zero. *)
+  econstructor; split.
+  eapply exec_Iop with (v := Vint Int.zero); eauto.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; auto.
+  rewrite is_int_zero_sound by auto.
+  unfold default_notrap_load_value.
+  constructor.
++ (* preserved *)
+  exploit eval_addressing_lessdef. eapply add_needs_all_lessdef; eauto. eauto.
+  intros (ta & U & V).
+  destruct (Mem.loadv chunk tm ta) eqn:Hchunk2.
+  {
+  econstructor; split.
+  eapply exec_Iload. eauto.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  eassumption.
+  exact symbols_preserved.
+  eassumption.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+  }
+  {
+  econstructor; split.
+  eapply exec_Iload_notrap2. eauto.
+  erewrite eval_addressing_preserved with (ge1 := ge).
+  eassumption.
+  exact symbols_preserved.
+  eassumption.
+  eapply match_succ_states; eauto. simpl; auto.
+  apply eagree_update; eauto 2 with na.
+  eapply magree_monotone; eauto. intros. apply incl_nmem_add; auto.
+  }
 - (* store *)
   TransfInstr; UseTransfer.
   destruct (nmem_contains nm (aaddressing (vanalyze cu f) # pc addr args)
@@ -966,7 +1043,7 @@ Ltac UseTransfer :=
   intros. eapply nlive_remove; eauto.
   unfold adst, vanalyze; rewrite AN; eapply aaddr_arg_sound_1; eauto.
   erewrite Mem.loadbytes_length in H1 by eauto.
-  rewrite nat_of_Z_eq in H1 by omega. auto.
+  rewrite Z2Nat.id in H1 by omega. auto.
   eauto.
   intros (tm' & A & B).
   econstructor; split.
@@ -993,7 +1070,7 @@ Ltac UseTransfer :=
   intros (bc & A & B & C).
   intros. eapply nlive_contains; eauto.
   erewrite Mem.loadbytes_length in H0 by eauto.
-  rewrite nat_of_Z_eq in H0 by omega. auto.
+  rewrite Z2Nat.id in H0 by omega. auto.
 + (* annot *)
   destruct (transfer_builtin_args (kill_builtin_res res ne, nm) _x2) as (ne1, nm1) eqn:TR.
   InvSoundState.

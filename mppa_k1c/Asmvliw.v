@@ -17,8 +17,6 @@
 
 (** Abstract syntax and semantics for VLIW semantics of K1c assembly language. *)
 
-(* FIXME: develop/fix the comments in this file *)
-
 Require Import Coqlib.
 Require Import Maps.
 Require Import AST.
@@ -45,8 +43,7 @@ Require Import Chunks.
     this view induces our sequential semantics of bundles defined in [Asmblock].
 *)
 
-(** General Purpose registers.
-*)
+(** General Purpose registers. *)
 
 Inductive gpreg: Type :=
   | GPR0:  gpreg | GPR1:  gpreg | GPR2:  gpreg | GPR3:  gpreg | GPR4:  gpreg
@@ -148,13 +145,10 @@ Definition gpreg_o_expand (x : gpreg_o) : gpreg * gpreg * gpreg * gpreg :=
   | R56R57R58R59 => (GPR56, GPR57, GPR58, GPR59)
   | R60R61R62R63 => (GPR60, GPR61, GPR62, GPR63)
   end.
-    
+
 Lemma gpreg_o_eq : forall (x y : gpreg_o), {x=y} + {x<>y}.
 Proof. decide equality. Defined.
 
-(** We model the following registers of the RISC-V architecture. *)
-
-(** basic register *)
 Inductive preg: Type :=
   | IR: gpreg -> preg                   (**r integer general purpose registers *)
   | RA: preg
@@ -173,7 +167,7 @@ End PregEq.
 
 Module Pregmap := EMap(PregEq).
 
-(** Conventional names for stack pointer ([SP]) and return address ([RA]). *)
+(** Conventional names for stack pointer ([SP]), return address ([RA]), frame pointer ([FP]) and other temporaries used *)
 
 Notation "'SP'" := GPR12 (only parsing) : asm.
 Notation "'FP'" := GPR17 (only parsing) : asm.
@@ -188,9 +182,7 @@ Inductive btest: Type :=
   | BTdgez                              (**r Double Greater Than or Equal to Zero *)
   | BTdlez                              (**r Double Less Than or Equal to Zero *)
   | BTdgtz                              (**r Double Greater Than Zero *)
-(*| BTodd                               (**r Odd (LSB Set) *)
-  | BTeven                              (**r Even (LSB Clear) *)
-*)| BTwnez                              (**r Word Not Equal to Zero *)
+  | BTwnez                              (**r Word Not Equal to Zero *)
   | BTweqz                              (**r Word Equal to Zero *)
   | BTwltz                              (**r Word Less Than Zero *)
   | BTwgez                              (**r Word Greater Than or Equal to Zero *)
@@ -211,11 +203,6 @@ Inductive itest: Type :=
   | ITgeu                               (**r Greater Than or Equal Unsigned *)
   | ITleu                               (**r Less Than or Equal Unsigned *)
   | ITgtu                               (**r Greater Than Unsigned *)
-  (* Not used yet *)
-  | ITall                               (**r All Bits Set in Mask *)
-  | ITnall                              (**r Not All Bits Set in Mask *)
-  | ITany                               (**r Any Bits Set in Mask *)
-  | ITnone                              (**r Not Any Bits Set in Mask *)
   .
 
 Inductive ftest: Type :=
@@ -251,16 +238,7 @@ Definition offset : Type := ptrofs.
 
 Definition label := positive.
 
-(* FIXME - rewrite the comment *)
-(** A note on immediates: there are various constraints on immediate
-  operands to K1c instructions.  We do not attempt to capture these
-  restrictions in the abstract syntax nor in the semantics.  The
-  assembler will emit an error if immediate operands exceed the
-  representable range.  Of course, our K1c generator (file
-  [Asmgen]) is careful to respect this range. *)
-
-(** Instructions to be expanded in control-flow 
-*)
+(** Instructions to be expanded in control-flow *)
 Inductive ex_instruction : Type :=
   (* Pseudo-instructions *)
   | Pbuiltin: external_function -> list (builtin_arg preg)
@@ -330,6 +308,16 @@ Inductive cf_instruction : Type :=
 .
 
 (** Loads **)
+Definition concrete_default_notrap_load_value (chunk : memory_chunk) :=
+  match chunk with
+  | Mint8signed | Mint8unsigned | Mint16signed | Mint16unsigned
+  | Mint32 => Vint Int.zero
+  | Mint64 => Vlong Int64.zero
+  | Many32 | Many64 => Vundef
+  | Mfloat32 => Vsingle Float32.zero
+  | Mfloat64 => Vfloat Float.zero
+  end.
+
 Inductive load_name : Type :=
   | Plb                                             (**r load byte *)
   | Plbu                                            (**r load byte unsigned *)
@@ -344,9 +332,9 @@ Inductive load_name : Type :=
 .
 
 Inductive ld_instruction : Type :=
-  | PLoadRRO   (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
-  | PLoadRRR   (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
-  | PLoadRRRXS (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRO   (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (ofs: offset)
+  | PLoadRRR   (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
+  | PLoadRRRXS (trap: trapping_mode) (i: load_name) (rd: ireg) (ra: ireg) (rofs: ireg)
   | PLoadQRRO  (rd: gpreg_q) (ra: ireg) (ofs: offset)
   | PLoadORRO  (rd: gpreg_o) (ra: ireg) (ofs: offset)
 .
@@ -392,6 +380,7 @@ Inductive arith_name_rr : Type :=
   | Pfabsw                                          (**r float absolute word *)
   | Pfnegd                                          (**r float negate double *)
   | Pfnegw                                          (**r float negate word *)
+  | Pfinvw                                          (**r float invert word *)
   | Pfnarrowdw                                      (**r float narrow 64 -> 32 bits *)
   | Pfwidenlwd                                      (**r Floating Point widen from 32 bits to 64 bits *)
   | Pfloatwrnsz                                     (**r Floating Point conversion from integer (int -> SINGLE) *)
@@ -429,7 +418,9 @@ Inductive arith_name_rrr : Type :=
   | Pfcompl (ft: ftest)                             (**r comparison float64 *)
 
   | Paddw                                           (**r add word *)
-  | Psubw                                           (**r sub word *)
+  | Paddxw (shift : shift1_4)                              (**r add shift *)
+  | Psubw                                           (**r sub word word *)
+  | Prevsubxw (shift : shift1_4)                              (**r sub shift word *)
   | Pmulw                                           (**r mul word *)
   | Pandw                                           (**r and word *)
   | Pnandw                                          (**r nand word *)
@@ -445,7 +436,9 @@ Inductive arith_name_rrr : Type :=
   | Psllw                                           (**r shift left logical word *)
 
   | Paddl                                           (**r add long *)
+  | Paddxl (shift : shift1_4)                              (**r add shift long *)
   | Psubl                                           (**r sub long *)
+  | Prevsubxl (shift : shift1_4)                              (**r sub shift long *)
   | Pandl                                           (**r and long *)
   | Pnandl                                          (**r nand long *)
   | Porl                                            (**r or long *)
@@ -466,12 +459,19 @@ Inductive arith_name_rrr : Type :=
   | Pfsbfw                                          (**r float sub word *)
   | Pfmuld                                          (**r float multiply double *)
   | Pfmulw                                          (**r float multiply word *)
+  | Pfmind                                          (**r float min double *)
+  | Pfminw                                          (**r float min word *)
+  | Pfmaxd                                          (**r float max double *)
+  | Pfmaxw                                          (**r float max word *)
 .
 
 Inductive arith_name_rri32 : Type :=
   | Pcompiw (it: itest)                             (**r comparison imm word *)
 
   | Paddiw                                          (**r add imm word *)
+  | Paddxiw (shift : shift1_4)
+  | Prevsubiw                                          (**r add imm word *)
+  | Prevsubxiw (shift : shift1_4)
   | Pmuliw                                          (**r add imm word *)
   | Pandiw                                          (**r and imm word *)
   | Pnandiw                                         (**r nand imm word *)
@@ -495,6 +495,9 @@ Inductive arith_name_rri32 : Type :=
 Inductive arith_name_rri64 : Type :=
   | Pcompil (it: itest)                             (**r comparison imm long *)
   | Paddil                                          (**r add immediate long *) 
+  | Paddxil (shift : shift1_4)
+  | Prevsubil
+  | Prevsubxil (shift : shift1_4)
   | Pmulil                                          (**r mul immediate long *) 
   | Pandil                                          (**r and immediate long *) 
   | Pnandil                                         (**r nand immediate long *) 
@@ -509,16 +512,26 @@ Inductive arith_name_rri64 : Type :=
 Inductive arith_name_arrr : Type :=
   | Pmaddw                                           (**r multiply add word *)
   | Pmaddl                                           (**r multiply add long *)
+  | Pmsubw                                           (**r multiply subtract word *)
+  | Pmsubl                                           (**r multiply subtract long *)
   | Pcmove (bt: btest)                               (**r conditional move *)
   | Pcmoveu (bt: btest)                              (**r conditional move, test on unsigned semantics *)
+  | Pfmaddfw                                         (**r float fused multiply add word *)
+  | Pfmaddfl                                         (**r float fused multiply add long *)
+  | Pfmsubfw                                         (**r float fused multiply subtract word *)
+  | Pfmsubfl                                         (**r float fused multiply subtract long *)
 .
 
 Inductive arith_name_arri32 : Type :=
   | Pmaddiw                                           (**r multiply add word *)
+  | Pcmoveiw (bt: btest)
+  | Pcmoveuiw (bt: btest)
 .
 
 Inductive arith_name_arri64 : Type :=
   | Pmaddil                                           (**r multiply add long *)
+  | Pcmoveil (bt: btest)
+  | Pcmoveuil (bt: btest)
 .
 
 Inductive arith_name_arr : Type :=
@@ -542,6 +555,8 @@ Inductive ar_instruction : Type :=
   | PArithARRI64 (i: arith_name_arri64) (rd rs: ireg) (imm: int64)
 .
 
+Module PArithCoercions.
+
 Coercion PArithR:       arith_name_r        >-> Funclass.
 Coercion PArithRR:      arith_name_rr       >-> Funclass.
 Coercion PArithRI32:    arith_name_ri32     >-> Funclass.
@@ -555,6 +570,8 @@ Coercion PArithARRR:    arith_name_arrr     >-> Funclass.
 Coercion PArithARR:     arith_name_arr      >-> Funclass.
 Coercion PArithARRI32:   arith_name_arri32    >-> Funclass.
 Coercion PArithARRI64:   arith_name_arri64    >-> Funclass.
+
+End PArithCoercions.
 
 Inductive basic : Type :=
   | PArith          (i: ar_instruction)
@@ -901,10 +918,6 @@ Definition compare_int (t: itest) (v1 v2: val): val :=
   | ITgeu => Val_cmpu Cge v1 v2
   | ITleu => Val_cmpu Cle v1 v2
   | ITgtu => Val_cmpu Cgt v1 v2
-  | ITall
-  | ITnall
-  | ITany
-  | ITnone => Vundef
   end.
 
 Definition compare_long (t: itest) (v1 v2: val): val :=
@@ -921,10 +934,6 @@ Definition compare_long (t: itest) (v1 v2: val): val :=
   | ITgeu => Some (Val_cmplu Cge v1 v2)
   | ITleu => Some (Val_cmplu Cle v1 v2)
   | ITgtu => Some (Val_cmplu Cgt v1 v2)
-  | ITall
-  | ITnall
-  | ITany
-  | ITnone => Some Vundef
   end in 
   match res with
   | Some v => v
@@ -976,6 +985,7 @@ Definition arith_eval_rr n v :=
   | Pfnegw => Val.negfs v
   | Pfabsd => Val.absf v
   | Pfabsw => Val.absfs v
+  | Pfinvw => ExtValues.invfs v
   | Pfnarrowdw => Val.singleoffloat v
   | Pfwidenlwd => Val.floatofsingle v
   | Pfloatwrnsz => match Val.singleofint v with Some f => f | _ => Vundef end
@@ -1055,12 +1065,24 @@ Definition arith_eval_rrr n v1 v2 :=
   | Pfsbfw => Val.subfs v1 v2
   | Pfmuld => Val.mulf v1 v2
   | Pfmulw => Val.mulfs v1 v2
+
+  | Pfmind => ExtValues.minf v1 v2
+  | Pfminw => ExtValues.minfs v1 v2
+  | Pfmaxd => ExtValues.maxf v1 v2
+  | Pfmaxw => ExtValues.maxfs v1 v2
+
+  | Paddxw shift => ExtValues.addx (int_of_shift1_4 shift) v1 v2
+  | Paddxl shift => ExtValues.addxl (int_of_shift1_4 shift) v1 v2
+
+  | Prevsubxw shift => ExtValues.revsubx (int_of_shift1_4 shift) v1 v2
+  | Prevsubxl shift => ExtValues.revsubxl (int_of_shift1_4 shift) v1 v2
   end.
 
 Definition arith_eval_rri32 n v i :=
   match n with
   | Pcompiw c => compare_int c v (Vint i)
   | Paddiw  => Val.add   v (Vint i)
+  | Prevsubiw  => Val.sub (Vint i) v
   | Pmuliw  => Val.mul   v (Vint i)
   | Pandiw  => Val.and   v (Vint i)
   | Pnandiw => Val.notint (Val.and  v (Vint i))
@@ -1079,12 +1101,15 @@ Definition arith_eval_rri32 n v i :=
   | Psrxil  => ExtValues.val_shrxl v (Vint i)
   | Psrlil  => Val.shrlu v (Vint i)
   | Psrail  => Val.shrl  v (Vint i)
+  | Paddxiw shift => ExtValues.addx (int_of_shift1_4 shift) v (Vint i)
+  | Prevsubxiw shift => ExtValues.revsubx (int_of_shift1_4 shift) v (Vint i)
   end.
 
 Definition arith_eval_rri64 n v i :=
   match n with
   | Pcompil c => compare_long c v (Vlong i)
   | Paddil  => Val.addl v (Vlong i)
+  | Prevsubil  => Val.subl (Vlong i) v
   | Pmulil  => Val.mull v (Vlong i)
   | Pandil  => Val.andl v (Vlong i)
   | Pnandil  => Val.notl (Val.andl v (Vlong i))
@@ -1094,44 +1119,56 @@ Definition arith_eval_rri64 n v i :=
   | Pnxoril  => Val.notl (Val.xorl  v (Vlong i))
   | Pandnil => Val.andl (Val.notl v) (Vlong i)
   | Pornil  => Val.orl (Val.notl v) (Vlong i)
+  | Paddxil shift => ExtValues.addxl (int_of_shift1_4 shift) v (Vlong i)
+  | Prevsubxil shift => ExtValues.revsubxl (int_of_shift1_4 shift) v (Vlong i)
+  end.
+
+Definition cmove bt v1 v2 v3 :=
+  match cmp_for_btest bt with
+  | (Some c, Int)  =>
+    match Val.cmp_bool c v2 (Vint Int.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (Some c, Long) =>
+    match Val.cmpl_bool c v2 (Vlong Int64.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (None, _) => Vundef
+  end.
+
+Definition cmoveu bt v1 v2 v3 :=
+  match cmpu_for_btest bt with
+  | (Some c, Int)  =>
+    match Val_cmpu_bool c v2 (Vint Int.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (Some c, Long) =>
+    match Val_cmplu_bool c v2 (Vlong Int64.zero) with
+    | None => Vundef
+    | Some true => v3
+    | Some false => v1
+    end
+  | (None, _) => Vundef
   end.
 
 Definition arith_eval_arrr n v1 v2 v3 :=
   match n with
   | Pmaddw => Val.add v1 (Val.mul v2 v3)
   | Pmaddl => Val.addl v1 (Val.mull v2 v3)
-  | Pcmove bt =>
-    match cmp_for_btest bt with
-    | (Some c, Int)  =>
-      match Val.cmp_bool c v2 (Vint Int.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (Some c, Long) =>
-      match Val.cmpl_bool c v2 (Vlong Int64.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (None, _) => Vundef
-    end
-  | Pcmoveu bt =>
-    match cmpu_for_btest bt with
-    | (Some c, Int)  =>
-      match Val_cmpu_bool c v2 (Vint Int.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (Some c, Long) =>
-      match Val_cmplu_bool c v2 (Vlong Int64.zero) with
-      | None => Vundef
-      | Some true => v3
-      | Some false => v1
-      end
-    | (None, _) => Vundef
-    end
+  | Pmsubw => Val.sub v1 (Val.mul v2 v3)
+  | Pmsubl => Val.subl v1 (Val.mull v2 v3)
+  | Pcmove bt => cmove bt v1 v2 v3
+  | Pcmoveu bt => cmoveu bt v1 v2 v3
+  | Pfmaddfw => ExtValues.fmaddfs v1 v2 v3
+  | Pfmaddfl => ExtValues.fmaddf v1 v2 v3
+  | Pfmsubfw => ExtValues.fmsubfs v1 v2 v3
+  | Pfmsubfl => ExtValues.fmsubf v1 v2 v3
   end.
 
 Definition arith_eval_arr n v1 v2 :=
@@ -1143,11 +1180,15 @@ Definition arith_eval_arr n v1 v2 :=
 Definition arith_eval_arri32 n v1 v2 v3 :=
   match n with
   | Pmaddiw => Val.add v1 (Val.mul v2 (Vint v3))
+  | Pcmoveiw bt => cmove bt v1 v2 (Vint v3)
+  | Pcmoveuiw bt => cmoveu bt v1 v2 (Vint v3)
   end.
 
 Definition arith_eval_arri64 n v1 v2 v3 :=
   match n with
   | Pmaddil => Val.addl v1 (Val.mull v2 (Vlong v3))
+  | Pcmoveil bt => cmove bt v1 v2 (Vlong v3)
+  | Pcmoveuil bt => cmoveu bt v1 v2 (Vlong v3)
   end.
 
 Definition parexec_arith_instr (ai: ar_instruction) (rsr rsw: regset): regset :=
@@ -1175,10 +1216,16 @@ Definition eval_offset (ofs: offset) : res ptrofs := OK ofs.
 
 (** * load/store *)
 
-Definition parexec_load_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
+Definition parexec_incorrect_load trap chunk d rsw mw :=
+  match trap with
+  | TRAP => Stuck
+  | NOTRAP => Next (rsw#d <- (concrete_default_notrap_load_value chunk)) mw
+  end.
+
+Definition parexec_load_offset (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a: ireg) (ofs: offset) :=
   match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk mr (Val.offset_ptr (rsr a) ptr) with
-              | None => Stuck
+              | None => parexec_incorrect_load trap chunk d rsw mw
               | Some v => Next (rsw#d <- v) mw
               end
   | _ => Stuck
@@ -1223,15 +1270,15 @@ Definition parexec_load_o_offset (rsr rsw: regset) (mr mw: mem) (d : gpreg_o) (a
     end
   end.
 
-Definition parexec_load_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+Definition parexec_load_reg (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (rsr ro)) with
-  | None => Stuck
+  | None => parexec_incorrect_load trap chunk d rsw mw
   | Some v => Next (rsw#d <- v) mw
   end.
 
-Definition parexec_load_regxs (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
+Definition parexec_load_regxs (trap: trapping_mode) (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (d a ro: ireg) :=
   match Mem.loadv chunk mr (Val.addl (rsr a) (Val.shll (rsr ro) (scale_of_chunk chunk))) with
-  | None => Stuck
+  | None => parexec_incorrect_load trap chunk d rsw mw
   | Some v => Next (rsw#d <- v) mw
   end.
 
@@ -1244,7 +1291,8 @@ Definition parexec_store_offset (chunk: memory_chunk) (rsr rsw: regset) (mr mw: 
   | _ => Stuck
   end.
 
-Definition parexec_store_reg (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
+Definition parexec_store_reg
+           (chunk: memory_chunk) (rsr rsw: regset) (mr mw: mem) (s a ro: ireg) :=
   match Mem.storev chunk mr (Val.addl (rsr a) (rsr ro)) (rsr s) with
   | None => Stuck
   | Some m' => Next rsw m'
@@ -1302,7 +1350,7 @@ Definition load_chunk n :=
   | Pfls => Mfloat32
   | Pfld => Mfloat64
   end.
-
+              
 Definition store_chunk n :=
   match n with
   | Psb => Mint8unsigned
@@ -1317,16 +1365,16 @@ Definition store_chunk n :=
 
 (** * basic instructions *)
 
-Definition parexec_basic_instr (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
+Definition bstep (bi: basic) (rsr rsw: regset) (mr mw: mem) :=
   match bi with
   | PArith ai => Next (parexec_arith_instr ai rsr rsw) mw
 
-  | PLoadRRO n d a ofs => parexec_load_offset (load_chunk n) rsr rsw mr mw d a ofs
-  | PLoadRRR n d a ro => parexec_load_reg (load_chunk n) rsr rsw mr mw d a ro
-  | PLoadRRRXS n d a ro => parexec_load_regxs (load_chunk n) rsr rsw mr mw d a ro
-  | PLoadQRRO d a ofs => 
+  | PLoad (PLoadRRO trap n d a ofs) => parexec_load_offset trap (load_chunk n) rsr rsw mr mw d a ofs
+  | PLoad (PLoadRRR trap n d a ro) => parexec_load_reg trap (load_chunk n) rsr rsw mr mw d a ro
+  | PLoad (PLoadRRRXS trap n d a ro) => parexec_load_regxs trap (load_chunk n) rsr rsw mr mw d a ro
+  | PLoad (PLoadQRRO d a ofs) => 
     parexec_load_q_offset rsr rsw mr mw d a ofs
-  | PLoadORRO d a ofs => 
+  | PLoad (PLoadORRO d a ofs) => 
     parexec_load_o_offset rsr rsw mr mw d a ofs
 
   | PStoreRRO n s a ofs => parexec_store_offset (store_chunk n) rsr rsw mr mw s a ofs
@@ -1376,7 +1424,7 @@ Fixpoint parexec_wio_body (body: list basic) (rsr rsw: regset) (mr mw: mem) :=
   match body with
   | nil => Next rsw mw
   | bi::body' => 
-     match parexec_basic_instr bi rsr rsw mr mw with
+     match bstep bi rsr rsw mr mw with
      | Next rsw mw => parexec_wio_body body' rsr rsw mr mw
      | Stuck => Stuck
      end
@@ -1512,19 +1560,19 @@ Definition incrPC size_b (rs: regset) :=
   rs#PC <- (Val.offset_ptr rs#PC size_b).
 
 (** parallel execution of the exit instruction of a bundle *)
-Definition parexec_exit (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
+Definition estep (f: function) ext size_b (rsr rsw: regset) (mw: mem) 
   := parexec_control f ext (incrPC size_b rsr) rsw mw.
 
-Definition parexec_wio_bblock_aux f bdy ext size_b (rsr rsw: regset) (mr mw: mem): outcome :=
-  match parexec_wio_body bdy rsr rsw mr mw with
-  | Next rsw mw => parexec_exit f ext size_b rsr rsw mw
+Definition parexec_wio f bdy ext size_b (rs: regset) (m: mem): outcome :=
+  match parexec_wio_body bdy rs rs m m with
+  | Next rsw mw => estep f ext size_b rs rsw mw
   | Stuck => Stuck
   end.
 
 (** non-deterministic (out-of-order writes) parallel execution of bundles *)
 Definition parexec_bblock (f: function) (bundle: bblock) (rs: regset) (m: mem) (o: outcome): Prop :=
    exists bdy1 bdy2, Permutation (bdy1++bdy2) (body bundle) /\ 
-      o=match parexec_wio_bblock_aux f bdy1 (exit bundle) (Ptrofs.repr (size bundle)) rs rs m m with
+      o=match parexec_wio f bdy1 (exit bundle) (Ptrofs.repr (size bundle)) rs m with
       | Next rsw mw => parexec_wio_body bdy2 rs rsw m mw
       | Stuck => Stuck
       end.
@@ -1651,7 +1699,7 @@ Inductive step: state -> trace -> state -> Prop :=
 
 (** parallel in-order writes execution of bundles *)
 Definition parexec_wio_bblock (f: function) (b: bblock) (rs: regset) (m: mem): outcome :=
-  parexec_wio_bblock_aux f (body b) (exit b) (Ptrofs.repr (size b)) rs rs m m.
+  parexec_wio f (body b) (exit b) (Ptrofs.repr (size b)) rs m.
 
 
 Lemma parexec_bblock_write_in_order f b rs m:
@@ -1661,11 +1709,11 @@ Proof.
    constructor 1.
    - rewrite app_nil_r; auto.
    - unfold parexec_wio_bblock.
-     destruct (parexec_wio_bblock_aux f _ _ _ _ _); simpl; auto.
+     destruct (parexec_wio f _ _ _); simpl; auto.
 Qed.
 
 
-Local Hint Resolve parexec_bblock_write_in_order.
+Local Hint Resolve parexec_bblock_write_in_order: core.
 
 Lemma det_parexec_write_in_order f b rs m rs' m':
    det_parexec f b rs m rs' m' -> parexec_wio_bblock f b rs m = Next rs' m'.
@@ -1739,9 +1787,9 @@ Ltac Det_WIO X :=
 - (* determ *) intros s t1 s1 t2 s2 H H0. inv H; Det_WIO X1;
   inv H0; Det_WIO X2; Equalities.
   + split. constructor. auto. 
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X1. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+  + unfold parexec_wio_bblock, parexec_wio in X1. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
     rewrite H8 in X1. discriminate.
-  + unfold parexec_wio_bblock, parexec_wio_bblock_aux in X2. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
+  + unfold parexec_wio_bblock, parexec_wio in X2. destruct (parexec_wio_body _ _ _ _ _ _); try discriminate.
     rewrite H4 in X2. discriminate.
   + assert (vargs0 = vargs) by (eapply eval_builtin_args_determ; eauto). subst vargs0.
     exploit external_call_determ. eexact H6. eexact H13. intros [A B].

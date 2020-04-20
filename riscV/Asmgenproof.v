@@ -285,12 +285,12 @@ Opaque Int.eq.
 - apply opimm32_label; intros; exact I.
 - apply opimm32_label; intros; exact I.
 - apply opimm32_label; intros; exact I.
-- destruct (Int.eq n Int.zero); TailNoLabel.
+- destruct (Int.eq n Int.zero); try destruct (Int.eq n Int.one); TailNoLabel.
 - apply opimm64_label; intros; exact I.
 - apply opimm64_label; intros; exact I.
 - apply opimm64_label; intros; exact I.
 - apply opimm64_label; intros; exact I.
-- destruct (Int.eq n Int.zero); TailNoLabel.
+- destruct (Int.eq n Int.zero); try destruct (Int.eq n Int.one); TailNoLabel.
 - eapply transl_cond_op_label; eauto.
 Qed.
 
@@ -359,7 +359,7 @@ Proof.
 - destruct ep. eapply loadind_label; eauto.
   eapply tail_nolabel_trans. apply loadind_ptr_label. eapply loadind_label; eauto. 
 - eapply transl_op_label; eauto.
-- destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
+- destruct t; (try discriminate); destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct m; monadInv H; eapply transl_memory_access_label; eauto; intros; exact I.
 - destruct s0; monadInv H; TailNoLabel.
 - destruct s0; monadInv H; (eapply tail_nolabel_trans; [eapply make_epilogue_label|TailNoLabel]).
@@ -724,6 +724,12 @@ Local Transparent destroyed_by_op.
   split. eapply agree_set_undef_mreg; eauto. congruence.
   intros; auto with asmgen.
   simpl; congruence.
+
+- (* Mload notrap *) (* isn't there a nicer way? *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
 
 - (* Mstore *)
   assert (eval_addressing tge sp addr (map rs args) = Some a).

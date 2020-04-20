@@ -29,7 +29,7 @@ Definition node := positive.
 
 Inductive instruction: Type :=
   | Lop (op: operation) (args: list mreg) (res: mreg)
-  | Lload (chunk: memory_chunk) (addr: addressing) (args: list mreg) (dst: mreg)
+  | Lload (trap : trapping_mode) (chunk: memory_chunk) (addr: addressing) (args: list mreg) (dst: mreg)
   | Lgetstack (sl: slot) (ofs: Z) (ty: typ) (dst: mreg)
   | Lsetstack (src: mreg) (sl: slot) (ofs: Z) (ty: typ)
   | Lstore (chunk: memory_chunk) (addr: addressing) (args: list mreg) (src: mreg)
@@ -37,7 +37,7 @@ Inductive instruction: Type :=
   | Ltailcall (sg: signature) (ros: mreg + ident)
   | Lbuiltin (ef: external_function) (args: list (builtin_arg loc)) (res: builtin_res mreg)
   | Lbranch (s: node)
-  | Lcond (cond: condition) (args: list mreg) (s1 s2: node)
+  | Lcond (cond: condition) (args: list mreg) (s1 s2: node) (info: option bool)
   | Ljumptable (arg: mreg) (tbl: list node)
   | Lreturn.
 
@@ -209,11 +209,24 @@ Inductive step: state -> trace -> state -> Prop :=
       rs' = Locmap.set (R res) v (undef_regs (destroyed_by_op op) rs) ->
       step (Block s f sp (Lop op args res :: bb) rs m)
         E0 (Block s f sp bb rs' m)
-  | exec_Lload: forall s f sp chunk addr args dst bb rs m a v rs',
+  | exec_Lload: forall s f sp trap chunk addr args dst bb rs m a v rs',
       eval_addressing ge sp addr (reglist rs args) = Some a ->
       Mem.loadv chunk m a = Some v ->
       rs' = Locmap.set (R dst) v (undef_regs (destroyed_by_load chunk addr) rs) ->
-      step (Block s f sp (Lload chunk addr args dst :: bb) rs m)
+      step (Block s f sp (Lload trap chunk addr args dst :: bb) rs m)
+        E0 (Block s f sp bb rs' m)
+  | exec_Lload_notrap1: forall s f sp chunk addr args dst bb rs m rs',
+      eval_addressing ge sp addr (reglist rs args) = None ->
+      rs' = Locmap.set (R dst)  (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (Block s f sp (Lload NOTRAP chunk addr args dst :: bb) rs m)
+        E0 (Block s f sp bb rs' m)
+  | exec_Lload_notrap2: forall s f sp chunk addr args dst bb rs m a rs',
+      eval_addressing ge sp addr (reglist rs args) = Some a ->
+      Mem.loadv chunk m a = None ->
+      rs' = Locmap.set (R dst) (default_notrap_load_value chunk)
+                       (undef_regs (destroyed_by_load chunk addr) rs) ->
+      step (Block s f sp (Lload NOTRAP chunk addr args dst :: bb) rs m)
         E0 (Block s f sp bb rs' m)
   | exec_Lgetstack: forall s f sp sl ofs ty dst bb rs m rs',
       rs' = Locmap.set (R dst) (rs (S sl ofs ty)) (undef_regs (destroyed_by_getstack sl) rs) ->
@@ -250,11 +263,11 @@ Inductive step: state -> trace -> state -> Prop :=
   | exec_Lbranch: forall s f sp pc bb rs m,
       step (Block s f sp (Lbranch pc :: bb) rs m)
         E0 (State s f sp pc rs m)
-  | exec_Lcond: forall s f sp cond args pc1 pc2 bb rs b pc rs' m,
+  | exec_Lcond: forall s f sp cond args pc1 pc2 bb rs b pc rs' m i,
       eval_condition cond (reglist rs args) m = Some b ->
       pc = (if b then pc1 else pc2) ->
       rs' = undef_regs (destroyed_by_cond cond) rs ->
-      step (Block s f sp (Lcond cond args pc1 pc2 :: bb) rs m)
+      step (Block s f sp (Lcond cond args pc1 pc2 i :: bb) rs m)
         E0 (State s f sp pc rs' m)
   | exec_Ljumptable: forall s f sp arg tbl bb rs m n pc rs',
       rs (R arg) = Vint n ->
@@ -315,7 +328,7 @@ Fixpoint successors_block (b: bblock) : list node :=
   | nil => nil                          (**r should never happen *)
   | Ltailcall _ _ :: _ => nil
   | Lbranch s :: _ => s :: nil
-  | Lcond _ _ s1 s2 :: _ => s1 :: s2 :: nil
+  | Lcond _ _ s1 s2 _ :: _ => s1 :: s2 :: nil
   | Ljumptable _ tbl :: _ => tbl
   | Lreturn :: _ => nil
   | instr :: b' => successors_block b'

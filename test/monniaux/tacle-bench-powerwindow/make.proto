@@ -1,8 +1,0 @@
-intro: "ALL_CFLAGS = -include kill_pragma.h"
-objdeps: [{name: powerwindow_const_params, compiler: both}, {name: powerwindow_controlexclusion, compiler: both}, 
-          {name: powerwindow_debounce, compiler: both}, {name: powerwindow_inputs, compiler: both},
-          {name: powerwindow_powerwindow_control, compiler: both}, {name: powerwindow_PW_Control_DRV, compiler: both},
-          {name: powerwindow_PW_Control_PSG_BackL, compiler: both}, {name: powerwindow_PW_Control_PSG_BackR, compiler: both},
-          {name: powerwindow_PW_Control_PSG_Front, compiler: both}]
-target: powerwindow
-measures: [cycles]

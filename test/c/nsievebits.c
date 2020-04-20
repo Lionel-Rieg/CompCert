@@ -30,7 +30,11 @@ nsieve(unsigned int m)
 	return (count);
 }
 
+#ifdef __K1C__
+#define NITER 1
+#else
 #define NITER 2
+#endif
 
 static void
 test(unsigned int n)
@@ -48,7 +52,11 @@ main(int ac, char **av)
 {
 	unsigned int n;
 
+#ifdef __K1C__
+	n = ac < 2 ? 2 : atoi(av[1]);
+#else
 	n = ac < 2 ? 9 : atoi(av[1]);
+#endif
 	test(n);
 	if (n >= 1)
 		test(n - 1);

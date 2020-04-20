@@ -64,7 +64,7 @@ module Target (*: TARGET*) =
       | "__compcert_i64_smod" ->
         (match idiv_function_kind_64bit() with
          | Idiv_system | Idiv_fp -> "__moddi3"
-         | Idiv_stsud -> "__compcert_i64_stsud")
+         | Idiv_stsud -> "__compcert_i64_smod_stsud")
       | "__compcert_i32_sdiv" as s ->
         (match idiv_function_kind_32bit() with
          | Idiv_system -> s
@@ -186,11 +186,19 @@ module Target (*: TARGET*) =
       | RA   -> output_string oc "$ra"
       | _ -> assert false
 
+    let preg_asm oc ty = preg oc
+              
     let preg_annot = let open Asmvliw in function
       | IR r -> int_reg_name r
       | RA   -> "$ra"
       | _ -> assert false
 
+    let scale_of_shift1_4 = let open ExtValues in function
+      | SHIFT1 -> 2
+      | SHIFT2 -> 4
+      | SHIFT3 -> 8
+      | SHIFT4 -> 16;;
+    
 (* Names of sections *)
 
     let name_of_section = function
@@ -289,6 +297,10 @@ module Target (*: TARGET*) =
     | ARegXS _ -> fprintf oc ".xs"
     | _ -> ()
 
+    let lsvariant oc = function
+      | TRAP -> ()
+      | NOTRAP -> output_string oc ".s"
+      
     let icond_name = let open Asmvliw in function
       | ITne | ITneu -> "ne"
       | ITeq | ITequ -> "eq"
@@ -300,10 +312,6 @@ module Target (*: TARGET*) =
       | ITgeu  -> "geu"
       | ITleu  -> "leu"
       | ITgtu  -> "gtu"
-      | ITall  -> "all"
-      | ITnall -> "nall"
-      | ITany  -> "any"
-      | ITnone -> "none"
 
     let icond oc c = fprintf oc "%s" (icond_name c)
 
@@ -364,7 +372,7 @@ module Target (*: TARGET*) =
                                (P.to_int kind) (extern_atom txt) args
           | EF_inline_asm(txt, sg, clob) ->
               fprintf oc "%s begin inline assembly\n\t" comment;
-              print_inline_asm preg oc (camlstring_of_coqstring txt) sg args res;
+              print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
           | _ ->
               assert false
@@ -439,10 +447,10 @@ module Target (*: TARGET*) =
          fprintf oc "	itouchl	0[%a]\n" ireg addr
       | Pdzerol addr ->
          fprintf oc "	dzerol	0[%a]\n" ireg addr
-      | Pafaddd(addr, incr_res) ->
-         fprintf oc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
+(*    | Pafaddd(addr, incr_res) ->
+         fprintfoc "	afaddd	0[%a] = %a\n" ireg addr ireg incr_res
       | Pafaddw(addr, incr_res) ->
-         fprintf oc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res
+         fprintfoc "	afaddw	0[%a] = %a\n" ireg addr ireg incr_res *) (* see #157 *)
       | Palclrd(res, addr) ->
          fprintf oc "	alclrd	%a = 0[%a]\n" ireg res ireg addr
       | Palclrw(res, addr) ->
@@ -462,18 +470,18 @@ module Target (*: TARGET*) =
          section oc Section_text
 
       (* Load/Store instructions *)
-      | Plb(rd, ra, adr) ->
-         fprintf oc "	lbs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plbu(rd, ra, adr) ->
-         fprintf oc "	lbz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plh(rd, ra, adr) ->
-         fprintf oc "	lhs%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plhu(rd, ra, adr) ->
-         fprintf oc "	lhz%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Plw(rd, ra, adr) | Plw_a(rd, ra, adr) | Pfls(rd, ra, adr) ->
-         fprintf oc "	lws%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
-      | Pld(rd, ra, adr) | Pfld(rd, ra, adr) | Pld_a(rd, ra, adr) -> assert Archi.ptr64;
-         fprintf oc "	ld%a	%a = %a[%a]\n" xscale adr ireg rd addressing adr ireg ra
+      | Plb(trap, rd, ra, adr) ->
+         fprintf oc "	lbs%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plbu(trap, rd, ra, adr) ->
+         fprintf oc "	lbz%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plh(trap, rd, ra, adr) ->
+         fprintf oc "	lhs%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plhu(trap, rd, ra, adr) ->
+         fprintf oc "	lhz%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Plw(trap, rd, ra, adr) | Plw_a(trap, rd, ra, adr) | Pfls(trap, rd, ra, adr) ->
+         fprintf oc "	lws%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
+      | Pld(trap, rd, ra, adr) | Pfld(trap, rd, ra, adr) | Pld_a(trap, rd, ra, adr) -> assert Archi.ptr64;
+         fprintf oc "	ld%a%a	%a = %a[%a]\n" lsvariant trap xscale adr ireg rd addressing adr ireg ra
       | Plq(rd, ra, adr) ->
          fprintf oc "	lq%a	%a = %a[%a]\n" xscale adr gpreg_q rd addressing adr ireg ra
       | Plo(rd, ra, adr) ->
@@ -574,8 +582,14 @@ module Target (*: TARGET*) =
 
       | Paddw (rd, rs1, rs2) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Paddxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Psubw (rd, rs1, rs2) ->
          fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
+      | Prevsubxw (s14, rd, rs1, rs2) ->
+         fprintf oc "	sbfx%dw	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Pmulw (rd, rs1, rs2) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pandw (rd, rs1, rs2) ->
@@ -604,22 +618,34 @@ module Target (*: TARGET*) =
          fprintf oc "	sllw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddw (rd, rs1, rs2) ->
          fprintf oc "	maddw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmsubw (rd, rs1, rs2) ->
+         fprintf oc "	msbfw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaddfw (rd, rs1, rs2) ->
+         fprintf oc "	ffmaw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmsubfw (rd, rs1, rs2) ->
+         fprintf oc "	ffmsw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
-      | Paddl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Paddl (rd, rs1, rs2) ->
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Paddxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
       | Psubl (rd, rs1, rs2) ->
          fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs2 ireg rs1
-      | Pandl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Prevsubxl (s14, rd, rs1, rs2) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n" (scale_of_shift1_4 s14)
+           ireg rd ireg rs1 ireg rs2
+      | Pandl (rd, rs1, rs2) ->
          fprintf oc "	andd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnandl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnandl (rd, rs1, rs2) ->
          fprintf oc "	nandd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Porl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Porl (rd, rs1, rs2) ->
          fprintf oc "	ord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnorl (rd, rs1, rs2) ->
          fprintf oc "	nord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pxorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pxorl (rd, rs1, rs2) ->
          fprintf oc "	xord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
-      | Pnxorl (rd, rs1, rs2) -> assert Archi.ptr64;
+      | Pnxorl (rd, rs1, rs2) -> 
          fprintf oc "	nxord	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pandnl (rd, rs1, rs2) -> 
          fprintf oc "	andnd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -637,6 +663,12 @@ module Target (*: TARGET*) =
          fprintf oc "	srad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pmaddl (rd, rs1, rs2) ->
          fprintf oc "	maddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pmsubl (rd, rs1, rs2) ->
+         fprintf oc "	msbfd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaddfl (rd, rs1, rs2) ->
+         fprintf oc "	ffmad	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmsubfl (rd, rs1, rs2) ->
+         fprintf oc "	ffmsd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
 
       | Pfaddd (rd, rs1, rs2) ->
          fprintf oc "	faddd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
@@ -650,12 +682,30 @@ module Target (*: TARGET*) =
          fprintf oc "	fmuld	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
       | Pfmulw (rd, rs1, rs2) ->
          fprintf oc "	fmulw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmind (rd, rs1, rs2) ->
+         fprintf oc "	fmind	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfminw (rd, rs1, rs2) ->
+         fprintf oc "	fminw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaxd (rd, rs1, rs2) ->
+         fprintf oc "	fmaxd	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfmaxw (rd, rs1, rs2) ->
+         fprintf oc "	fmaxw	%a = %a, %a\n" ireg rd ireg rs1 ireg rs2
+      | Pfinvw (rd, rs1) ->
+         fprintf oc "	finvw	%a = %a\n" ireg rd ireg rs1
 
       (* Arith RRI32 instructions *)
       | Pcompiw (it, rd, rs, imm) ->
          fprintf oc "	compw.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint imm
       | Paddiw (rd, rs, imm) ->
          fprintf oc "	addw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Paddxiw (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
+      | Prevsubiw (rd, rs, imm) ->
+         fprintf oc "	sbfw	%a = %a, %a\n" ireg rd ireg rs coqint imm
+      | Prevsubxiw (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dw	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
       | Pmuliw (rd, rs, imm) ->
          fprintf oc "	mulw	%a = %a, %a\n" ireg rd ireg rs coqint imm
       | Pandiw (rd, rs, imm) ->
@@ -701,6 +751,14 @@ module Target (*: TARGET*) =
          fprintf oc "	compd.%a	%a = %a, %a\n" icond it ireg rd ireg rs coqint64 imm
       | Paddil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	addd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Paddxil (s14, rd, rs, imm) ->
+         fprintf oc "	addx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint imm
+      | Prevsubil (rd, rs, imm) ->
+         fprintf oc "	sbfd	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
+      | Prevsubxil (s14, rd, rs, imm) ->
+         fprintf oc "	sbfx%dd	%a = %a, %a\n"  (scale_of_shift1_4 s14)
+           ireg rd ireg rs coqint64 imm
       | Pmulil (rd, rs, imm) -> assert Archi.ptr64;
          fprintf oc "	muld	%a = %a, %a\n" ireg rd ireg rs coqint64 imm
       | Pandil (rd, rs, imm) -> assert Archi.ptr64;
@@ -725,6 +783,12 @@ module Target (*: TARGET*) =
       | Pcmove (bt, rd, rcond, rs) | Pcmoveu (bt, rd, rcond, rs) ->
          fprintf oc "	cmoved.%a %a? %a = %a\n"
            bcond bt ireg rcond ireg rd ireg rs
+      | Pcmoveiw (bt, rd, rcond, imm) | Pcmoveuiw (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint imm
+      | Pcmoveil (bt, rd, rcond, imm) | Pcmoveuil (bt, rd, rcond, imm) ->
+         fprintf oc "	cmoved.%a %a? %a = %a\n"
+           bcond bt ireg rcond ireg rd coqint64 imm
         
     let get_section_names name =
       let (text, lit) =

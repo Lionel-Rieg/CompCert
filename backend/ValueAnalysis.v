@@ -13,7 +13,7 @@
 Require Import FunInd.
 Require Import Coqlib Maps Integers Floats Lattice Kildall.
 Require Import Compopts AST Linking.
-Require Import Values Memory Globalenvs Events.
+Require Import Values Memory Globalenvs Builtins Events.
 Require Import Registers Op RTL.
 Require Import ValueDomain ValueAOp Liveness.
 
@@ -78,6 +78,15 @@ Definition transfer_builtin_default
   let (av, am') := analyze_call am (map (abuiltin_arg ae am rm) args) in
   VA.State (set_builtin_res res av ae) am'.
 
+Definition eval_static_builtin_function
+              (ae: aenv) (am: amem) (rm: romem)
+              (bf: builtin_function) (args: list (builtin_arg reg)) :=
+  match builtin_function_sem bf
+                 (map val_of_aval (map (abuiltin_arg ae am rm) args)) with
+  | Some v => aval_of_val v
+  | None => None
+  end.
+
 Definition transfer_builtin
               (ae: aenv) (am: amem) (rm: romem) (ef: external_function)
               (args: list (builtin_arg reg)) (res: builtin_res reg) :=
@@ -105,6 +114,15 @@ Definition transfer_builtin
   | EF_annot_val _ _ _, v :: nil =>
       let av := abuiltin_arg ae am rm v in
       VA.State (set_builtin_res res av ae) am
+  | EF_builtin name sg, _ =>
+      match lookup_builtin_function name sg with
+      | Some bf => 
+          match eval_static_builtin_function ae am rm bf args with
+          | Some av => VA.State (set_builtin_res res av ae) am
+          | None => transfer_builtin_default ae am rm args res
+          end
+      | None => transfer_builtin_default ae am rm args res
+      end
   | _, _ =>
       transfer_builtin_default ae am rm args res
   end.
@@ -121,9 +139,14 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
   | Some(Iop op args res s) =>
       let a := eval_static_operation op (aregs ae args) in
       VA.State (AE.set res a ae) am
-  | Some(Iload chunk addr args dst s) =>
+  | Some(Iload TRAP chunk addr args dst s) =>
       let a := loadv chunk rm am (eval_static_addressing addr (aregs ae args)) in
       VA.State (AE.set dst a ae) am
+
+  (* TODO: maybe a case analysis on the results of loadv? *)
+               
+  | Some(Iload NOTRAP chunk addr args dst s) =>
+      VA.State (AE.set dst Vtop ae) am
   | Some(Istore chunk addr args src s) =>
       let am' := storev chunk am (eval_static_addressing addr (aregs ae args)) (areg ae src) in
       VA.State ae am'
@@ -133,7 +156,7 @@ Definition transfer (f: function) (rm: romem) (pc: node) (ae: aenv) (am: amem) :
       VA.Bot
   | Some(Ibuiltin ef args res s) =>
       transfer_builtin ae am rm ef args res
-  | Some(Icond cond args s1 s2) =>
+  | Some(Icond cond args s1 s2 _) =>
       VA.State ae am
   | Some(Ijumptable arg tbl) =>
       VA.State ae am
@@ -370,6 +393,31 @@ Lemma set_builtin_res_sound:
   ematch bc (regmap_setres res v rs) (set_builtin_res res av ae).
 Proof.
   intros. destruct res; simpl; auto. apply ematch_update; auto.
+Qed.
+
+Lemma eval_static_builtin_function_sound:
+  forall bc ge rs sp m ae rm am (bf: builtin_function) al vl v va,
+  ematch bc rs ae ->
+  romatch bc m rm ->
+  mmatch bc m am ->
+  genv_match bc ge ->
+  bc sp = BCstack ->
+  eval_builtin_args ge (fun r => rs#r) (Vptr sp Ptrofs.zero) m al vl ->
+  eval_static_builtin_function ae am rm bf al = Some va ->
+  builtin_function_sem bf vl = Some v ->
+  vmatch bc v va.
+Proof.
+  unfold eval_static_builtin_function; intros.
+  exploit abuiltin_args_sound; eauto. 
+  set (vla := map (abuiltin_arg ae am rm) al) in *. intros VMA.
+  destruct (builtin_function_sem bf (map val_of_aval vla)) as [v0|] eqn:A; try discriminate.
+  assert (LD: Val.lessdef v0 v).
+  { apply val_inject_lessdef.
+    exploit (bs_inject _ (builtin_function_sem bf)). 
+    apply val_inject_list_lessdef. eapply list_val_of_aval_sound; eauto.
+    rewrite A, H6; simpl. auto.
+  }
+  inv LD. apply aval_of_val_sound; auto. discriminate.
 Qed.
 
 (** ** Constructing block classifications *)
@@ -996,9 +1044,8 @@ Proof.
   red; simpl; intros. destruct (plt b (Mem.nextblock m)).
   exploit RO; eauto. intros (R & P & Q).
   split; auto.
-  split. apply bmatch_incr with bc; auto. apply bmatch_inv with m; auto.
-  intros. eapply Mem.loadbytes_unchanged_on_1. eapply external_call_readonly; eauto.
-  auto. intros; red. apply Q.
+  split. apply bmatch_incr with bc; auto. apply bmatch_ext with m; auto.
+  intros. eapply external_call_readonly with (m2 := m'); eauto.
   intros; red; intros; elim (Q ofs).
   eapply external_call_max_perm with (m2 := m'); eauto.
   destruct (j' b); congruence.
@@ -1105,10 +1152,10 @@ Proof.
 - constructor.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_public_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
 - assert (Plt sp bound') by eauto with va.
   eapply sound_stack_private_call; eauto. apply IHsound_stack; intros.
-  apply INV. xomega. rewrite SAME; auto. xomega. auto. auto.
+  apply INV. xomega. rewrite SAME; auto with ordered_type. xomega. auto. auto.
   apply bmatch_ext with m; auto. intros. apply INV. xomega. auto. auto. auto.
 Qed.
 
@@ -1225,11 +1272,29 @@ Proof.
   apply ematch_update; auto. eapply eval_static_operation_sound; eauto with va.
 
 - (* load *)
+  destruct trap.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto. eapply loadv_sound; eauto with va.
+    eapply eval_static_addressing_sound; eauto with va.
+  + eapply sound_succ_state; eauto. simpl; auto.
+    unfold transfer; rewrite H. eauto.
+    apply ematch_update; auto.
+    eapply vmatch_top.
+    eapply loadv_sound; try eassumption.
+    eapply eval_static_addressing_sound; eauto with va.
+- (* load notrap1 *)
   eapply sound_succ_state; eauto. simpl; auto.
   unfold transfer; rewrite H. eauto.
-  apply ematch_update; auto. eapply loadv_sound; eauto with va.
-  eapply eval_static_addressing_sound; eauto with va.
-
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
+- (* load notrap2 *)
+  eapply sound_succ_state; eauto. simpl; auto.
+  unfold transfer; rewrite H. eauto.
+  apply ematch_update; auto.
+  unfold default_notrap_load_value.
+  constructor.
 - (* store *)
   exploit eval_static_addressing_sound; eauto with va. intros VMADDR.
   eapply sound_succ_state; eauto. simpl; auto.
@@ -1319,7 +1384,7 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
 * (* public builtin call *)
   exploit anonymize_stack; eauto.
@@ -1338,11 +1403,18 @@ Proof.
   apply sound_stack_exten with bc.
   apply sound_stack_inv with m. auto.
   intros. apply Q. red. eapply Plt_trans; eauto.
-  rewrite C; auto.
+  rewrite C; auto with ordered_type.
   exact AA.
   }
   unfold transfer_builtin in TR.
   destruct ef; auto.
++ (* builtin function *)
+  destruct (lookup_builtin_function name sg) as [bf|] eqn:LK; auto.
+  destruct (eval_static_builtin_function ae am rm bf args) as [av|] eqn:ES; auto.
+  simpl in H1. red in H1. rewrite LK in H1. inv H1.
+  eapply sound_succ_state; eauto. simpl; auto.
+  apply set_builtin_res_sound; auto.
+  eapply eval_static_builtin_function_sound; eauto.
 + (* volatile load *)
   inv H0; auto. inv H3; auto. inv H1.
   exploit abuiltin_arg_sound; eauto. intros VM1.

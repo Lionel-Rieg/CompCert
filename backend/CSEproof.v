@@ -14,7 +14,7 @@
 
 Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
 Require Import AST Linking.
-Require Import Values Memory Events Globalenvs Smallstep.
+Require Import Values Memory Builtins Events Globalenvs Smallstep.
 Require Import Op Registers RTL.
 Require Import ValueDomain ValueAOp ValueAnalysis.
 Require Import CSEdomain CombineOp CombineOpproof CSE.
@@ -71,7 +71,11 @@ Lemma rhs_eval_to_exten:
 Proof.
   intros. inv H; simpl in *.
 - constructor. rewrite valnums_val_exten by assumption. auto.
-- econstructor; eauto. rewrite valnums_val_exten by assumption. auto.
+- eapply load_eval_to; eauto. rewrite valnums_val_exten by assumption. auto.
+(*
+- apply load_notrap1_eval_to; auto. rewrite valnums_val_exten by assumption. assumption.
+- eapply load_notrap2_eval_to; eauto. rewrite valnums_val_exten by assumption. assumption.
+*)
 Qed.
 
 Lemma equation_holds_exten:
@@ -393,6 +397,39 @@ Proof.
 + intros. apply Regmap.gso; auto.
 Qed.
 
+(*
+Lemma add_load_holds_none1:
+  forall valu1 ge sp rs m n addr (args: list reg) chunk dst,
+  numbering_holds valu1 ge sp rs m n ->
+  eval_addressing ge sp addr rs##args = None ->
+  exists valu2, numbering_holds valu2 ge sp (rs#dst <- (default_notrap_load_value chunk)) m (add_load n dst chunk addr args).
+Proof.
+  unfold add_load; intros.
+  destruct (valnum_regs n args) as [n1 vl] eqn:VN.
+  exploit valnum_regs_holds; eauto.
+  intros (valu2 & A & B & C & D & E).
+  eapply add_rhs_holds; eauto.
++ rewrite Regmap.gss; auto. eapply load_notrap1_eval_to. rewrite <- B; eauto.
++ intros. apply Regmap.gso; auto.
+Qed.
+
+Lemma add_load_holds_none2:
+  forall valu1 ge sp rs m n addr (args: list reg) a chunk dst,
+  numbering_holds valu1 ge sp rs m n ->
+  eval_addressing ge sp addr rs##args = Some a ->
+  Mem.loadv chunk m a = None ->
+  exists valu2, numbering_holds valu2 ge sp (rs#dst <- (default_notrap_load_value chunk)) m (add_load n dst NOTRAP chunk addr args).
+Proof.
+  unfold add_load; intros.
+  destruct (valnum_regs n args) as [n1 vl] eqn:VN.
+  exploit valnum_regs_holds; eauto.
+  intros (valu2 & A & B & C & D & E).
+  eapply add_rhs_holds; eauto.
++ rewrite Regmap.gss; auto. eapply load_notrap2_eval_to. rewrite <- B; eauto. assumption. 
++ intros. apply Regmap.gso; auto.
+Qed.
+ *)
+
 Lemma set_unknown_holds:
   forall valu ge sp rs m n r v,
   numbering_holds valu ge sp rs m n ->
@@ -456,8 +493,8 @@ Lemma kill_all_loads_hold:
 Proof.
   intros. eapply kill_equations_hold; eauto.
   unfold filter_loads; intros. inv H1.
-  constructor. rewrite <- H2. apply op_depends_on_memory_correct; auto.
-  discriminate.
+  1: constructor; rewrite <- H2; apply op_depends_on_memory_correct; auto.
+  all: discriminate.
 Qed.
 
 Lemma kill_loads_after_store_holds:
@@ -486,6 +523,20 @@ Proof.
   apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
   erewrite <- regs_valnums_sound by eauto. eauto with va.
   apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto with va.
+(*
+- eapply load_notrap1_eval_to; assumption.
+- destruct (regs_valnums n vl) as [rl|] eqn:RV; try discriminate.
+  eapply load_notrap2_eval_to; eauto.
+  rewrite <- H9.
+  destruct a; simpl in H1; try discriminate.
+  destruct a0; simpl in H9; try discriminate; simpl; trivial.
+  rewrite negb_false_iff in H6. unfold aaddressing in H6.
+  eapply Mem.load_store_other. eauto.
+  eapply pdisjoint_sound; eauto.
+  apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
+  erewrite <- regs_valnums_sound by eauto. eauto with va.
+  apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto with va.
+*)
 Qed.
 
 Lemma store_normalized_range_sound:
@@ -544,7 +595,7 @@ Lemma kill_loads_after_storebytes_holds:
   bc sp = BCstack ->
   ematch bc rs ae ->
   approx = VA.State ae am ->
-  length bytes = nat_of_Z sz -> sz >= 0 ->
+  length bytes = Z.to_nat sz -> sz >= 0 ->
   numbering_holds valu ge (Vptr sp Ptrofs.zero) rs m'
                            (kill_loads_after_storebytes approx n dst sz).
 Proof.
@@ -557,11 +608,24 @@ Proof.
   simpl.
   rewrite negb_false_iff in H8.
   eapply Mem.load_storebytes_other. eauto.
-  rewrite H6. rewrite nat_of_Z_eq by auto.
+  rewrite H6. rewrite Z2Nat.id by omega.
   eapply pdisjoint_sound. eauto.
   unfold aaddressing. apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
   erewrite <- regs_valnums_sound by eauto. eauto with va.
   auto.
+(*
+- eapply load_notrap1_eval_to; assumption.
+- destruct (regs_valnums n vl) as [rl|] eqn:RV; try discriminate.
+  eapply load_notrap2_eval_to; eauto. rewrite <- H11.
+  destruct a; simpl in H10; try discriminate; simpl; trivial.
+  rewrite negb_false_iff in H8.
+  eapply Mem.load_storebytes_other. eauto.
+  rewrite H6. rewrite Z2Nat.id by omega.
+  eapply pdisjoint_sound. eauto.
+  unfold aaddressing. apply match_aptr_of_aval. eapply eval_static_addressing_sound; eauto.
+  erewrite <- regs_valnums_sound by eauto. eauto with va.
+  auto.
+*)
 Qed.
 
 Lemma load_memcpy:
@@ -598,9 +662,9 @@ Proof.
   exploit Mem.storebytes_split; eauto. intros (m2 & SB2 & SB3).
   clear SB23.
   assert (L1: Z.of_nat (length bytes1) = n1).
-  { erewrite Mem.loadbytes_length by eauto. apply nat_of_Z_eq. unfold n1; omega. }
+  { erewrite Mem.loadbytes_length by eauto. apply Z2Nat.id. unfold n1; omega. }
   assert (L2: Z.of_nat (length bytes2) = n2).
-  { erewrite Mem.loadbytes_length by eauto. apply nat_of_Z_eq. unfold n2; omega. }
+  { erewrite Mem.loadbytes_length by eauto. apply Z2Nat.id. unfold n2; omega. }
   rewrite L1 in *. rewrite L2 in *.
   assert (LB': Mem.loadbytes m2 b2 (ofs2 + n1) n2 = Some bytes2).
   { rewrite <- L2. eapply Mem.loadbytes_storebytes_same; eauto. }
@@ -1034,6 +1098,10 @@ Proof.
   destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
   destruct SAT as [valu1 NH1].
   exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
+  destruct trap.
+
+  (* TRAP *)
+  {
   destruct (find_rhs n1 (Load chunk addr vl)) as [r|] eqn:?.
 + (* replaced by move *)
   exploit find_rhs_sound; eauto. intros (v' & EV & LD).
@@ -1063,7 +1131,103 @@ Proof.
   unfold transfer; rewrite H.
   eapply add_load_holds; eauto.
   apply set_reg_lessdef; auto.
+  }
 
+  (* NOTRAP *)
+  {
+    assert (exists a' : val,
+       eval_addressing ge sp addr rs' ## args = Some a' /\ Val.lessdef a a')
+       as Haa'.    
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Haa' as [a' [Ha'1 Ha'2]].
+
+    assert (
+    exists v' : val,
+        Mem.loadv chunk m' a' = Some v' /\ Val.lessdef v v') as Hload' by
+    (apply Mem.loadv_extends with (m1 := m) (addr1 := a); assumption).
+    destruct Hload' as [v' [Hv'1 Hv'2]].
+
+    econstructor. split.
+    eapply exec_Iload; eauto.
+    try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
+
+    econstructor; eauto.
+    eapply analysis_correct_1; eauto. simpl; eauto.
+    unfold transfer. rewrite H.
+    exists valu1.
+    apply set_unknown_holds.
+    assumption.
+    apply set_reg_lessdef; assumption.
+  }
+
+- (* Iload notrap 1*)
+  destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
+  destruct SAT as [valu1 NH1].
+  exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
+
+    econstructor. split.
+    eapply exec_Iload_notrap1; eauto.
+    rewrite eval_addressing_preserved with (ge1 := ge).
+    apply eval_addressing_lessdef_none with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    exact symbols_preserved.
+
+    econstructor; eauto.
+    eapply analysis_correct_1; eauto. simpl; eauto.
+    unfold transfer. rewrite H.
+    exists valu1.
+    apply set_unknown_holds.
+    assumption.
+    apply set_reg_lessdef.
+    constructor. assumption.
+  
+- (* Iload notrap 2*)
+  destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
+  destruct SAT as [valu1 NH1].
+  exploit valnum_regs_holds; eauto. intros (valu2 & NH2 & EQ & AG & P & Q).
+
+    assert (exists a' : val,
+       eval_addressing ge sp addr rs' ## args = Some a' /\ Val.lessdef a a')
+       as Haa'.    
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Haa' as [a' [Ha'1 Ha'2]].
+
+    destruct (Mem.loadv chunk m' a') eqn:Hload'.
+
+    {
+      econstructor. split.
+      eapply exec_Iload; eauto.
+      try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
+      
+      econstructor; eauto.
+      eapply analysis_correct_1; eauto. simpl; eauto.
+      unfold transfer. rewrite H.
+      exists valu1.
+      apply set_unknown_holds.
+      assumption.
+      unfold default_notrap_load_value.
+      apply set_reg_lessdef; eauto.
+    }
+    {
+      econstructor. split.
+      eapply exec_Iload_notrap2; eauto.
+      try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
+      
+      econstructor; eauto.
+      eapply analysis_correct_1; eauto. simpl; eauto.
+      unfold transfer. rewrite H.
+      exists valu1.
+      apply set_unknown_holds.
+      assumption.
+      apply set_reg_lessdef.
+      constructor. assumption.
+    }
+    
 - (* Istore *)
   destruct (valnum_regs approx!!pc args) as [n1 vl] eqn:?.
   destruct SAT as [valu1 NH1].
@@ -1129,7 +1293,9 @@ Proof.
   { exists valu. apply set_res_unknown_holds. eapply kill_all_loads_hold; eauto. }
   destruct ef.
   + apply CASE1.
-  + apply CASE3.
+  + destruct (lookup_builtin_function name sg) as [bf|] eqn:LK.
+    ++ apply CASE2. simpl in H1; red in H1; rewrite LK in H1; inv H1. auto.
+    ++ apply CASE3.
   + apply CASE1.
   + apply CASE2; inv H1; auto.
   + apply CASE3.

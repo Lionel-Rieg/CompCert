@@ -1,4 +1,4 @@
-(** Parallel Semantics of Abstract Basic Blocks and parallelizability test.s
+(** Parallel Semantics of Abstract Basic Blocks and parallelizability test.
 *)
 
 Require Setoid. (* in order to rewrite <-> *)
@@ -32,7 +32,7 @@ Fixpoint inst_prun (i: inst) (m tmp old: mem): option mem :=
      end
   end.
 
-(* [inst_prun] is generalization of [inst_run] *)   
+(* [inst_prun] is generalization of [inst_run] *)
 Lemma inst_run_prun i: forall m old,
   inst_run ge i m old = inst_prun i m m old.
 Proof.
@@ -332,7 +332,7 @@ Fixpoint bblock_wframe(p:bblock): list R.t :=
   | i::p' => (inst_wframe i)++(bblock_wframe p') 
   end.
 
-Local Hint Resolve Permutation_app_head Permutation_app_tail Permutation_app_comm.
+Local Hint Resolve Permutation_app_head Permutation_app_tail Permutation_app_comm: core.
 
 Lemma bblock_wframe_Permutation p p': 
  Permutation p p' -> Permutation (bblock_wframe p)  (bblock_wframe p').
@@ -620,7 +620,7 @@ Include ParallelizablityChecking L.
 Section PARALLEL2.
 Variable ge: genv.
 
-Local Hint Resolve S.empty_match_frame S.add_match_frame S.union_match_frame S.is_disjoint_match_frame.
+Local Hint Resolve S.empty_match_frame S.add_match_frame S.union_match_frame S.is_disjoint_match_frame: core.
 
 (** Now, refinement of each operation toward parallelizable *)
 
@@ -659,14 +659,14 @@ Fixpoint inst_sframe (i: inst): S.t :=
   | a::i' => S.add (fst a) (S.union (exp_sframe (snd a)) (inst_sframe i'))
   end.
 
-Local Hint Resolve exp_sframe_correct.
+Local Hint Resolve exp_sframe_correct: core.
 
 Lemma inst_sframe_correct i: S.match_frame (inst_sframe i) (inst_frame i).
 Proof.
   induction i as [|[y e] i']; simpl; auto.
 Qed.
 
-Local Hint Resolve inst_wsframe_correct inst_sframe_correct.
+Local Hint Resolve inst_wsframe_correct inst_sframe_correct: core.
 
 Fixpoint is_pararec (p: bblock) (wsframe: S.t): bool :=
   match p with

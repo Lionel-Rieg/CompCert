@@ -481,6 +481,9 @@ Definition transl_op
       do r <- ireg_of res; do r1 <- ireg_of a1;
       if Int.eq n Int.zero then
         OK (Pmov r (SOreg r1) :: k)
+      else if Int.eq n Int.one then
+        OK (Padd IR14 r1 (SOlsr r1 (Int.repr 31)) ::
+            Pmov r (SOasr IR14 n) :: k)
       else
         OK (Pmov IR14 (SOasr r1 (Int.repr 31)) ::
             Padd IR14 r1 (SOlsr IR14 (Int.sub Int.iwordsize n)) ::
@@ -555,6 +558,19 @@ Definition transl_op
       do r <- ireg_of res;
       transl_cond cmp args
         (Pmovite (cond_for_cond cmp) r (SOimm Int.one) (SOimm Int.zero) :: k)
+  | Osel cmp ty, a1 :: a2 :: args =>
+      match preg_of res with
+      | IR r => 
+          do r1 <- ireg_of a1; do r2 <- ireg_of a2;
+          transl_cond cmp args
+            (Pmovite (cond_for_cond cmp) r (SOreg r1) (SOreg r2) :: k)
+      | FR r =>
+          do r1 <- freg_of a1; do r2 <- freg_of a2;
+          transl_cond cmp args
+            (Pfmovite (cond_for_cond cmp) r r1 r2 :: k)
+      | _ =>
+          Error(msg "Asmgen.Osel")
+      end
   | _, _ =>
       Error(msg "Asmgen.transl_op")
   end.
@@ -676,8 +692,12 @@ Definition transl_memory_access_float
     None
     mk_immed addr args k.
 
-Definition transl_load (chunk: memory_chunk) (addr: addressing)
-                       (args: list mreg) (dst: mreg) (k: code) :=
+Definition transl_load (trap : trapping_mode)
+           (chunk: memory_chunk) (addr: addressing)
+           (args: list mreg) (dst: mreg) (k: code) :=
+  match trap with
+  | NOTRAP => Error (msg "Asmgen.transl_load non-trapping loads unsupported on Arm")
+  | TRAP =>
   match chunk with
   | Mint8signed =>
       transl_memory_access_int Pldrsb mk_immed_mem_small dst addr args k
@@ -695,6 +715,7 @@ Definition transl_load (chunk: memory_chunk) (addr: addressing)
       transl_memory_access_float Pfldd mk_immed_mem_float dst addr args k
   | _ =>
       Error (msg "Asmgen.transl_load")
+  end
   end.
 
 Definition transl_store (chunk: memory_chunk) (addr: addressing)
@@ -734,8 +755,8 @@ Definition transl_instr (f: Mach.function) (i: Mach.instruction)
           else loadind_int IR13 f.(fn_link_ofs) IR12 c)
   | Mop op args res =>
       transl_op op args res k
-  | Mload chunk addr args dst =>
-      transl_load chunk addr args dst k
+  | Mload trap chunk addr args dst =>
+      transl_load trap chunk addr args dst k
   | Mstore chunk addr args src =>
       transl_store chunk addr args src k
   | Mcall sig (inl arg) =>

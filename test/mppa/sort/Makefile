@@ -1,4 +1,4 @@
-K1CC ?= k1-mbr-gcc
+K1CC ?= k1-cos-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2

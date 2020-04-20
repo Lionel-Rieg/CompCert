@@ -193,4 +193,4 @@ Ltac wlp_xsimplify hint :=
 
 Create HintDb wlp discriminated.
 
-Ltac wlp_simplify := wlp_xsimplify ltac:(intuition (eauto with wlp)).
+Ltac wlp_simplify := wlp_xsimplify ltac:(intuition eauto with wlp).

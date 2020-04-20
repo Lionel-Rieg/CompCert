@@ -16,8 +16,9 @@ open FSetAVL
 open Maps
 open Op
 open Ordered
-open !RTL
-
+open! RTL
+open Camlcoq
+   
 module PSet = Make(OrderedPositive)
 
 type inlining_info = {
@@ -57,7 +58,7 @@ let used_in_globvar io gv =
 let fun_inline_analysis id io fn =
   let inst io nid = function
     | Iop (op, args, dest, succ) -> used_id io (globals_operation op)
-    | Iload (chunk, addr, args, dest, succ)
+    | Iload (_, chunk, addr, args, dest, succ)
     | Istore (chunk, addr, args, dest, succ) -> used_id io (globals_addressing addr)
     | Ibuiltin (ef, args, dest, succ) -> used_id io (globals_of_builtin_args args)
     | Icall (_, Coq_inr cid, _, _, _)
@@ -83,13 +84,15 @@ let static_called_once id io =
   else
     false
 
-(* To be considered: heuristics based on size of function? *)
+(* D. Monniaux: attempt at heuristic based on size *)
+let small_enough (f : coq_function) =
+  P.to_int (RTL.max_pc_function f) <= !Clflags.option_inline_auto_threshold
 
 let should_inline (io: inlining_info) (id: ident) (f: coq_function) =
   if !Clflags.option_finline then begin
     match C2C.atom_inline id with
     | C2C.Inline -> true
     | C2C.Noinline -> false
-    | C2C.No_specifier -> static_called_once id io
+    | C2C.No_specifier -> static_called_once id io || small_enough f
   end else
     false

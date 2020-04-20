@@ -231,6 +231,10 @@ int main(int argc, char ** argv)
   }
   do_test(test_input_1, test_output_1);
   do_test(test_input_2, test_output_2);
+#ifdef __K1C__
+  do_bench(500);
+#else
   do_bench(200000);
+#endif
   return 0;
 }

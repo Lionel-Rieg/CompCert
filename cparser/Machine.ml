@@ -18,6 +18,7 @@
 type struct_passing_style =
   | SP_ref_callee                       (* by reference, callee takes copy *)
   | SP_ref_caller                       (* by reference, caller takes copy *)
+  | SP_value32_ref_callee               (* by value if <= 32 bits, by ref_callee otherwise *)
   | SP_split_args                       (* by value, as a sequence of ints *)
 
 type struct_return_style =
@@ -238,11 +239,43 @@ let rv64 =
                    struct_return_style = SR_ref } (* to check *)
 
 let mppa_k1c =
-  { ilp32ll64 with sizeof_ptr = 8;
-                   sizeof_long = 8;
-                   name = "k1c";
-                   char_signed = true;
-                   supports_unaligned_accesses = true }
+  { name = "k1c";
+    char_signed = true;
+    wchar_signed = true;
+    sizeof_ptr = 8;
+    sizeof_short = 2;
+    sizeof_int = 4;
+    sizeof_long = 8;
+    sizeof_longlong = 8;
+    sizeof_float = 4;
+    sizeof_double = 8;
+    sizeof_longdouble = 8;
+    sizeof_void = None; (* What is this for ? *)
+    sizeof_fun = None; (* What is this for ? *)
+    sizeof_wchar = 4;
+    sizeof_size_t = 8;
+    sizeof_ptrdiff_t = 8;
+    sizeof_intreg = 8; (* What is this for ? *)
+    alignof_ptr = 8;
+    alignof_short = 2;
+    alignof_int = 4;
+    alignof_long = 8;
+    alignof_longlong = 8;
+    alignof_float = 4;
+    alignof_double = 8;
+    alignof_longdouble = 8;
+    alignof_void = None; (* what is this for ? *)
+    alignof_fun = None; (* what is this for ? *)
+    bigendian = false;
+    bitfields_msb_first = false; (* TO CHECK *)
+    supports_unaligned_accesses = true;
+    struct_passing_style = SP_value32_ref_callee;
+    struct_return_style = SR_int1to4 }
+
+let aarch64 =
+  { i32lpll64 with name = "aarch64";
+                   struct_passing_style = SP_ref_callee; (* Wrong *)
+                   struct_return_style = SR_ref } (* Wrong *)
 
 (* Add GCC extensions re: sizeof and alignof *)
 

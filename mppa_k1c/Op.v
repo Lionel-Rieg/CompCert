@@ -79,8 +79,13 @@ Inductive operation : Type :=
   | Ocast16signed            (**r [rd] is 16-bit sign extension of [r1] *)
   | Oadd                     (**r [rd = r1 + r2] *)
   | Oaddimm (n: int)         (**r [rd = r1 + n] *)
+  | Oaddx (shift: shift1_4)         (**r [rd = r1 << shift + r2] *)
+  | Oaddximm (shift: shift1_4) (n: int) (**r [rd = r1 << shift + n] *)
   | Oneg                     (**r [rd = - r1]   *)                     
   | Osub                     (**r [rd = r1 - r2] *)
+  | Orevsubimm (n: int)      (**r [rd = n - r1] *)
+  | Orevsubx (shift: shift1_4)         (**r [rd = r2 -r1 << shift] *)
+  | Orevsubximm (shift: shift1_4) (n: int) (**r [rd = n -r1 << shift] *)
   | Omul                     (**r [rd = r1 * r2] *)
   | Omulimm (n: int)         (**r [rd = r1 * n] *)
   | Omulhs                   (**r [rd = high part of r1 * r2, signed] *)
@@ -95,27 +100,28 @@ Inductive operation : Type :=
   | Onandimm (n: int)        (**r [rd = ~(r1 & n)] *)
   | Oor                      (**r [rd = r1 | r2] *)
   | Oorimm (n: int)          (**r [rd = r1 | n] *)
-  | Onor                     (**r [rd = r1 | r2] *)
-  | Onorimm (n: int)         (**r [rd = r1 | n] *)
+  | Onor                     (**r [rd = ~(r1 | r2)] *)
+  | Onorimm (n: int)         (**r [rd = ~(r1 | n)] *)
   | Oxor                     (**r [rd = r1 ^ r2] *)
   | Oxorimm (n: int)         (**r [rd = r1 ^ n] *)
   | Onxor                    (**r [rd = ~(r1 ^ r2)] *)
   | Onxorimm (n: int)        (**r [rd = ~(r1 ^ n)] *)
   | Onot                     (**r [rd = ~r1] *)
-  | Oandn                    (**r [rd = (~r1) ^ r2] *)
-  | Oandnimm (n: int)        (**r [rd = (~r1) ^ n] *)
+  | Oandn                    (**r [rd = (~r1) & r2] *)
+  | Oandnimm (n: int)        (**r [rd = (~r1) & n] *)
   | Oorn                     (**r [rd = (~r1) | r2] *)
   | Oornimm (n: int)         (**r [rd = (~r1) | n] *)
   | Oshl                     (**r [rd = r1 << r2] *)
   | Oshlimm (n: int)         (**r [rd = r1 << n] *)
-  | Oshr                     (**r [rd = r1 >> r2] (signed) *)
-  | Oshrimm (n: int)         (**r [rd = r1 >> n] (signed) *)
-  | Oshru                    (**r [rd = r1 >> r2] (unsigned) *)
-  | Oshruimm (n: int)        (**r [rd = r1 >> n] (unsigned) *)
+  | Oshr                     (**r [rd = r1 >>s r2] (signed) *)
+  | Oshrimm (n: int)         (**r [rd = r1 >>s n] (signed) *)
+  | Oshru                    (**r [rd = r1 >>u r2] (unsigned) *)
+  | Oshruimm (n: int)        (**r [rd = r1 >>x n] (unsigned) *)
   | Oshrximm (n: int)        (**r [rd = r1 / 2^n] (signed) *)
   | Ororimm (n: int)         (**r rotate right immediate *)
   | Omadd                    (**r [rd = rd + r1 * r2] *)
   | Omaddimm (n: int)        (**r [rd = rd + r1 * imm] *)
+  | Omsub                    (**r [rd = rd - r1 * r2] *)
 (*c 64-bit integer arithmetic: *)
   | Omakelong                (**r [rd = r1 << 32 | r2] *)
   | Olowlong                 (**r [rd = low-word(r1)] *)
@@ -124,6 +130,11 @@ Inductive operation : Type :=
   | Ocast32unsigned          (**r [rd] is 32-bit zero extension of [r1] *)
   | Oaddl                    (**r [rd = r1 + r2] *)
   | Oaddlimm (n: int64)      (**r [rd = r1 + n] *)
+  | Oaddxl (shift: shift1_4)         (**r [rd = r1 << shift + r2] *)
+  | Oaddxlimm (shift: shift1_4) (n: int64) (**r [rd = r1 << shift + n] *)
+  | Orevsublimm (n: int64)      (**r [rd = n - r1] *)
+  | Orevsubxl (shift: shift1_4)         (**r [rd = r2 -r1 << shift] *)
+  | Orevsubxlimm (shift: shift1_4) (n: int64) (**r [rd = n -r1 << shift] *)
   | Onegl                    (**r [rd = - r1] *)
   | Osubl                    (**r [rd = r1 - r2] *)
   | Omull                    (**r [rd = r1 * r2] *)
@@ -147,8 +158,8 @@ Inductive operation : Type :=
   | Onxorl                   (**r [rd = ~(r1 ^ r2)] *)
   | Onxorlimm (n: int64)     (**r [rd = ~(r1 ^ n)] *)
   | Onotl                    (**r [rd = ~r1] *)
-  | Oandnl                   (**r [rd = (~r1) ^ r2] *)
-  | Oandnlimm (n: int64)     (**r [rd = (~r1) ^ n] *)
+  | Oandnl                   (**r [rd = (~r1) & r2] *)
+  | Oandnlimm (n: int64)     (**r [rd = (~r1) & n] *)
   | Oornl                    (**r [rd = (~r1) | r2] *)
   | Oornlimm (n: int64)      (**r [rd = (~r1) | n] *)
   | Oshll                    (**r [rd = r1 << r2] *)
@@ -160,6 +171,7 @@ Inductive operation : Type :=
   | Oshrxlimm (n: int)       (**r [rd = r1 / 2^n] (signed) *)
   | Omaddl                   (**r [rd = rd + r1 * r2] *)
   | Omaddlimm (n: int64)     (**r [rd = rd + r1 * imm] *)
+  | Omsubl                   (**r [rd = rd - r1 * r2] *)
 (*c Floating-point arithmetic: *)
   | Onegf                    (**r [rd = - r1] *)
   | Oabsf                    (**r [rd = abs(r1)] *)
@@ -167,12 +179,21 @@ Inductive operation : Type :=
   | Osubf                    (**r [rd = r1 - r2] *)
   | Omulf                    (**r [rd = r1 * r2] *)
   | Odivf                    (**r [rd = r1 / r2] *)
+  | Ominf
+  | Omaxf
+  | Ofmaddf
+  | Ofmsubf
   | Onegfs                   (**r [rd = - r1] *)
   | Oabsfs                   (**r [rd = abs(r1)] *)
   | Oaddfs                   (**r [rd = r1 + r2] *)
   | Osubfs                   (**r [rd = r1 - r2] *)
   | Omulfs                   (**r [rd = r1 * r2] *)
   | Odivfs                   (**r [rd = r1 / r2] *)
+  | Ominfs
+  | Omaxfs
+  | Oinvfs
+  | Ofmaddfs
+  | Ofmsubfs
   | Osingleoffloat           (**r [rd] is [r1] truncated to single-precision float *)
   | Ofloatofsingle           (**r [rd] is [r1] extended to double-precision float *)
 (*c Conversions between int and float: *)
@@ -192,16 +213,15 @@ Inductive operation : Type :=
   | Osingleoflongu           (**r [rd = float32_of_unsigned_int(r1)] *)
 (*c Boolean tests: *)
   | Ocmp (cond: condition)   (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
-  | Oselect (cond: condition0)    (**r [rd = if cond r3 then r2 else r1] *)
-  | Oselectl (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
-  | Oselectf (cond: condition0)   (**r [rd = if cond r3 then r2 else r1] *)
-  | Oselectfs (cond: condition0) (**r [rd = if cond r3 then r2 else r1] *)
   | Oextfz (stop : Z) (start : Z)
   | Oextfs (stop : Z) (start : Z)
   | Oextfzl (stop : Z) (start : Z)
   | Oextfsl (stop : Z) (start : Z)
   | Oinsf (stop : Z) (start : Z)
-  | Oinsfl (stop : Z) (start : Z).
+  | Oinsfl (stop : Z) (start : Z)
+  | Osel (c0 : condition0) (ty : typ)
+  | Oselimm (c0 : condition0) (imm: int)
+  | Osellimm (c0 : condition0) (imm: int64).
 
 (** Addressing modes.  [r1], [r2], etc, are the arguments to the
   addressing. *)
@@ -235,9 +255,14 @@ Proof.
   decide equality.
 Defined.
 
+Definition eq_shift1_4 (x y : shift1_4): {x=y} + {x<>y}.
+Proof.
+  decide equality.
+Defined.
+
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec; intros.
+  generalize typ_eq Int.eq_dec Int64.eq_dec Ptrofs.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_condition eq_condition0 Z.eq_dec eq_shift1_4; intros.
   decide equality.
 Defined.
 
@@ -287,89 +312,13 @@ Definition eval_condition0 (cond: condition0) (v1: val) (m: mem): option bool :=
   | Ccomplu0 c => Val.cmplu_bool (Mem.valid_pointer m) c v1 (Vlong Int64.zero)
   end.
 
-Definition eval_select (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vint i0, Vint i1, Some bval => Vint (if bval then i1 else i0)
-    | _,_,_ => Vundef
+Definition negate_condition0 (cond0 : condition0) : condition0 :=
+  match cond0 with
+  | Ccomp0 c => Ccomp0 (negate_comparison c)
+  | Ccompu0 c => Ccompu0 (negate_comparison c)
+  | Ccompl0 c => Ccompl0 (negate_comparison c)
+  | Ccomplu0 c => Ccomplu0 (negate_comparison c)
   end.
-
-Definition eval_select2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vint i0, Vint i1 => Vint (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_select_to2: forall cond v0 v1 vselect m,
-    (eval_select cond v0 v1 vselect m) =
-    (eval_select2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_select2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectl (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vlong i0, Vlong i1, Some bval => Vlong (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectl2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vlong i0, Vlong i1 => Vlong (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectl_to2: forall cond v0 v1 vselect m,
-    (eval_selectl cond v0 v1 vselect m) =
-    (eval_selectl2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectl2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectf (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vfloat i0, Vfloat i1, Some bval => Vfloat (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectf2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vfloat i0, Vfloat i1 => Vfloat (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectf_to2: forall cond v0 v1 vselect m,
-    (eval_selectf cond v0 v1 vselect m) =
-    (eval_selectf2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectf2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
-
-Definition eval_selectfs (cond: condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match v0, v1, (eval_condition0 cond vselect m) with
-    | Vsingle i0, Vsingle i1, Some bval => Vsingle (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Definition eval_selectfs2 (cond : condition0) (v0 : val) (v1 : val) (vselect : val) (m: mem) : val :=
-  match (eval_condition0 cond vselect m), v0, v1 with
-    | Some bval, Vsingle i0, Vsingle i1 => Vsingle (if bval then i1 else i0)
-    | _,_,_ => Vundef
-  end.
-
-Lemma eval_selectfs_to2: forall cond v0 v1 vselect m,
-    (eval_selectfs cond v0 v1 vselect m) =
-    (eval_selectfs2 cond v0 v1 vselect m).
-Proof.
-  intros.
-  unfold eval_selectfs2.
-  destruct v0; destruct v1; simpl; destruct (eval_condition0 cond vselect m); simpl; reflexivity.
-Qed.
 
 Definition eval_operation
     (F V: Type) (genv: Genv.t F V) (sp: val)
@@ -386,8 +335,13 @@ Definition eval_operation
   | Ocast16signed, v1 :: nil => Some (Val.sign_ext 16 v1)
   | Oadd, v1 :: v2 :: nil => Some (Val.add v1 v2)
   | Oaddimm n, v1 :: nil => Some (Val.add v1 (Vint n))
+  | Oaddx s14, v1 :: v2 :: nil => Some (addx (int_of_shift1_4 s14) v1 v2)
+  | Oaddximm s14 n, v1 :: nil => Some (addx (int_of_shift1_4 s14) v1 (Vint n))
   | Oneg, v1 :: nil => Some (Val.neg v1)
   | Osub, v1 :: v2 :: nil => Some (Val.sub v1 v2)
+  | Orevsubimm n, v1 :: nil => Some (Val.sub (Vint n) v1)
+  | Orevsubx shift, v1 :: v2 :: nil => Some (ExtValues.revsubx (int_of_shift1_4 shift) v1 v2)
+  | Orevsubximm shift n, v1 :: nil => Some (ExtValues.revsubx (int_of_shift1_4 shift) v1 (Vint n))
   | Omul, v1 :: v2 :: nil => Some (Val.mul v1 v2)
   | Omulimm n, v1 :: nil => Some (Val.mul v1 (Vint n))
   | Omulhs, v1::v2::nil => Some (Val.mulhs v1 v2)
@@ -423,6 +377,7 @@ Definition eval_operation
   | Oshrximm n, v1::nil => Val.shrx v1 (Vint n)
   | Omadd, v1::v2::v3::nil => Some (Val.add v1 (Val.mul v2 v3))
   | (Omaddimm n), v1::v2::nil => Some (Val.add v1 (Val.mul v2 (Vint n)))
+  | Omsub, v1::v2::v3::nil => Some (Val.sub v1 (Val.mul v2 v3))
                                      
   | Omakelong, v1::v2::nil => Some (Val.longofwords v1 v2)
   | Olowlong, v1::nil => Some (Val.loword v1)
@@ -431,8 +386,13 @@ Definition eval_operation
   | Ocast32unsigned, v1 :: nil => Some (Val.longofintu v1)
   | Oaddl, v1 :: v2 :: nil => Some (Val.addl v1 v2)
   | Oaddlimm n, v1::nil => Some (Val.addl v1 (Vlong n))
+  | Oaddxl s14, v1 :: v2 :: nil => Some (addxl (int_of_shift1_4 s14) v1 v2)
+  | Oaddxlimm s14 n, v1 :: nil => Some (addxl (int_of_shift1_4 s14) v1 (Vlong n))
   | Onegl, v1::nil => Some (Val.negl v1)
   | Osubl, v1::v2::nil => Some (Val.subl v1 v2)
+  | Orevsublimm n, v1 :: nil => Some (Val.subl (Vlong n) v1)
+  | Orevsubxl shift, v1 :: v2 :: nil => Some (ExtValues.revsubxl (int_of_shift1_4 shift) v1 v2)
+  | Orevsubxlimm shift n, v1 :: nil => Some (ExtValues.revsubxl (int_of_shift1_4 shift) v1 (Vlong n))
   | Omull, v1::v2::nil => Some (Val.mull v1 v2)
   | Omullimm n, v1::nil => Some (Val.mull v1 (Vlong n))
   | Omullhs, v1::v2::nil => Some (Val.mullhs v1 v2)
@@ -467,6 +427,7 @@ Definition eval_operation
   | Oshrxlimm n, v1::nil => Val.shrxl v1 (Vint n)
   | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
   | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
+  | Omsubl, v1::v2::v3::nil => Some (Val.subl v1 (Val.mull v2 v3))
                                       
   | Onegf, v1::nil => Some (Val.negf v1)
   | Oabsf, v1::nil => Some (Val.absf v1)
@@ -474,12 +435,23 @@ Definition eval_operation
   | Osubf, v1::v2::nil => Some (Val.subf v1 v2)
   | Omulf, v1::v2::nil => Some (Val.mulf v1 v2)
   | Odivf, v1::v2::nil => Some (Val.divf v1 v2)
+  | Ominf, v1::v2::nil => Some (ExtValues.minf v1 v2)
+  | Omaxf, v1::v2::nil => Some (ExtValues.maxf v1 v2)
+  | Ofmaddf, v1::v2::v3::nil => Some (ExtValues.fmaddf v1 v2 v3)
+  | Ofmsubf, v1::v2::v3::nil => Some (ExtValues.fmsubf v1 v2 v3)
+                                     
   | Onegfs, v1::nil => Some (Val.negfs v1)
   | Oabsfs, v1::nil => Some (Val.absfs v1)
   | Oaddfs, v1::v2::nil => Some (Val.addfs v1 v2)
   | Osubfs, v1::v2::nil => Some (Val.subfs v1 v2)
   | Omulfs, v1::v2::nil => Some (Val.mulfs v1 v2)
   | Odivfs, v1::v2::nil => Some (Val.divfs v1 v2)
+  | Ominfs, v1::v2::nil => Some (ExtValues.minfs v1 v2)
+  | Omaxfs, v1::v2::nil => Some (ExtValues.maxfs v1 v2)
+  | Oinvfs, v1::nil => Some (ExtValues.invfs v1)
+  | Ofmaddfs, v1::v2::v3::nil => Some (ExtValues.fmaddfs v1 v2 v3)
+  | Ofmsubfs, v1::v2::v3::nil => Some (ExtValues.fmsubfs v1 v2 v3)
+                                      
   | Osingleoffloat, v1::nil => Some (Val.singleoffloat v1)
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
   | Ointoffloat, v1::nil => Val.intoffloat v1
@@ -497,16 +469,15 @@ Definition eval_operation
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Osingleoflongu, v1::nil => Val.singleoflongu v1
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
-  | (Oselect cond), v0::v1::vselect::nil => Some (eval_select cond v0 v1 vselect m)
-  | (Oselectl cond), v0::v1::vselect::nil => Some (eval_selectl cond v0 v1 vselect m)
-  | (Oselectf cond), v0::v1::vselect::nil => Some (eval_selectf cond v0 v1 vselect m)
-  | (Oselectfs cond), v0::v1::vselect::nil => Some (eval_selectfs cond v0 v1 vselect m)
   | (Oextfz stop start), v0::nil => Some (extfz stop start v0)
   | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
   | (Oextfzl stop start), v0::nil => Some (extfzl stop start v0)
   | (Oextfsl stop start), v0::nil => Some (extfsl stop start v0)
   | (Oinsf stop start), v0::v1::nil => Some (insf stop start v0 v1)
   | (Oinsfl stop start), v0::v1::nil => Some (insfl stop start v0 v1)
+  | Osel c ty, v1::v2::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 v2 ty)
+  | Oselimm c imm, v1::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vint imm) Tint)
+  | Osellimm c imm, v1::vc::nil => Some(Val.select (eval_condition0 c vc m) v1 (Vlong imm) Tlong)
   | _, _ => None
   end.
 
@@ -583,8 +554,13 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocast16signed => (Tint :: nil, Tint)
   | Oadd => (Tint :: Tint :: nil, Tint)
   | Oaddimm _ => (Tint :: nil, Tint)
+  | Oaddx _ => (Tint :: Tint :: nil, Tint)
+  | Oaddximm _ _ => (Tint :: nil, Tint)
   | Oneg => (Tint :: nil, Tint)
   | Osub => (Tint :: Tint :: nil, Tint)
+  | Orevsubimm _ => (Tint :: nil, Tint)
+  | Orevsubx _ => (Tint :: Tint :: nil, Tint)
+  | Orevsubximm _ _ => (Tint :: nil, Tint)
   | Omul => (Tint :: Tint :: nil, Tint)
   | Omulimm _ => (Tint :: nil, Tint)
   | Omulhs => (Tint :: Tint :: nil, Tint)
@@ -620,6 +596,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ororimm _ => (Tint :: nil, Tint)
   | Omadd => (Tint :: Tint :: Tint :: nil, Tint)
   | Omaddimm _ => (Tint :: Tint :: nil, Tint)
+  | Omsub => (Tint :: Tint :: Tint :: nil, Tint)
                    
   | Omakelong => (Tint :: Tint :: nil, Tlong)
   | Olowlong => (Tlong :: nil, Tint)
@@ -628,6 +605,11 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Ocast32unsigned => (Tint :: nil, Tlong)
   | Oaddl => (Tlong :: Tlong :: nil, Tlong)
   | Oaddlimm _ => (Tlong :: nil, Tlong)
+  | Oaddxl _ => (Tlong :: Tlong :: nil, Tlong)
+  | Oaddxlimm _ _ => (Tlong :: nil, Tlong)
+  | Orevsublimm _ => (Tlong :: nil, Tlong)
+  | Orevsubxl _ => (Tlong :: Tlong :: nil, Tlong)
+  | Orevsubxlimm _ _ => (Tlong :: nil, Tlong)
   | Onegl => (Tlong :: nil, Tlong)
   | Osubl => (Tlong :: Tlong :: nil, Tlong)
   | Omull => (Tlong :: Tlong :: nil, Tlong)
@@ -664,19 +646,29 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Oshrxlimm _ => (Tlong :: nil, Tlong)
   | Omaddl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
   | Omaddlimm _ => (Tlong :: Tlong :: nil, Tlong)
+  | Omsubl => (Tlong :: Tlong :: Tlong :: nil, Tlong)
 
   | Onegf => (Tfloat :: nil, Tfloat)
   | Oabsf => (Tfloat :: nil, Tfloat)
-  | Oaddf => (Tfloat :: Tfloat :: nil, Tfloat)
-  | Osubf => (Tfloat :: Tfloat :: nil, Tfloat)
-  | Omulf => (Tfloat :: Tfloat :: nil, Tfloat)
-  | Odivf => (Tfloat :: Tfloat :: nil, Tfloat)
+  | Oaddf
+  | Osubf
+  | Omulf
+  | Odivf
+  | Ominf
+  | Omaxf => (Tfloat :: Tfloat :: nil, Tfloat)
+  | Ofmaddf | Ofmsubf => (Tfloat :: Tfloat :: Tfloat :: nil, Tfloat)
+
   | Onegfs => (Tsingle :: nil, Tsingle)
   | Oabsfs => (Tsingle :: nil, Tsingle)
-  | Oaddfs => (Tsingle :: Tsingle :: nil, Tsingle)
-  | Osubfs => (Tsingle :: Tsingle :: nil, Tsingle)
-  | Omulfs => (Tsingle :: Tsingle :: nil, Tsingle)
-  | Odivfs => (Tsingle :: Tsingle :: nil, Tsingle)
+  | Oaddfs
+  | Osubfs
+  | Omulfs
+  | Odivfs
+  | Ominfs
+  | Omaxfs => (Tsingle :: Tsingle :: nil, Tsingle)
+  | Oinvfs => (Tsingle :: nil, Tsingle)
+  | Ofmaddfs | Ofmsubfs => (Tsingle :: Tsingle :: Tsingle :: nil, Tsingle)
+
   | Osingleoffloat => (Tfloat :: nil, Tsingle)
   | Ofloatofsingle => (Tsingle :: nil, Tfloat)
   | Ointoffloat => (Tfloat :: nil, Tint)
@@ -693,16 +685,14 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Olonguofsingle => (Tsingle :: nil, Tlong)
   | Osingleoflong => (Tlong :: nil, Tsingle)
   | Osingleoflongu => (Tlong :: nil, Tsingle)
-  | Ocmp c => (type_of_condition c, Tint)
-                
-  | Oselect cond => (Tint :: Tint :: (arg_type_of_condition0 cond) :: nil, Tint)
-  | Oselectl cond => (Tlong :: Tlong :: (arg_type_of_condition0 cond) :: nil, Tlong)
-  | Oselectf cond => (Tfloat :: Tfloat :: (arg_type_of_condition0 cond) :: nil, Tfloat)
-  | Oselectfs cond => (Tsingle :: Tsingle ::  (arg_type_of_condition0 cond) :: nil, Tsingle)
+  | Ocmp c => (type_of_condition c, Tint)                
   | Oextfz _ _ | Oextfs _ _ => (Tint :: nil, Tint)
   | Oextfzl _ _ | Oextfsl _ _ => (Tlong :: nil, Tlong)
   | Oinsf _ _ => (Tint :: Tint :: nil, Tint)
   | Oinsfl _ _ => (Tlong :: Tlong :: nil, Tlong)
+  | Osel c ty => (ty :: ty :: arg_type_of_condition0 c :: nil, ty)
+  | Oselimm c ty => (Tint :: arg_type_of_condition0 c :: nil, Tint)
+  | Osellimm c ty => (Tlong :: arg_type_of_condition0 c :: nil, Tlong)
   end.
 
 (* FIXME: two Tptr ?! *)
@@ -736,6 +726,32 @@ Proof.
   intros. unfold Val.has_type, Val.addl. destruct Archi.ptr64, v1, v2; auto.
 Qed.
 
+Remark type_sub:
+  forall v1 v2, Val.has_type (Val.sub v1 v2) Tint.
+Proof.
+  intros. unfold Val.has_type, Val.sub. destruct Archi.ptr64, v1, v2; simpl; auto.
+  destruct (eq_block _ _); auto.
+Qed.
+
+Remark type_subl:
+  forall v1 v2, Val.has_type (Val.subl v1 v2) Tlong.
+Proof.
+  intros. unfold Val.has_type, Val.subl. destruct Archi.ptr64, v1, v2; simpl; auto.
+  destruct (eq_block _ _); auto.
+Qed.
+
+Remark type_shl:
+  forall v1 v2, Val.has_type (Val.shl v1 v2) Tint.
+Proof.
+  destruct v1, v2; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial.
+Qed.
+
+Remark type_shll:
+  forall v1 v2, Val.has_type (Val.shll v1 v2) Tlong.
+Proof.
+  destruct v1, v2; simpl; trivial; destruct (Int.ltu _ _); simpl; trivial.
+Qed.
+
 Lemma type_of_operation_sound:
   forall op vl sp v m,
   op <> Omove ->
@@ -761,9 +777,18 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* add, addimm *)
   - apply type_add.
   - apply type_add.
+  (* addx, addximm *)
+  - apply type_add.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - destruct v0...
-  - unfold Val.sub. destruct v0; destruct v1... 
+  - apply type_sub.
+  (* revsubimm, revsubx, revsubximm *)
+  - destruct v0...
+  - apply type_sub.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* mul, mulimm, mulhs, mulhu *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -819,8 +844,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* shrimm *)
   - destruct v0; simpl...   
   (* madd *)
-  - destruct v0; destruct v1; destruct v2...   
-  - destruct v0; destruct v1...
+  - apply type_add.
+  - apply type_add.
+  (* msub *)
+  - apply type_sub.
   (* makelong, lowlong, highlong *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -831,11 +858,17 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* addl, addlimm *)
   - apply type_addl.
   - apply type_addl.
+  (* addxl addxlimm *)
+  - apply type_addl.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
   - destruct v0...
-  - unfold Val.subl. destruct v0; destruct v1... 
-    unfold Val.has_type; destruct Archi.ptr64...
-    destruct (eq_block b b0)...
+  - apply type_subl.
+  - destruct v0; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
+  - destruct v0...
+  - apply type_subl.
   (* mull, mullhs, mullhu *)
   - destruct v0; destruct v1...
   - destruct v0...
@@ -889,10 +922,10 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* shrxl *)
   - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 63)); inv H0...
   (* maddl, maddlim *)
-  - destruct v0; destruct v1; destruct v2; simpl; trivial.
-    destruct Archi.ptr64; simpl; trivial.
-  - destruct v0; destruct v1; simpl; trivial.
-    destruct Archi.ptr64; simpl; trivial.
+  - apply type_addl.
+  - apply type_addl.
+  (* msubl *)
+  - apply type_subl.
   (* negf, absf *)
   - destruct v0...
   - destruct v0...
@@ -902,6 +935,12 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* mulf, divf *)
   - destruct v0; destruct v1...
   - destruct v0; destruct v1...
+  (* minf, maxf *)
+  - destruct v0; destruct v1...
+  - destruct v0; destruct v1...
+  (* fmaddf, fmsubf *)
+  - destruct v0; destruct v1; destruct v2...
+  - destruct v0; destruct v1; destruct v2...
   (* negfs, absfs *)
   - destruct v0...
   - destruct v0...
@@ -911,6 +950,14 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   (* mulfs, divfs *)
   - destruct v0; destruct v1...
   - destruct v0; destruct v1...
+  (* minfs, maxfs *)
+  - destruct v0; destruct v1...
+  - destruct v0; destruct v1...
+  (* invfs *)
+  - destruct v0...
+  (* fmaddfs, fmsubfs *)
+  - destruct v0; destruct v1; destruct v2...
+  - destruct v0; destruct v1; destruct v2...
   (* singleoffloat, floatofsingle *)
   - destruct v0...
   - destruct v0...
@@ -937,43 +984,6 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; simpl in H0; inv H0...
   (* cmp *)
   - destruct (eval_condition cond vl m)... destruct b...
-  (* select *)
-  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
-    destruct cond; destruct v2; simpl in *; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-  (* selectl *)
-  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
-    destruct cond; destruct v2; simpl in *; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-
-  (* selectf *)
-  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
-    destruct cond; destruct v2; simpl in *; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-  (* selectfs *)
-  - destruct v0; destruct v1; simpl in *; try discriminate; trivial.
-    destruct cond; destruct v2; simpl in *; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
-    + destruct Archi.ptr64; simpl; trivial.
-      destruct (_ && _); simpl; trivial.
-      destruct (Val.cmp_different_blocks _); simpl; trivial.
  (* extfz *)
   - unfold extfz.
     destruct (is_bitfield _ _).
@@ -1006,8 +1016,48 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
     + destruct v0; destruct v1; simpl; trivial.
       destruct (Int.ltu _ _); simpl; trivial.
     + constructor.
+ (* Osel *)
+  - unfold Val.select. destruct (eval_condition0 _ _ m).
+    + apply Val.normalize_type.
+    + constructor.
+ (* Oselimm *)
+  - unfold Val.select. destruct (eval_condition0 _ _ m).
+    + apply Val.normalize_type.
+    + constructor.
+ (* Osellimm *)
+  - unfold Val.select. destruct (eval_condition0 _ _ m).
+    + apply Val.normalize_type.
+    + constructor.
 Qed.
 
+Definition is_trapping_op (op : operation) :=
+  match op with
+  | Odiv | Odivl | Odivu | Odivlu
+  | Omod | Omodl | Omodu | Omodlu
+  | Oshrximm _ | Oshrxlimm _
+  | Ointoffloat | Ointuoffloat
+  | Ointofsingle | Ointuofsingle
+  | Olongoffloat | Olonguoffloat
+  | Olongofsingle | Olonguofsingle
+  | Osingleofint | Osingleofintu
+  | Osingleoflong | Osingleoflongu
+  | Ofloatoflong | Ofloatoflongu => true
+  | _ => false
+  end.
+
+Lemma is_trapping_op_sound:
+  forall op vl sp m,
+    op <> Omove ->
+    is_trapping_op op = false ->
+    (List.length vl) = (List.length (fst (type_of_operation op))) ->
+    eval_operation genv sp op vl m <> None.
+Proof.
+  destruct op; intros; simpl in *; try congruence.
+  all: try (destruct vl as [ | vh1 vl1]; try discriminate).
+  all: try (destruct vl1 as [ | vh2 vl2]; try discriminate).
+  all: try (destruct vl2 as [ | vh3 vl3]; try discriminate).
+  all: try (destruct vl3 as [ | vh4 vl4]; try discriminate).
+Qed.
 End SOUNDNESS.
 
 (** * Manipulating and transforming operations *)
@@ -1166,19 +1216,10 @@ Definition op_depends_on_memory (op: operation) : bool :=
   | Ocmp (Ccompuimm _ _) => negb Archi.ptr64
   | Ocmp (Ccomplu _) => Archi.ptr64
   | Ocmp (Ccompluimm _ _) => Archi.ptr64
+  
+  | Osel (Ccompu0 _) _   | Oselimm (Ccompu0 _) _   | Osellimm (Ccompu0 _) _ => negb Archi.ptr64
+  | Osel (Ccomplu0 _) _ | Oselimm (Ccomplu0 _) _ | Osellimm (Ccomplu0 _) _ => Archi.ptr64
 
-  | Oselect (Ccompu0 _) => negb Archi.ptr64
-  | Oselect (Ccomplu0 _) => Archi.ptr64
-
-  | Oselectl (Ccompu0 _) => negb Archi.ptr64
-  | Oselectl (Ccomplu0 _) => Archi.ptr64
-
-  | Oselectf (Ccompu0 _) => negb Archi.ptr64
-  | Oselectf (Ccomplu0 _) => Archi.ptr64
-
-  | Oselectfs (Ccompu0 _) => negb Archi.ptr64
-  | Oselectfs (Ccomplu0 _) => Archi.ptr64
-                                
   | _ => false
   end.
 
@@ -1187,10 +1228,19 @@ Lemma op_depends_on_memory_correct:
   op_depends_on_memory op = false ->
   eval_operation ge sp op args m1 = eval_operation ge sp op args m2.
 Proof.
-  intros until m2. destruct op; simpl; try congruence;
-                     
-  destruct cond; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
-  unfold eval_select, eval_selectl, eval_selectf, eval_selectfs, eval_condition0, Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  intros until m2. destruct op; simpl; try congruence.
+  - destruct cond; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  - destruct c0; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  - destruct c0; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  - destruct c0; simpl; try congruence;
+    intros SF; auto; rewrite ? negb_false_iff in SF;
+      unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
 Qed.
 
 (** Global variables mentioned in an operation or addressing mode *)
@@ -1359,9 +1409,19 @@ Proof.
   (* add, addimm *)
   - apply Val.add_inject; auto.
   - apply Val.add_inject; auto.
+  (* addx, addximm *)
+  - apply Val.add_inject; trivial.
+    inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* neg, sub *)
   - inv H4; simpl; auto.
   - apply Val.sub_inject; auto.
+  (* revsubimm, revsubx, revsubximm *)
+  - inv H4; simpl; trivial.
+  - apply Val.sub_inject; trivial.
+    inv H4; inv H2; simpl; try destruct (Int.ltu _ _); simpl; auto.
+  - inv H4; simpl; try destruct (Int.ltu _ _); simpl; auto.
   (* mul, mulimm, mulhs, mulhu *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1424,6 +1484,9 @@ Proof.
   (* madd, maddim *)
   - inv H2; inv H3; inv H4; simpl; auto.
   - inv H2; inv H4; simpl; auto.
+  (* msub *)
+  - apply Val.sub_inject; auto.
+    inv H3; inv H2; simpl; auto.
   (* makelong, highlong, lowlong *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; simpl; auto.
@@ -1434,7 +1497,19 @@ Proof.
   (* addl, addlimm *)
   - apply Val.addl_inject; auto.
   - apply Val.addl_inject; auto.
+  (* addxl, addxlimm *)
+  - apply Val.addl_inject; auto.
+    inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
+  - inv H4; simpl; trivial.
+    destruct (Int.ltu _ _); simpl; trivial.
   (* negl, subl *)
+  - inv H4; simpl; auto.
+  - apply Val.subl_inject; auto.
+    inv H4; inv H2; simpl; trivial;
+    destruct (Int.ltu _ _); simpl; trivial.
+  - inv H4; simpl; trivial;
+      destruct (Int.ltu _ _); simpl; trivial.
   - inv H4; simpl; auto.
   - apply Val.subl_inject; auto.
   (* mull, mullhs, mullhu *)
@@ -1500,6 +1575,9 @@ Proof.
     inv H2; inv H3; inv H4; simpl; auto.
   - apply Val.addl_inject; auto.
     inv H4; inv H2; simpl; auto.
+  (* msubl, msublimm *)
+  - apply Val.subl_inject; auto.
+    inv H2; inv H3; inv H4; simpl; auto.
     
   (* negf, absf *)
   - inv H4; simpl; auto.
@@ -1510,6 +1588,12 @@ Proof.
   (* mulf, divf *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; inv H2; simpl; auto.
+  (* minf, maxf *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; inv H2; simpl; auto.
+  (* fmaddf, fmsubf *)
+  - inv H4; inv H3; inv H2; simpl; auto.
+  - inv H4; inv H3; inv H2; simpl; auto.
   (* negfs, absfs *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
@@ -1519,6 +1603,14 @@ Proof.
   (* mulfs, divfs *)
   - inv H4; inv H2; simpl; auto.
   - inv H4; inv H2; simpl; auto.
+  (* minfs, maxfs *)
+  - inv H4; inv H2; simpl; auto.
+  - inv H4; inv H2; simpl; auto.
+  (* invfs *)
+  - inv H4; simpl; auto.    
+  (* fmaddfs, fmsubfs *)
+  - inv H4; inv H3; inv H2; simpl; auto.
+  - inv H4; inv H3; inv H2; simpl; auto.
   (* singleoffloat, floatofsingle *)
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
@@ -1556,62 +1648,6 @@ Proof.
     exploit eval_condition_inj; eauto. intros EQ; rewrite EQ.
     destruct b; simpl; constructor.
     simpl; constructor.
-  (* select *)
-  - unfold eval_select.
-    inv H4; trivial.
-    inv H2; trivial.
-    inv H3; trivial;
-      try (destruct cond; simpl; trivial; fail).
-    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
-    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
-    * eapply eval_condition0_inj.
-      eapply Val.inject_ptr.
-      eassumption.
-      reflexivity.
-      assumption.
-    * rewrite Hcond'. constructor.
-  (* selectl *)
-  - unfold eval_selectl.
-    inv H4; trivial.
-    inv H2; trivial.
-    inv H3; trivial;
-      try (destruct cond; simpl; trivial; fail).
-    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
-    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
-    * eapply eval_condition0_inj.
-      eapply Val.inject_ptr.
-      eassumption.
-      reflexivity.
-      assumption.
-    * rewrite Hcond'. constructor.
-  (* selectf *)
-  - unfold eval_selectf.
-    inv H4; trivial.
-    inv H2; trivial.
-    inv H3; trivial;
-      try (destruct cond; simpl; trivial; fail).
-    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
-    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
-    * eapply eval_condition0_inj.
-      eapply Val.inject_ptr.
-      eassumption.
-      reflexivity.
-      assumption.
-    * rewrite Hcond'. constructor.
-  (* selectfs *)
-  - unfold eval_selectfs.
-    inv H4; trivial.
-    inv H2; trivial.
-    inv H3; trivial;
-      try (destruct cond; simpl; trivial; fail).
-    destruct (eval_condition0 cond (Vptr _ _) m1) eqn:Hcond; trivial.
-    eassert (Hcond' : ((eval_condition0 cond (Vptr b2 (Ptrofs.add ofs1 (Ptrofs.repr delta)))) m2) = Some b).
-    * eapply eval_condition0_inj.
-      eapply Val.inject_ptr.
-      eassumption.
-      reflexivity.
-      assumption.
-    * rewrite Hcond'. constructor.
 
  (* extfz *)
   - unfold extfz.
@@ -1652,6 +1688,30 @@ Proof.
       simpl. destruct (Int.ltu _ _); trivial.
       simpl. trivial.
     + trivial.
+
+ (* Osel *)
+  - apply Val.select_inject; trivial.
+    destruct (eval_condition0 c0 v2 m1) eqn:Hcond.
+    + right.
+      symmetry.
+      eapply eval_condition0_inj; eassumption.
+    + left. trivial.
+
+ (* Oselimm *)
+  - apply Val.select_inject; trivial.
+    destruct (eval_condition0 _ _ _) eqn:Hcond.
+    + right.
+      symmetry.
+      eapply eval_condition0_inj; eassumption.
+    + left. trivial.
+
+ (* Osellimm *)
+  - apply Val.select_inject; trivial.
+    destruct (eval_condition0 _ _ _) eqn:Hcond.
+    + right.
+      symmetry.
+      eapply eval_condition0_inj; eassumption.
+    + left. trivial.
 Qed.
 
 Lemma eval_addressing_inj:
@@ -1674,6 +1734,27 @@ Proof.
   - apply Val.offset_ptr_inject; auto. 
 Qed.
 
+Lemma eval_addressing_inj_none:
+  forall addr sp1 vl1 sp2 vl2,
+  (forall id ofs,
+      In id (globals_addressing addr) ->
+      Val.inject f (Genv.symbol_address ge1 id ofs) (Genv.symbol_address ge2 id ofs)) ->
+  Val.inject f sp1 sp2 ->
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing ge1 sp1 addr vl1 = None ->
+  eval_addressing ge2 sp2 addr vl2 = None.
+Proof.
+  intros until vl2. intros Hglobal Hinjsp Hinjvl.
+  destruct addr; simpl in *.
+  1,2: inv Hinjvl; trivial;
+       inv H0; trivial;
+       inv H2; trivial;
+       discriminate.
+  2,3: inv Hinjvl; trivial; discriminate.
+  inv Hinjvl; trivial; inv H0; trivial;
+    inv H; trivial; discriminate.
+Qed.
+  
 End EVAL_COMPAT.
 
 (** Compatibility of the evaluation functions with the ``is less defined'' relation over values. *)
@@ -1780,6 +1861,24 @@ Proof.
   destruct H1 as [v2 [A B]]. exists v2; split; auto. rewrite val_inject_lessdef; auto.
 Qed.
 
+
+Lemma eval_addressing_lessdef_none:
+  forall sp addr vl1 vl2,
+  Val.lessdef_list vl1 vl2 ->
+  eval_addressing genv sp addr vl1 = None ->
+  eval_addressing genv sp addr vl2 = None.
+Proof.
+  intros until vl2. intros Hlessdef Heval1.
+  destruct addr; simpl in *.
+  1, 2, 4, 5: inv Hlessdef; trivial;
+  inv H0; trivial;
+  inv H2; trivial;
+    discriminate.
+  inv Hlessdef; trivial.
+  inv H0; trivial.
+  discriminate.
+Qed.
+  
 End EVAL_LESSDEF.
 
 (** Compatibility of the evaluation functions with memory injections. *)
@@ -1832,6 +1931,19 @@ Proof.
   econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
 Qed.
 
+Lemma eval_addressing_inject_none:
+  forall addr vl1 vl2,
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing genv (Vptr sp1 Ptrofs.zero) addr vl1 = None ->
+  eval_addressing genv (Vptr sp2 Ptrofs.zero) (shift_stack_addressing delta addr) vl2 = None.
+Proof.
+  intros.
+  rewrite eval_shift_stack_addressing.
+  eapply eval_addressing_inj_none with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
+  intros. apply symbol_address_inject.
+  econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
+Qed.
+  
 Lemma eval_operation_inject:
   forall op vl1 vl2 v1 m1 m2,
   Val.inject_list f vl1 vl2 ->

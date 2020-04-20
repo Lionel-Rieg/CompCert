@@ -15,12 +15,12 @@
 open Format
 open Camlcoq
 open AST
-open Integers
+open! Integers
 open Values
 open Memory
 open Globalenvs
 open Events
-open Ctypes
+open! Ctypes
 open Csyntax
 open Csem
 
@@ -145,7 +145,7 @@ let print_state p (prog, ge, s) =
 let compare_mem m1 m2 =
   (* assumes nextblocks were already compared equal *)
   (* should permissions be taken into account? *)
-  Pervasives.compare m1.Mem.mem_contents m2.Mem.mem_contents
+  compare m1.Mem.mem_contents m2.Mem.mem_contents
 
 (* Comparing continuations *)
 

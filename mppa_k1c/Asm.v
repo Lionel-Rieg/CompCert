@@ -15,7 +15,13 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for K1c assembly language. *)
+(** * Abstract syntax for K1c textual assembly language.
+
+    Each emittable instruction is defined here. ';;' is also defined as an instruction.
+    The goal of this representation is to stay compatible with the rest of the generic backend of CompCert
+    We define [unfold : list bblock -> list instruction]
+    An Asm function is then defined as : [fn_sig], [fn_blocks], [fn_code], and a proof of [unfold fn_blocks = fn_code]
+    [fn_code] has no semantic. Instead, the semantic of Asm is given by using the AsmVLIW semantic on [fn_blocks] *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -57,10 +63,6 @@ Inductive instruction : Type :=
   | Psemi                                           (**r semi colon separating bundles *)
   | Pnop                                            (**r instruction that does nothing *)
 
-  (** builtins *)
-  | Pclzll (rd rs: ireg)
-  | Pstsud (rd rs1 rs2: ireg)
-
   (** Control flow instructions *)
   | Pget    (rd: ireg) (rs: preg)                   (**r get system register *)
   | Pset    (rd: preg) (rs: ireg)                   (**r set system register *)
@@ -97,22 +99,24 @@ Inductive instruction : Type :=
   | Piinvals (addr: ireg)
   | Pitouchl (addr: ireg)
   | Pdzerol (addr: ireg)
-  | Pafaddd (addr: ireg) (incr_res: ireg)
-  | Pafaddw (addr: ireg) (incr_res: ireg)
+(*| Pafaddd (addr: ireg) (incr_res: ireg)
+  | Pafaddw (addr: ireg) (incr_res: ireg) *) (* see #157 *)
   | Palclrd (dst: ireg) (addr: ireg)
   | Palclrw (dst: ireg) (addr: ireg)
+  | Pclzll (rd rs: ireg)
+  | Pstsud (rd rs1 rs2: ireg)
             
   (** Loads **)
-  | Plb     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)
-  | Plbu    (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte unsigned *)
-  | Plh     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word *)
-  | Plhu    (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word unsigned *)
-  | Plw     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int32 *)
-  | Plw_a   (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any32 *)
-  | Pld     (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int64 *)
-  | Pld_a   (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any64 *)
-  | Pfls    (rd: freg) (ra: ireg) (ofs: addressing)     (**r load float *)
-  | Pfld    (rd: freg) (ra: ireg) (ofs: addressing)    (**r load 64-bit float *)
+  | Plb     (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte *)
+  | Plbu    (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load byte unsigned *)
+  | Plh     (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word *)
+  | Plhu    (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load half word unsigned *)
+  | Plw     (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int32 *)
+  | Plw_a   (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any32 *)
+  | Pld     (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load int64 *)
+  | Pld_a   (trap: trapping_mode) (rd: ireg) (ra: ireg) (ofs: addressing)     (**r load any64 *)
+  | Pfls    (trap: trapping_mode) (rd: freg) (ra: ireg) (ofs: addressing)     (**r load float *)
+  | Pfld    (trap: trapping_mode) (rd: freg) (ra: ireg) (ofs: addressing)    (**r load 64-bit float *)
   | Plq     (rs: gpreg_q) (ra: ireg) (ofs: addressing)  (**r load 2*64-bit *)
   | Plo     (rs: gpreg_o) (ra: ireg) (ofs: addressing)  (**r load 4*64-bit *)
 
@@ -182,7 +186,9 @@ Inductive instruction : Type :=
   | Pfcompl (ft: ftest) (rd rs1 rs2: ireg)          (**r comparison float64 *)
 
   | Paddw               (rd rs1 rs2: ireg)          (**r add word *)
+  | Paddxw (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add word *)
   | Psubw               (rd rs1 rs2: ireg)          (**r sub word *)
+  | Prevsubxw (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add word *)
   | Pmulw               (rd rs1 rs2: ireg)          (**r mul word *)
   | Pandw               (rd rs1 rs2: ireg)          (**r and word *)
   | Pnandw              (rd rs1 rs2: ireg)          (**r nand word *)
@@ -197,9 +203,16 @@ Inductive instruction : Type :=
   | Psrlw               (rd rs1 rs2: ireg)          (**r shift right logical word *)
   | Psllw               (rd rs1 rs2: ireg)          (**r shift left logical word *)
   | Pmaddw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
+  | Pmsubw              (rd rs1 rs2: ireg)          (**r multiply-add words *)
+  | Pfmaddfw            (rd rs1 rs2: ireg)          (**r float fused multiply-add words *)
+  | Pfmsubfw            (rd rs1 rs2: ireg)          (**r float fused multiply-subtract words *)
+  | Pfmaddfl            (rd rs1 rs2: ireg)          (**r float fused multiply-add longs *)
+  | Pfmsubfl            (rd rs1 rs2: ireg)          (**r float fused multiply-subtract longs *)
 
   | Paddl               (rd rs1 rs2: ireg)          (**r add long *)
+  | Paddxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r add long shift *)
   | Psubl               (rd rs1 rs2: ireg)          (**r sub long *)
+  | Prevsubxl (shift : shift1_4)  (rd rs1 rs2: ireg)          (**r sub long shift *)
   | Pandl               (rd rs1 rs2: ireg)          (**r and long *)
   | Pnandl              (rd rs1 rs2: ireg)          (**r nand long *)
   | Porl                (rd rs1 rs2: ireg)          (**r or long *)
@@ -214,6 +227,7 @@ Inductive instruction : Type :=
   | Psral               (rd rs1 rs2: ireg)          (**r shift right arithmetic long *)
   | Psrxl               (rd rs1 rs2: ireg)          (**r shift right arithmetic long round to 0*)
   | Pmaddl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
+  | Pmsubl              (rd rs1 rs2: ireg)          (**r multiply-add long *)
 
   | Pfaddd              (rd rs1 rs2: ireg)          (**r Float addition double *)
   | Pfaddw              (rd rs1 rs2: ireg)          (**r Float addition word *)
@@ -221,11 +235,19 @@ Inductive instruction : Type :=
   | Pfsbfw              (rd rs1 rs2: ireg)          (**r Float sub word *)
   | Pfmuld              (rd rs1 rs2: ireg)          (**r Float mul double *)
   | Pfmulw              (rd rs1 rs2: ireg)          (**r Float mul word *)
-
+  | Pfmind              (rd rs1 rs2: ireg)          (**r Float min double *)
+  | Pfminw              (rd rs1 rs2: ireg)          (**r Float min word *)
+  | Pfmaxd              (rd rs1 rs2: ireg)          (**r Float max double *)
+  | Pfmaxw              (rd rs1 rs2: ireg)          (**r Float max word *)
+  | Pfinvw              (rd rs1: ireg)              (**r Float invert word *)
+                        
   (** Arith RRI32 *)
   | Pcompiw (it: itest) (rd rs: ireg) (imm: int)    (**r comparison imm word *)
 
   | Paddiw              (rd rs: ireg) (imm: int)    (**r add imm word *)
+  | Paddxiw (shift : shift1_4) (rd rs: ireg) (imm: int)    (**r add imm word *)
+  | Prevsubiw              (rd rs: ireg) (imm: int)    (**r subtract imm word *)
+  | Prevsubxiw (shift : shift1_4) (rd rs: ireg) (imm: int)    (**r subtract imm word *)
   | Pmuliw              (rd rs: ireg) (imm: int)    (**r mul imm word *)
   | Pandiw              (rd rs: ireg) (imm: int)    (**r and imm word *)
   | Pnandiw             (rd rs: ireg) (imm: int)    (**r nand imm word *)
@@ -249,6 +271,9 @@ Inductive instruction : Type :=
   (** Arith RRI64 *)
   | Pcompil (it: itest) (rd rs: ireg) (imm: int64)  (**r comparison imm long *)
   | Paddil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
+  | Paddxil (shift : shift1_4) (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
+  | Prevsubil              (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
+  | Prevsubxil (shift : shift1_4) (rd rs: ireg) (imm: int64)  (**r subtract imm long *)
   | Pmulil              (rd rs: ireg) (imm: int64)  (**r add immediate long *) 
   | Pandil              (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
   | Pnandil             (rd rs: ireg) (imm: int64)  (**r and immediate long *) 
@@ -261,6 +286,10 @@ Inductive instruction : Type :=
   | Pmaddil             (rd rs: ireg) (imm: int64)  (**r multiply add imm long *)
   | Pcmove (bt: btest) (rcond rd rs : ireg) (** conditional move *) 
   | Pcmoveu (bt: btest) (rcond rd rs : ireg) (** conditional move, unsigned semantics *) 
+  | Pcmoveiw (bt: btest) (rcond rd : ireg) (imm: int) (** conditional move *) 
+  | Pcmoveuiw (bt: btest) (rcond rd : ireg) (imm: int) (** conditional move, unsigned semantics *) 
+  | Pcmoveil (bt: btest) (rcond rd : ireg) (imm: int64) (** conditional move *) 
+  | Pcmoveuil (bt: btest) (rcond rd : ireg) (imm: int64) (** conditional move, unsigned semantics *) 
 .
 
 (** Correspondance between Asmblock and Asm *)
@@ -307,6 +336,7 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRR Asmvliw.Pfabsw rd rs => Pfabsw rd rs
   | PArithRR Asmvliw.Pfnegd rd rs  => Pfnegd rd rs
   | PArithRR Asmvliw.Pfnegw rd rs => Pfnegw rd rs
+  | PArithRR Asmvliw.Pfinvw rd rs => Pfinvw rd rs
   | PArithRR Asmvliw.Pfnarrowdw rd rs => Pfnarrowdw rd rs
   | PArithRR Asmvliw.Pfwidenlwd rd rs => Pfwidenlwd rd rs
   | PArithRR Asmvliw.Pfloatuwrnsz rd rs => Pfloatuwrnsz rd rs
@@ -338,7 +368,9 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR (Asmvliw.Pfcompw ft) rd rs1 rs2 => Pfcompw ft rd rs1 rs2
   | PArithRRR (Asmvliw.Pfcompl ft) rd rs1 rs2 => Pfcompl ft rd rs1 rs2
   | PArithRRR Asmvliw.Paddw rd rs1 rs2       => Paddw rd rs1 rs2
+  | PArithRRR (Asmvliw.Paddxw shift) rd rs1 rs2 => Paddxw shift rd rs1 rs2
   | PArithRRR Asmvliw.Psubw rd rs1 rs2       => Psubw rd rs1 rs2
+  | PArithRRR (Asmvliw.Prevsubxw shift) rd rs1 rs2 => Prevsubxw shift rd rs1 rs2
   | PArithRRR Asmvliw.Pmulw rd rs1 rs2       => Pmulw rd rs1 rs2
   | PArithRRR Asmvliw.Pandw rd rs1 rs2       => Pandw rd rs1 rs2
   | PArithRRR Asmvliw.Pnandw rd rs1 rs2      => Pnandw rd rs1 rs2
@@ -354,7 +386,9 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Psllw rd rs1 rs2       => Psllw rd rs1 rs2
 
   | PArithRRR Asmvliw.Paddl rd rs1 rs2       => Paddl rd rs1 rs2
+  | PArithRRR (Asmvliw.Paddxl shift) rd rs1 rs2 => Paddxl shift rd rs1 rs2
   | PArithRRR Asmvliw.Psubl rd rs1 rs2       => Psubl rd rs1 rs2
+  | PArithRRR (Asmvliw.Prevsubxl shift) rd rs1 rs2 => Prevsubxl shift rd rs1 rs2
   | PArithRRR Asmvliw.Pandl rd rs1 rs2       => Pandl rd rs1 rs2
   | PArithRRR Asmvliw.Pnandl rd rs1 rs2      => Pnandl rd rs1 rs2
   | PArithRRR Asmvliw.Porl rd rs1 rs2        => Porl rd rs1 rs2
@@ -375,10 +409,17 @@ Definition basic_to_instruction (b: basic) :=
   | PArithRRR Asmvliw.Pfsbfw rd rs1 rs2      => Pfsbfw rd rs1 rs2
   | PArithRRR Asmvliw.Pfmuld rd rs1 rs2      => Pfmuld rd rs1 rs2
   | PArithRRR Asmvliw.Pfmulw rd rs1 rs2      => Pfmulw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmind rd rs1 rs2      => Pfmind rd rs1 rs2
+  | PArithRRR Asmvliw.Pfminw rd rs1 rs2      => Pfminw rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmaxd rd rs1 rs2      => Pfmaxd rd rs1 rs2
+  | PArithRRR Asmvliw.Pfmaxw rd rs1 rs2      => Pfmaxw rd rs1 rs2
 
   (* RRI32 *)
   | PArithRRI32 (Asmvliw.Pcompiw it) rd rs imm => Pcompiw it rd rs imm
   | PArithRRI32 Asmvliw.Paddiw rd rs imm       => Paddiw rd rs imm
+  | PArithRRI32 (Asmvliw.Paddxiw shift) rd rs imm => Paddxiw shift rd rs imm
+  | PArithRRI32 Asmvliw.Prevsubiw rd rs imm       => Prevsubiw rd rs imm
+  | PArithRRI32 (Asmvliw.Prevsubxiw shift) rd rs imm => Prevsubxiw shift rd rs imm
   | PArithRRI32 Asmvliw.Pmuliw rd rs imm       => Pmuliw rd rs imm
   | PArithRRI32 Asmvliw.Pandiw rd rs imm       => Pandiw rd rs imm
   | PArithRRI32 Asmvliw.Pnandiw rd rs imm      => Pnandiw rd rs imm
@@ -401,6 +442,9 @@ Definition basic_to_instruction (b: basic) :=
   (* RRI64 *)
   | PArithRRI64 (Asmvliw.Pcompil it) rd rs imm => Pcompil it rd rs imm
   | PArithRRI64 Asmvliw.Paddil rd rs imm       => Paddil rd rs imm
+  | PArithRRI64 (Asmvliw.Paddxil shift) rd rs imm => Paddxil shift rd rs imm
+  | PArithRRI64 Asmvliw.Prevsubil rd rs imm       => Prevsubil rd rs imm
+  | PArithRRI64 (Asmvliw.Prevsubxil shift) rd rs imm => Prevsubxil shift rd rs imm
   | PArithRRI64 Asmvliw.Pmulil rd rs imm       => Pmulil rd rs imm
   | PArithRRI64 Asmvliw.Pandil rd rs imm       => Pandil rd rs imm
   | PArithRRI64 Asmvliw.Pnandil rd rs imm      => Pnandil rd rs imm
@@ -414,6 +458,12 @@ Definition basic_to_instruction (b: basic) :=
   (** ARRR *)
   | PArithARRR Asmvliw.Pmaddw rd rs1 rs2       => Pmaddw rd rs1 rs2
   | PArithARRR Asmvliw.Pmaddl rd rs1 rs2       => Pmaddl rd rs1 rs2
+  | PArithARRR Asmvliw.Pmsubw rd rs1 rs2       => Pmsubw rd rs1 rs2
+  | PArithARRR Asmvliw.Pmsubl rd rs1 rs2       => Pmsubl rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmaddfw rd rs1 rs2     => Pfmaddfw rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmaddfl rd rs1 rs2     => Pfmaddfl rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmsubfw rd rs1 rs2     => Pfmsubfw rd rs1 rs2
+  | PArithARRR Asmvliw.Pfmsubfl rd rs1 rs2     => Pfmsubfl rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmove cond) rd rs1 rs2=> Pcmove cond rd rs1 rs2
   | PArithARRR (Asmvliw.Pcmoveu cond) rd rs1 rs2=> Pcmoveu cond rd rs1 rs2
 
@@ -423,46 +473,49 @@ Definition basic_to_instruction (b: basic) :=
 
   (** ARRI32 *)
   | PArithARRI32 Asmvliw.Pmaddiw rd rs1 imm    => Pmaddiw rd rs1 imm
+  | PArithARRI32 (Asmvliw.Pcmoveiw cond) rd rs1 imm => Pcmoveiw cond rd rs1 imm
+  | PArithARRI32 (Asmvliw.Pcmoveuiw cond) rd rs1 imm => Pcmoveuiw cond rd rs1 imm
 
   (** ARRI64 *)
   | PArithARRI64 Asmvliw.Pmaddil rd rs1 imm    => Pmaddil rd rs1 imm
-                                                          
+  | PArithARRI64 (Asmvliw.Pcmoveil cond) rd rs1 imm => Pcmoveil cond rd rs1 imm
+  | PArithARRI64 (Asmvliw.Pcmoveuil cond) rd rs1 imm => Pcmoveuil cond rd rs1 imm                                                          
   (** Load *)
-  | PLoadRRO Asmvliw.Plb rd ra ofs   => Plb rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Plbu rd ra ofs  => Plbu rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Plh rd ra ofs   => Plh rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Plhu rd ra ofs  => Plhu rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Plw rd ra ofs   => Plw rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Plw_a rd ra ofs => Plw_a rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Pld rd ra ofs   => Pld rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Pld_a rd ra ofs => Pld_a rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Pfls rd ra ofs  => Pfls rd ra (AOff ofs)
-  | PLoadRRO Asmvliw.Pfld rd ra ofs  => Pfld rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plb rd ra ofs   => Plb trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plbu rd ra ofs  => Plbu trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plh rd ra ofs   => Plh trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plhu rd ra ofs  => Plhu trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plw rd ra ofs   => Plw trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Plw_a rd ra ofs => Plw_a trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Pld rd ra ofs   => Pld trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Pld_a rd ra ofs => Pld_a trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Pfls rd ra ofs  => Pfls trap rd ra (AOff ofs)
+  | PLoadRRO trap Asmvliw.Pfld rd ra ofs  => Pfld trap rd ra (AOff ofs)
 
   | PLoadQRRO qrs ra ofs => Plq qrs ra (AOff ofs)
   | PLoadORRO qrs ra ofs => Plo qrs ra (AOff ofs)
 
-  | PLoadRRR Asmvliw.Plb rd ra ro   => Plb rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Plbu rd ra ro  => Plbu rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Plh rd ra ro   => Plh rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Plhu rd ra ro  => Plhu rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Plw rd ra ro   => Plw rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Plw_a rd ra ro => Plw_a rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Pld rd ra ro   => Pld rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Pld_a rd ra ro => Pld_a rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Pfls rd ra ro  => Pfls rd ra (AReg ro)
-  | PLoadRRR Asmvliw.Pfld rd ra ro  => Pfld rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plb rd ra ro   => Plb trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plbu rd ra ro  => Plbu trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plh rd ra ro   => Plh trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plhu rd ra ro  => Plhu trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plw rd ra ro   => Plw trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Plw_a rd ra ro => Plw_a trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Pld rd ra ro   => Pld trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Pld_a rd ra ro => Pld_a trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Pfls rd ra ro  => Pfls trap rd ra (AReg ro)
+  | PLoadRRR trap Asmvliw.Pfld rd ra ro  => Pfld trap rd ra (AReg ro)
 
-  | PLoadRRRXS Asmvliw.Plb rd ra ro   => Plb rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Plbu rd ra ro  => Plbu rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Plh rd ra ro   => Plh rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Plhu rd ra ro  => Plhu rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Plw rd ra ro   => Plw rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Plw_a rd ra ro => Plw_a rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Pld rd ra ro   => Pld rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Pld_a rd ra ro => Pld_a rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Pfls rd ra ro  => Pfls rd ra (ARegXS ro)
-  | PLoadRRRXS Asmvliw.Pfld rd ra ro  => Pfld rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plb rd ra ro   => Plb trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plbu rd ra ro  => Plbu trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plh rd ra ro   => Plh trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plhu rd ra ro  => Plhu trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plw rd ra ro   => Plw trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Plw_a rd ra ro => Plw_a trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Pld rd ra ro   => Pld trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Pld_a rd ra ro => Pld_a trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Pfls rd ra ro  => Pfls trap rd ra (ARegXS ro)
+  | PLoadRRRXS trap Asmvliw.Pfld rd ra ro  => Pfld trap rd ra (ARegXS ro)
 
   (** Store *)
   | PStoreRRO Asmvliw.Psb rd ra ofs  => Psb rd ra (AOff ofs)
@@ -540,12 +593,6 @@ Definition genv := Genv.t fundef unit.
 
 Definition function_proj (f: function) := Asmvliw.mkfunction (fn_sig f) (fn_blocks f).
 
-(* 
-Definition fundef_proj (fu: fundef) : Asmblock.fundef := transf_fundef function_proj fu.
-
-Definition program_proj (p: program) : Asmblock.program := transform_program fundef_proj p.
- *)
-
 Definition fundef_proj (fu: fundef) : Asmvliw.fundef := 
   match fu with
   | Internal f => Internal (function_proj f)
@@ -619,35 +666,6 @@ Proof.
   rewrite transf_function_proj. auto.
 Qed.
 
-(* Definition transf_globdef (gd: globdef Asmblock.fundef unit) : globdef fundef unit :=
-  match gd with
-  | Gfun f => Gfun (transf_fundef f)
-  | Gvar gu => Gvar gu
-  end.
-
-Lemma transf_globdef_proj: forall gd, globdef_proj (transf_globdef gd) = gd.
-Proof.
-  intros gd. destruct gd as [f|v]; simpl; auto.
-  rewrite transf_fundef_proj; auto.
-Qed.
-
-Fixpoint transf_prog_defs (l: list (ident * globdef Asmblock.fundef unit))
-                            : list (ident * globdef fundef unit) :=
-  match l with
-  | nil => nil
-  | (i, gd) :: l => (i, transf_globdef gd) :: transf_prog_defs l
-  end.
-
-Lemma transf_prog_proj: forall p, prog_defs p = prog_defs_proj (transf_prog_defs (prog_defs p)).
-Proof.
-  intros p. destruct p as [defs pub main]. simpl.
-  induction defs; simpl; auto.
-  destruct a as [i gd]. simpl.
-  rewrite transf_globdef_proj.
-  congruence.
-Qed.
- *)
-
 Definition transf_program : Asmvliw.program -> program := transform_program transf_fundef.
 
 Lemma program_equals {A B: Type} : forall (p1 p2: AST.program A B),
@@ -685,7 +703,6 @@ Proof.
   intros. congruence.
 Qed.
 
-(* I think it is a special case of Asmblock -> Asm. Very handy to have *)
 Lemma match_program_transf:
   forall p tp, match_prog p tp -> transf_program p = tp.
 Proof.

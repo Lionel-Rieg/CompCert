@@ -1,9 +1,26 @@
+#!/usr/bin/env bash
 
+TMPFILE=/tmp/1513times.txt
+
+cores=$(grep -c ^processor /proc/cpuinfo)
 source benches.sh
 
+default="\e[39m"
+magenta="\e[35m"
+red="\e[31m"
+
 rm -f commands.txt
+rm -f $TMPFILE
 for bench in $benches; do
-  echo "(cd $bench && make -j5 $1)" >> commands.txt
+  echo -e "${magenta}Building $bench..${default}"
+  if [ "$1" == "" ]; then 
+    (cd $bench && make -s -j$cores > /dev/null &> /dev/null) || { echo -e "${red}Build failed" && break; }
+  else
+    (cd $bench && make -j$cores) | grep -P "\d+: \d+\.\d+" >> $TMPFILE
+  fi
 done
 
-cat commands.txt | xargs -n1 -I{} -P4 bash -c '{}'
+if [ "$1" != "" ]; then
+  cat $TMPFILE | sort -n -k 1 > $1
+fi
+

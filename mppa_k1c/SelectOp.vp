@@ -51,9 +51,10 @@ Require Import Floats.
 Require Import Op.
 Require Import CminorSel.
 Require Import OpHelpers.
-Require Import ExtValues.
+Require Import ExtValues ExtFloats.
 Require Import DecBoolOps.
 Require Import Chunks.
+Require Import Builtins.
 Require Compopts.
 
 Local Open Scope cminorsel_scope.
@@ -65,34 +66,52 @@ Section SELECT.
 
 Context {hf: helper_functions}.
 
+Nondetfunction cond_to_condition0 (cond : condition) (args : exprlist) :=
+  match cond, args with
+  | (Ccompimm c x), (e1 ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccomp0 c), e1)
+    else None
+           
+  | (Ccompuimm c x), (e1 ::: Enil) =>
+    if Int.eq_dec x Int.zero
+    then Some ((Ccompu0 c), e1)
+    else None
+
+  | (Ccomplimm c x), (e1 ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccompl0 c), e1)
+    else None
+           
+  | (Ccompluimm c x), (e1 ::: Enil) =>
+    if Int64.eq_dec x Int64.zero
+    then Some ((Ccomplu0 c), e1)
+    else None
+           
+  | _, _ => None
+  end.
+  
 (** Ternary operator *)
-Definition select_base o0 o1 oselect :=
- Eop (Oselect (Ccomp0 Cne))
-              (o0:::o1:::oselect:::Enil).
-				      
-Definition select o0 o1 oselect :=
-  select_base o0 o1 oselect.
-				      
-Definition selectl_base o0 o1 oselect :=
- Eop (Oselectl (Ccomp0 Cne))
-              (o0:::o1:::oselect:::Enil).
-				      
-Definition selectl o0 o1 oselect :=
-  selectl_base o0 o1 oselect.
-				      
-Definition selectf_base o0 o1 oselect :=
- Eop (Oselectf (Ccomp0 Cne))
-              (o0:::o1:::oselect:::Enil).
-				      
-Definition selectf o0 o1 oselect :=
-  selectf_base o0 o1 oselect.
-				      
-Definition selectfs_base o0 o1 oselect :=
- Eop (Oselectfs (Ccomp0 Cne))
-              (o0:::o1:::oselect:::Enil).
-				      
-Definition selectfs o0 o1 oselect :=
-  selectfs_base o0 o1 oselect.
+Nondetfunction select0 (ty : typ) (cond0 : condition0) (e1 e2 e3: expr) :=
+  match ty, cond0, e1, e2, e3 with
+  | Tint, cond0, e1, (Eop (Ointconst imm) Enil), e3 =>
+    (Eop (Oselimm cond0 imm) (e1 ::: e3 ::: Enil))
+  | Tint, cond0, (Eop (Ointconst imm) Enil), e2, e3 =>
+    (Eop (Oselimm (negate_condition0 cond0) imm) (e2 ::: e3 ::: Enil))
+  | Tlong, cond0, e1, (Eop (Olongconst imm) Enil), e3 =>
+    (Eop (Osellimm cond0 imm) (e1 ::: e3 ::: Enil))
+  | Tlong, cond0, (Eop (Olongconst imm) Enil), e2, e3 =>
+    (Eop (Osellimm (negate_condition0 cond0) imm) (e2 ::: e3 ::: Enil))
+  | _, _, _ => (Eop (Osel cond0 ty) (e1 ::: e2 ::: e3 ::: Enil))
+  end.
+
+Definition select (ty : typ) (cond : condition) (args : exprlist) (e1 e2: expr)  : option expr :=
+  Some(
+  match cond_to_condition0 cond args with
+  | None => select0 ty (Ccomp0 Cne) e1 e2 (Eop (Ocmp cond) args)
+  | Some(cond0, ec) => select0 ty cond0 e1 e2 ec
+  end).
+
 				      
 (** ** Constants **)
 
@@ -104,6 +123,15 @@ Definition addrstack (ofs: ptrofs) :=
 
 (** ** Integer addition and pointer addition *)
 
+Definition addimm_shlimm sh k2 e1 :=
+  if Compopts.optim_addx tt
+  then
+    match shift1_4_of_z (Int.unsigned sh) with
+    | Some s14 => Eop (Oaddximm s14 k2) (e1:::Enil)
+    | None => Eop (Oaddimm k2) ((Eop (Oshlimm sh) (e1:::Enil)):::Enil)
+    end
+  else Eop (Oaddimm k2) ((Eop (Oshlimm sh) (e1:::Enil)):::Enil).
+
 Nondetfunction addimm (n: int) (e: expr) :=
   if Int.eq n Int.zero then e else
   match e with
@@ -111,8 +139,19 @@ Nondetfunction addimm (n: int) (e: expr) :=
   | Eop (Oaddrsymbol s m) Enil   => Eop (Oaddrsymbol s (Ptrofs.add (Ptrofs.of_int n) m)) Enil
   | Eop (Oaddrstack m) Enil      => Eop (Oaddrstack (Ptrofs.add (Ptrofs.of_int n) m)) Enil
   | Eop (Oaddimm m) (t ::: Enil) => Eop (Oaddimm(Int.add n m)) (t ::: Enil)
+  | Eop (Oaddximm sh m) (t ::: Enil) => Eop (Oaddximm sh (Int.add n m)) (t ::: Enil)
+  | Eop (Oshlimm sh) (t1:::Enil) => addimm_shlimm sh n t1
   | _ => Eop (Oaddimm n) (e ::: Enil)
   end.
+
+Definition add_shlimm n e1 e2 :=
+  if Compopts.optim_addx tt
+  then
+    match shift1_4_of_z (Int.unsigned n) with
+    | Some s14 => Eop (Oaddx s14) (e1:::e2:::Enil)
+    | None => Eop Oadd (e2:::(Eop (Oshlimm n) (e1:::Enil)):::Enil)
+    end
+  else Eop Oadd (e2:::(Eop (Oshlimm n) (e1:::Enil)):::Enil).
 
 Nondetfunction add (e1: expr) (e2: expr) :=
   match e1, e2 with
@@ -135,7 +174,11 @@ Nondetfunction add (e1: expr) (e2: expr) :=
   | t1, (Eop (Omulimm n) (t2:::Enil)) =>
       Eop (Omaddimm n) (t1:::t2:::Enil)
   | (Eop (Omulimm n) (t2:::Enil)), t1 =>
-      Eop (Omaddimm n) (t1:::t2:::Enil)
+    Eop (Omaddimm n) (t1:::t2:::Enil)
+  | (Eop (Oshlimm n) (t1:::Enil)), t2 =>
+    add_shlimm n t1 t2
+  | t2, (Eop (Oshlimm n) (t1:::Enil)) =>
+    add_shlimm n t1 t2
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 
@@ -151,6 +194,10 @@ Nondetfunction sub (e1: expr) (e2: expr) :=
       addimm n1 (Eop Osub (t1:::t2:::Enil))
   | t1, Eop (Oaddimm n2) (t2:::Enil) =>
       addimm (Int.neg n2) (Eop Osub (t1:::t2:::Enil))
+  | t1, (Eop Omul (t2:::t3:::Enil)) =>
+      Eop Omsub (t1:::t2:::t3:::Enil)
+  | t1, (Eop (Omulimm n) (t2:::Enil)) =>
+      Eop (Omaddimm (Int.neg n)) (t1:::t2:::Enil)
   | _, _ => Eop Osub (e1:::e2:::Enil)
   end.
 
@@ -321,24 +368,6 @@ Nondetfunction or (e1: expr) (e2: expr) :=
       else Eop Oor (e1:::e2:::Enil)
   | (Eop Onot (t1:::Enil)), t2 => Eop Oorn (t1:::t2:::Enil) 
   | t1, (Eop Onot (t2:::Enil))  => Eop Oorn (t2:::t1:::Enil)
-  |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompimm Ceq zero0))
-        (y0:::Enil)):::Enil)):::v0:::Enil)),
-     (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompimm Cne zero1))
-        (y1:::Enil)):::Enil)):::v1:::Enil)) =>
-     if same_expr_pure y0 y1
-     && Int.eq zero0 Int.zero
-     && Int.eq zero1 Int.zero                 
-     then select_base v0 v1 y0
-     else Eop Oor (e1:::e2:::Enil)
-  |  (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Ceq zero0))
-        (y0:::Enil)):::Enil)):::v0:::Enil)),
-     (Eop Oand ((Eop Oneg ((Eop (Ocmp (Ccompuimm Cne zero1))
-        (y1:::Enil)):::Enil)):::v1:::Enil)) =>
-     if same_expr_pure y0 y1
-     && Int.eq zero0 Int.zero
-     && Int.eq zero1 Int.zero                 
-     then select_base v0 v1 y0
-     else Eop Oor (e1:::e2:::Enil)
   | (Eop (Oandimm nmask) (prev:::Enil)),
     (Eop (Oandimm mask)
       ((Eop (Oshlimm start) (fld:::Enil)):::Enil)) =>
@@ -584,18 +613,26 @@ Nondetfunction addressing (chunk: memory_chunk) (e: expr) :=
   match e with
   | Eop (Oaddrstack n) Enil => (Ainstack n, Enil)
   | Eop (Oaddrsymbol id ofs) Enil =>
-    (if (orb (Archi.pic_code tt) (negb (Compopts.optim_fglobaladdrtmp tt)))
+    (if (orb (Archi.pic_code tt) (negb (Compopts.optim_globaladdrtmp tt)))
      then (Aindexed Ptrofs.zero, e:::Enil)
      else (Aglobal id ofs, Enil))
   | Eop (Oaddimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int n), e1:::Enil)
   | Eop (Oaddlimm n) (e1:::Enil) => (Aindexed (Ptrofs.of_int64 n), e1:::Enil)
   | Eop Oaddl (e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil) =>
-    (if Compopts.optim_fxsaddr tt
+    (if Compopts.optim_xsaddr tt
      then let zscale := Int.unsigned scale in
           if Z.eq_dec zscale (zscale_of_chunk chunk)
           then (Aindexed2XS zscale, e1:::e2:::Enil) 
           else (Aindexed2, e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil)
      else (Aindexed2, e1:::(Eop (Oshllimm scale) (e2:::Enil)):::Enil))
+  | Eop (Oaddxl sh) (e1:::e2:::Enil) =>
+    let zscale := ExtValues.z_of_shift1_4 sh in
+    let scale := Int.repr zscale in
+    (if Compopts.optim_xsaddr tt
+     then if Z.eq_dec zscale (zscale_of_chunk chunk)
+          then (Aindexed2XS zscale, e2:::e1:::Enil) 
+          else (Aindexed2, e2:::(Eop (Oshllimm scale) (e1:::Enil)):::Enil)
+     else (Aindexed2, e2:::(Eop (Oshllimm scale) (e1:::Enil)):::Enil))
   | Eop Oaddl (e1:::e2:::Enil) => (Aindexed2, e1:::e2:::Enil) 
   | _ => (Aindexed Ptrofs.zero, e:::Enil)
   end.
@@ -624,9 +661,45 @@ Definition divf_base (e1: expr) (e2: expr) :=
   (* Eop Odivf (e1 ::: e2 ::: Enil). *)
   Eexternal f64_div sig_ff_f (e1 ::: e2 ::: Enil).
 
-Definition divfs_base (e1: expr) (e2: expr) :=
+Definition divfs_base1 (e2 : expr) :=
+  Eop Oinvfs (e2 ::: Enil).
+Definition divfs_baseX (e1 : expr) (e2 : expr) :=
   (* Eop Odivf (e1 ::: e2 ::: Enil). *)
   Eexternal f32_div sig_ss_s (e1 ::: e2 ::: Enil).
+
+Nondetfunction divfs_base (e1: expr) :=
+  match e1 with
+  | Eop (Osingleconst f) Enil =>
+    (if Float32.eq_dec f ExtFloat32.one
+     then divfs_base1
+     else divfs_baseX e1)
+  | _ => divfs_baseX e1
+  end.
+
+Nondetfunction gen_fma args :=
+  match args with
+  | (Eop Onegf (e1:::Enil)):::e2:::e3:::Enil => Some (Eop Ofmsubf (e3:::e1:::e2:::Enil))
+  | e1:::e2:::e3:::Enil => Some (Eop Ofmaddf (e3:::e1:::e2:::Enil))
+  | _ => None
+  end.
+
+Nondetfunction gen_fmaf args :=
+  match args with
+  | (Eop Onegfs (e1:::Enil)):::e2:::e3:::Enil => Some (Eop Ofmsubfs (e3:::e1:::e2:::Enil))
+  | e1:::e2:::e3:::Enil => Some (Eop Ofmaddfs (e3:::e1:::e2:::Enil))
+  | _ => None
+  end.
+
+Definition platform_builtin (b: platform_builtin) (args: exprlist) : option expr :=
+  match b with
+  | BI_fmin => Some (Eop Ominf args)
+  | BI_fmax => Some (Eop Omaxf args)
+  | BI_fminf => Some (Eop Ominfs args)
+  | BI_fmaxf => Some (Eop Omaxfs args)
+  | BI_fabsf => Some (Eop Oabsfs args)
+  | BI_fma => gen_fma args
+  | BI_fmaf => gen_fmaf args
+  end.
 End SELECT.
 
 (* Local Variables: *)

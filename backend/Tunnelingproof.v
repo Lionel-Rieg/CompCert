@@ -441,6 +441,31 @@ Proof.
   rewrite <- EV. apply eval_addressing_preserved. exact symbols_preserved.
   eauto. eauto.
   econstructor; eauto using locmap_set_lessdef, locmap_undef_regs_lessdef.
+- (* Lload notrap1 *)
+  exploit eval_addressing_lessdef_none. apply reglist_lessdef; eauto. eassumption.
+  left; simpl; econstructor; split.
+  eapply exec_Lload_notrap1.
+  rewrite <- H0.
+  apply eval_addressing_preserved. exact symbols_preserved. eauto.
+  econstructor; eauto using locmap_set_lessdef, locmap_undef_regs_lessdef.
+- (* Lload notrap2 *)
+  exploit eval_addressing_lessdef. apply reglist_lessdef; eauto. eauto. 
+  intros (ta & EV & LD).
+  destruct (Mem.loadv chunk tm ta) eqn:Htload.
+  {
+  left; simpl; econstructor; split.
+  eapply exec_Lload.
+  rewrite <- EV. apply eval_addressing_preserved. exact symbols_preserved.
+  exact Htload. eauto.
+  econstructor; eauto using locmap_set_lessdef, locmap_undef_regs_lessdef.
+  }
+  {
+  left; simpl; econstructor; split.
+  eapply exec_Lload_notrap2.
+  rewrite <- EV. apply eval_addressing_preserved. exact symbols_preserved.
+  exact Htload. eauto.
+  econstructor; eauto using locmap_set_lessdef, locmap_undef_regs_lessdef.
+  }
 - (* Lgetstack *)
   left; simpl; econstructor; split.
   econstructor; eauto.

@@ -13,16 +13,9 @@
 (** Correctness of instruction selection for operators *)
 
 Require Import Coqlib.
-Require Import Maps.
-Require Import AST.
-Require Import Integers.
-Require Import Floats.
-Require Import Values.
-Require Import Memory.
-Require Import Globalenvs.
-Require Import Cminor.
-Require Import Op.
-Require Import CminorSel.
+Require Import AST Integers Floats.
+Require Import Values Memory Builtins Globalenvs.
+Require Import Cminor Op CminorSel.
 Require Import SelectOp.
 Require Import OpHelpers OpHelpersproof.
 
@@ -738,6 +731,22 @@ Proof.
   intros; red; intros. unfold compfs. TrivialExists.
 Qed.
 
+Theorem eval_select:
+  forall le ty cond al vl a1 v1 a2 v2 a b,
+  select ty cond al a1 a2 = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  eval_expr ge sp e m le a1 v1 ->
+  eval_expr ge sp e m le a2 v2 ->
+  eval_condition cond vl m = Some b ->
+  exists v, 
+     eval_expr ge sp e m le a v
+  /\ Val.lessdef (Val.select (Some b) v1 v2 ty) v.
+Proof.
+  unfold select; intros.
+  destruct (match ty with Tint | Tfloat | Tsingle => true | _ => false end); inv H.
+  rewrite <- H3; TrivialExists. 
+Qed.
+
 Theorem eval_cast8signed: unary_constructor_sound cast8signed (Val.sign_ext 8).
 Proof.
   red; intros until x. unfold cast8signed; case (cast8signed_match a); intros.
@@ -748,7 +757,7 @@ Qed.
 Theorem eval_cast8unsigned: unary_constructor_sound cast8unsigned (Val.zero_ext 8).
 Proof.
   red; intros until x. unfold cast8unsigned.
-  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto.
+  rewrite Val.zero_ext_and. apply eval_andimm. omega.
 Qed.
 
 Theorem eval_cast16signed: unary_constructor_sound cast16signed (Val.sign_ext 16).
@@ -761,7 +770,7 @@ Qed.
 Theorem eval_cast16unsigned: unary_constructor_sound cast16unsigned (Val.zero_ext 16).
 Proof.
   red; intros until x. unfold cast8unsigned.
-  rewrite Val.zero_ext_and. apply eval_andimm. compute; auto.
+  rewrite Val.zero_ext_and. apply eval_andimm. omega.
 Qed.
 
 Theorem eval_singleoffloat: unary_constructor_sound singleoffloat Val.singleoffloat.
@@ -896,7 +905,6 @@ Proof.
 - constructor; auto.
 Qed.
 
-
 (* floating-point division without HELPERS *)
 Theorem eval_divf_base:
   forall le a b x y,
@@ -917,4 +925,17 @@ Proof.
   intros; unfold divfs_base.
   TrivialExists.
 Qed.
+
+(** Platform-specific known builtins *)
+
+Theorem eval_platform_builtin:
+  forall bf al a vl v le,
+  platform_builtin bf al = Some a ->
+  eval_exprlist ge sp e m le al vl ->
+  platform_builtin_sem bf vl = Some v ->
+  exists v', eval_expr ge sp e m le a v' /\ Val.lessdef v v'.
+Proof.
+  intros. discriminate.
+Qed.
+
 End CMCONSTR.

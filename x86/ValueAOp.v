@@ -160,6 +160,7 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Olongofsingle, v1::nil => longofsingle v1
   | Osingleoflong, v1::nil => singleoflong v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
+  | Osel c ty, v1::v2::vl => select (eval_static_condition c vl) v1 v2
   | _, _ => Vbot
   end.
 
@@ -258,7 +259,27 @@ Proof.
   eapply eval_static_addressing_32_sound; eauto.
   eapply eval_static_addressing_64_sound; eauto.
   apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
+  apply select_sound; auto. eapply eval_static_condition_sound; eauto.
 Qed.
-
+(*
+Theorem eval_static_addressing_sound_none:
+  forall addr vargs aargs,
+  eval_addressing ge (Vptr sp Ptrofs.zero) addr vargs = None ->
+  list_forall2 (vmatch bc) vargs aargs ->
+  (eval_static_addressing addr aargs) = Vbot.
+Proof.
+  unfold eval_addressing, eval_static_addressing.
+  intros until aargs. intros Heval_none Hlist.
+  destruct (Archi.ptr64).
+  inv Hlist.
+  destruct addr; trivial; discriminate.
+  inv H0.
+  destruct addr; trivial; try discriminate. simpl in *.
+  inv H2.
+  destruct addr; trivial; discriminate.
+  inv H3;
+  destruct addr; trivial; discriminate.
+Qed.
+*)
 End SOUNDNESS.
 

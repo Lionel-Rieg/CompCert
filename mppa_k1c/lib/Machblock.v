@@ -14,19 +14,19 @@ Require Stacklayout.
 Require Import Mach.
 Require Import Linking.
 
-(** instructions "basiques" (ie non control-flow) *)
+(** basic instructions (ie no control-flow) *)
 Inductive basic_inst: Type :=
   | MBgetstack: ptrofs -> typ -> mreg -> basic_inst
   | MBsetstack: mreg -> ptrofs -> typ -> basic_inst
   | MBgetparam: ptrofs -> typ -> mreg -> basic_inst
   | MBop: operation -> list mreg -> mreg -> basic_inst
-  | MBload: memory_chunk -> addressing -> list mreg -> mreg -> basic_inst
+  | MBload: trapping_mode -> memory_chunk -> addressing -> list mreg -> mreg -> basic_inst
   | MBstore: memory_chunk -> addressing -> list mreg -> mreg -> basic_inst
   .
 
 Definition bblock_body := list basic_inst.
 
-(** instructions de control flow *)
+(** control flow instructions *)
 Inductive control_flow_inst: Type :=
   | MBcall: signature -> mreg + ident -> control_flow_inst
   | MBtailcall: signature -> mreg + ident -> control_flow_inst
@@ -207,11 +207,22 @@ Inductive basic_step (s: list stackframe) (fb: block) (sp: val) (rs: regset) (m:
       rs' = ((undef_regs (destroyed_by_op op) rs)#res <- v) ->
       basic_step s fb sp rs m (MBop op args res) rs' m
   | exec_MBload:
-      forall addr args a v rs' chunk dst,
+      forall addr args a v rs' trap chunk dst,
       eval_addressing ge sp addr rs##args = Some a ->
       Mem.loadv chunk m a = Some v ->
       rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- v) ->
-      basic_step s fb sp rs m (MBload chunk addr args dst) rs' m
+      basic_step s fb sp rs m (MBload trap chunk addr args dst) rs' m
+  | exec_MBload_notrap1:
+      forall addr args rs' chunk dst,
+      eval_addressing ge sp addr rs##args = None ->
+      rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- (default_notrap_load_value chunk)) ->
+      basic_step s fb sp rs m (MBload NOTRAP chunk addr args dst) rs' m
+  | exec_MBload_notrap2:
+      forall addr args a rs' chunk dst,
+      eval_addressing ge sp addr rs##args = Some a ->
+      Mem.loadv chunk m a = None ->
+      rs' = ((undef_regs (destroyed_by_load chunk addr) rs)#dst <- (default_notrap_load_value chunk)) ->
+      basic_step s fb sp rs m (MBload NOTRAP chunk addr args dst) rs' m
   | exec_MBstore:
       forall chunk addr args src m' a rs',
       eval_addressing ge sp addr rs##args = Some a ->

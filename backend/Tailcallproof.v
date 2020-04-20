@@ -157,12 +157,10 @@ Lemma transf_instr_charact:
   transf_instr_spec f instr (transf_instr f pc instr).
 Proof.
   intros. unfold transf_instr. destruct instr; try constructor.
-  caseEq (is_return niter f n r && tailcall_is_possible s &&
-          opt_typ_eq (sig_res s) (sig_res (fn_sig f))); intros.
-  destruct (andb_prop _ _ H0). destruct (andb_prop _ _ H1).
-  eapply transf_instr_tailcall; eauto.
-  eapply is_return_charact; eauto.
-  constructor.
+  destruct (is_return niter f n r && tailcall_is_possible s &&
+            rettype_eq (sig_res s) (sig_res (fn_sig f))) eqn:B.
+- InvBooleans. eapply transf_instr_tailcall; eauto. eapply is_return_charact; eauto.
+- constructor.
 Qed.
 
 Lemma transf_instr_lookup:
@@ -438,6 +436,43 @@ Proof.
   apply eval_addressing_preserved. exact symbols_preserved. eauto.
   econstructor; eauto. apply set_reg_lessdef; auto.
 
+- (* load notrap1 *)
+  TransfInstr.
+  assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.
+  left.
+  exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- (default_notrap_load_value chunk)) m'); split.
+  eapply exec_Iload_notrap1.
+  eassumption.
+  eapply eval_addressing_lessdef_none. eassumption.
+  erewrite eval_addressing_preserved.
+  eassumption. exact symbols_preserved.
+
+  econstructor; eauto. apply set_reg_lessdef; auto.
+
+- (* load notrap2 *)
+  TransfInstr.
+  assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.
+  left.
+
+  exploit eval_addressing_lessdef; eauto.
+  intros [a' [ADDR' ALD]].
+  
+  destruct (Mem.loadv chunk m' a') eqn:Echunk2.
+  + exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- v) m'); split.
+    eapply exec_Iload with (a:=a'). eassumption.
+    erewrite eval_addressing_preserved.
+    eassumption.
+    exact symbols_preserved.
+    assumption.
+    econstructor; eauto. apply set_reg_lessdef; auto.
+  + exists (State s' (transf_function f) (Vptr sp0 Ptrofs.zero) pc' (rs'#dst <- (default_notrap_load_value chunk)) m'); split.
+    eapply exec_Iload_notrap2. eassumption.
+    erewrite eval_addressing_preserved.
+    eassumption.
+    exact symbols_preserved.
+    assumption.
+    econstructor; eauto. apply set_reg_lessdef; auto.
+    
 - (* store *)
   TransfInstr.
   assert (Val.lessdef_list (rs##args) (rs'##args)). apply regs_lessdef_regs; auto.

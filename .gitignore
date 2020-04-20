@@ -5,6 +5,8 @@
 **.out
 **.tok
 *.vo
+*.vok
+*.vos
 *.glob
 *.o
 *.a
@@ -45,6 +47,12 @@
 /riscV/ConstpropOp.v
 /riscV/SelectOp.v
 /riscV/SelectLong.v
+/mppa_k1c/ConstpropOp.v
+/mppa_k1c/SelectOp.v
+/mppa_k1c/SelectLong.v
+/aarch64/ConstpropOp.v
+/aarch64/SelectOp.v
+/aarch64/SelectLong.v
 /backend/SelectDiv.v
 /backend/SplitLong.v
 /cparser/Parser.v
@@ -78,5 +86,8 @@ runtime/mppa_k1c/i64_udivmod.s
 runtime/mppa_k1c/i64_umod.s
 # Test generated data
 /test/clightgen/*.v
-# Coq cache
+# Coq caches
 .lia.cache
+.nia.cache
+.nra.cache
+.csdp.cache

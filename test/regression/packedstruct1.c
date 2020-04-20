@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-/* offsetof is the offset computed by the verified front-end (cfrontend/) */
-#define offsetof(s,f) (int)&(((struct s *)0)->f)
+/* offsetOf is the offset computed by the verified front-end (cfrontend/) */
+#define offsetOf(s,f) (int)&(((struct s *)0)->f)
 
 /* boffsetof is the offset computed by the elaborator (cparser/) */
 #define boffsetof(s,f) (int)__builtin_offsetof(struct s, f)
@@ -24,7 +24,7 @@ void test1(void)
   printf("sizeof(struct s1) = %d\n", szof(s1));
   printf("precomputed sizeof(struct s1) = %d\n", bszof(s1));
   printf("offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
-         offsetof(s1,x), offsetof(s1,y), offsetof(s1,z));
+         offsetOf(s1,x), offsetOf(s1,y), offsetOf(s1,z));
   printf("precomputed offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
          boffsetof(s1,x), boffsetof(s1,y), boffsetof(s1,z));
   s1.x = 123; s1.y = -456; s1.z = 3.14159;
@@ -45,7 +45,7 @@ void test2(void)
   printf("precomputed sizeof(struct s2) = %d\n", bszof(s2));
   printf("&s2 mod 16 = %d\n", ((int) &s2) & 0xF);
   printf("offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
-         offsetof(s2,x), offsetof(s2,y), offsetof(s2,z));
+         offsetOf(s2,x), offsetOf(s2,y), offsetOf(s2,z));
   printf("precomputed offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
          boffsetof(s2,x), boffsetof(s2,y), boffsetof(s2,z));
   s2.x = 12345; s2.y = -456; s2.z = 3.14159;
@@ -73,7 +73,7 @@ void test3(void)
 
   printf("sizeof(struct s3) = %d\n", szof(s3));
   printf("precomputed sizeof(struct s3) = %d\n", bszof(s3));
-  printf("offsetof(s) = %d\n", offsetof(s3,s));
+  printf("offsetof(s) = %d\n", offsetOf(s3,s));
   printf("precomputed offsetof(s) = %d\n", boffsetof(s3,s));
   s3.x = 123;
   s3.y = 45678;
@@ -104,7 +104,7 @@ void test4(void)
   printf("sizeof(struct s4) = %d\n", szof(s4));
   printf("precomputed sizeof(struct s4) = %d\n", bszof(s4));
   printf("offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
-         offsetof(s4,x), offsetof(s4,y), offsetof(s4,z));
+         offsetOf(s4,x), offsetOf(s4,y), offsetOf(s4,z));
   printf("precomputed offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
          boffsetof(s4,x), boffsetof(s4,y), boffsetof(s4,z));
   s4.x = 123; s4.y = -456; s4.z = 3.14159;
@@ -122,7 +122,7 @@ void test5(void)
   printf("sizeof(struct s5) = %d\n", szof(s5));
   printf("precomputed sizeof(struct s5) = %d\n", bszof(s5));
   printf("offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
-         offsetof(s5,x), offsetof(s5,y), offsetof(s5,z));
+         offsetOf(s5,x), offsetOf(s5,y), offsetOf(s5,z));
   printf("precomputed offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
          boffsetof(s5,x), boffsetof(s5,y), boffsetof(s5,z));
   s5.x = 123; s5.y = -456; s5.z = 3.14159;
@@ -140,7 +140,7 @@ void test6(void)
   printf("sizeof(struct s6) = %d\n", szof(s6));
   printf("precomputed sizeof(struct s6) = %d\n", bszof(s6));
   printf("offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
-         offsetof(s6,x), offsetof(s6,y), offsetof(s6,z));
+         offsetOf(s6,x), offsetOf(s6,y), offsetOf(s6,z));
   printf("precomputed offsetof(x) = %d, offsetof(y) = %d, offsetof(z) = %d\n",
          boffsetof(s6,x), boffsetof(s6,y), boffsetof(s6,z));
   s62.x = 123; s62.y = -456; s62.z = 3.14159;

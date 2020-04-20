@@ -34,7 +34,6 @@ Require Clight.
 Require Compiler.
 Require Parser.
 Require Initializers.
-Require Int31.
 Require Asmaux.
 
 (* Standard lib *)
@@ -73,6 +72,7 @@ Extract Constant Iteration.GenIter.iterate =>
 (* Selection *)
 
 Extract Constant Selection.compile_switch => "Switchaux.compile_switch".
+Extract Constant Selection.if_conversion_heuristic => "Selectionaux.if_conversion_heuristic".
 
 (* RTLgen *)
 Extract Constant RTLgen.more_likely => "RTLgenaux.more_likely".
@@ -105,10 +105,14 @@ Extract Constant Compopts.generate_float_constants =>
   "fun _ -> !Clflags.option_ffloatconstprop >= 2".
 Extract Constant Compopts.optim_tailcalls =>
   "fun _ -> !Clflags.option_ftailcalls".
+Extract Constant Compopts.optim_duplicate =>
+  "fun _ -> (if !Clflags.option_fduplicate = -1 then false else true)".
 Extract Constant Compopts.optim_constprop =>
   "fun _ -> !Clflags.option_fconstprop".
 Extract Constant Compopts.optim_CSE =>
   "fun _ -> !Clflags.option_fcse".
+Extract Constant Compopts.optim_CSE2 =>
+  "fun _ -> !Clflags.option_fcse2".
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>
@@ -117,14 +121,22 @@ Extract Constant Compopts.thumb =>
   "fun _ -> !Clflags.option_mthumb".
 Extract Constant Compopts.debug =>
   "fun _ -> !Clflags.option_g".
-Extract Constant Compopts.optim_fglobaladdrtmp =>
+Extract Constant Compopts.optim_globaladdrtmp =>
   "fun _ -> !Clflags.option_fglobaladdrtmp".
-Extract Constant Compopts.optim_fglobaladdroffset =>
+Extract Constant Compopts.optim_globaladdroffset =>
   "fun _ -> !Clflags.option_fglobaladdroffset".
-Extract Constant Compopts.optim_fxsaddr =>
+Extract Constant Compopts.optim_xsaddr =>
   "fun _ -> !Clflags.option_fxsaddr".
+Extract Constant Compopts.optim_addx =>
+  "fun _ -> !Clflags.option_faddx".
 Extract Constant Compopts.optim_coalesce_mem =>
-  "fun _ -> !Clflags.option_coalesce_mem".
+  "fun _ -> !Clflags.option_fcoalesce_mem".
+Extract Constant Compopts.optim_forward_moves =>
+  "fun _ -> !Clflags.option_fforward_moves".
+Extract Constant Compopts.va_strict =>
+  "fun _ -> false".
+Extract Constant Compopts.all_loads_nontrap =>
+  "fun _ -> !Clflags.option_all_loads_nontrap".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -134,11 +146,12 @@ Extract Constant Compiler.print_LTL => "PrintLTL.print_if".
 Extract Constant Compiler.print_Mach => "PrintMach.print_if".
 Extract Constant Compiler.print => "fun (f: 'a -> unit) (x: 'a) -> f x; x".
 Extract Constant Compiler.time  => "Timing.time_coq".
+Extract Constant Compopts.time  => "Timing.time_coq".
 
 (*Extraction Inline Compiler.apply_total Compiler.apply_partial.*)
 
 (* Cabs *)
-Extract Constant Cabs.cabsloc =>
+Extract Constant Cabs.loc =>
 "{ lineno : int;
    filename: string;
    byteno: int;
@@ -146,15 +159,6 @@ Extract Constant Cabs.cabsloc =>
  }".
 Extract Inlined Constant Cabs.string => "String.t".
 Extract Constant Cabs.char_code => "int64".
-
-(* Int31 *)
-Extract Inductive Int31.digits => "bool" [ "false" "true" ].
-Extract Inductive Int31.int31 => "int" [ "Camlcoq.Int31.constr" ] "Camlcoq.Int31.destr".
-Extract Constant Int31.twice => "Camlcoq.Int31.twice".
-Extract Constant Int31.twice_plus_one => "Camlcoq.Int31.twice_plus_one".
-Extract Constant Int31.compare31 => "Camlcoq.Int31.compare".
-Extract Constant Int31.On => "0".
-Extract Constant Int31.In => "1".
 
 (* Processor-specific extraction directives *)
 
@@ -164,11 +168,11 @@ Load extractionMachdep.
 Extraction Blacklist List String Int.
 
 (* Cutting the dependency to R. *)
-Extract Inlined Constant Fcore_defs.F2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.FF2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.B2R => "fun _ -> assert false".
-Extract Inlined Constant Fappli_IEEE.round_mode => "fun _ -> assert false".
-Extract Inlined Constant Fcalc_bracket.inbetween_loc => "fun _ -> assert false".
+Extract Inlined Constant Defs.F2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.FF2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.B2R => "fun _ -> assert false".
+Extract Inlined Constant Binary.round_mode => "fun _ -> assert false".
+Extract Inlined Constant Bracket.inbetween_loc => "fun _ -> assert false".
 
 (* Needed in Coq 8.4 to avoid problems with Function definitions. *)
 Set Extraction AccessOpaque.
@@ -182,9 +186,10 @@ Separate Extraction
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env
    Initializers.transl_init Initializers.constval
-   Csyntax.Eindex Csyntax.Epreincr
+   Csyntax.Eindex Csyntax.Epreincr Csyntax.Eselection
    Ctyping.typecheck_program
    Ctyping.epostincr Ctyping.epostdecr Ctyping.epreincr Ctyping.epredecr
+   Ctyping.eselection
    Ctypes.make_program
    Clight.type_of_function
    Conventions1.callee_save_type Conventions1.is_float_reg

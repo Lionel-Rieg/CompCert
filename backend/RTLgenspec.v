@@ -639,8 +639,8 @@ Lemma new_reg_return_ok:
   map_valid map s1 ->
   return_reg_ok s2 map (ret_reg sig r).
 Proof.
-  intros. unfold ret_reg. destruct (sig_res sig); constructor.
-  eauto with rtlg. eauto with rtlg.
+  intros. unfold ret_reg.
+  destruct (rettype_eq (sig_res sig) Tvoid); constructor; eauto with rtlg.
 Qed.
 
 (** * Relational specification of the translation *)
@@ -707,7 +707,7 @@ Inductive tr_expr (c: code):
       tr_expr c map pr (Eop op al) ns nd rd dst
   | tr_Eload: forall map pr chunk addr al ns nd rd n1 rl dst,
       tr_exprlist c map pr al ns n1 rl ->
-      c!n1 = Some (Iload chunk addr rl rd nd) ->
+      c!n1 = Some (Iload TRAP chunk addr rl rd nd) ->
       reg_map_ok map rd dst -> ~In rd pr ->
       tr_expr c map pr (Eload chunk addr al) ns nd rd dst
   | tr_Econdition: forall map pr a ifso ifnot ns nd rd ntrue nfalse dst,
@@ -744,9 +744,9 @@ Inductive tr_expr (c: code):
 
 with tr_condition (c: code):
        mapping -> list reg -> condexpr -> node -> node -> node -> Prop :=
-  | tr_CEcond: forall map pr cond bl ns ntrue nfalse n1 rl,
+  | tr_CEcond: forall map pr cond bl ns ntrue nfalse n1 rl i,
       tr_exprlist c map pr bl ns n1 rl ->
-      c!n1 = Some (Icond cond rl ntrue nfalse) ->
+      c!n1 = Some (Icond cond rl ntrue nfalse i) ->
       tr_condition c map pr (CEcond cond bl) ns ntrue nfalse
   | tr_CEcondition: forall map pr a1 a2 a3 ns ntrue nfalse n2 n3,
       tr_condition c map pr a1 ns n2 n3 ->
@@ -1224,9 +1224,9 @@ Lemma convert_builtin_res_charact:
 Proof.
   destruct res; simpl; intros.
 - monadInv TR. constructor.  unfold find_var in EQ. destruct (map_vars map)!x; inv EQ; auto.
-- destruct oty; monadInv TR.
-+ constructor. eauto with rtlg.
+- destruct (rettype_eq oty Tvoid); monadInv TR.
 + constructor.
++ constructor. eauto with rtlg.
 - monadInv TR.
 Qed.
 
@@ -1350,7 +1350,7 @@ Proof.
   intros [C D].
   eapply tr_function_intro; eauto with rtlg.
   eapply transl_stmt_charact; eauto with rtlg.
-  unfold ret_reg. destruct (sig_res (CminorSel.fn_sig f)).
-  constructor. eauto with rtlg. eauto with rtlg.
+  unfold ret_reg. destruct (rettype_eq (sig_res (CminorSel.fn_sig f)) Tvoid).
   constructor.
+  constructor; eauto with rtlg.
 Qed.

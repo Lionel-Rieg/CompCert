@@ -27,6 +27,9 @@ Parameter generate_float_constants: unit -> bool.
 (** For value analysis.  Currently always false. *)
 Parameter va_strict: unit -> bool.
 
+(** Flag -fduplicate. Branch prediction annotation + tail duplication *)
+Parameter optim_duplicate: unit -> bool.
+
 (** Flag -ftailcalls.  For tail call optimization. *)
 Parameter optim_tailcalls: unit -> bool.
 
@@ -36,6 +39,9 @@ Parameter optim_constprop: unit -> bool.
 (** Flag -fcse.  For common subexpression elimination. *)
 Parameter optim_CSE: unit -> bool.
 
+(** Flag -fcse2.  For DMonniaux's common subexpression elimination. *)
+Parameter optim_CSE2: unit -> bool.
+
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 
@@ -43,19 +49,32 @@ Parameter optim_redundancy: unit -> bool.
 Parameter optim_postpass: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fglobaladdrtmp. Use a temporary register for loading the address of global variables (default false) *)
-Parameter optim_fglobaladdrtmp: unit -> bool.
+Parameter optim_globaladdrtmp: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fglobaladdroffset. Fold offsets into global addresses  (default false) *)
-Parameter optim_fglobaladdroffset: unit -> bool.
+Parameter optim_globaladdroffset: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fxsaddr. Use .xs addressing mode (default true) *)
-Parameter optim_fxsaddr: unit -> bool.
+Parameter optim_xsaddr: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
 Parameter optim_coalesce_mem: unit -> bool.
+
+(** FIXME TEMPORARY Flag -faddx. Fuse (default false) *)
+Parameter optim_addx: unit -> bool.
 
 (** Flag -fthumb.  For the ARM back-end. *)
 Parameter thumb: unit -> bool.
 
 (** Flag -g.  For insertion of debugging information. *)
 Parameter debug: unit -> bool.
+
+(** Flag -fall-loads-nontrap. Turn user loads into non trapping. *)
+Parameter all_loads_nontrap: unit -> bool.
+
+(** Flag -fforward-moves. Forward moves after CSE. *)
+Parameter optim_forward_moves: unit -> bool.
+
+(* TODO is there a more appropriate place? *)
+Require Import Coqlib.
+Definition time {A B: Type} (name: string) (f: A -> B) : A -> B := f.

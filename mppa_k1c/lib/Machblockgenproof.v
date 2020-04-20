@@ -72,7 +72,7 @@ Proof.
   apply match_states_trans_state.
 Qed.
 
-Local Hint Resolve match_states_trans_state.
+Local Hint Resolve match_states_trans_state: core.
 
 Lemma symbols_preserved:
   forall (s: ident), Genv.find_symbol tge s = Genv.find_symbol ge s.
@@ -284,7 +284,7 @@ Proof.
 Qed.
 
 Local Hint Resolve symbols_preserved senv_preserved init_mem_preserved prog_main_preserved functions_translated
-                   parent_sp_preserved.
+                   parent_sp_preserved: core.
 
 
 Definition dist_end_block_code (c: Mach.code) := 
@@ -299,8 +299,8 @@ Definition dist_end_block (s: Mach.state): nat :=
   | _ => 0
   end.
 
-Local Hint Resolve exec_nil_body exec_cons_body.
-Local Hint Resolve exec_MBgetstack exec_MBsetstack exec_MBgetparam exec_MBop exec_MBload exec_MBstore.
+Local Hint Resolve exec_nil_body exec_cons_body: core.
+Local Hint Resolve exec_MBgetstack exec_MBsetstack exec_MBgetparam exec_MBop exec_MBload exec_MBstore: core.
 
 Lemma size_add_label l bh: size (add_label l bh) = size bh + 1.
 Proof.
@@ -336,7 +336,7 @@ Proof.
     omega.
 Qed.
 
-Local Hint Resolve dist_end_block_code_simu_mid_block.
+Local Hint Resolve dist_end_block_code_simu_mid_block: core.
 
 
 Lemma size_nonzero c b bl:
@@ -392,8 +392,8 @@ destruct i; congruence.
 Qed.
 
 
-Local Hint Resolve Mlabel_is_not_cfi.
-Local Hint Resolve MBbasic_is_not_cfi.
+Local Hint Resolve Mlabel_is_not_cfi: core.
+Local Hint Resolve MBbasic_is_not_cfi: core.
 
 Lemma add_to_new_block_is_label i:
   header (add_to_new_bblock (trans_inst i)) <> nil -> exists l, i = Mlabel l.
@@ -408,7 +408,7 @@ Proof.
   + unfold cfi_bblock in H; simpl in H; congruence.
 Qed.
 
-Local Hint Resolve Mlabel_is_not_basic.
+Local Hint Resolve Mlabel_is_not_basic: core.
 
 Lemma trans_code_decompose c: forall b bl,
   is_trans_code c (b::bl) ->
@@ -483,6 +483,10 @@ Proof.
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
   - eapply exec_MBload; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
+  - eapply exec_MBload_notrap1; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
+    unfold Genv.symbol_address; rewrite symbols_preserved; auto.
+  - eapply exec_MBload_notrap2; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
+    unfold Genv.symbol_address; rewrite symbols_preserved; auto.
   - eapply exec_MBstore; eauto; rewrite <- H; destruct a; simpl; auto; destruct (rs ## l); simpl; auto;
     unfold Genv.symbol_address; rewrite symbols_preserved; auto.
 Qed.
@@ -506,8 +510,8 @@ Proof.
     rewrite Hs2, Hb2; eauto.
     Qed. 
 
-Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit.
-Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same.
+Local Hint Resolve exec_MBcall exec_MBtailcall exec_MBbuiltin exec_MBgoto exec_MBcond_true exec_MBcond_false exec_MBjumptable exec_MBreturn exec_Some_exit exec_None_exit: core.
+Local Hint Resolve eval_builtin_args_preserved external_call_symbols_preserved find_funct_ptr_same: core.
 
 
 Lemma match_states_concat_trans_code st f sp c rs m h: 
@@ -715,11 +719,11 @@ Proof.
   intro H; destruct c as [|i' c]. { inversion H. }
   remember (trans_inst i) as ti.
   destruct ti as [lbl|bi|cfi].
-  - (*i=lbl *) cutrewrite (i = Mlabel lbl). 2:{ destruct i; simpl in * |- *; try congruence. }
+  - (*i=lbl *) cutrewrite (i = Mlabel lbl). 2: ( destruct i; simpl in * |- *; try congruence ).
     exists nil; simpl; eexists. eapply Tr_add_label; eauto.
   - (*i=basic*)
     destruct i'.
-    10: {exists (add_to_new_bblock (MB_basic bi)::nil).  exists b. 
+    10: { exists (add_to_new_bblock (MB_basic bi)::nil).  exists b. 
       cutrewrite ((add_to_new_bblock (MB_basic bi) :: nil) ++ (b::l)=(add_to_new_bblock (MB_basic bi) :: (b::l)));eauto.
       rewrite Heqti.        
       eapply  Tr_end_block; eauto.

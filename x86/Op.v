@@ -167,7 +167,9 @@ Inductive operation : Type :=
   | Olongofsingle            (**r [rd = signed_long_of_float32(r1)] *)
   | Osingleoflong            (**r [rd = float32_of_signed_long(r1)] *)
 (*c Boolean tests: *)
-  | Ocmp (cond: condition).  (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Ocmp (cond: condition)  (**r [rd = 1] if condition holds, [rd = 0] otherwise. *)
+  | Osel: condition -> typ -> operation.
+                             (**r [rd = rs1] if condition holds, [rd = rs2] otherwise. *)
 
 (** Comparison functions (used in modules [CSE] and [Allocation]). *)
 
@@ -186,7 +188,7 @@ Defined.
 
 Definition beq_operation: forall (x y: operation), bool.
 Proof.
-  generalize Int.eq_dec Int64.eq_dec Float.eq_dec Float32.eq_dec ident_eq eq_addressing eq_condition; boolean_equality.
+  generalize Int.eq_dec Int64.eq_dec Float.eq_dec Float32.eq_dec ident_eq typ_eq eq_addressing eq_condition; boolean_equality.
 Defined.
 
 Definition eq_operation: forall (x y: operation), {x=y} + {x<>y}.
@@ -407,6 +409,7 @@ Definition eval_operation
   | Olongofsingle, v1::nil => Val.longofsingle v1
   | Osingleoflong, v1::nil => Val.singleoflong v1
   | Ocmp c, _ => Some(Val.of_optbool (eval_condition c vl m))
+  | Osel c ty, v1::v2::vl => Some(Val.select (eval_condition c vl m) v1 v2 ty)
   | _, _ => None
   end.
 
@@ -578,6 +581,7 @@ Definition type_of_operation (op: operation) : list typ * typ :=
   | Olongofsingle => (Tsingle :: nil, Tlong)
   | Osingleoflong => (Tlong :: nil, Tsingle)
   | Ocmp c => (type_of_condition c, Tint)
+  | Osel c ty => (ty :: ty :: type_of_condition c, ty)
   end.
 
 (** Weak type soundness results for [eval_operation]:
@@ -735,8 +739,40 @@ Proof with (try exact I; try reflexivity).
   destruct v0; simpl in H0; inv H0. destruct (Float32.to_long f); inv H2...
   destruct v0; simpl in H0; inv H0...
   destruct (eval_condition cond vl m); simpl... destruct b...
+  unfold Val.select. destruct (eval_condition c vl m). apply Val.normalize_type. exact I.
 Qed.
 
+
+Definition is_trapping_op (op : operation) :=
+  match op with
+  | Odiv | Odivl | Odivu | Odivlu
+  | Omod | Omodl | Omodu | Omodlu
+  | Oshrximm _ | Oshrxlimm _
+  | Ointoffloat
+  | Ointofsingle
+  | Olongoffloat
+  | Olongofsingle 
+  | Osingleofint
+  | Osingleoflong
+  | Ofloatofint
+  | Ofloatoflong
+  | Olea _ | Oleal _ (* TODO this is suboptimal *) => true
+  | _ => false
+  end.
+
+Lemma is_trapping_op_sound:
+  forall op vl sp m,
+    op <> Omove ->
+    is_trapping_op op = false ->
+    (List.length vl) = (List.length (fst (type_of_operation op))) ->
+    eval_operation genv sp op vl m <> None.
+Proof.
+  destruct op; intros; simpl in *; try congruence.
+  all: try (destruct vl as [ | vh1 vl1]; try discriminate).
+  all: try (destruct vl1 as [ | vh2 vl2]; try discriminate).
+  all: try (destruct vl2 as [ | vh3 vl3]; try discriminate).
+  all: try (destruct vl3 as [ | vh4 vl4]; try discriminate).
+Qed.
 End SOUNDNESS.
 
 (** * Manipulating and transforming operations *)
@@ -958,23 +994,42 @@ Definition is_trivial_op (op: operation) : bool :=
 
 (** Operations that depend on the memory state. *)
 
-Definition op_depends_on_memory (op: operation) : bool :=
-  match op with
-  | Ocmp (Ccompu _) => negb Archi.ptr64
-  | Ocmp (Ccompuimm _ _) => negb Archi.ptr64
-  | Ocmp (Ccomplu _) => Archi.ptr64
-  | Ocmp (Ccompluimm _ _) => Archi.ptr64
+Definition condition_depends_on_memory (c: condition) : bool :=
+  match c with
+  | Ccompu _ => negb Archi.ptr64
+  | Ccompuimm _ _ => negb Archi.ptr64
+  | Ccomplu _ => Archi.ptr64
+  | Ccompluimm _ _ => Archi.ptr64
   | _ => false
   end.
+
+Definition op_depends_on_memory (op: operation) : bool :=
+  match op with
+  | Ocmp c => condition_depends_on_memory c
+  | Osel c ty => condition_depends_on_memory c
+  | _ => false
+  end.
+
+Lemma condition_depends_on_memory_correct:
+  forall c args m1 m2,
+  condition_depends_on_memory c = false ->
+  eval_condition c args m1 = eval_condition c args m2.
+Proof.
+  intros until m2. 
+  destruct c; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
+  unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+Qed.
 
 Lemma op_depends_on_memory_correct:
   forall (F V: Type) (ge: Genv.t F V) sp op args m1 m2,
   op_depends_on_memory op = false ->
   eval_operation ge sp op args m1 = eval_operation ge sp op args m2.
 Proof.
-  intros until m2. destruct op; simpl; try congruence.
-  destruct cond; simpl; intros SF; auto; rewrite ? negb_false_iff in SF;
-  unfold Val.cmpu_bool, Val.cmplu_bool; rewrite SF; reflexivity.
+  intros until m2. destruct op; simpl; try congruence; intros C.
+- f_equal; f_equal; apply condition_depends_on_memory_correct; auto.
+- destruct args; auto. destruct args; auto.
+  rewrite (condition_depends_on_memory_correct c args m1 m2 C).
+  auto.
 Qed.
 
 (** Global variables mentioned in an operation or addressing mode *)
@@ -1175,6 +1230,21 @@ Proof.
   unfold eval_addressing; intros. destruct Archi.ptr64; eauto using eval_addressing32_inj, eval_addressing64_inj.
 Qed.
 
+Lemma eval_addressing_inj_none:
+  forall addr sp1 vl1 sp2 vl2,
+  (forall id ofs,
+      In id (globals_addressing addr) ->
+      Val.inject f (Genv.symbol_address ge1 id ofs) (Genv.symbol_address ge2 id ofs)) ->
+  Val.inject f sp1 sp2 ->
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing ge1 sp1 addr vl1 = None ->
+  eval_addressing ge2 sp2 addr vl2 = None.
+Proof.
+  intros until vl2. intros Hglobal Hinjsp Hinjvl.
+  destruct addr; simpl in *;
+  inv Hinjvl; trivial; try discriminate; inv H0; trivial; try discriminate; inv H2; trivial; try discriminate.
+Qed.
+
 Lemma eval_operation_inj:
   forall op sp1 vl1 sp2 vl2 v1,
   (forall id ofs,
@@ -1290,6 +1360,9 @@ Proof.
   exploit eval_condition_inj; eauto. intros EQ; rewrite EQ.
   destruct b; simpl; constructor.
   simpl; constructor.
+  apply Val.select_inject; auto.  
+  destruct (eval_condition c vl1 m1) eqn:?; auto.
+  right; symmetry; eapply eval_condition_inj; eauto.
 Qed.
 
 End EVAL_COMPAT.
@@ -1398,6 +1471,19 @@ Proof.
   destruct H1 as [v2 [A B]]. exists v2; split; auto. rewrite val_inject_lessdef; auto.
 Qed.
 
+Lemma eval_addressing_lessdef_none:
+  forall sp addr vl1 vl2,
+  Val.lessdef_list vl1 vl2 ->
+  eval_addressing genv sp addr vl1 = None ->
+  eval_addressing genv sp addr vl2 = None.
+Proof.
+  intros until vl2. intros Hlessdef Heval1.
+  destruct addr; simpl in *;
+  inv Hlessdef; trivial; try discriminate;
+  inv H0; trivial; try discriminate;
+  inv H2; trivial; try discriminate.
+Qed.
+
 End EVAL_LESSDEF.
 
 (** Compatibility of the evaluation functions with memory injections. *)
@@ -1448,6 +1534,19 @@ Proof.
   eapply eval_addressing_inj with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
   intros. apply symbol_address_inject.
   econstructor; eauto. rewrite Ptrofs.add_zero_l; auto.
+Qed.
+
+Lemma eval_addressing_inject_none:
+  forall addr vl1 vl2,
+  Val.inject_list f vl1 vl2 ->
+  eval_addressing genv (Vptr sp1 Ptrofs.zero) addr vl1 = None ->
+  eval_addressing genv (Vptr sp2 Ptrofs.zero) (shift_stack_addressing delta addr) vl2 = None.
+Proof.
+  intros.
+  rewrite eval_shift_stack_addressing.
+  eapply eval_addressing_inj_none with (sp1 := Vptr sp1 Ptrofs.zero); eauto.
+  intros. apply symbol_address_inject.
+  econstructor; eauto. rewrite Ptrofs.add_zero_l; auto. 
 Qed.
 
 Lemma eval_operation_inject:

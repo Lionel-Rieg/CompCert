@@ -24,9 +24,9 @@ cycle_t get_current_cycle(void) {
 }
 
 void print_total_clock(void) {
-  printf("cycles: %lu\n", total_clock);
+  printf("time cycles: %" PRcycle "\n", total_clock);
 }
 
 void printerr_total_clock(void) {
-  fprintf(stderr, "cycles: %lu\n", total_clock);
+  fprintf(stderr, "time cycles: %" PRcycle "\n", total_clock);
 }

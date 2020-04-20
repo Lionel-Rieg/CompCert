@@ -15,7 +15,7 @@
   and the corresponding code rewriting. *)
 
 Require Import Coqlib Maps Integers Floats Lattice Kildall.
-Require Import AST Linking.
+Require Import AST Linking Builtins.
 Require Compopts Machregs.
 Require Import Op Registers RTL.
 Require Import Liveness ValueDomain ValueAOp ValueAnalysis.
@@ -69,7 +69,7 @@ Fixpoint successor_rec (n: nat) (f: function) (ae: AE.t) (pc: node) : node :=
       match f.(fn_code)!pc with
       | Some (Inop s) =>
           successor_rec n' f ae s
-      | Some (Icond cond args s1 s2) =>
+      | Some (Icond cond args s1 s2 _) =>
           match resolve_branch (eval_static_condition cond (aregs ae args)) with
           | Some b => successor_rec n' f ae (if b then s1 else s2)
           | None => pc
@@ -139,6 +139,30 @@ Definition builtin_strength_reduction
   | _ => builtin_args_strength_reduction ae al (Machregs.builtin_constraints ef)
   end.
 
+(*
+Definition transf_builtin
+             (ae: AE.t) (am: amem) (rm: romem)
+             (ef: external_function)
+             (args: list (builtin_arg reg)) (res: builtin_res reg) (s: node) :=
+  let dfl := Ibuiltin ef (builtin_strength_reduction ae ef args) res s in
+  match ef, res with
+  | EF_builtin name sg, BR rd =>
+      match lookup_builtin_function name sg with
+      | Some bf => 
+          match eval_static_builtin_function ae am rm bf args with
+          | Some a =>
+              match const_for_result a with
+              | Some cop => Iop cop nil rd s
+              | None => dfl
+              end
+          | None => dfl
+          end
+      | None => dfl
+      end
+  | _, _ => dfl
+  end.
+*)
+
 Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
                         (pc: node) (instr: instruction) :=
   match an!!pc with
@@ -157,7 +181,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               let (op', args') := op_strength_reduction op args aargs in
               Iop op' args' res s'
           end
-      | Iload chunk addr args dst s =>
+      | Iload TRAP chunk addr args dst s =>
           let aargs := aregs ae args in
           let a := ValueDomain.loadv chunk rm am (eval_static_addressing addr aargs) in
           match const_for_result a with
@@ -165,7 +189,7 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
               Iop cop nil dst s
           | None =>
               let (addr', args') := addr_strength_reduction addr args aargs in
-              Iload chunk addr' args' dst s
+              Iload TRAP chunk addr' args' dst s
           end
       | Istore chunk addr args src s =>
           let aargs := aregs ae args in
@@ -176,15 +200,31 @@ Definition transf_instr (f: function) (an: PMap.t VA.t) (rm: romem)
       | Itailcall sig ros args =>
           Itailcall sig (transf_ros ae ros) args
       | Ibuiltin ef args res s =>
-          Ibuiltin ef (builtin_strength_reduction ae ef args) res s
-      | Icond cond args s1 s2 =>
+          let dfl := Ibuiltin ef (builtin_strength_reduction ae ef args) res s in
+          match ef, res with
+          | EF_builtin name sg, BR rd =>
+              match lookup_builtin_function name sg with
+              | Some bf => 
+                  match eval_static_builtin_function ae am rm bf args with
+                  | Some a =>
+                      match const_for_result a with
+                      | Some cop => Iop cop nil rd s
+                      | None => dfl
+                      end
+                 | None => dfl
+                 end
+             | None => dfl
+             end
+          | _, _ => dfl
+          end
+      | Icond cond args s1 s2 i =>
           let aargs := aregs ae args in
           match resolve_branch (eval_static_condition cond aargs) with
           | Some b =>
               if b then Inop s1 else Inop s2
           | None =>
               let (cond', args') := cond_strength_reduction cond args aargs in
-              Icond cond' args' s1 s2
+              Icond cond' args' s1 s2 i
           end
       | Ijumptable arg tbl =>
           match areg ae arg with

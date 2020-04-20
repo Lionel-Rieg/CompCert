@@ -15,7 +15,7 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(** Abstract syntax and semantics for K1c assembly language. *)
+(** Sequential block semantics for K1c assembly. The syntax is given in AsmVLIW *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -33,6 +33,19 @@ Require Import Conventions.
 Require Import Errors.
 Require Export Asmvliw.
 
+(* Notations necessary to hook Asmvliw definitions *)
+Notation undef_caller_save_regs := Asmvliw.undef_caller_save_regs.
+Notation regset := Asmvliw.regset.
+Notation extcall_arg := Asmvliw.extcall_arg.
+Notation extcall_arg_pair := Asmvliw.extcall_arg_pair.
+Notation extcall_arguments := Asmvliw.extcall_arguments.
+Notation set_res := Asmvliw.set_res.
+Notation function := Asmvliw.function.
+Notation bblocks := Asmvliw.bblocks.
+Notation header := Asmvliw.header.
+Notation body := Asmvliw.body.
+Notation exit := Asmvliw.exit.
+Notation correct := Asmvliw.correct.
 
 (** * Auxiliary utilies on basic blocks *)
 
@@ -172,7 +185,6 @@ Proof.
 Qed.
 
 Ltac bblock_auto_correct := (apply non_empty_bblock_refl; try discriminate; try (left; discriminate); try (right; discriminate)).
-(* Local Obligation Tactic := bblock_auto_correct. *)
 
 Lemma Istrue_proof_irrelevant (b: bool): forall (p1 p2:Is_true b), p1=p2.
 Proof.
@@ -250,9 +262,6 @@ Proof.
   intros. destruct bb as [hd bdy ex COR]. simpl. unfold no_header; unfold stick_header; simpl. reflexivity.
 Qed.
 
-
-
-
 (** * Sequential Semantics of basic blocks *)
 Section RELSEM.
 
@@ -264,11 +273,11 @@ Definition exec_arith_instr (ai: ar_instruction) (rs: regset): regset := parexec
 
 (** Auxiliaries for memory accesses *)
 
-Definition exec_load_offset (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) := parexec_load_offset chunk rs rs m m d a ofs.
+Definition exec_load_offset (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a: ireg) (ofs: offset) := parexec_load_offset trap chunk rs rs m m d a ofs.
 
-Definition exec_load_reg (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_reg chunk rs rs m m d a ro.
+Definition exec_load_reg (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_reg trap chunk rs rs m m d a ro.
 
-Definition exec_load_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_regxs chunk rs rs m m d a ro.
+Definition exec_load_regxs (trap: trapping_mode) (chunk: memory_chunk) (rs: regset) (m: mem) (d a ro: ireg) := parexec_load_regxs trap chunk rs rs m m d a ro.
 
 Definition exec_load_q_offset (rs: regset) (m: mem) (d : gpreg_q) (a: ireg) (ofs: offset) := parexec_load_q_offset rs rs m m d a ofs.
 
@@ -286,7 +295,7 @@ Definition exec_store_regxs (chunk: memory_chunk) (rs: regset) (m: mem) (s a ro:
 
 (** * basic instructions *)
 
-Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := parexec_basic_instr ge bi rs rs m m.
+Definition exec_basic_instr (bi: basic) (rs: regset) (m: mem) : outcome := bstep ge bi rs rs m m.
 
 Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
   match body with
@@ -298,32 +307,36 @@ Fixpoint exec_body (body: list basic) (rs: regset) (m: mem): outcome :=
      end
   end.
 
+
+Theorem builtin_body_nil:
+  forall bb ef args res, exit bb = Some (PExpand (Pbuiltin ef args res)) -> body bb = nil.
+Proof.
+  intros. destruct bb as [hd bdy ex WF]. simpl in *.
+  apply wf_bblock_refl in WF. inv WF. unfold builtin_alone in H1.
+  eapply H1; eauto.
+Qed.
+
+Theorem exec_body_app:
+  forall l l' rs m rs'' m'',
+  exec_body (l ++ l') rs m = Next rs'' m'' ->
+  exists rs' m',
+       exec_body l rs m = Next rs' m'
+    /\ exec_body l' rs' m' = Next rs'' m''.
+Proof.
+  induction l.
+  - intros. simpl in H. repeat eexists. auto.
+  - intros. rewrite <- app_comm_cons in H. simpl in H.
+    destruct (exec_basic_instr a rs m) eqn:EXEBI.
+    + apply IHl in H. destruct H as (rs1 & m1 & EXEB1 & EXEB2).
+      repeat eexists. simpl. rewrite EXEBI. eauto. auto.
+    + discriminate.
+Qed.
+
 (** Position corresponding to a label *)
 
 Definition goto_label (f: function) (lbl: label) (rs: regset) (m: mem) : outcome := par_goto_label f lbl rs rs m.
 
-(** Evaluating a branch 
-
-Warning: in m PC is assumed to be already pointing on the next instruction !
-
-*)
 Definition eval_branch (f: function) (l: label) (rs: regset) (m: mem) (res: option bool) : outcome := par_eval_branch f l rs rs m res.
-
-(** Execution of a single control-flow instruction [i] in initial state [rs] and
-    [m].  Return updated state.
-
-    As above: PC is assumed to be incremented on the next block before the control-flow instruction
-
-    For instructions that correspond tobuiltin
-    actual RISC-V instructions, the cases are straightforward
-    transliterations of the informal descriptions given in the RISC-V
-    user-mode specification.  For pseudo-instructions, refer to the
-    informal descriptions given above.
-
-    Note that we set to [Vundef] the registers used as temporaries by
-    the expansions of the pseudo-instructions, so that the RISC-V code
-    we generate cannot use those registers to hold values that must
-    survive the execution of the pseudo-instruction. *)
 
 Definition exec_control (f: function) (oc: option control) (rs: regset) (m: mem) : outcome := parexec_control ge f oc rs rs m.
 
@@ -368,15 +381,10 @@ Inductive step: state -> trace -> state -> Prop :=
       step (State rs m) t (State rs' m')
   .
 
-
-
 End RELSEM.
-
-
 
 Definition semantics (p: program) :=
   Semantics step (initial_state p) final_state (Genv.globalenv p).
-
 
 Definition data_preg (r: preg) : bool :=
   match r with
@@ -386,4 +394,3 @@ Definition data_preg (r: preg) : bool :=
   | IR _   => true
   | PC     => false
   end.
-

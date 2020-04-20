@@ -14,7 +14,7 @@
   proceeds by value numbering over extended basic blocks. *)
 
 Require Import Coqlib Maps Errors Integers Floats Lattice Kildall.
-Require Import AST Linking.
+Require Import AST Linking Builtins.
 Require Import Values Memory.
 Require Import Op Registers RTL.
 Require Import ValueDomain ValueAnalysis CSEdomain CombineOp.
@@ -444,10 +444,10 @@ Module Solver := BBlock_solver(Numbering).
   ([EF_external], [EF_runtime], [EF_malloc], [EF_free]).
 - Forget equations involving loads but keep equations over registers.
   This is appropriate for builtins that can modify memory,
-  e.g. volatile stores, or [EF_builtin]
+  e.g. volatile stores, or [EF_builtin] for unknown builtin functions.
 - Keep all equations, taking advantage of the fact that neither memory
-  nor registers are modified.  This is appropriate for annotations
-  and for volatile loads.
+  nor registers are modified.  This is appropriate for annotations,
+  volatile loads, and known builtin functions.
 *)
 
 Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numbering) :=
@@ -459,8 +459,10 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           before
       | Iop op args res s =>
           add_op before res op args
-      | Iload chunk addr args dst s =>
-          add_load before dst chunk addr args
+      | Iload TRAP chunk addr args dst s =>
+        add_load before dst chunk addr args
+      | Iload NOTRAP _ _ _ dst _ =>
+        set_unknown before dst
       | Istore chunk addr args src s =>
           let app := approx!!pc in
           let n := kill_loads_after_store app before chunk addr args in
@@ -473,8 +475,13 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           match ef with
           | EF_external _ _ | EF_runtime _ _ | EF_malloc | EF_free | EF_inline_asm _ _ _ =>
               empty_numbering
-          | EF_builtin _ _ | EF_vstore _ =>
+          | EF_vstore _ =>
               set_res_unknown (kill_all_loads before) res
+          | EF_builtin name sg =>
+              match lookup_builtin_function name sg with
+              | Some bf => set_res_unknown before res
+              | None    => set_res_unknown (kill_all_loads before) res
+              end
           | EF_memcpy sz al =>
               match args with
               | dst :: src :: nil =>
@@ -489,7 +496,7 @@ Definition transfer (f: function) (approx: PMap.t VA.t) (pc: node) (before: numb
           | EF_vload _ | EF_annot _ _ _ | EF_annot_val _ _ _ | EF_debug _ _ _ =>
               set_res_unknown before res
           end
-      | Icond cond args ifso ifnot =>
+      | Icond cond args ifso ifnot _ =>
           before
       | Ijumptable arg tbl =>
           before
@@ -529,23 +536,23 @@ Definition transf_instr (n: numbering) (instr: instruction) :=
             let (op', args') := reduce _ combine_op n1 op args vl in
             Iop op' args' res s
         end
-  | Iload chunk addr args dst s =>
+  | Iload TRAP chunk addr args dst s =>
       let (n1, vl) := valnum_regs n args in
       match find_rhs n1 (Load chunk addr vl) with
       | Some r =>
           Iop Omove (r :: nil) dst s
       | None =>
           let (addr', args') := reduce _ combine_addr n1 addr args vl in
-          Iload chunk addr' args' dst s
+          Iload TRAP chunk addr' args' dst s
       end
   | Istore chunk addr args src s =>
       let (n1, vl) := valnum_regs n args in
       let (addr', args') := reduce _ combine_addr n1 addr args vl in
       Istore chunk addr' args' src s
-  | Icond cond args s1 s2 =>
+  | Icond cond args s1 s2 i =>
       let (n1, vl) := valnum_regs n args in
       let (cond', args') := reduce _ combine_cond n1 cond args vl in
-      Icond cond' args' s1 s2
+      Icond cond' args' s1 s2 i
   | _ =>
       instr
   end.

@@ -190,10 +190,10 @@ let expand_builtin_memcpy_big sz al src dst =
         end);
     
       cpy tmpbuf2 16L (fun x y z -> Plq(x, y, z)) (fun x y z -> Psq(x, y, z));
-      cpy tmpbuf 8L (fun x y z -> Pld(x, y, z)) (fun x y z -> Psd(x, y, z));
-      cpy tmpbuf 4L (fun x y z -> Plw(x, y, z)) (fun x y z -> Psw(x, y, z));
-      cpy tmpbuf 2L (fun x y z -> Plh(x, y, z)) (fun x y z -> Psh(x, y, z));
-      cpy tmpbuf 1L (fun x y z -> Plb(x, y, z)) (fun x y z -> Psb(x, y, z));
+      cpy tmpbuf 8L (fun x y z -> Pld(TRAP, x, y, z)) (fun x y z -> Psd(x, y, z));
+      cpy tmpbuf 4L (fun x y z -> Plw(TRAP, x, y, z)) (fun x y z -> Psw(x, y, z));
+      cpy tmpbuf 2L (fun x y z -> Plh(TRAP, x, y, z)) (fun x y z -> Psh(x, y, z));
+      cpy tmpbuf 1L (fun x y z -> Plb(TRAP, x, y, z)) (fun x y z -> Psb(x, y, z));
       assert (!remaining = 0L)
     end
   else
@@ -203,7 +203,7 @@ let expand_builtin_memcpy_big sz al src dst =
       let lbl = new_label() in
       emit (Ploopdo (tmpbuf, lbl));
       emit Psemi;
-      emit (Plb (tmpbuf, srcptr, AOff Z.zero));
+      emit (Plb (TRAP, tmpbuf, srcptr, AOff Z.zero));
       emit (Paddil (srcptr, srcptr, Z.one));
       emit Psemi;
       emit (Psb (tmpbuf, dstptr, AOff Z.zero));
@@ -223,30 +223,30 @@ let expand_builtin_memcpy  sz al args =
 let expand_builtin_vload_common chunk base ofs res =
   match chunk, res with
   | Mint8unsigned, BR(Asmvliw.IR res) ->
-     emit (Plbu (res, base, AOff ofs))
+     emit (Plbu (TRAP, res, base, AOff ofs))
   | Mint8signed, BR(Asmvliw.IR res) ->
-     emit (Plb  (res, base, AOff ofs))
+     emit (Plb  (TRAP, res, base, AOff ofs))
   | Mint16unsigned, BR(Asmvliw.IR res) ->
-     emit (Plhu (res, base, AOff ofs))
+     emit (Plhu (TRAP, res, base, AOff ofs))
   | Mint16signed, BR(Asmvliw.IR res) ->
-     emit (Plh  (res, base, AOff ofs))
+     emit (Plh  (TRAP, res, base, AOff ofs))
   | Mint32, BR(Asmvliw.IR res) ->
-     emit (Plw  (res, base, AOff ofs))
+     emit (Plw  (TRAP, res, base, AOff ofs))
   | Mint64, BR(Asmvliw.IR res) ->
-     emit (Pld  (res, base, AOff ofs))
+     emit (Pld  (TRAP, res, base, AOff ofs))
   | Mint64, BR_splitlong(BR(Asmvliw.IR res1), BR(Asmvliw.IR res2)) ->
      let ofs' = Integers.Ptrofs.add ofs _4 in
      if base <> res2 then begin
-         emit (Plw (res2, base, AOff ofs));
-         emit (Plw (res1, base, AOff ofs'))
+         emit (Plw (TRAP, res2, base, AOff ofs));
+         emit (Plw (TRAP, res1, base, AOff ofs'))
        end else begin
-         emit (Plw (res1, base, AOff ofs'));
-         emit (Plw (res2, base, AOff ofs))
+         emit (Plw (TRAP, res1, base, AOff ofs'));
+         emit (Plw (TRAP, res2, base, AOff ofs))
        end
   | Mfloat32, BR(Asmvliw.IR res) ->
-     emit (Pfls (res, base, AOff ofs))
+     emit (Pfls (TRAP, res, base, AOff ofs))
   | Mfloat64, BR(Asmvliw.IR res) ->
-     emit (Pfld (res, base, AOff ofs))
+     emit (Pfld (TRAP, res, base, AOff ofs))
   | _ ->
      assert false
 
@@ -345,34 +345,32 @@ let expand_int64_arith conflict rl fn = assert false
 (* Byte swaps.  There are no specific instructions, so we use standard,
    not-very-efficient formulas. *)
 
-let expand_bswap16 d s = assert false
+let expand_bswap16 d s = let open Asmvliw in
   (* d = (s & 0xFF) << 8 | (s >> 8) & 0xFF *)
-(*emit (Pandiw(X31, X s, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _8));
-  emit (Psrliw(d, X s, _8));
-  emit (Pandiw(d, X d, coqint_of_camlint 0xFFl));
-  emit (Porw(d, X X31, X d))
-*)
+  emit (Pandiw(GPR32, s, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _8)); emit Psemi;
+  emit (Psrliw(d, s, _8)); emit Psemi;
+  emit (Pandiw(d, d, coqint_of_camlint 0xFFl));
+  emit (Porw(d, GPR32, d)); emit Psemi
 
-let expand_bswap32 d s = assert false
+let expand_bswap32 d s = let open Asmvliw in
   (* d = (s << 24)
        | (((s >> 8) & 0xFF) << 16)
        | (((s >> 16) & 0xFF) << 8)
        | (s >> 24)  *)
-(*emit (Pslliw(X1, X s, coqint_of_camlint 24l));
-  emit (Psrliw(X31, X s, _8));
-  emit (Pandiw(X31, X X31, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _16));
-  emit (Porw(X1, X X1, X X31));
-  emit (Psrliw(X31, X s, _16));
-  emit (Pandiw(X31, X X31, coqint_of_camlint 0xFFl));
-  emit (Pslliw(X31, X X31, _8));
-  emit (Porw(X1, X X1, X X31));
-  emit (Psrliw(X31, X s, coqint_of_camlint 24l));
-  emit (Porw(d, X X1, X X31))
-*)
+  emit (Pslliw(GPR16, s, coqint_of_camlint 24l)); emit Psemi;
+  emit (Psrliw(GPR32, s, _8)); emit Psemi;
+  emit (Pandiw(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _16)); emit Psemi;
+  emit (Porw(GPR16, GPR16, GPR31)); emit Psemi;
+  emit (Psrliw(GPR32, s, _16)); emit Psemi;
+  emit (Pandiw(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+  emit (Pslliw(GPR32, GPR32, _8)); emit Psemi;
+  emit (Porw(GPR16, GPR16, GPR32)); emit Psemi;
+  emit (Psrliw(GPR32, s, coqint_of_camlint 24l)); emit Psemi;
+  emit (Porw(d, GPR16, GPR32)); emit Psemi
 
-let expand_bswap64 d s = assert false
+let expand_bswap64 d s = let open Asmvliw in
   (* d = s << 56
          | (((s >> 8) & 0xFF) << 48)
          | (((s >> 16) & 0xFF) << 40)
@@ -381,17 +379,16 @@ let expand_bswap64 d s = assert false
          | (((s >> 40) & 0xFF) << 16)
          | (((s >> 48) & 0xFF) << 8)
          | s >> 56 *)
-(*emit (Psllil(X1, X s, coqint_of_camlint 56l));
+  emit (Psllil(GPR16, s, coqint_of_camlint 56l)); emit Psemi;
   List.iter
     (fun (n1, n2) ->
-      emit (Psrlil(X31, X s, coqint_of_camlint n1));
-      emit (Pandil(X31, X X31, coqint_of_camlint 0xFFl));
-      emit (Psllil(X31, X X31, coqint_of_camlint n2));
-      emit (Porl(X1, X X1, X X31)))
+      emit (Psrlil(GPR32, s, coqint_of_camlint n1)); emit Psemi;
+      emit (Pandil(GPR32, GPR32, coqint_of_camlint 0xFFl)); emit Psemi;
+      emit (Psllil(GPR32, GPR32, coqint_of_camlint n2)); emit Psemi;
+      emit (Porl(GPR16, GPR16, GPR32)); emit Psemi;)
     [(8l,48l); (16l,40l); (24l,32l); (32l,24l); (40l,16l); (48l,8l)];
-  emit (Psrlil(X31, X s, coqint_of_camlint 56l));
-  emit (Porl(d, X X1, X X31))
-*)
+  emit (Psrlil(GPR32, s, coqint_of_camlint 56l)); emit Psemi;
+  emit (Porl(d, GPR16, GPR32)); emit Psemi
 
 (* Handling of compiler-inlined builtins *)
 let last_system_register = 511l
@@ -465,18 +462,24 @@ let expand_builtin_inline name args res = let open Asmvliw in
      emit (Pitouchl addr)
   | "__builtin_k1_dzerol", [BA(IR addr)], _ ->
      emit (Pdzerol addr)
-  | "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
+(*| "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
-      then (emit (Pmv(res, incr_res)); emit Psemi));
+      then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddd(addr, res))
   | "__builtin_k1_afaddw", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
-      then (emit (Pmv(res, incr_res)); emit Psemi));
-     emit (Pafaddw(addr, res))
+      then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
+     emit (Pafaddw(addr, res)) *) (* see #157 *)
   | "__builtin_alclrd", [BA(IR addr)], BR(IR res) ->
      emit (Palclrd(res, addr))
   | "__builtin_alclrw", [BA(IR addr)], BR(IR res) ->
      emit (Palclrw(res, addr))
+  | "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
+     expand_bswap16 res a1
+  | ("__builtin_bswap"| "__builtin_bswap32"), [BA(IR a1)], BR(IR res) ->
+     expand_bswap32 res a1
+  | "__builtin_bswap64", [BA(IR src)], BR(IR res) ->
+     expand_bswap64 res src
 	  
   (* Byte swaps *)
 (*| "__builtin_bswap16", [BA(IR a1)], BR(IR res) ->
@@ -504,15 +507,15 @@ let expand_instruction instr =
         expand_storeind_ptr Asmvliw.GPR17 stack_pointer ofs;
         emit Psemi;
         let va_ofs =
-            sz in
-          (*Z.add full_sz (Z.of_sint ((n - _nbregargs_) * wordsize)) in *)
+          let extra_ofs = if n <= _nbregargs_ then 0 else ((n - _nbregargs_) * wordsize) in
+          Z.add sz (Z.of_sint extra_ofs) in
         vararg_start_ofs := Some va_ofs;
         save_arguments n va_ofs
       end else begin
         let below = Integers.Ptrofs.repr (Z.neg sz) in
         expand_addptrofs stack_pointer stack_pointer below;
+        emit Psemi; (* Psemi required to fit in resource constraints *)
         expand_storeind_ptr stack_pointer stack_pointer (Integers.Ptrofs.add ofs below);
-        (* DM we don't need it emit Psemi; *)
         vararg_start_ofs := None
       end
   | Pfreeframe (sz, ofs) ->

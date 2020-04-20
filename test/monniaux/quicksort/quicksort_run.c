@@ -13,7 +13,7 @@ int main (void) {
   quicksort(vec, len);
   quicksort_time = get_cycle() - quicksort_time;
   printf("sorted=%s\n"
-	 "quicksort_time:%" PRIu64 "\n",
+	 "time cycles:%" PRcycle "\n",
 	 data_vec_is_sorted(vec, len)?"true":"false",
 	 quicksort_time);
   free(vec);

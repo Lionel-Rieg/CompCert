@@ -24,13 +24,15 @@ endif
 BACKENDLIB?=Asmgenproof0.v Asmgenproof1.v
 
 DIRS=lib common $(ARCHDIRS) backend cfrontend driver \
-  flocq/Core flocq/Prop flocq/Calc flocq/Appli exportclight \
-  cparser cparser/MenhirLib
+  flocq/Core flocq/Prop flocq/Calc flocq/IEEE754 \
+  exportclight MenhirLib cparser
 
-RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight cparser
+RECDIRS=lib common $(ARCHDIRS) backend cfrontend driver flocq exportclight \
+  MenhirLib cparser
 
 COQINCLUDES=$(foreach d, $(RECDIRS), -R $(d) $(subst /,.,compcert.$(d)))
 
+COQCOPTS ?= -w -undeclared-scope
 COQC="$(COQBIN)coqc" -q $(COQINCLUDES) $(COQCOPTS)
 COQDEP="$(COQBIN)coqdep" $(COQINCLUDES)
 COQDOC="$(COQBIN)coqdoc"
@@ -45,20 +47,17 @@ GPATH=$(DIRS)
 # Flocq
 
 FLOCQ=\
-  Fcore_Raux.v Fcore_Zaux.v Fcore_defs.v Fcore_digits.v                     \
-  Fcore_float_prop.v Fcore_FIX.v Fcore_FLT.v Fcore_FLX.v                    \
-  Fcore_FTZ.v Fcore_generic_fmt.v Fcore_rnd.v Fcore_rnd_ne.v                \
-  Fcore_ulp.v Fcore.v                                                       \
-  Fcalc_bracket.v Fcalc_digits.v Fcalc_div.v Fcalc_ops.v                    \
-  Fcalc_round.v Fcalc_sqrt.v                                                \
-  Fprop_div_sqrt_error.v Fprop_mult_error.v Fprop_plus_error.v              \
-  Fprop_relative.v Fprop_Sterbenz.v                                         \
-  Fappli_rnd_odd.v Fappli_double_round.v Fappli_IEEE.v Fappli_IEEE_bits.v
+  Raux.v Zaux.v Defs.v Digits.v Float_prop.v FIX.v FLT.v FLX.v FTZ.v \
+  Generic_fmt.v Round_pred.v Round_NE.v Ulp.v Core.v \
+  Bracket.v Div.v Operations.v Round.v Sqrt.v \
+  Div_sqrt_error.v Mult_error.v Plus_error.v \
+  Relative.v Sterbenz.v Round_odd.v Double_rounding.v \
+  Binary.v Bits.v
 
 # General-purpose libraries (in lib/)
 
 VLIB=Axioms.v Coqlib.v Intv.v Maps.v Heaps.v Lattice.v Ordered.v \
-  Iteration.v Integers.v Archi.v Fappli_IEEE_extra.v Floats.v \
+  Iteration.v Zbits.v Integers.v Archi.v IEEE754_extra.v Floats.v \
   Parmov.v UnionFind.v Wfsimpl.v \
   Postorder.v FSetAVLplus.v IntvSets.v Decidableplus.v BoolEqual.v
 
@@ -67,12 +66,12 @@ VLIB=Axioms.v Coqlib.v Intv.v Maps.v Heaps.v Lattice.v Ordered.v \
 COMMON=Errors.v AST.v Linking.v \
   Events.v Globalenvs.v Memdata.v Memtype.v Memory.v \
   Values.v Smallstep.v Behaviors.v Switch.v Determinism.v Unityping.v \
-  Separation.v
+  Separation.v Builtins0.v Builtins1.v Builtins.v
 
 # Back-end modules (in backend/, $(ARCH)/)
 
 BACKEND=\
-  Cminor.v Op.v CminorSel.v OpHelpers.v OpHelpersproof.v \
+  Cminor.v Cminortyping.v  Op.v CminorSel.v OpHelpers.v OpHelpersproof.v \
   SelectOp.v SelectDiv.v SplitLong.v SelectLong.v Selection.v \
   SelectOpproof.v SelectDivproof.v SplitLongproof.v \
   SelectLongproof.v Selectionproof.v \
@@ -81,14 +80,19 @@ BACKEND=\
   Tailcall.v Tailcallproof.v \
   Inlining.v Inliningspec.v Inliningproof.v \
   Renumber.v Renumberproof.v \
+  Duplicate.v Duplicateproof.v \
   RTLtyping.v \
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
   ConstpropOp.v Constprop.v ConstpropOpproof.v Constpropproof.v \
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
+  CSE2deps.v CSE2depsproof.v \
+  CSE2.v CSE2proof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
+  ForwardMoves.v ForwardMovesproof.v \
+  Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \
   Linear.v Lineartyping.v \
@@ -109,15 +113,15 @@ CFRONTEND=Ctypes.v Cop.v Csyntax.v Csem.v Ctyping.v Cstrategy.v Cexec.v \
   Cshmgen.v Cshmgenproof.v \
   Csharpminor.v Cminorgen.v Cminorgenproof.v
 
-# LR(1) parser validator
-
-PARSERVALIDATOR=Alphabet.v Interpreter_complete.v Interpreter.v \
-  Validator_complete.v Automaton.v Interpreter_correct.v Main.v \
-  Validator_safe.v Grammar.v Interpreter_safe.v Tuples.v
-
 # Parser
 
 PARSER=Cabs.v Parser.v
+
+# MenhirLib
+
+MENHIRLIB=Alphabet.v Automaton.v Grammar.v Interpreter_complete.v \
+  Interpreter_correct.v Interpreter.v Main.v Validator_complete.v \
+  Validator_safe.v Validator_classes.v
 
 # Putting everything together (in driver/)
 
@@ -126,7 +130,7 @@ DRIVER=Compopts.v Compiler.v Complements.v
 # All source files
 
 FILES=$(VLIB) $(COMMON) $(BACKEND) $(CFRONTEND) $(DRIVER) $(FLOCQ) \
-  $(PARSERVALIDATOR) $(PARSER)
+  $(MENHIRLIB) $(PARSER)
 
 # Generated source files
 
@@ -147,7 +151,6 @@ endif
 ifeq ($(CLIGHTGEN),true)
 	$(MAKE) clightgen
 endif
-
 
 proof: $(FILES:.v=.vo)
 
@@ -232,7 +235,7 @@ driver/Version.ml: VERSION
 
 cparser/Parser.v: cparser/Parser.vy
 	@rm -f $@
-	$(MENHIR) $(MENHIR_FLAGS) --coq cparser/Parser.vy
+	$(MENHIR) --coq --coq-lib-path compcert.MenhirLib --coq-no-version-check cparser/Parser.vy
 	@chmod a-w $@
 
 depend: $(GENERATED) depend1
@@ -242,29 +245,29 @@ depend1: $(FILES) exportclight/Clightdefs.v
 	@$(COQDEP) $^ > .depend
 
 install:
-	install -d $(BINDIR)
-	install -m 0755 ./ccomp $(BINDIR)
-	install -d $(SHAREDIR)
-	install -m 0644 ./compcert.ini $(SHAREDIR)
-	install -d $(MANDIR)/man1
-	install -m 0644 ./doc/ccomp.1 $(MANDIR)/man1
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 0755 ./ccomp $(DESTDIR)$(BINDIR)
+	install -d $(DESTDIR)$(SHAREDIR)
+	install -m 0644 ./compcert.ini $(DESTDIR)$(SHAREDIR)
+	install -d $(DESTDIR)$(MANDIR)/man1
+	install -m 0644 ./doc/ccomp.1 $(DESTDIR)$(MANDIR)/man1
 	$(MAKE) -C runtime install
 ifeq ($(CLIGHTGEN),true)
-	install -m 0755 ./clightgen $(BINDIR)
+	install -m 0755 ./clightgen $(DESTDIR)$(BINDIR)
 endif
 ifeq ($(INSTALL_COQDEV),true)
-	install -d $(COQDEVDIR)
+	install -d $(DESTDIR)$(COQDEVDIR)
 	for d in $(DIRS); do \
-          install -d $(COQDEVDIR)/$$d && \
-          install -m 0644 $$d/*.vo $(COQDEVDIR)/$$d/; \
+          install -d $(DESTDIR)$(COQDEVDIR)/$$d && \
+          install -m 0644 $$d/*.vo $(DESTDIR)$(COQDEVDIR)/$$d/; \
 	done
-	install -m 0644 ./VERSION $(COQDEVDIR)
-	@(echo "To use, pass the following to coq_makefile or add the following to _CoqProject:"; echo "-R $(COQDEVDIR) compcert") > $(COQDEVDIR)/README
+	install -m 0644 ./VERSION $(DESTDIR)$(COQDEVDIR)
+	@(echo "To use, pass the following to coq_makefile or add the following to _CoqProject:"; echo "-R $(COQDEVDIR) compcert") > $(DESTDIR)$(COQDEVDIR)/README
 endif
 
 
 clean:
-	rm -f $(patsubst %, %/*.vo, $(DIRS))
+	rm -f $(patsubst %, %/*.vo*, $(DIRS))
 	rm -f $(patsubst %, %/.*.aux, $(DIRS))
 	rm -rf doc/html doc/*.glob
 	rm -f driver/Version.ml

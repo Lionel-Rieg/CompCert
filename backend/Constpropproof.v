@@ -14,7 +14,7 @@
 
 Require Import Coqlib Maps Integers Floats Lattice Kildall.
 Require Import AST Linking.
-Require Import Values Events Memory Globalenvs Smallstep.
+Require Import Values Builtins Events Memory Globalenvs Smallstep.
 Require Compopts Machregs.
 Require Import Op Registers RTL.
 Require Import Liveness ValueDomain ValueAOp ValueAnalysis.
@@ -142,8 +142,8 @@ Inductive match_pc (f: function) (rs: regset) (m: mem): nat -> node -> node -> P
       f.(fn_code)!pc = Some (Inop s) ->
       match_pc f rs m n s pcx ->
       match_pc f rs m (S n) pc pcx
-  | match_pc_cond: forall n pc cond args s1 s2 pcx,
-      f.(fn_code)!pc = Some (Icond cond args s1 s2) ->
+  | match_pc_cond: forall n pc cond args s1 s2 pcx i,
+      f.(fn_code)!pc = Some (Icond cond args s1 s2 i) ->
       (forall b,
         eval_condition cond rs##args m = Some b ->
         match_pc f rs m n (if b then s1 else s2) pcx) ->
@@ -406,6 +406,8 @@ Proof.
   assert (VM1: vmatch bc a aa) by (eapply eval_static_addressing_sound; eauto with va).
   set (av := loadv chunk (romem_for cu) am aa).
   assert (VM2: vmatch bc v av) by (eapply loadv_sound; eauto).
+  destruct trap.
+  {
   destruct (const_for_result av) as [cop|] eqn:?; intros.
 + (* constant-propagated *)
   exploit const_for_result_correct; eauto. intros (v' & A & B).
@@ -431,6 +433,59 @@ Proof.
   left; econstructor; econstructor; split.
   eapply exec_Iload; eauto.
   eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+  }
+  {
+    assert (exists v2 : val,
+         eval_addressing ge (Vptr sp0 Ptrofs.zero) addr (rs' ## args) = Some v2 /\ Val.lessdef a v2) as Hexist2.
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Hexist2 as [v2 [Heval2 Hlessdef2]].
+    destruct (Mem.loadv_extends chunk m m' a v2 v MEM H1 Hlessdef2) as [vX [Hvx1 Hvx2]].
+    left; econstructor; econstructor; split.
+    eapply exec_Iload with (a := v2); eauto.
+    try (erewrite eval_addressing_preserved with (ge1:=ge); auto;
+    exact symbols_preserved).
+  eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    
+  }
+
+- (* Iload notrap1 *)
+  rename pc'0 into pc. TransfInstr.
+  assert (eval_addressing tge (Vptr sp0 Ptrofs.zero) addr (rs' ## args) =  None).
+  rewrite eval_addressing_preserved with (ge1 := ge); eauto.
+  apply eval_addressing_lessdef_none with (vl1 := rs ## args).
+  apply regs_lessdef_regs; assumption.
+  assumption.
+  exact symbols_preserved.
+  
+  left; econstructor; econstructor; split.
+  eapply exec_Iload_notrap1; eauto.
+  eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+
+- (* Iload notrap2 *)
+  rename pc'0 into pc. TransfInstr.
+    assert (exists v2 : val,
+         eval_addressing ge (Vptr sp0 Ptrofs.zero) addr (rs' ## args) = Some v2 /\ Val.lessdef a v2) as Hexist2.
+    apply eval_addressing_lessdef with (vl1 := rs ## args).
+    apply regs_lessdef_regs; assumption.
+    assumption.
+    destruct Hexist2 as [a' [Heval' Hlessdef']].
+    destruct (Mem.loadv chunk m' a') eqn:Hload'.
+    {
+    left; econstructor; econstructor; split.
+    eapply exec_Iload; eauto.
+   
+    try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
+    eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    }
+    {
+      left; econstructor; econstructor; split.
+      eapply exec_Iload_notrap2; eauto.
+   
+    try (rewrite eval_addressing_preserved with (ge1 := ge); auto; exact symbols_preserved).
+    eapply match_states_succ; eauto. apply set_reg_lessdef; auto.
+    }
 
 - (* Istore *)
   rename pc'0 into pc. TransfInstr.
@@ -474,19 +529,41 @@ Proof.
 - (* Ibuiltin *)
   rename pc'0 into pc. TransfInstr; intros.
 Opaque builtin_strength_reduction.
-  exploit builtin_strength_reduction_correct; eauto. intros (vargs' & P & Q).
-  exploit (@eval_builtin_args_lessdef _ ge (fun r => rs#r) (fun r => rs'#r)).
+  set (dfl := Ibuiltin ef (builtin_strength_reduction ae ef args) res pc') in *.
+  set (rm := romem_for cu) in *.
+  assert (DFL: (fn_code (transf_function rm f))!pc = Some dfl ->
+          exists (n2 : nat) (s2' : state),
+            step tge
+             (State s' (transf_function rm f) (Vptr sp0 Ptrofs.zero) pc rs' m'0) t s2' /\
+            match_states n2
+             (State s f (Vptr sp0 Ptrofs.zero) pc' (regmap_setres res vres rs) m') s2').
+  {
+    exploit builtin_strength_reduction_correct; eauto. intros (vargs' & P & Q).
+    exploit (@eval_builtin_args_lessdef _ ge (fun r => rs#r) (fun r => rs'#r)).
     apply REGS. eauto. eexact P.
-  intros (vargs'' & U & V).
-  exploit external_call_mem_extends; eauto.
-  intros [v' [m2' [A [B [C D]]]]].
+    intros (vargs'' & U & V).
+    exploit external_call_mem_extends; eauto.
+    intros (v' & m2' & A & B & C & D).
+    econstructor; econstructor; split.
+    eapply exec_Ibuiltin; eauto.
+    eapply eval_builtin_args_preserved. eexact symbols_preserved. eauto.
+    eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+    eapply match_states_succ; eauto.
+    apply set_res_lessdef; auto.
+  }
+  destruct ef; auto.
+  destruct res; auto.
+  destruct (lookup_builtin_function name sg) as [bf|] eqn:LK; auto.
+  destruct (eval_static_builtin_function ae am rm bf args) as [a|] eqn:ES; auto.
+  destruct (const_for_result a) as [cop|] eqn:CR; auto.
+  clear DFL. simpl in H1; red in H1; rewrite LK in H1; inv H1.
+  exploit const_for_result_correct; eauto. 
+  eapply eval_static_builtin_function_sound; eauto.
+  intros (v' & A & B).
   left; econstructor; econstructor; split.
-  eapply exec_Ibuiltin; eauto.
-  eapply eval_builtin_args_preserved. eexact symbols_preserved. eauto.
-  eapply external_call_symbols_preserved; eauto. apply senv_preserved.
+  eapply exec_Iop; eauto.
   eapply match_states_succ; eauto.
-  apply set_res_lessdef; auto.
-
+  apply set_reg_lessdef; auto.
 - (* Icond, preserved *)
   rename pc'0 into pc. TransfInstr.
   set (ac := eval_static_condition cond (aregs ae args)).

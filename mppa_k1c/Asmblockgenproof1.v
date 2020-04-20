@@ -15,11 +15,15 @@
 (*                                                                     *)
 (* *********************************************************************)
 
+(** * Proof of correctness for individual instructions *)
+
 Require Import Coqlib Errors Maps.
 Require Import AST Integers Floats Values Memory Globalenvs.
 Require Import Op Locations Machblock Conventions.
-Require Import Asmblock Asmblockgen Asmblockgenproof0.
+Require Import Asmblock Asmblockgen Asmblockgenproof0 Asmblockprops.
 Require Import Chunks.
+
+Import PArithCoercions.
 
 (** Decomposition of integer constants. *)
 
@@ -86,31 +90,6 @@ Section CONSTRUCTORS.
 Variable ge: genv.
 Variable fn: function.
 
-(*
-(** 32-bit integer constants and arithmetic *)
-(*
-Lemma load_hilo32_correct:
-  forall rd hi lo k rs m,
-  exists rs',
-     exec_straight ge fn (load_hilo32 rd hi lo k) rs m k rs' m
-  /\ rs'#rd = Vint (Int.add (Int.shl hi (Int.repr 12)) lo)
-  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r.
-Proof.
-  unfold load_hilo32; intros. 
-  predSpec Int.eq Int.eq_spec lo Int.zero.
-- subst lo. econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split. rewrite Int.add_zero. Simpl.
-  intros; Simpl.
-- econstructor; split.
-  eapply exec_straight_two. simpl; eauto. simpl; eauto. auto. auto. 
-  split. Simpl. 
-  intros; Simpl.
-Qed.
-*)
-
-*)
-
 Lemma loadimm32_correct:
   forall rd n k rs m,
   exists rs',
@@ -141,60 +120,6 @@ Proof.
   intros; Simpl.
 Qed.
 
-(*
-(*
-Lemma opimm32_correct:
-  forall (op: ireg -> ireg0 -> ireg0 -> instruction)
-         (opi: ireg -> ireg0 -> int -> instruction)
-         (sem: val -> val -> val) m,
-  (forall d s1 s2 rs,
-   exec_instr ge fn (op d s1 s2) rs m = Next (nextinstr (rs#d <- (sem rs##s1 rs##s2))) m) ->
-  (forall d s n rs,
-   exec_instr ge fn (opi d s n) rs m = Next (nextinstr (rs#d <- (sem rs##s (Vint n)))) m) ->
-  forall rd r1 n k rs,
-  r1 <> RTMP ->
-  exists rs',
-     exec_straight ge fn (opimm32 op opi rd r1 n k) rs m k rs' m
-  /\ rs'#rd = sem rs##r1 (Vint n)
-  /\ forall r, r <> PC -> r <> rd -> r <> RTMP -> rs'#r = rs#r.
-Proof.
-  intros. unfold opimm32. generalize (make_immed32_sound n); intros E.
-  destruct (make_immed32 n). 
-- subst imm. econstructor; split. 
-  apply exec_straight_one. rewrite H0. simpl; eauto. auto.
-  split. Simpl. intros; Simpl.
-- destruct (load_hilo32_correct RTMP hi lo (op rd r1 RTMP :: k) rs m)
-  as (rs' & A & B & C).
-  econstructor; split.
-  eapply exec_straight_trans. eexact A. apply exec_straight_one. 
-  rewrite H; eauto. auto.
-  split. Simpl. simpl. rewrite B, C, E. auto. congruence. congruence.
-  intros; Simpl. 
-Qed.
-
-(** 64-bit integer constants and arithmetic *)
-
-Lemma load_hilo64_correct:
-  forall rd hi lo k rs m,
-  exists rs',
-     exec_straight ge fn (load_hilo64 rd hi lo k) rs m k rs' m
-  /\ rs'#rd = Vlong (Int64.add (Int64.sign_ext 32 (Int64.shl hi (Int64.repr 12))) lo)
-  /\ forall r, r <> PC -> r <> rd -> rs'#r = rs#r.
-Proof.
-  unfold load_hilo64; intros. 
-  predSpec Int64.eq Int64.eq_spec lo Int64.zero.
-- subst lo. econstructor; split. 
-  apply exec_straight_one. simpl; eauto. auto.
-  split. rewrite Int64.add_zero. Simpl.
-  intros; Simpl.
-- econstructor; split.
-  eapply exec_straight_two. simpl; eauto. simpl; eauto. auto. auto. 
-  split. Simpl. 
-  intros; Simpl.
-Qed.
-*)
-*)
-
 Lemma opimm64_correct:
   forall (op: arith_name_rrr)
          (opi: arith_name_rri64)
@@ -215,18 +140,6 @@ Proof.
 - subst imm. econstructor; split. 
   apply exec_straight_one. rewrite H0. simpl; eauto. auto.
   split. Simpl. intros; Simpl.
-(*
-- destruct (load_hilo64_correct RTMP hi lo (op rd r1 RTMP :: k) rs m)
-  as (rs' & A & B & C).
-  econstructor; split.
-  eapply exec_straight_trans. eexact A. apply exec_straight_one. 
-  rewrite H; eauto. auto.
-  split. Simpl. simpl. rewrite B, C, E. auto. congruence. congruence.
-  intros; Simpl. 
-- subst imm. econstructor; split. 
-  eapply exec_straight_two. simpl; eauto. rewrite H. simpl; eauto. auto. auto.
-  split. Simpl. intros; Simpl.
-*)
 Qed.
 
 (** Add offset to pointer *)
@@ -251,35 +164,6 @@ Proof.
   rewrite B. destruct (rs r1); simpl; auto.
   rewrite Ptrofs.of_int64_to_int64 by auto. auto.
 Qed.
-
-(*
-(*
-Lemma addptrofs_correct_2:
-  forall rd r1 n k (rs: regset) m b ofs,
-  r1 <> RTMP -> rs#r1 = Vptr b of
-s ->
-  exists rs',
-     exec_straight ge fn (addptrofs rd r1 n k) rs m k rs' m
-  /\ rs'#rd = Vptr b (Ptrofs.add ofs n)
-  /\ forall r, r <> PC -> r <> rd -> r <> RTMP -> rs'#r = rs#r.
-Proof.
-  intros. exploit (addptrofs_correct rd r1 n); eauto. intros (rs' & A & B & C).
-  exists rs'; intuition eauto. 
-  rewrite H0 in B. inv B. auto.
-Qed.
-
-(** Translation of conditional branches *)
-
-Remark branch_on_RTMP:
-  forall normal lbl (rs: regset) m b,
-  rs#RTMP = Val.of_bool (eqb normal b) ->
-  exec_instr ge fn (if normal then Pbnew RTMP X0 lbl else Pbeqw RTMP X0 lbl) rs m =
-  eval_branch fn lbl rs m (Some b).
-Proof.
-  intros. destruct normal; simpl; rewrite H; simpl; destruct b; reflexivity. 
-Qed.
-*)
-*)
 
 Ltac ArgsInv :=
   repeat (match goal with
@@ -977,7 +861,7 @@ Proof.
     destruct cmp; discriminate.
 Qed.
 
-Local Hint Resolve Val_cmpu_bool_correct Val_cmplu_bool_correct.
+Local Hint Resolve Val_cmpu_bool_correct Val_cmplu_bool_correct: core.
 
 Lemma transl_cbranch_correct_1:
   forall cond args lbl k c m ms b sp rs m' tbb,
@@ -1281,7 +1165,7 @@ Proof.
   split; intros; Simpl.
 Qed.
 
-Local Hint Resolve Val_cmpu_correct Val_cmplu_correct.
+Local Hint Resolve Val_cmpu_correct Val_cmplu_correct: core.
 
 Lemma transl_condimm_int32u_correct:
   forall cmp rd r1 n k rs m,
@@ -1522,99 +1406,6 @@ Proof.
   exploit transl_cond_nofloat32_correct; eauto. intros (rs' & A & B & C). exists rs'; eauto.
 Qed.
 
-(*
-(*
-+ (* cmpf *)
-  destruct (transl_cond_float c0 rd x x0) as [insn normal] eqn:TR.
-  fold (Val.cmpf c0 (rs x) (rs x0)).
-  set (v := Val.cmpf c0 (rs x) (rs x0)).
-  destruct normal; inv EQ2.
-* econstructor; split.
-  apply exec_straight_one. eapply transl_cond_float_correct with (v := v); eauto. auto.
-  split; intros; Simpl.
-* econstructor; split.
-  eapply exec_straight_two.
-  eapply transl_cond_float_correct with (v := Val.notbool v); eauto.
-  simpl; reflexivity.
-  auto. auto.
-  split; intros; Simpl. unfold v, Val.cmpf. destruct (Val.cmpf_bool c0 (rs x) (rs x0)) as [[]|]; auto.
-+ (* notcmpf *)
-  destruct (transl_cond_float c0 rd x x0) as [insn normal] eqn:TR.
-  rewrite Val.notbool_negb_3. fold (Val.cmpf c0 (rs x) (rs x0)).
-  set (v := Val.cmpf c0 (rs x) (rs x0)).
-  destruct normal; inv EQ2.
-* econstructor; split.
-  eapply exec_straight_two.
-  eapply transl_cond_float_correct with (v := v); eauto.
-  simpl; reflexivity.
-  auto. auto.
-  split; intros; Simpl. unfold v, Val.cmpf. destruct (Val.cmpf_bool c0 (rs x) (rs x0)) as [[]|]; auto.
-* econstructor; split.
-  apply exec_straight_one. eapply transl_cond_float_correct with (v := Val.notbool v); eauto. auto.
-  split; intros; Simpl.
-+ (* cmpfs *)
-  destruct (transl_cond_single c0 rd x x0) as [insn normal] eqn:TR.
-  fold (Val.cmpfs c0 (rs x) (rs x0)).
-  set (v := Val.cmpfs c0 (rs x) (rs x0)).
-  destruct normal; inv EQ2.
-* econstructor; split.
-  apply exec_straight_one. eapply transl_cond_single_correct with (v := v); eauto. auto.
-  split; intros; Simpl.
-* econstructor; split.
-  eapply exec_straight_two.
-  eapply transl_cond_single_correct with (v := Val.notbool v); eauto.
-  simpl; reflexivity.
-  auto. auto.
-  split; intros; Simpl. unfold v, Val.cmpfs. destruct (Val.cmpfs_bool c0 (rs x) (rs x0)) as [[]|]; auto.
-+ (* notcmpfs *)
-  destruct (transl_cond_single c0 rd x x0) as [insn normal] eqn:TR.
-  rewrite Val.notbool_negb_3. fold (Val.cmpfs c0 (rs x) (rs x0)).
-  set (v := Val.cmpfs c0 (rs x) (rs x0)).
-  destruct normal; inv EQ2.
-* econstructor; split.
-  eapply exec_straight_two.
-  eapply transl_cond_single_correct with (v := v); eauto.
-  simpl; reflexivity.
-  auto. auto.
-  split; intros; Simpl. unfold v, Val.cmpfs. destruct (Val.cmpfs_bool c0 (rs x) (rs x0)) as [[]|]; auto.
-* econstructor; split.
-  apply exec_straight_one. eapply transl_cond_single_correct with (v := Val.notbool v); eauto. auto.
-  split; intros; Simpl.
-*)
-*)
-
-(** Some arithmetic properties. *)
-
-(* Remark cast32unsigned_from_cast32signed:
-  forall i, Int64.repr (Int.unsigned i) = Int64.zero_ext 32 (Int64.repr (Int.signed i)).
-Proof.
-  intros. apply Int64.same_bits_eq; intros. 
-  rewrite Int64.bits_zero_ext, !Int64.testbit_repr by tauto.
-  rewrite Int.bits_signed by tauto. fold (Int.testbit i i0).
-  change Int.zwordsize with 32.
-  destruct (zlt i0 32). auto. apply Int.bits_above. auto.
-Qed.
-
-Lemma cast32signed_correct:
-  forall (d s: ireg) (k: code) (rs: regset) (m: mem),
-  exists rs': regset,
-    exec_straight ge (cast32signed d s ::g k) rs m k rs' m
- /\ Val.lessdef (Val.longofint (rs s)) (rs' d)
- /\ (forall r: preg, r <> PC -> r <> d -> rs' r = rs r).
-Proof.
-  intros. unfold cast32signed. destruct (ireg_eq d s).
-- econstructor; split.
-  + apply exec_straight_one. simpl. eauto with asmgen.
-  + split.
-    * rewrite e. Simpl.
-    * intros. destruct r; Simpl.
-- econstructor; split.
-  + apply exec_straight_one. simpl. eauto with asmgen.
-  + split.
-    * Simpl.
-    * intros. destruct r; Simpl.
-Qed. *)
-
 (* Translation of arithmetic operations *)
 
 Ltac SimplEval H :=
@@ -1648,6 +1439,51 @@ Proof.
   unfold zeq.
   destruct (Z.eq_dec _ _); destruct (Z.eq_dec _ _); congruence.
 Qed.
+
+Lemma select_same_lessdef:
+  forall ty c v,
+    Val.lessdef (Val.select c v v ty) v.
+Proof.
+  intros.
+  unfold Val.select.
+  destruct c; try econstructor.
+  replace (if b then v else v) with v by (destruct b ; trivial).
+  destruct v; destruct ty; simpl; econstructor.
+Qed.
+
+Lemma if_neg : forall X,
+    forall a,
+    forall b c : X,
+    (if (negb a) then b else c) = (if a then c else b).
+Proof.
+  destruct a; reflexivity.
+Qed.
+
+Lemma int_ltu_to_neq:
+  forall x,
+    Int.ltu Int.zero x = negb (Int.eq x Int.zero).
+Proof.
+  intros.
+  unfold Int.ltu, Int.eq.
+  change (Int.unsigned Int.zero) with 0.
+  pose proof (Int.unsigned_range x) as RANGE.
+  unfold zlt, zeq.
+  destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
+Qed.
+
+Lemma int64_ltu_to_neq:
+  forall x,
+    Int64.ltu Int64.zero x = negb (Int64.eq x Int64.zero).
+Proof.
+  intros.
+  unfold Int64.ltu, Int64.eq.
+  change (Int64.unsigned Int64.zero) with 0.
+  pose proof (Int64.unsigned_range x) as RANGE.
+  unfold zlt, zeq.
+  destruct (Z_lt_dec _ _); destruct (Z.eq_dec _ _); trivial; omega.
+Qed.
+
+Ltac splitall := repeat match goal with |- _ /\ _ => split end.
 
 Lemma transl_op_correct:
   forall op args res k (rs: regset) m v c,
@@ -1683,21 +1519,21 @@ Opaque Int.eq.
 - (* Ocast8signed *)
   econstructor; split.
   eapply exec_straight_two. simpl;eauto. simpl;eauto.
-  split; intros; simpl; Simpl.
+  repeat split; intros; simpl; Simpl.
   assert (A: Int.ltu (Int.repr 24) Int.iwordsize = true) by auto.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A.
   apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Ocast16signed *)
   econstructor; split.
   eapply exec_straight_two. simpl;eauto. simpl;eauto.
-  split; intros; Simpl.
+  repeat split; intros; Simpl.
   assert (A: Int.ltu (Int.repr 16) Int.iwordsize = true) by auto.
   destruct (rs x0); auto; simpl. rewrite A; simpl. Simpl. unfold Val.shr. rewrite A. 
   apply Val.lessdef_same. f_equal. apply Int.sign_ext_shr_shl. split; reflexivity.
 - (* Oshrximm *)
   econstructor; split.
   + apply exec_straight_one. simpl. eauto.
-  + split.
+  + repeat split.
     * rewrite Pregmap.gss.
       subst v.
       destruct (rs x0); simpl; trivial.
@@ -1708,7 +1544,7 @@ Opaque Int.eq.
 - (* Oshrxlimm *)
   econstructor; split.
   + apply exec_straight_one. simpl. eauto.
-  + split.
+  + repeat split.
     * rewrite Pregmap.gss.
       subst v.
       destruct (rs x0); simpl; trivial.
@@ -1716,253 +1552,95 @@ Opaque Int.eq.
       destruct (Int.ltu _ _); simpl; trivial.
     * intros.
       rewrite Pregmap.gso; trivial.
+      
 - (* Ocmp *)
   exploit transl_cond_op_correct; eauto. intros (rs' & A & B & C).
-  exists rs'; split. eexact A. eauto with asmgen.
-- (* Oselect *)
-  destruct cond in *; simpl in *; try congruence;
-    try monadInv EQ3;
-    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
-  econstructor; split;
-  try ( eapply exec_straight_one; simpl; reflexivity ).
-  (* Cmp *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmp_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-  (* Cmpu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+  exists rs'; repeat split; eauto with asmgen.
+  
+- (* Osel *)
+  unfold conditional_move in *.
+  destruct (ireg_eq _ _).
+  {
+    subst x. inv EQ2.
+    econstructor; split.
+    {
+      apply exec_straight_one.
+      simpl. reflexivity.
+    }
+    split.
+    { apply select_same_lessdef. } 
+    intros; trivial.
+  }
 
-  (* Cmpl *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmpl_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-      
-  (* Cmplu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+  destruct c0; simpl in *.
 
-- (* Oselectl *)
-  destruct cond in *; simpl in *; try congruence;
-    try monadInv EQ3;
-    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
-  econstructor; split;
-  try ( eapply exec_straight_one; simpl; reflexivity ).
-  (* Cmp *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmp_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-  (* Cmpu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ2.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x1); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 
-  (* Cmpl *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmpl_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-      
-  (* Cmplu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+- (* Oselimm *)
+  unfold conditional_move_imm32 in *.
+  destruct c0; simpl in *.
 
-- (* Oselectf *)
-  destruct cond in *; simpl in *; try congruence;
-    try monadInv EQ3;
-    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
-  econstructor; split;
-  try ( eapply exec_straight_one; simpl; reflexivity ).
-  (* Cmp *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmp_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-  (* Cmpu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ0.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x0); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 
-  (* Cmpl *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmpl_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-      
-  (* Cmplu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+- (* Osellimm *)
+  unfold conditional_move_imm64 in *.
+  destruct c0; simpl in *.
 
-
-- (* Oselectfs *)
-  destruct cond in *; simpl in *; try congruence;
-    try monadInv EQ3;
-    try (injection EQ3; clear EQ3; intro Hrew; rewrite <- Hrew in * ; clear Hrew);
-  econstructor; split;
-  try ( eapply exec_straight_one; simpl; reflexivity ).
-  (* Cmp *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmp_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-  (* Cmpu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Ceq (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpuabs := (Val_cmpu_bool_correct m Cne (rs x1) (Vint Int.zero))).
-         destruct (Val.cmpu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpuabs true) | rewrite (Hcmpuabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-
-  (* Cmpl *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl;
-      destruct (Val.cmpl_bool _ _); simpl; try constructor;
-        destruct b; simpl; rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
-      
-  (* Cmplu *)
-  + split.
-    * unfold eval_select.
-      destruct (rs x) eqn:eqX; try constructor.
-      destruct (rs x0) eqn:eqX0; try constructor.
-      destruct c0 in *; simpl in *; inv EQ2; simpl.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Ceq (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-      ** assert (Hcmpluabs := (Val_cmplu_bool_correct m Cne (rs x1) (Vlong Int64.zero))).
-         destruct (Val.cmplu_bool _ _); simpl; try constructor.
-         destruct b in *; simpl in *; [ rewrite (Hcmpluabs true) | rewrite (Hcmpluabs false)]; trivial;
-         rewrite Pregmap.gss; constructor.
-    * intros.
-      rewrite Pregmap.gso; congruence.
+    all: destruct c.
+    all: simpl in *.
+    all: inv EQ0.
+    all: econstructor; splitall.
+    all: try apply exec_straight_one.
+    all: intros; simpl; trivial.
+    all: unfold Val.select, cmove, cmoveu; simpl.
+    all: destruct (rs x0); simpl; trivial.
+    all: try rewrite int_ltu_to_neq.
+    all: try rewrite int64_ltu_to_neq.
+    all: try change (Int64.eq Int64.zero Int64.zero) with true.
+    all: try destruct Archi.ptr64.
+    all: try rewrite Pregmap.gss.
+    all: repeat rewrite if_neg.
+    all: simpl.
+    all: try destruct (_ || _).
+    all: try apply Val.lessdef_normalize.
+    all: trivial. (* no more lessdef *)
+    all: apply Pregmap.gso; congruence.
 Qed.
 
 (** Memory accesses *)
@@ -1984,40 +1662,13 @@ Proof.
 + econstructor; econstructor; econstructor; econstructor; split.
   apply exec_straight_opt_refl. 
   split; auto. simpl. subst imm. rewrite Ptrofs.of_int64_to_int64 by auto. auto.
-(*
-+ econstructor; econstructor; econstructor; split. 
-  constructor. eapply exec_straight_two. 
-  simpl; eauto. simpl; eauto. auto. auto. 
-  split; intros; Simpl. destruct (rs base); auto; simpl. rewrite SF. simpl.
-  rewrite Ptrofs.add_assoc. f_equal. f_equal. 
-  rewrite <- (Ptrofs.of_int64_to_int64 SF ofs). rewrite EQ. 
-  symmetry; auto with ptrofs.
-+ econstructor; econstructor; econstructor; split. 
-  constructor. eapply exec_straight_two. 
-  simpl; eauto. simpl; eauto. auto. auto. 
-  split; intros; Simpl. unfold eval_offset. destruct (rs base); auto; simpl. rewrite SF. simpl.
-  rewrite Ptrofs.add_zero. subst imm. rewrite Ptrofs.of_int64_to_int64 by auto. auto.
-(* 32 bits part, irrelevant for us
-- generalize (make_immed32_sound (Ptrofs.to_int ofs)); intros EQ.
-  destruct (make_immed32 (Ptrofs.to_int ofs)).
-+ econstructor; econstructor; econstructor; split.
-  apply exec_straight_opt_refl. 
-  split; auto. simpl. subst imm. rewrite Ptrofs.of_int_to_int by auto. auto.
-+ econstructor; econstructor; econstructor; split. 
-  constructor. eapply exec_straight_two. 
-  simpl; eauto. simpl; eauto. auto. auto. 
-  split; intros; Simpl. destruct (rs base); auto; simpl. rewrite SF. simpl.
-  rewrite Ptrofs.add_assoc. f_equal. f_equal. 
-  rewrite <- (Ptrofs.of_int_to_int SF ofs). rewrite EQ. 
-  symmetry; auto with ptrofs.
-*)*)
 Qed.
 
 
 Lemma indexed_load_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> basic) rd m,
+  forall trap chunk (mk_instr: ireg -> offset -> basic) rd m,
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs) ->
   forall (base: ireg) ofs k (rs: regset) v,
   Mem.loadv chunk m (Val.offset_ptr rs#base ofs) = Some v ->
   exists rs',
@@ -2070,7 +1721,7 @@ Proof.
              /\ c = indexed_memory_access mk_instr base ofs :: k
              /\ forall base' ofs' rs',
                    exec_basic_instr ge (mk_instr base' ofs') rs' m =
-                   exec_load_offset (chunk_of_type ty) rs' m rd base' ofs').
+                   exec_load_offset TRAP (chunk_of_type ty) rs' m rd base' ofs').
   { unfold loadind in TR.
     destruct ty, (preg_of dst); inv TR; econstructor; esplit; eauto. }
   destruct A as (mk_instr & rd & rdEq & B & C). subst c. rewrite rdEq.
@@ -2138,7 +1789,9 @@ Lemma loadind_ptr_correct:
   /\ forall r, r <> PC -> r <> dst -> rs'#r = rs#r.
 Proof.
   intros. eapply indexed_load_access_correct; eauto with asmgen.
-  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H0. auto.
+  intros. unfold Mptr. assert (Archi.ptr64 = true). auto. rewrite H0.
+  instantiate (1 := TRAP).
+  auto.
 Qed.
 
 Lemma storeind_ptr_correct:
@@ -2231,11 +1884,11 @@ Proof.
 Qed.
 
 Lemma transl_load_access2_correct:
-  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro v',
+  forall trap chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro v',
   args = mr1 :: mro :: nil ->
   ireg_of mro = OK ro ->
   (forall base rs,
-     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro) ->
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg trap chunk rs m rd base ro) ->
   transl_memory_access2 mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -2253,12 +1906,35 @@ Proof.
   split; intros; Simpl. auto.
 Qed.
 
-Lemma transl_load_access2XS_correct:
-  forall chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro v',
+Lemma transl_load_access2_correct_notrap2:
+  forall chunk (mk_instr: ireg -> ireg -> basic) addr args k c rd (rs: regset) m v mro mr1 ro,
   args = mr1 :: mro :: nil ->
   ireg_of mro = OK ro ->
   (forall base rs,
-     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs chunk rs m rd base ro) ->
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg NOTRAP chunk rs m rd base ro) ->
+  transl_memory_access2 mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = concrete_default_notrap_load_value chunk
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until ro; intros ARGS IREGE INSTR TR EV LOAD. 
+  exploit transl_memory_access2_correct; eauto.
+  intros (base & ro2 & mro2 & mr2 & rs' & ARGSS & IREGEQ & A & B & C). rewrite ARGSS in ARGS. inversion ARGS. subst mr2 mro2. clear ARGS.
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
+  rewrite INSTR. unfold exec_load_reg. unfold parexec_load_reg. rewrite B, LOAD. reflexivity. Simpl. 
+  split; intros; Simpl. auto.
+Qed.
+
+Lemma transl_load_access2XS_correct:
+  forall trap chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro v',
+  args = mr1 :: mro :: nil ->
+  ireg_of mro = OK ro ->
+  (forall base rs,
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs trap chunk rs m rd base ro) ->
   transl_memory_access2XS chunk mk_instr scale args k = OK c ->
   eval_addressing ge rs#SP (Aindexed2XS scale) (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -2276,13 +1952,39 @@ Proof.
   unfold scale_of_chunk.
   subst scale.
   rewrite B, LOAD. reflexivity. Simpl. 
-  split; intros; Simpl. auto.
+  split. trivial. intros. Simpl.
+Qed.
+
+Lemma transl_load_access2XS_correct_notrap2:
+  forall chunk (mk_instr: ireg -> ireg -> basic) (scale : Z) args k c rd (rs: regset) m v mro mr1 ro,
+  args = mr1 :: mro :: nil ->
+  ireg_of mro = OK ro ->
+  (forall base rs,
+     exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs NOTRAP chunk rs m rd base ro) ->
+  transl_memory_access2XS chunk mk_instr scale args k = OK c ->
+  eval_addressing ge rs#SP (Aindexed2XS scale) (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = concrete_default_notrap_load_value chunk
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until ro; intros ARGS IREGE INSTR TR EV LOAD. 
+  exploit transl_memory_access2XS_correct; eauto.
+  intros (base & ro2 & mro2 & mr2 & rs' & ARGSS & IREGEQ & A & B & C & D). rewrite ARGSS in ARGS. inversion ARGS. subst mr2 mro2. clear ARGS.
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. assert (ro = ro2) by congruence. subst ro2.
+  rewrite INSTR. unfold exec_load_regxs. unfold parexec_load_regxs.
+  unfold scale_of_chunk.
+  subst scale.
+  rewrite B, LOAD. reflexivity. Simpl. 
+  split. trivial. intros. Simpl.
 Qed.
 
 Lemma transl_load_access_correct:
-  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
+  forall trap chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v v',
   (forall base ofs rs,
-     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs) ->
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs) ->
   transl_memory_access mk_instr addr args k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
   Mem.loadv chunk m v = Some v' ->
@@ -2300,54 +2002,119 @@ Proof.
   split; intros; Simpl. auto.
 Qed.
 
+Lemma transl_load_access_correct_notrap2:
+  forall chunk (mk_instr: ireg -> offset -> basic) addr args k c rd (rs: regset) m v,
+  (forall base ofs rs,
+     exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset NOTRAP chunk rs m rd base ofs) ->
+  transl_memory_access mk_instr addr args k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some v ->
+  Mem.loadv chunk m v = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#rd = concrete_default_notrap_load_value chunk
+  /\ forall r, r <> PC -> r <> RTMP -> r <> rd -> rs'#r = rs#r.
+Proof.
+  intros until v; intros INSTR TR EV LOAD. 
+  exploit transl_memory_access_correct; eauto.
+  intros (base & ofs & rs' & ptr & A & PtrEq & B & C).
+  econstructor; split.
+  eapply exec_straight_opt_right. eexact A. apply exec_straight_one. 
+  rewrite INSTR. unfold exec_load_offset. unfold parexec_load_offset. rewrite PtrEq, B, LOAD. reflexivity. Simpl. 
+  split. trivial. intros. Simpl.
+Qed.
+
 Lemma transl_load_memory_access_ok:
-  forall addr chunk args dst k c rs a v m,
+  forall addr trap chunk args dst k c rs a v m,
   (match addr with Aindexed2XS _ | Aindexed2 => False | _ => True end) ->
-  transl_load chunk addr args dst k = OK c ->
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr rd,
      preg_of dst = IR rd
   /\ transl_memory_access mk_instr addr args k = OK c
   /\ forall base ofs rs,
-        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset chunk rs m rd base ofs.
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset trap chunk rs m rd base ofs.
 Proof.
   intros until m. intros ADDR TR ? ?.
   unfold transl_load in TR. destruct addr; try contradiction.
   - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
-    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
     | eauto ].
   - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
-    [ instantiate (1 := (PLoadRRO _ x)); simpl; reflexivity
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
+    | eauto ].
+Qed.
+
+Lemma transl_load_memory_access_ok_notrap2:
+  forall addr chunk args dst k c rs a m,
+  (match addr with Aindexed2XS _ | Aindexed2 => False | _ => True end) ->
+  transl_load NOTRAP chunk addr args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = None ->
+  exists mk_instr rd,
+     preg_of dst = IR rd
+  /\ transl_memory_access mk_instr addr args k = OK c
+  /\ forall base ofs rs,
+        exec_basic_instr ge (mk_instr base ofs) rs m = exec_load_offset NOTRAP chunk rs m rd base ofs.
+Proof.
+  intros until m. intros ADDR TR ? ?.
+  unfold transl_load in TR. destruct addr; try contradiction.
+  - monadInv TR. destruct chunk; ArgsInv; econstructor; (esplit; eauto).
+  - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
+    | eauto ].
+  - monadInv TR. destruct chunk. all: ArgsInv; destruct args; try discriminate; monadInv EQ0; eexists; eexists; split; try split;
+    [ instantiate (1 := (PLoadRRO _ _ x)); simpl; reflexivity
     | eauto ].
 Qed.
 
 Lemma transl_load_memory_access2_ok:
-  forall addr chunk args dst k c rs a v m,
-  addr = Aindexed2 ->
-  transl_load chunk addr args dst k = OK c ->
-  eval_addressing ge (rs (IR SP)) addr (map rs (map preg_of args)) = Some a ->
+  forall trap chunk args dst k c rs a v m,
+  transl_load trap chunk Aindexed2 args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) Aindexed2 (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr mr0 mro rd ro,
       args = mr0 :: mro :: nil
    /\ preg_of dst = IR rd
    /\ preg_of mro = IR ro
-   /\ transl_memory_access2 mk_instr addr args k = OK c
+   /\ transl_memory_access2 mk_instr Aindexed2 args k = OK c
    /\ forall base rs,
-      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg chunk rs m rd base ro.
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg trap chunk rs m rd base ro.
 Proof.
-  intros until m. intros ? TR ? ?.
+  intros until m. intros TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
-  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ x)); simpl; reflexivity
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ _ x)); simpl; reflexivity
+  | eauto].
+Qed.
+
+
+Lemma transl_load_memory_access2_ok_notrap2:
+  forall chunk args dst k c rs a m,
+  transl_load NOTRAP chunk Aindexed2 args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) Aindexed2 (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = None ->
+  exists mk_instr mr0 mro rd ro,
+      args = mr0 :: mro :: nil
+   /\ preg_of dst = IR rd
+   /\ preg_of mro = IR ro
+   /\ transl_memory_access2 mk_instr Aindexed2 args k = OK c
+   /\ forall base rs,
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_reg NOTRAP chunk rs m rd base ro.
+Proof.
+  intros until m. intros TR ? ?.
+  unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
+  unfold transl_memory_access2 in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
+  [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRR _ _ x)); simpl; reflexivity
   | eauto].
 Qed.
 
 Lemma transl_load_memory_access2XS_ok:
-  forall scale chunk args dst k c rs a v m,
-  transl_load chunk (Aindexed2XS scale) args dst k = OK c ->
+  forall scale trap chunk args dst k c rs a v m,
+  transl_load trap chunk (Aindexed2XS scale) args dst k = OK c ->
   eval_addressing ge (rs (IR SP)) (Aindexed2XS scale) (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists mk_instr mr0 mro rd ro,
@@ -2356,19 +2123,41 @@ Lemma transl_load_memory_access2XS_ok:
    /\ preg_of mro = IR ro
    /\ transl_memory_access2XS chunk mk_instr scale args k = OK c
    /\ forall base rs,
-      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs chunk rs m rd base ro.
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs trap chunk rs m rd base ro.
 Proof.
   intros until m. intros TR ? ?.
   unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
   unfold transl_memory_access2XS in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
   [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
-  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ x)); simpl; rewrite Heqb; eauto
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ _ x)); simpl; rewrite Heqb; eauto
+  | eauto].
+Qed.
+
+
+Lemma transl_load_memory_access2XS_ok_notrap2:
+  forall scale chunk args dst k c rs a m,
+  transl_load NOTRAP chunk (Aindexed2XS scale) args dst k = OK c ->
+  eval_addressing ge (rs (IR SP)) (Aindexed2XS scale) (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = None ->
+  exists mk_instr mr0 mro rd ro,
+      args = mr0 :: mro :: nil
+   /\ preg_of dst = IR rd
+   /\ preg_of mro = IR ro
+   /\ transl_memory_access2XS chunk mk_instr scale args k = OK c
+   /\ forall base rs,
+      exec_basic_instr ge (mk_instr base ro) rs m = exec_load_regxs NOTRAP chunk rs m rd base ro.
+Proof.
+  intros until m. intros TR ? ?.
+  unfold transl_load in TR. subst. monadInv TR. destruct chunk. all:
+  unfold transl_memory_access2XS in EQ0; repeat (destruct args; try discriminate); monadInv EQ0; ArgsInv; repeat eexists;
+  [ unfold ireg_of in EQ0; destruct (preg_of m1); eauto; try discriminate; monadInv EQ0; reflexivity
+  | rewrite EQ1; rewrite EQ0; simpl; instantiate (1 := (PLoadRRRXS _ _ x)); simpl; rewrite Heqb; eauto
   | eauto].
 Qed.
 
 Lemma transl_load_correct:
-  forall chunk addr args dst k c (rs: regset) m a v,
-  transl_load chunk addr args dst k = OK c ->
+  forall trap chunk addr args dst k c (rs: regset) m a v,
+  transl_load trap chunk addr args dst k = OK c ->
   eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
   Mem.loadv chunk m a = Some v ->
   exists rs',
@@ -2390,6 +2179,32 @@ Proof.
   - exploit transl_load_memory_access_ok; eauto; try discriminate; try (simpl; reflexivity).
     intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
       eapply transl_load_access_correct; eauto with asmgen.
+Qed.
+
+Lemma transl_load_correct_notrap2:
+  forall chunk addr args dst k c (rs: regset) m a,
+  transl_load NOTRAP chunk addr args dst k = OK c ->
+  eval_addressing ge rs#SP addr (map rs (map preg_of args)) = Some a ->
+  Mem.loadv chunk m a = None ->
+  exists rs',
+     exec_straight ge (basics_to_code c) rs m (basics_to_code k) rs' m
+  /\ rs'#(preg_of dst) = (concrete_default_notrap_load_value chunk)
+  /\ forall r, r <> PC -> r <> RTMP -> r <> preg_of dst -> rs'#r = rs#r.
+Proof.
+  intros until a; intros TR EV LOAD. destruct addr.
+  - exploit transl_load_memory_access2XS_ok_notrap2; eauto. intros (mk_instr & mr0 & mro & rd & ro & argsEq & rdEq & roEq & B & C).
+    rewrite rdEq. eapply transl_load_access2XS_correct_notrap2; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
+  - exploit transl_load_memory_access2_ok_notrap2; eauto. intros (mk_instr & mr0 & mro & rd & ro & argsEq & rdEq & roEq & B & C).
+    rewrite rdEq. eapply transl_load_access2_correct_notrap2; eauto with asmgen. unfold ireg_of. rewrite roEq. reflexivity.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
+    intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
+    intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
+  - exploit transl_load_memory_access_ok_notrap2; eauto; try discriminate; try (simpl; reflexivity).
+    intros A; destruct A as (mk_instr & rd & rdEq & B & C); rewrite rdEq;
+      eapply transl_load_access_correct_notrap2; eauto with asmgen.
 Qed.
 
 Lemma transl_store_access2_correct:
@@ -2671,8 +2486,8 @@ Proof.
           { eapply A2. }
           { apply exec_straight_one. simpl.
             rewrite (C2 SP) by auto with asmgen. rewrite <- (sp_val _ _ rs1 AG1). simpl; rewrite LP'.
-            rewrite FREE'. eauto. (* auto. *) } }
-      * split. (* apply agree_nextinstr.  *)apply agree_set_other; auto with asmgen. 
+            rewrite FREE'. eauto. } }
+      * split. apply agree_set_other; auto with asmgen. 
     apply agree_change_sp with (Vptr stk soff).
     apply agree_exten with rs; auto. intros; rewrite C2; auto with asmgen.
     eapply parent_sp_def; eauto.

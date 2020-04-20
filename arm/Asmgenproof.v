@@ -270,6 +270,7 @@ Opaque Int.eq.
   destruct Archi.thumb2_support; TailNoLabel.
   eapply tail_nolabel_trans; TailNoLabel.
   eapply tail_nolabel_trans. eapply transl_cond_label; eauto. TailNoLabel.
+  destruct (preg_of r); monadInv H; (eapply tail_nolabel_trans; [eapply transl_cond_label; eauto|TailNoLabel]).
 Qed.
 
 Remark transl_memory_access_label:
@@ -302,6 +303,7 @@ Proof.
     eapply tail_nolabel_trans. 2: eapply loadind_label; eauto. unfold loadind_int; TailNoLabel.
   eapply transl_op_label; eauto.
   unfold transl_load, transl_memory_access_int, transl_memory_access_float in H.
+  destruct t; try discriminate.
   destruct m; monadInv H; eapply transl_memory_access_label; eauto; simpl; auto.
   unfold transl_store, transl_memory_access_int, transl_memory_access_float in H.
   destruct m; monadInv H; eapply transl_memory_access_label; eauto; simpl; auto.
@@ -616,6 +618,12 @@ Opaque loadind.
   exists rs2; split. eauto.
   split. eapply agree_set_undef_mreg; eauto. congruence.
   simpl; congruence.
+
+- (* Mload notrap1 *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
+
+- (* Mload notrap *)
+  inv AT. simpl in *. unfold bind in *. destruct (transl_code _ _ _) in *; discriminate.
 
 - (* Mstore *)
   assert (eval_addressing tge sp addr rs##args = Some a).

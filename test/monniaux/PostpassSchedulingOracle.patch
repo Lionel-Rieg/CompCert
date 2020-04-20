@@ -1,0 +1,33 @@
+diff --git a/mppa_k1c/PostpassSchedulingOracle.ml b/mppa_k1c/PostpassSchedulingOracle.ml
+index 2fc561e..d3748e8 100644
+--- a/mppa_k1c/PostpassSchedulingOracle.ml
++++ b/mppa_k1c/PostpassSchedulingOracle.ml
+@@ -808,7 +808,7 @@ let print_bb oc bb =
+   let asm_instructions = Asm.unfold_bblock bb
+   in List.iter (print_inst oc) asm_instructions
+ 
+-let do_schedule bb =
++let real_do_schedule bb =
+   let problem = build_problem bb
+   in let solution = (if !Clflags.option_fpostpass_sched = "ilp" then
+                       validated_scheduler cascaded_scheduler
+@@ -831,6 +831,19 @@ let do_schedule bb =
+       end;
+       bundles)
+ 
++let do_schedule bb =
++  let nb_instructions = Camlcoq.Z.to_int64 @@ Asmvliw.size bb
++  in let start_time = (Gc.major(); (Unix.times ()).Unix.tms_utime)
++  in let sched = real_do_schedule bb
++  in let refer = ref sched
++  in begin
++    for i = 1 to 1000-1 do
++      refer := (if i > 0 then real_do_schedule bb else real_do_schedule bb);
++    done;
++    Printf.printf "%Ld: %f\n" nb_instructions ((Unix.times ()).Unix.tms_utime -. start_time);
++    sched
++  end
++
+ (**
+  * Dumb schedule if the above doesn't work
+  *)

@@ -744,7 +744,7 @@ Lemma match_stacks_free_right:
   match_stacks F m m1' stk stk' sp.
 Proof.
   intros. eapply match_stacks_invariant; eauto.
-  intros. eapply Mem.perm_free_1; eauto.
+  intros. eapply Mem.perm_free_1; eauto with ordered_type.
   intros. eapply Mem.perm_free_3; eauto.
 Qed.
 
@@ -755,13 +755,13 @@ Proof.
   assert (2 <= sz -> (2 | n)). intros.
     destruct (zle sz 1). omegaContradiction.
     destruct (zle sz 2). auto.
-    destruct (zle sz 4). apply Zdivides_trans with 4; auto. exists 2; auto.
-    apply Zdivides_trans with 8; auto. exists 4; auto.
+    destruct (zle sz 4). apply Z.divide_trans with 4; auto. exists 2; auto.
+    apply Z.divide_trans with 8; auto. exists 4; auto.
   assert (4 <= sz -> (4 | n)). intros.
     destruct (zle sz 1). omegaContradiction.
     destruct (zle sz 2). omegaContradiction.
     destruct (zle sz 4). auto.
-    apply Zdivides_trans with 8; auto. exists 2; auto.
+    apply Z.divide_trans with 8; auto. exists 2; auto.
   assert (8 <= sz -> (8 | n)). intros.
     destruct (zle sz 1). omegaContradiction.
     destruct (zle sz 2). omegaContradiction.
@@ -929,6 +929,15 @@ Proof.
   intros. inv H. eauto.
 Qed.
 
+Lemma eval_addressing_none:
+  forall sp' ctx addr rs,
+  eval_addressing ge (Vptr sp' (Ptrofs.repr (dstk ctx))) addr rs = None ->
+  eval_addressing ge (Vptr sp' Ptrofs.zero) (saddr ctx addr) rs = None.
+Proof.
+  intros until rs; intro Heval.
+  destruct addr; destruct rs as [| r0 rs1]; simpl in *; trivial; discriminate.
+Qed.
+
 Theorem step_simulation:
   forall S1 t S2,
   step ge S1 t S2 ->
@@ -976,6 +985,51 @@ Proof.
   apply match_stacks_inside_set_reg; auto.
   apply agree_set_reg; auto.
 
+- (* load notrap1 *)
+  exploit tr_funbody_inv; eauto. intros TR; inv TR.
+  left; econstructor; split.
+  eapply plus_one. eapply exec_Iload_notrap1. eassumption.
+  rewrite eval_addressing_preserved with (ge1:=ge) (ge2:=tge).
+  exploit eval_addressing_inj_none.
+  4: eassumption.
+  intros. eapply symbol_address_inject.
+  eapply match_stacks_inside_globals; eauto.
+  eauto.
+  instantiate (1 := rs'##(sregs ctx args)). eapply agree_val_regs; eauto.
+  rewrite Ptrofs.add_zero_l.
+  apply eval_addressing_none.
+  exact symbols_preserved.
+  econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+
+- (* load notrap2 *)
+  exploit tr_funbody_inv; eauto. intros TR; inv TR.
+
+  exploit eval_addressing_inject.
+    eapply match_stacks_inside_globals; eauto.
+    eexact SP.
+    instantiate (2 := rs##args). instantiate (1 := rs'##(sregs ctx args)). eapply agree_val_regs; eauto.
+    eauto.
+  fold (saddr ctx addr). intros [a' [P Q]].
+
+  destruct (Mem.loadv chunk m' a') eqn:Hload'.
+  + left; econstructor; split.
+    eapply plus_one.
+    eapply exec_Iload; eauto.
+    try (rewrite <- P; apply eval_addressing_preserved; exact symbols_preserved).
+    econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+    
+  + left; econstructor; split.
+    eapply plus_one.
+    eapply exec_Iload_notrap2; eauto.
+    try (rewrite <- P; apply eval_addressing_preserved; exact symbols_preserved).
+    econstructor; eauto.
+  apply match_stacks_inside_set_reg; auto.
+  apply agree_set_reg; auto.
+  
 - (* store *)
   exploit tr_funbody_inv; eauto. intros TR; inv TR.
   exploit eval_addressing_inject.
@@ -1043,7 +1097,7 @@ Proof.
   eapply match_stacks_bound with (bound := sp').
   eapply match_stacks_invariant; eauto.
     intros. eapply Mem.perm_free_3; eauto.
-    intros. eapply Mem.perm_free_1; eauto.
+    intros. eapply Mem.perm_free_1; eauto with ordered_type.
     intros. eapply Mem.perm_free_3; eauto.
   erewrite Mem.nextblock_free; eauto. red in VB; xomega.
   eapply agree_val_regs; eauto.
@@ -1135,7 +1189,7 @@ Proof.
   eapply match_stacks_bound with (bound := sp').
   eapply match_stacks_invariant; eauto.
     intros. eapply Mem.perm_free_3; eauto.
-    intros. eapply Mem.perm_free_1; eauto.
+    intros. eapply Mem.perm_free_1; eauto with ordered_type.
     intros. eapply Mem.perm_free_3; eauto.
   erewrite Mem.nextblock_free; eauto. red in VB; xomega.
   destruct or; simpl. apply agree_val_reg; auto. auto.
@@ -1182,7 +1236,7 @@ Proof.
     subst b1. rewrite D in H8; inv H8. eelim Plt_strict; eauto.
     intros. eapply Mem.perm_alloc_1; eauto.
     intros. exploit Mem.perm_alloc_inv. eexact A. eauto.
-    rewrite dec_eq_false; auto.
+    rewrite dec_eq_false; auto with ordered_type.
   auto. auto. auto. eauto. auto.
   rewrite H5. apply agree_regs_init_regs. eauto. auto. inv H1; auto. congruence. auto.
   eapply Mem.valid_new_block; eauto.
@@ -1249,7 +1303,7 @@ Proof.
     eapply external_call_nextblock; eauto.
     auto. auto.
 
-- (* return fron noninlined function *)
+- (* return from noninlined function *)
   inv MS0.
 + (* normal case *)
   left; econstructor; split.

@@ -1,6 +1,13 @@
+(** * Translation from Asmblock to AbstractBB 
+
+    We define a specific instance of AbstractBB, named L, translate bblocks from Asmblock into this instance
+    AbstractBB will then define two semantics for L : a sequential, and a semantic one
+    We prove a bisimulation between the parallel semantics of L and AsmVLIW
+    From this, we also deduce a bisimulation between the sequential semantics of L and Asmblock *)
+
 Require Import AST.
 Require Import Asmblock.
-Require Import Asmblockgenproof0.
+Require Import Asmblockgenproof0 Asmblockprops.
 Require Import Values.
 Require Import Globalenvs.
 Require Import Memory.
@@ -9,13 +16,17 @@ Require Import Integers.
 Require Import Floats.
 Require Import ZArith.
 Require Import Coqlib.
-Require Import ImpDep.
+Require Import ImpSimuTest.
 Require Import Axioms.
 Require Import Parallelizability.
 Require Import Asmvliw Permutation.
 Require Import Chunks.
 
+Require Import Lia.
+
 Open Scope impure.
+
+(** Definition of L *)
 
 Module P<: ImpParam.
 Module R := Pos.
@@ -74,9 +85,9 @@ Coercion OArithRRI32: arith_name_rri32 >-> Funclass.
 Coercion OArithRRI64: arith_name_rri64 >-> Funclass.
 
 Inductive load_op :=
-  | OLoadRRO (n: load_name) (ofs: offset)
-  | OLoadRRR (n: load_name)
-  | OLoadRRRXS (n: load_name)
+  | OLoadRRO (n: load_name) (trap: trapping_mode) (ofs: offset)
+  | OLoadRRR (n: load_name) (trap: trapping_mode) 
+  | OLoadRRRXS (n: load_name) (trap: trapping_mode)
 .
 
 Coercion OLoadRRO: load_name >-> Funclass.
@@ -133,33 +144,39 @@ Definition arith_eval (ao: arith_op) (l: list value) :=
   | _, _ => None
   end.
 
-Definition exec_load_deps_offset (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
+Definition exec_incorrect_load trap chunk :=
+  match trap with
+  | TRAP => None
+  | NOTRAP => Some (Val (concrete_default_notrap_load_value chunk))
+  end.
+
+Definition exec_load_deps_offset (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v: val) (ofs: offset) :=
   let (ge, fn) := Ge in
   match (eval_offset ofs) with
   | OK ptr => match Mem.loadv chunk m (Val.offset_ptr v ptr) with 
-              | None => None
+              | None => exec_incorrect_load trap chunk
               | Some vl => Some (Val vl)
               end
   | _ => None
   end.
 
-Definition exec_load_deps_reg (chunk: memory_chunk) (m: mem) (v vo: val) :=
+Definition exec_load_deps_reg (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v vo: val) :=
   match Mem.loadv chunk m (Val.addl v vo) with
-  | None => None
+  | None => exec_incorrect_load trap chunk
   | Some vl => Some (Val vl)
   end.
 
-Definition exec_load_deps_regxs (chunk: memory_chunk) (m: mem) (v vo: val) :=
+Definition exec_load_deps_regxs (trap: trapping_mode) (chunk: memory_chunk) (m: mem) (v vo: val) :=
   match Mem.loadv chunk m (Val.addl v (Val.shll vo (scale_of_chunk chunk))) with
-  | None => None
+  | None => exec_incorrect_load trap chunk
   | Some vl => Some (Val vl)
   end.
 
 Definition load_eval (lo: load_op) (l: list value) :=
   match lo, l with
-  | OLoadRRO n ofs, [Val v; Memstate m] => exec_load_deps_offset (load_chunk n) m v ofs
-  | OLoadRRR n, [Val v; Val vo; Memstate m] => exec_load_deps_reg (load_chunk n) m v vo
-  | OLoadRRRXS n, [Val v; Val vo; Memstate m] => exec_load_deps_regxs (load_chunk n) m v vo
+  | OLoadRRO n trap ofs, [Val v; Memstate m] => exec_load_deps_offset trap (load_chunk n) m v ofs
+  | OLoadRRR n trap, [Val v; Val vo; Memstate m] => exec_load_deps_reg trap (load_chunk n) m v vo
+  | OLoadRRRXS n trap, [Val v; Val vo; Memstate m] => exec_load_deps_regxs trap (load_chunk n) m v vo
   | _, _ => None
   end.
 
@@ -192,6 +209,136 @@ Definition store_eval (so: store_op) (l: list value) :=
   | OStoreRRRXS n, [Val vs; Val va; Val vo; Memstate m] => exec_store_deps_regxs (store_chunk n) m vs va vo
   | _, _ => None
   end.
+
+Local Open Scope Z.
+
+Remark size_chunk_positive: forall chunk,
+    (size_chunk chunk) > 0.
+Proof.
+  destruct chunk; simpl; lia.
+Qed.
+
+Remark size_chunk_small: forall chunk,
+    (size_chunk chunk) <= 8.
+Proof.
+  destruct chunk; simpl; lia.
+Qed.
+
+Definition disjoint_chunks
+           (ofs1 : offset) (chunk1 : memory_chunk)
+           (ofs2 : offset) (chunk2 : memory_chunk) :=
+  Intv.disjoint ((Ptrofs.unsigned ofs1),
+                 ((Ptrofs.unsigned ofs1) + (size_chunk chunk1)))
+                ((Ptrofs.unsigned ofs2),
+                 ((Ptrofs.unsigned ofs2) + (size_chunk chunk2))).
+
+Definition small_offset_threshold := 18446744073709551608.
+
+Lemma store_store_disjoint_offsets :
+  forall n1 n2 ofs1 ofs2 vs1 vs2 va m0 m1 m2 m1' m2',
+    (disjoint_chunks ofs1 (store_chunk n1) ofs2 (store_chunk n2)) ->
+    (Ptrofs.unsigned ofs1) < small_offset_threshold ->
+    (Ptrofs.unsigned ofs2) < small_offset_threshold ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m0] = Some (Memstate m1) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m1] = Some (Memstate m2) ->
+    store_eval (OStoreRRO n2 ofs2) [vs2; va; Memstate m0] = Some (Memstate m1') ->
+    store_eval (OStoreRRO n1 ofs1) [vs1; va; Memstate m1'] = Some (Memstate m2') ->
+    m2 = m2'.
+Proof.
+  intros until m2'.
+  intros DISJOINT SMALL1 SMALL2 STORE0 STORE1 STORE0' STORE1'.
+  unfold disjoint_chunks in DISJOINT.
+  destruct vs1 as [v1 | ]; simpl in STORE0, STORE1'; try congruence.
+  destruct vs2 as [v2 | ]; simpl in STORE1, STORE0'; try congruence.
+  destruct va as [base | ]; try congruence.
+  unfold exec_store_deps_offset in *.
+  destruct Ge.
+  unfold eval_offset in *; simpl in *.
+  unfold Mem.storev in *.
+  unfold Val.offset_ptr in *.
+  destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
+  destruct (Mem.store _ _ _ _ _) eqn:E0; try congruence.
+  inv STORE0.
+  destruct (Mem.store (store_chunk n2) _ _ _ _) eqn:E1; try congruence.
+  inv STORE1.
+  destruct (Mem.store (store_chunk n2) m0 _ _ _) eqn:E0'; try congruence.
+  inv STORE0'.
+  destruct (Mem.store _ m1' _ _ _) eqn:E1'; try congruence.
+  inv STORE1'.
+  assert (Some m2 = Some m2').
+  2: congruence.
+  rewrite <- E1.
+  rewrite <- E1'.
+  eapply Mem.store_store_other.
+  2, 3: eassumption.
+
+  right.
+  pose proof (size_chunk_positive (store_chunk n1)).
+  pose proof (size_chunk_positive (store_chunk n2)).
+  pose proof (size_chunk_small (store_chunk n1)).
+  pose proof (size_chunk_small (store_chunk n2)).
+  destruct (Intv.range_disjoint _ _ DISJOINT) as [DIS | [DIS | DIS]];
+    unfold Intv.empty in DIS; simpl in DIS.
+  1, 2: lia.
+  pose proof (Ptrofs.unsigned_range ofs1).
+  pose proof (Ptrofs.unsigned_range ofs2).
+  unfold small_offset_threshold in *.
+  destruct (Ptrofs.unsigned_add_either wpofs ofs1) as [R1 | R1]; rewrite R1;
+    destruct (Ptrofs.unsigned_add_either wpofs ofs2) as [R2 | R2]; rewrite R2;
+      change Ptrofs.modulus with 18446744073709551616 in *; 
+      lia.
+Qed.
+
+Lemma load_store_disjoint_offsets :
+  forall n1 n2 tm ofs1 ofs2 vs va m0 m1,
+    (disjoint_chunks ofs1 (store_chunk n1) ofs2 (load_chunk n2)) ->
+    (Ptrofs.unsigned ofs1) < small_offset_threshold ->
+    (Ptrofs.unsigned ofs2) < small_offset_threshold ->
+    store_eval (OStoreRRO n1 ofs1) [vs; va; Memstate m0] = Some (Memstate m1) ->
+    load_eval (OLoadRRO n2 tm ofs2) [va; Memstate m1] =
+    load_eval (OLoadRRO n2 tm ofs2) [va; Memstate m0].
+Proof.
+  intros until m1.
+  intros DISJOINT SMALL1 SMALL2 STORE0.
+  destruct vs as [v | ]; simpl in STORE0; try congruence.
+  destruct va as [base | ]; try congruence.
+  unfold exec_store_deps_offset in *.
+  unfold eval_offset in *; simpl in *.
+  unfold exec_load_deps_offset.
+  unfold Mem.storev, Mem.loadv in *.
+  destruct Ge in *.
+  unfold eval_offset in *.
+  unfold Val.offset_ptr in *.
+  destruct base as [ | | | | | wblock wpofs] in * ; try congruence.
+  destruct (Mem.store _ _ _ _) eqn:E0; try congruence.
+  inv STORE0.
+  assert (
+    (Mem.load (load_chunk n2) m1 wblock
+      (Ptrofs.unsigned (Ptrofs.add wpofs ofs2))) =
+    (Mem.load (load_chunk n2) m0 wblock
+              (Ptrofs.unsigned (Ptrofs.add wpofs ofs2))) ) as LOADS.
+  {
+    eapply Mem.load_store_other.
+    eassumption.
+    right.
+    pose proof (size_chunk_positive (store_chunk n1)).
+    pose proof (size_chunk_positive (load_chunk n2)).
+    pose proof (size_chunk_small (store_chunk n1)).
+    pose proof (size_chunk_small (load_chunk n2)).
+    destruct (Intv.range_disjoint _ _ DISJOINT) as [DIS | [DIS | DIS]];
+      unfold Intv.empty in DIS; simpl in DIS.
+    1,2: lia.
+    
+    pose proof (Ptrofs.unsigned_range ofs1).
+    pose proof (Ptrofs.unsigned_range ofs2).
+    unfold small_offset_threshold in *.
+    destruct (Ptrofs.unsigned_add_either wpofs ofs1) as [R1 | R1]; rewrite R1;
+      destruct (Ptrofs.unsigned_add_either wpofs ofs2) as [R2 | R2]; rewrite R2;
+        change Ptrofs.modulus with 18446744073709551616 in *; 
+        lia.
+  }
+  destruct (Mem.load _ m1 _ _) in *; destruct (Mem.load _ m0 _ _) in *; congruence.
+Qed.
 
 Definition goto_label_deps (f: function) (lbl: label) (vpc: val) :=
   match label_pos lbl 0 (fn_blocks f) with
@@ -302,30 +449,6 @@ Definition op_eval (o: op) (l: list value) :=
   end.
 
 
- (** Function [is_constant] is used for a small optimization inside the scheduling verifier.
-    It is good that it answers [true] as much as possible while satisfying [is_constant_correct] below.
-
-   BE CAREFUL that, [is_constant] must not depend on [ge].
-   Otherwise, we would have an easy implementation: [match op_eval o nil with Some _ => true | _ => false end]
-
-   => REM: when [is_constant] is not complete w.r.t [is_constant_correct], this should have only a very little impact
-      on the performance of the scheduling verifier...
-  *)
-
-Definition is_constant (o: op): bool :=
-  match o with
-  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
-  | _ => false
-  end.
-
-Lemma is_constant_correct o: is_constant o = true -> op_eval o nil <> None.
-Proof.
-  destruct o; simpl; try congruence.
-  destruct ao; simpl; try congruence;
-  destruct n; simpl; try congruence;
-  unfold arith_eval; destruct Ge; simpl; try congruence.
-Qed.
-
 Definition arith_op_eq (o1 o2: arith_op): ?? bool :=
   match o1 with
   | OArithR n1 =>
@@ -379,24 +502,47 @@ Proof.
 Qed.
 Hint Resolve offset_eq_correct: wlp.
 
+Definition trapping_mode_eq trap1 trap2 :=
+  RET (match trap1, trap2 with
+       | TRAP, TRAP | NOTRAP, NOTRAP => true
+       | TRAP, NOTRAP | NOTRAP, TRAP => false
+      end).
+Lemma trapping_mode_eq_correct t1 t2:
+  WHEN trapping_mode_eq t1 t2 ~> b THEN b = true -> t1 = t2.
+Proof.
+  wlp_simplify.
+  destruct t1; destruct t2; trivial; discriminate.
+Qed.
+Hint Resolve trapping_mode_eq_correct: wlp.
+
 Definition load_op_eq (o1 o2: load_op): ?? bool :=
   match o1 with
-  | OLoadRRO n1 ofs1 =>
-     match o2 with OLoadRRO n2 ofs2 => iandb (phys_eq n1 n2) (offset_eq ofs1 ofs2) | _ => RET false end
-  | OLoadRRR n1 =>
-     match o2 with OLoadRRR n2 => phys_eq n1 n2 | _ => RET false end
-  | OLoadRRRXS n1 =>
-     match o2 with OLoadRRRXS n2 => phys_eq n1 n2 | _ => RET false end
+  | OLoadRRO n1 trap ofs1 =>
+    match o2 with
+    | OLoadRRO n2 trap2 ofs2 => iandb (phys_eq n1 n2) (iandb (offset_eq ofs1 ofs2) (trapping_mode_eq trap trap2))
+    | _ => RET false
+    end
+  | OLoadRRR n1 trap =>
+    match o2 with
+    | OLoadRRR n2 trap2 => iandb (phys_eq n1 n2) (trapping_mode_eq trap trap2) 
+    | _ => RET false
+    end
+  | OLoadRRRXS n1 trap =>
+    match o2 with
+    | OLoadRRRXS n2 trap2 => iandb (phys_eq n1 n2) (trapping_mode_eq trap trap2)
+    | _ => RET false
+    end
   end.
 
 Lemma load_op_eq_correct o1 o2:
   WHEN load_op_eq o1 o2 ~> b THEN b = true -> o1 = o2.
 Proof.
   destruct o1, o2; wlp_simplify; try discriminate.
-  - f_equal. pose (Ptrofs.eq_spec ofs ofs0).
-    rewrite H in *. trivial.
-  - congruence.
-  - congruence.
+  { f_equal.
+    destruct trap, trap0; simpl in *; trivial; discriminate.
+    pose (Ptrofs.eq_spec ofs ofs0).
+    rewrite H in *. trivial. }
+  all: destruct trap, trap0; simpl in *; trivial; discriminate.
 Qed.
 Hint Resolve load_op_eq_correct: wlp.
 Opaque load_op_eq_correct.
@@ -483,18 +629,6 @@ Qed.
 Hint Resolve op_eq_correct: wlp.
 Global Opaque op_eq_correct.
 
-
-(* QUICK FIX WITH struct_eq *)
-
-(* Definition op_eq (o1 o2: op): ?? bool := struct_eq o1 o2. 
-
-Theorem op_eq_correct o1 o2: 
- WHEN op_eq o1 o2 ~> b THEN b=true -> o1 = o2.
-Proof.
-  wlp_simplify.
-Qed.
-*)
-
 End IMPPARAM.
 
 End P.
@@ -507,7 +641,7 @@ Include MkSeqLanguage P.
 
 End L.
 
-Module IDT := ImpDepTree L ImpPosDict.
+Module IST := ImpSimu L ImpPosDict.
 
 Import L.
 Import P.
@@ -574,7 +708,7 @@ Proof.
   - unfold ppos. unfold pmem. discriminate.
 Qed.
 
-(** Inversion functions, used for debugging *)
+(** Inversion functions, used for debug traces *)
 
 Definition pos_to_ireg (p: R.t) : option gpreg :=
   match p with
@@ -597,9 +731,6 @@ Definition inv_ppos (p: R.t) : option preg :=
        | Some gpr => Some (IR gpr)
        end
   end.
-
-
-(** Traduction Asmblock -> Asmblockdeps *)
 
 Notation "a @ b" := (Econs a b) (at level 102, right associativity).
 
@@ -647,21 +778,21 @@ Definition trans_arith (ai: ar_instruction) : inst :=
 Definition trans_basic (b: basic) : inst :=
   match b with
   | PArith ai => trans_arith ai
-  | PLoadRRO n d a ofs => [(#d, Op (Load (OLoadRRO n ofs)) (PReg (#a) @ PReg pmem @ Enil))]
-  | PLoadRRR n d a ro =>  [(#d, Op (Load (OLoadRRR n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
-  | PLoadRRRXS n d a ro =>  [(#d, Op (Load (OLoadRRRXS n)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRO trap n d a ofs => [(#d, Op (Load (OLoadRRO n trap ofs)) (PReg (#a) @ PReg pmem @ Enil))]
+  | PLoadRRR trap n d a ro =>  [(#d, Op (Load (OLoadRRR n trap)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
+  | PLoadRRRXS trap n d a ro =>  [(#d, Op (Load (OLoadRRRXS n trap)) (PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRO n s a ofs => [(pmem, Op (Store (OStoreRRO n ofs)) (PReg (#s) @ PReg (#a) @ PReg pmem @ Enil))]
   | PLoadQRRO qd a ofs =>
     let (d0, d1) := gpreg_q_expand qd in
-      [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-       (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
+      [(#d0, Op (Load (OLoadRRO Pld_a TRAP ofs)) (PReg (#a) @ PReg pmem @ Enil));
+       (#d1, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
   | PLoadORRO od a ofs =>
     match gpreg_o_expand od with
     | (d0, d1, d2, d3) =>
-        [(#d0, Op (Load (OLoadRRO Pld_a ofs)) (PReg (#a) @ PReg pmem @ Enil));
-         (#d1, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
-         (#d2, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 16)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
-         (#d3, Op (Load (OLoadRRO Pld_a (Ptrofs.add ofs (Ptrofs.repr 24)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
+        [(#d0, Op (Load (OLoadRRO Pld_a TRAP ofs)) (PReg (#a) @ PReg pmem @ Enil));
+         (#d1, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 8)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d2, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 16)))) (Old(PReg (#a)) @ PReg pmem @ Enil));
+         (#d3, Op (Load (OLoadRRO Pld_a TRAP (Ptrofs.add ofs (Ptrofs.repr 24)))) (Old(PReg (#a)) @ PReg pmem @ Enil))]
     end
   | PStoreRRR n s a ro => [(pmem, Op (Store (OStoreRRR n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
   | PStoreRRRXS n s a ro => [(pmem, Op (Store (OStoreRRRXS n)) (PReg (#s) @ PReg (#a) @ PReg (#ro) @ PReg pmem @ Enil))]
@@ -744,7 +875,7 @@ Proof.
   intros. congruence.
 Qed.
 
-(** Parallelizability of a bblock (bundle) *)
+(** Parallelizability test of a bblock (bundle), and bisimulation of the Asmblock and L parallel semantics *)
 
 Module PChk := ParallelChecks L PosPseudoRegSet.
 
@@ -866,15 +997,15 @@ Qed.
 
 
 
-Theorem forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
+Theorem bisimu_par_wio_basic ge fn rsr rsw mr mw sr sw bi:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  match_outcome (parexec_basic_instr ge bi rsr rsw mr mw) (inst_prun Ge (trans_basic bi) sw sr sr).
+  match_outcome (bstep ge bi rsr rsw mr mw) (inst_prun Ge (trans_basic bi) sw sr sr).
 Proof.
 
 (* a little tactic to automate reasoning on preg_eq *)
-Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr: core.
 Local Ltac preg_eq_discr r rd :=
   destruct (preg_eq r rd); try (subst r; rewrite assign_eq, Pregmap.gss; auto);
   rewrite (assign_diff _ (#rd) (#r) _); auto;
@@ -891,21 +1022,21 @@ Local Ltac preg_eq_discr r rd :=
       unfold parexec_load_offset; simpl; unfold exec_load_deps_offset; erewrite GENV, H, H0;
       unfold eval_offset;
       simpl; auto;
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
     (* Load Reg *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_reg; simpl; unfold exec_load_deps_reg; rewrite H, H0; rewrite (H0 rofs);
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
     (* Load Reg XS *)
     + destruct i; simpl load_chunk. all:
       unfold parexec_load_regxs; simpl; unfold exec_load_deps_regxs; rewrite H, H0; rewrite (H0 rofs);
-      destruct (Mem.loadv _ _ _) eqn:MEML; simpl; auto;
+      destruct (Mem.loadv _ _ _) eqn:MEML; destruct trap; simpl; auto;
       eexists; split; try split; Simpl;
       intros rr; destruct rr; Simpl; destruct (ireg_eq g rd); subst; Simpl.
 
@@ -922,7 +1053,7 @@ Local Ltac preg_eq_discr r rd :=
         preg_eq_discr r rd0. }
 
     (* Load Octuple word *)
-    + Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr.
+    + Local Hint Resolve not_eq_sym ppos_pmem_discr ppos_discr: core.
       unfold parexec_load_o_offset.
       destruct (gpreg_o_expand rd) as [[[rd0 rd1] rd2] rd3]; destruct Ge; simpl.
       rewrite H0, H.
@@ -1018,7 +1149,7 @@ Local Ltac preg_eq_discr r rd :=
 Qed.
 
 
-Theorem forward_simu_par_body:
+Theorem bisimu_par_body:
   forall bdy ge fn rsr mr sr rsw mw sw,
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
@@ -1027,19 +1158,19 @@ Theorem forward_simu_par_body:
 Proof.
   induction bdy as [|i bdy]; simpl; eauto. 
   intros.
-  exploit (forward_simu_par_wio_basic ge fn rsr rsw mr mw sr sw i); eauto.
-  destruct (parexec_basic_instr _ _ _ _ _ _); simpl.
+  exploit (bisimu_par_wio_basic ge fn rsr rsw mr mw sr sw i); eauto.
+  destruct (bstep _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2). rewrite X1; simpl; eauto.
   - intros X; rewrite X; simpl; auto.
 Qed.
 
-Theorem forward_simu_par_control ex sz aux ge fn rsr rsw mr mw sr sw:
+Theorem bisimu_par_control ex sz aux ge fn rsr rsw mr mw sr sw:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
   match_outcome (parexec_control ge fn ex (incrPC (Ptrofs.repr sz) rsr) (rsw#PC <- aux) mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
 Proof.
-  intros GENV MSR MSW; unfold parexec_exit.
+  intros GENV MSR MSW; unfold estep.
   simpl in *. inv MSR. inv MSW.
   destruct ex.
   - destruct c; destruct i; try discriminate; simpl.
@@ -1091,54 +1222,52 @@ Proof.
     intros rr; destruct rr; unfold incrPC; Simpl.
 Qed.
 
-Theorem forward_simu_par_exit ex sz ge fn rsr rsw mr mw sr sw:
+Theorem bisimu_par_exit ex sz ge fn rsr rsw mr mw sr sw:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
   match_states (State rsw mw) sw ->
-  match_outcome (parexec_exit ge fn ex (Ptrofs.repr sz) rsr rsw mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
+  match_outcome (estep ge fn ex (Ptrofs.repr sz) rsr rsw mw) (inst_prun Ge (trans_pcincr sz (trans_exit ex)) sw sr sr).
 Proof.
-  intros; unfold parexec_exit.
-  exploit (forward_simu_par_control ex sz rsw#PC ge fn rsr rsw mr mw sr sw); eauto.
+  intros; unfold estep.
+  exploit (bisimu_par_control ex sz rsw#PC ge fn rsr rsw mr mw sr sw); eauto.
   cutrewrite (rsw # PC <- (rsw PC) = rsw); auto.
   apply extensionality. intros; destruct x; simpl; auto.
 Qed.
 
 Definition trans_block_aux bdy sz ex := (trans_body bdy) ++ (trans_pcincr sz (trans_exit ex) :: nil).
 
-Theorem forward_simu_par_wio_bblock_aux ge fn rsr mr sr rsw mw sw bdy ex sz:
+Theorem bisimu_par_wio ge fn rsr mr sr bdy ex sz:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
-  match_states (State rsw mw) sw ->
-  match_outcome (parexec_wio_bblock_aux ge fn bdy ex (Ptrofs.repr sz) rsr rsw mr mw) (prun_iw Ge (trans_block_aux bdy sz ex) sw sr).
+  match_outcome (parexec_wio ge fn bdy ex (Ptrofs.repr sz) rsr mr) (prun_iw Ge (trans_block_aux bdy sz ex) sr sr).
 Proof.
-  intros GENV MSR MSW. unfold parexec_wio_bblock_aux, trans_block_aux.
-  exploit (forward_simu_par_body bdy ge fn rsr mr sr rsw mw sw); eauto.
+  intros GENV MSR. unfold parexec_wio, trans_block_aux.
+  exploit (bisimu_par_body bdy ge fn rsr mr sr rsr mr sr); eauto.
   destruct (parexec_wio_body _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite prun_iw_app_Some; eauto.
-    exploit (forward_simu_par_exit ex sz ge fn rsr rs mr m sr s'); eauto.
+    exploit (bisimu_par_exit ex sz ge fn rsr rs mr m sr s'); eauto.
     subst Ge; simpl. destruct MSR as (Y1 & Y2). erewrite Y2; simpl.
     destruct (inst_prun _ _ _ _ _); simpl; auto.
   - intros X; erewrite prun_iw_app_None; eauto.
 Qed.
 
-Theorem forward_simu_par_wio_bblock ge fn rsr rsw mr sr sw mw bdy1 bdy2 ex sz:
+Theorem bisimu_par_wio_bblock ge fn rsr mr sr bdy1 bdy2 ex sz:
   Ge = Genv ge fn ->
   match_states (State rsr mr) sr ->
-  match_states (State rsw mw) sw ->
   match_outcome 
-   match parexec_wio_bblock_aux ge fn bdy1 ex (Ptrofs.repr sz) rsr rsw mr mw with
+   match parexec_wio ge fn bdy1 ex (Ptrofs.repr sz) rsr mr with
    | Next rs' m' => parexec_wio_body ge bdy2 rsr rs' mr m'
    | Stuck => Stuck
    end
-   (prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sw sr).
+   (prun_iw Ge ((trans_block_aux bdy1 sz ex)++(trans_body bdy2)) sr sr).
 Proof.
   intros.
-  exploit (forward_simu_par_wio_bblock_aux ge fn rsr mr sr rsw mw sw bdy1 ex sz); eauto.
-  destruct (parexec_wio_bblock_aux _ _ _ _ _ _); simpl.
+  exploit (bisimu_par_wio ge fn rsr mr sr bdy1 ex sz); eauto.
+  destruct (parexec_wio _ _ _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite prun_iw_app_Some; eauto.
-    eapply forward_simu_par_body; eauto.
+    eapply bisimu_par_body; eauto.
   - intros; erewrite prun_iw_app_None; eauto.
 Qed.
 
@@ -1169,7 +1298,7 @@ Proof.
     apply Permutation_app_comm.
 Qed.
 
-Theorem forward_simu_par rs1 m1 s1' b ge fn o2:
+Theorem bisimu_par rs1 m1 s1' b ge fn o2:
     Ge = Genv ge fn ->
     match_states (State rs1 m1) s1' -> 
     parexec_bblock ge fn b rs1 m1 o2 ->
@@ -1181,24 +1310,24 @@ Proof.
   inversion PAREXEC as (bdy1 & bdy2 & PERM & WIO).
   exploit trans_block_perserves_permutation; eauto.
   intros Perm.
-  exploit (forward_simu_par_wio_bblock ge fn rs1 rs1 m1 s1' s1' m1 bdy1 bdy2 (exit b) (size b)); eauto.
+  exploit (bisimu_par_wio_bblock ge fn rs1 m1 s1' bdy1 bdy2 (exit b) (size b)); eauto.
   rewrite <- WIO. clear WIO.
   intros H; eexists; split. 2: eapply H.
   unfold prun; eexists; split; eauto. 
   destruct (prun_iw _ _ _ _); simpl; eauto.
 Qed.
 
-(* sequential execution *)
-Theorem forward_simu_basic ge fn bi rs m s:
+(** sequential execution *)
+Theorem bisimu_basic ge fn bi rs m s:
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
   match_outcome (exec_basic_instr ge bi rs m) (inst_run Ge (trans_basic bi) s s).
 Proof.
   intros; unfold exec_basic_instr. rewrite inst_run_prun.
-  eapply forward_simu_par_wio_basic; eauto.
+  eapply bisimu_par_wio_basic; eauto.
 Qed.
 
-Lemma forward_simu_body:
+Lemma bisimu_body:
   forall bdy ge fn rs m s,
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
@@ -1206,33 +1335,33 @@ Lemma forward_simu_body:
 Proof.
   induction bdy as [|i bdy]; simpl; eauto. 
   intros.
-  exploit (forward_simu_basic ge fn i rs m s); eauto.
+  exploit (bisimu_basic ge fn i rs m s); eauto.
   destruct (exec_basic_instr _ _ _ _); simpl.
   - intros (s' & X1 & X2). rewrite X1; simpl; eauto.
   - intros X; rewrite X; simpl; auto.
 Qed.
 
-Theorem forward_simu_exit ge fn b rs m s:
+Theorem bisimu_exit ge fn b rs m s:
   Ge = Genv ge fn ->
   match_states (State rs m) s ->
   match_outcome (exec_control ge fn (exit b) (nextblock b rs) m) (inst_run Ge (trans_pcincr (size b) (trans_exit (exit b))) s s).
 Proof.
   intros; unfold exec_control, nextblock. rewrite inst_run_prun. 
-  apply (forward_simu_par_control (exit b) (size b) (Val.offset_ptr (rs PC) (Ptrofs.repr (size b))) ge fn rs rs m m s s); auto.
+  apply (bisimu_par_control (exit b) (size b) (Val.offset_ptr (rs PC) (Ptrofs.repr (size b))) ge fn rs rs m m s s); auto.
 Qed.
 
-Theorem forward_simu rs m b ge fn s:
+Theorem bisimu rs m b ge fn s:
     Ge = Genv ge fn ->
     match_states (State rs m) s -> 
     match_outcome (exec_bblock ge fn b rs m) (exec Ge (trans_block b) s).
 Proof.
   intros GENV MS. unfold exec_bblock.
-  exploit (forward_simu_body (body b) ge fn rs m s); eauto.
+  exploit (bisimu_body (body b) ge fn rs m s); eauto.
   unfold exec, trans_block; simpl.
   destruct (exec_body _ _ _ _); simpl.
   - intros (s' & X1 & X2).
     erewrite run_app_Some; eauto.
-    exploit (forward_simu_exit ge fn b rs0 m0 s'); eauto.
+    exploit (bisimu_exit ge fn b rs0 m0 s'); eauto.
     subst Ge; simpl. destruct X2 as (Y1 & Y2). erewrite Y2; simpl.
     destruct (inst_run _ _ _); simpl; auto.
   - intros X; erewrite run_app_None; eauto.
@@ -1269,10 +1398,10 @@ Lemma bblock_para_check_correct ge fn bb rs m rs' m':
   det_parexec ge fn bb rs m rs' m'.
 Proof.
   intros H H0 H1 o H2. unfold bblock_para_check in H1.
-  exploit (forward_simu rs m bb ge fn); eauto. eapply trans_state_match.
+  exploit (bisimu rs m bb ge fn); eauto. eapply trans_state_match.
   rewrite H0; simpl.
   intros (s2' & EXEC & MS).
-  exploit forward_simu_par. 2: apply (trans_state_match (State rs m)). all: eauto.
+  exploit bisimu_par. 2: apply (trans_state_match (State rs m)). all: eauto.
   intros (o2' & PRUN & MO).
   exploit parallelizable_correct. apply is_para_correct_aux. eassumption.
   intro. eapply H3 in PRUN. clear H3. destruct o2'.
@@ -1290,24 +1419,23 @@ Qed.
 
 End SECT_PAR.
 
-
 Section SECT_BBLOCK_EQUIV.
 
 Variable Ge: genv.
 
-Local Hint Resolve trans_state_match.
+Local Hint Resolve trans_state_match: core.
 
 Lemma bblock_simu_reduce:
   forall p1 p2 ge fn,
   Ge = Genv ge fn ->
   L.bblock_simu Ge (trans_block p1) (trans_block p2) ->
-  Asmblockgenproof0.bblock_simu ge fn p1 p2.
+  Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
   unfold bblock_simu, res_eq; intros p1 p2 ge fn H1 H2 rs m DONTSTUCK.
   generalize (H2 (trans_state (State rs m))); clear H2.
   intro H2. 
-  exploit (forward_simu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
-  exploit (forward_simu Ge rs m p2 ge fn (trans_state (State rs m))); eauto.
+  exploit (bisimu Ge rs m p1 ge fn (trans_state (State rs m))); eauto.
+  exploit (bisimu Ge rs m p2 ge fn (trans_state (State rs m))); eauto.
   destruct (exec_bblock ge fn p1 rs m); try congruence.
   intros H3 (s2' & exp2 & MS'). unfold exec in exp2, H3. rewrite exp2 in H2.
   destruct H2 as (m2' & H2 & H4). discriminate. rewrite H2 in H3.
@@ -1319,6 +1447,8 @@ Proof.
       generalize (H0 r). intros Hr. congruence.
   * discriminate.
 Qed.
+
+(** Used for debug traces *)
 
 Definition gpreg_name (gpr: gpreg) :=
   match gpr with
@@ -1369,6 +1499,7 @@ Definition string_of_name_rr (n: arith_name_rr): pstring :=
   | Pfabsw => "Pfabsw"
   | Pfnegd => "Pfnegd"
   | Pfnegw => "Pfnegw"
+  | Pfinvw => "Pfinvw"
   | Pfnarrowdw => "Pfnarrowdw"
   | Pfwidenlwd => "Pfwidenlwd"
   | Pfloatwrnsz => "Pfloatwrnsz"
@@ -1405,12 +1536,14 @@ Definition string_of_name_rf64 (n: arith_name_rf64): pstring :=
 
 Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   match n with
-    Pcompw _ => "Pcompw"
+  | Pcompw _ => "Pcompw"
   | Pcompl _ => "Pcompl"
   | Pfcompw _ => "Pfcompw"
   | Pfcompl _ => "Pfcompl"
   | Paddw => "Paddw"
+  | Paddxw _ => "Paddxw"
   | Psubw => "Psubw"
+  | Prevsubxw _ => "Prevsubxw"
   | Pmulw => "Pmulw"
   | Pandw => "Pandw"
   | Pnandw => "Pnandw"
@@ -1425,7 +1558,9 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Psrxw => "Psrxw"
   | Psllw => "Psllw"
   | Paddl => "Paddl"
+  | Paddxl _ => "Paddxl"
   | Psubl => "Psubl"
+  | Prevsubxl _ => "Prevsubxl"
   | Pandl => "Pandl"
   | Pnandl => "Pnandl"
   | Porl => "Porl"
@@ -1445,12 +1580,19 @@ Definition string_of_name_rrr (n: arith_name_rrr): pstring :=
   | Pfsbfw => "Pfsbfw"
   | Pfmuld => "Pfmuld"
   | Pfmulw => "Pfmulw"
+  | Pfmind => "Pfmind"
+  | Pfminw => "Pfminw"
+  | Pfmaxd => "Pfmaxd"
+  | Pfmaxw => "Pfmaxw"
   end.
 
 Definition string_of_name_rri32 (n: arith_name_rri32): pstring :=
   match n with
     Pcompiw _ => "Pcompiw"
   | Paddiw => "Paddiw"
+  | Paddxiw _ => "Paddxiw"
+  | Prevsubiw => "Prevsubiw"
+  | Prevsubxiw _ => "Prevsubxiw"
   | Pmuliw => "Pmuliw"
   | Pandiw => "Pandiw"
   | Pnandiw => "Pnandiw"
@@ -1475,6 +1617,9 @@ Definition string_of_name_rri64 (n: arith_name_rri64): pstring :=
   match n with
     Pcompil _ => "Pcompil"
   | Paddil => "Paddil"
+  | Prevsubil => "Prevsubil"
+  | Paddxil _ => "Paddxil"
+  | Prevsubxil _ => "Prevsubxil"
   | Pmulil => "Pmulil"
   | Pandil => "Pandil"
   | Pnandil => "Pnandil"
@@ -1490,8 +1635,14 @@ Definition string_of_name_arrr (n: arith_name_arrr): pstring :=
   match n with
   | Pmaddw  => "Pmaddw"
   | Pmaddl  => "Pmaddl"
+  | Pmsubw  => "Pmsubw"
+  | Pmsubl  => "Pmsubl"
   | Pcmove _ => "Pcmove"
   | Pcmoveu _ => "Pcmoveu"
+  | Pfmaddfw  => "Pfmaddfw"
+  | Pfmaddfl  => "Pfmaddfl"
+  | Pfmsubfw  => "Pfmsubfw"
+  | Pfmsubfl  => "Pfmsubfl"
   end.
 
 Definition string_of_name_arr (n: arith_name_arr): pstring :=
@@ -1503,11 +1654,15 @@ Definition string_of_name_arr (n: arith_name_arr): pstring :=
 Definition string_of_name_arri32 (n: arith_name_arri32): pstring :=
   match n with
   | Pmaddiw => "Pmaddw"
+  | Pcmoveiw _ => "Pcmoveiw"
+  | Pcmoveuiw _ => "Pcmoveuiw"
   end.
 
 Definition string_of_name_arri64 (n: arith_name_arri64): pstring :=
   match n with
   | Pmaddil => "Pmaddl"
+  | Pcmoveil _ => "Pcmoveil"
+  | Pcmoveuil _ => "Pcmoveuil"
   end.
 
 Definition string_of_arith (op: arith_op): pstring :=
@@ -1543,9 +1698,9 @@ Definition string_of_load_name (n: load_name) : pstring :=
 
 Definition string_of_load (op: load_op): pstring :=
   match op with
-  | OLoadRRO n _ => string_of_load_name n
-  | OLoadRRR n => string_of_load_name n
-  | OLoadRRRXS n => string_of_load_name n
+  | OLoadRRO n _ _ => string_of_load_name n
+  | OLoadRRR n _ => string_of_load_name n
+  | OLoadRRRXS n _ => string_of_load_name n
   end.
 
 Definition string_of_store_name (n: store_name) : pstring :=
@@ -1593,16 +1748,46 @@ Definition string_of_op (op: P.op): ?? pstring :=
   | Fail => RET (Str "Fail")
   end.
 
+End SECT_BBLOCK_EQUIV.
+
+(** REWRITE RULES *)
+
+Definition is_constant (o: op): bool :=
+  match o with
+  | Constant _ | OArithR _ | OArithRI32 _ _ | OArithRI64 _ _ | OArithRF32 _ _ | OArithRF64 _ _ => true
+  | _ => false
+  end.
+
+Lemma is_constant_correct ge o: is_constant o = true -> op_eval ge o [] <> None.
+Proof.
+  destruct o; simpl in * |- *; try congruence.
+  destruct ao; simpl in * |- *; try congruence;
+  destruct n; simpl in * |- *; try congruence;
+  unfold arith_eval; destruct ge; simpl in * |- *; try congruence.
+Qed.
+
+Definition main_reduce (t: Terms.term):= RET (Terms.nofail is_constant t).
+
+Local Hint Resolve is_constant_correct: wlp.
+
+Lemma main_reduce_correct t:
+ WHEN main_reduce t ~> pt THEN Terms.match_pt t pt.
+Proof.
+  wlp_simplify.
+Qed.
+
+Definition reduce := {| Terms.result := main_reduce; Terms.result_correct := main_reduce_correct |}.
+
 Definition bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock) : ?? bool :=
   if verb then
-    IDT.verb_bblock_simu_test string_of_name string_of_op (trans_block p1) (trans_block p2)
+    IST.verb_bblock_simu_test reduce string_of_name string_of_op (trans_block p1) (trans_block p2)
   else
-    IDT.bblock_simu_test (trans_block p1) (trans_block p2).
+    IST.bblock_simu_test reduce (trans_block p1) (trans_block p2).
 
-Local Hint Resolve IDT.bblock_simu_test_correct bblock_simu_reduce IDT.verb_bblock_simu_test_correct: wlp.
+Local Hint Resolve IST.bblock_simu_test_correct bblock_simu_reduce IST.verb_bblock_simu_test_correct: wlp.
 
 Theorem bblock_simu_test_correct verb p1 p2 :
-  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Ge = Genv ge fn -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+  WHEN bblock_simu_test verb p1 p2 ~> b THEN b=true -> forall ge fn, Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
   wlp_simplify.
 Qed.
@@ -1612,19 +1797,23 @@ Hint Resolve bblock_simu_test_correct: wlp.
 
 Import UnsafeImpure.
 
-Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := unsafe_coerce (bblock_simu_test verb p1 p2).
+Definition pure_bblock_simu_test (verb: bool) (p1 p2: Asmvliw.bblock): bool := 
+  match unsafe_coerce (bblock_simu_test verb p1 p2) with
+  | Some b => b
+  | None => false
+  end.
 
-Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: Ge = Genv ge fn -> pure_bblock_simu_test verb p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Theorem pure_bblock_simu_test_correct verb p1 p2 ge fn: pure_bblock_simu_test verb p1 p2 = true -> Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
-   intros; unfold pure_bblock_simu_test. intros; eapply bblock_simu_test_correct; eauto.
+   unfold pure_bblock_simu_test. 
+   destruct (unsafe_coerce (bblock_simu_test verb p1 p2)) eqn: UNSAFE; try discriminate.
+   intros; subst. eapply bblock_simu_test_correct; eauto.
    apply unsafe_coerce_not_really_correct; eauto.
 Qed.
 
 Definition bblock_simub: Asmvliw.bblock -> Asmvliw.bblock -> bool := pure_bblock_simu_test true.
 
-Lemma bblock_simub_correct p1 p2 ge fn: Ge = Genv ge fn -> bblock_simub p1 p2 = true -> Asmblockgenproof0.bblock_simu ge fn p1 p2.
+Lemma bblock_simub_correct p1 p2 ge fn: bblock_simub p1 p2 = true -> Asmblockprops.bblock_simu ge fn p1 p2.
 Proof.
  eapply (pure_bblock_simu_test_correct true).
 Qed.
-
-End SECT_BBLOCK_EQUIV.

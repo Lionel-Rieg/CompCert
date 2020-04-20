@@ -1,5 +1,6 @@
 /* List manipulations */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@ struct list * buildlist(int n)
   struct list * r;
   if (n < 0) return NULL;
   r = malloc(sizeof(struct list));
+  assert(r != NULL && "buildlist: r malloc failed");
   r->hd = n;
   r->tl = buildlist(n - 1);
   return r;
@@ -21,6 +23,7 @@ struct list * reverselist (struct list * l)
   struct list * r, * r2;
   for (r = NULL; l != NULL; l = l->tl) {
     r2 = malloc(sizeof(struct list));
+    assert(r2 != NULL && "reverselist: r2 malloc failed");
     r2->hd = l->hd;
     r2->tl = r;
     r = r2;
@@ -58,8 +61,13 @@ int main(int argc, char ** argv)
   int n, niter, i;
   struct list * l;
 
+#ifdef __K1C__
+  if (argc >= 2) n = atoi(argv[1]); else n = 500;
+  if (argc >= 3) niter = atoi(argv[1]); else niter = 100;
+#else
   if (argc >= 2) n = atoi(argv[1]); else n = 1000;
   if (argc >= 3) niter = atoi(argv[1]); else niter = 20000;
+#endif
   l = buildlist(n);
   if (checklist(n, reverselist(l))) {
     printf("OK\n");

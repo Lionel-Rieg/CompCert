@@ -227,9 +227,9 @@ int main() {
   
   printf("c1==c8: %s\n"
 	 "c1==c9: %s\n"
-	 "c1_time : %" PRIu64 "\n"
-	 "c8_time : %" PRIu64 "\n"
-	 "c9_time : %" PRIu64 "\n",
+	 "c1 cycles: %" PRIu64 "\n"
+	 "c8 cycles: %" PRIu64 "\n"
+	 "c9 cycles: %" PRIu64 "\n",
 	
 	 COMPLEX_mat_equal(m, n, c1, p, c8, p)?"true":"false",
 	 COMPLEX_mat_equal(m, n, c1, p, c9, p)?"true":"false",

@@ -86,9 +86,10 @@ let print_instruction pp succ = function
       fprintf pp "(%a) = (%a) using %a, %a" vars dsts vars srcs var t1 var t2
   | Xop(op, args, res) ->
       fprintf pp "%a = %a" var res (print_operation var) (op, args)
-  | Xload(chunk, addr, args, dst) ->
-      fprintf pp "%a = %s[%a]"
-         var dst (name_of_chunk chunk) (print_addressing var) (addr, args)
+  | Xload(trap, chunk, addr, args, dst) ->
+      fprintf pp "%a = %s[%a]%a"
+        var dst (name_of_chunk chunk) (print_addressing var) (addr, args)
+        print_trapping_mode trap
   | Xstore(chunk, addr, args, src) ->
       fprintf pp "%s[%a] = %a"
          (name_of_chunk chunk) (print_addressing var) (addr, args) var src
@@ -103,7 +104,7 @@ let print_instruction pp succ = function
         (print_builtin_args var) args
   | Xbranch s ->
       print_succ pp s succ
-  | Xcond(cond, args, s1, s2) ->
+  | Xcond(cond, args, s1, s2, _) ->
       fprintf pp "if (%a) goto %d else goto %d"
         (print_condition var) (cond, args)
         (P.to_int s1) (P.to_int s2)
@@ -138,7 +139,7 @@ let print_function pp ?alloc ?live f =
   fprintf pp "f() {\n";
   let instrs =
     List.sort
-      (fun (pc1, _) (pc2, _) -> Pervasives.compare pc2 pc1)
+      (fun (pc1, _) (pc2, _) -> compare pc2 pc1)
       (List.map
         (fun (pc, i) -> (P.to_int pc, i))
         (PTree.elements f.fn_code)) in
