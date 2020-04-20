@@ -135,6 +135,8 @@ __compcert_i64_udiv_stsud:
 __compcert_i64_sdiv_stsud:
 	compd.lt $r2 = $r0, 0
 	compd.lt $r3 = $r1, 0
+	absd $r0 = $r0
+	absd $r1 = $r1
 	;;
 	xord $r2 = $r2, $r3
 	make $r3 = 0
@@ -144,6 +146,8 @@ __compcert_i64_sdiv_stsud:
 	.globl __compcert_i64_smod_stsud
 __compcert_i64_smod_stsud:
 	compd.lt $r2 = $r0, 0
+	absd $r0 = $r0
+	absd $r1 = $r1
 	make $r3 = 1
 	goto __compcert_i64_divmod_stsud
 	;;
