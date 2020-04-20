@@ -88,15 +88,17 @@ BACKEND=\
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
   ConstpropOp.v Constprop.v ConstpropOpproof.v Constpropproof.v \
+  Inject.v Injectproof.v \
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
   CSE2deps.v CSE2depsproof.v \
   CSE2.v CSE2proof.v \
   CSE3analysis.v CSE3analysisproof.v CSE3.v CSE3proof.v \
+  LICM.v LICMproof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
   ForwardMoves.v ForwardMovesproof.v \
-  FirstNop.v \
+  FirstNop.v FirstNopproof.v \
   Allnontrap.v Allnontrapproof.v \
   Allocation.v Allocproof.v \
   Tunneling.v Tunnelingproof.v \

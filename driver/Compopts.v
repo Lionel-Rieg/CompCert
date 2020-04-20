@@ -48,6 +48,9 @@ Parameter optim_CSE3: unit -> bool.
 (** Flag -fcse3-alias-analysis.  For DMonniaux's common subexpression elimination. *)
 Parameter optim_CSE3_alias_analysis: unit -> bool.
 
+(** Flag -fmove-loop-invariants. *)
+Parameter optim_move_loop_invariants: unit -> bool.
+
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 
@@ -65,6 +68,9 @@ Parameter optim_xsaddr: unit -> bool.
 
 (** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
 Parameter optim_coalesce_mem: unit -> bool.
+
+(* FIXME TEMPORARY Flag -faddx. Fuse (default true) *)
+Parameter optim_madd: unit -> bool.
 
 (** FIXME TEMPORARY Flag -faddx. Fuse (default false) *)
 Parameter optim_addx: unit -> bool.

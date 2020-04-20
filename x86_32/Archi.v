@@ -64,3 +64,5 @@ Global Opaque ptr64 big_endian splitlong
               default_nan_32 choose_nan_32
               fma_order fma_invalid_mul_is_nan
               float_of_single_preserves_sNaN.
+
+Definition has_notrap_loads := false.

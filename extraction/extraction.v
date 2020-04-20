@@ -87,6 +87,9 @@ Extract Inlined Constant Inlining.inlining_info => "Inliningaux.inlining_info".
 Extract Inlined Constant Inlining.inlining_analysis => "Inliningaux.inlining_analysis".
 Extraction Inline Inlining.ret Inlining.bind.
 
+(* Loop invariant code motion *)
+Extract Inlined Constant LICM.gen_injections => "LICMaux.gen_injections".
+
 (* Allocation *)
 Extract Constant Allocation.regalloc => "Regalloc.regalloc".
 
@@ -120,6 +123,9 @@ Extract Constant Compopts.optim_CSE3 =>
   "fun _ -> !Clflags.option_fcse3".
 Extract Constant Compopts.optim_CSE3_alias_analysis =>
   "fun _ -> !Clflags.option_fcse3_alias_analysis".
+Extract Constant Compopts.optim_move_loop_invariants =>
+  "fun _ -> !Clflags.option_fmove_loop_invariants".
+
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>
@@ -136,6 +142,8 @@ Extract Constant Compopts.optim_xsaddr =>
   "fun _ -> !Clflags.option_fxsaddr".
 Extract Constant Compopts.optim_addx =>
   "fun _ -> !Clflags.option_faddx".
+Extract Constant Compopts.optim_madd =>
+  "fun _ -> !Clflags.option_fmadd".
 Extract Constant Compopts.optim_coalesce_mem =>
   "fun _ -> !Clflags.option_fcoalesce_mem".
 Extract Constant Compopts.optim_forward_moves =>
@@ -230,4 +238,5 @@ Separate Extraction
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
    Parser.translation_unit_file
-   Compopts.optim_postpass.
+   Compopts.optim_postpass
+   Archi.has_notrap_loads.

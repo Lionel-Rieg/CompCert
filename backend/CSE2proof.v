@@ -1033,7 +1033,16 @@ Proof.
     assumption.
   }
   intuition congruence.
-Qed. 
+Qed.
+
+Lemma kill_builtin_res_sound:
+  forall res (m : mem) (rs : regset) vres (rel : RELATION.t)
+         (REL : sem_rel m rel rs),
+         (sem_rel m (kill_builtin_res res rel) (regmap_setres res vres rs)).
+Proof.
+  destruct res; simpl; intros; trivial.
+  apply kill_reg_sound; trivial.
+Qed.
 End SOUNDNESS.
 
 Definition match_prog (p tp: RTL.program) :=
@@ -1116,6 +1125,22 @@ Definition is_killed_in_fmap fmap pc res :=
   | Some map => is_killed_in_map map pc res
   end.
 
+Lemma external_call_sound:
+  forall ef (rel : RELATION.t) sp (m m' : mem) (rs : regset) vargs t vres
+         (REL : sem_rel fundef unit ge sp m rel rs)
+         (CALL : external_call ef ge vargs m t vres m'),
+    sem_rel fundef unit ge sp m' (apply_external_call ef rel) rs.
+Proof.
+  destruct ef; intros; simpl in *.
+  all: eauto using kill_mem_sound.
+  all: unfold builtin_or_external_sem in *.
+  1, 2: destruct (Builtins.lookup_builtin_function name sg);
+    eauto using kill_mem_sound;
+    inv CALL; eauto using kill_mem_sound.
+  all: inv CALL.
+  all: eauto using kill_mem_sound.
+Qed.
+  
 Definition sem_rel_b' := sem_rel_b fundef unit ge.
 Definition fmap_sem' := fmap_sem fundef unit ge.
 Definition subst_arg_ok' := subst_arg_ok fundef unit ge.
@@ -1578,9 +1603,9 @@ Proof.
   destruct (forward_map _) as [map |] eqn:MAP in *; trivial.
   destruct (map # pc) as [mpc |] eqn:MPC in *; try contradiction.
   
-  apply sem_rel_b_ge with (rb2 := Some RELATION.top).
+  apply sem_rel_b_ge with (rb2 := Some (kill_builtin_res res (apply_external_call ef mpc))).
   {
-    replace (Some RELATION.top) with (apply_instr' (fn_code f) pc (map # pc)).
+    replace (Some (kill_builtin_res res (apply_external_call ef mpc))) with (apply_instr' (fn_code f) pc (map # pc)).
     {
       eapply DS.fixpoint_solution with (code := fn_code f) (successors := successors_instr); try eassumption.
       2: apply apply_instr'_bot.
@@ -1591,8 +1616,8 @@ Proof.
     rewrite MPC.
     reflexivity.
   }
-  apply top_ok.
-  
+  apply kill_builtin_res_sound.
+  eapply external_call_sound with (m := m); eassumption.
 
 (* cond *)
 - econstructor; split.
