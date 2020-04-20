@@ -374,7 +374,7 @@ Definition eval_operation
   | Ororimm n, v1 :: nil => Some (Val.ror v1 (Vint n))
   | Oshru, v1 :: v2 :: nil => Some (Val.shru v1 v2)
   | Oshruimm n, v1 :: nil => Some (Val.shru v1 (Vint n))
-  | Oshrximm n, v1::nil => Val.shrx v1 (Vint n)
+  | Oshrximm n, v1::nil => Some (Val.maketotal (Val.shrx v1 (Vint n)))
   | Omadd, v1::v2::v3::nil => Some (Val.add v1 (Val.mul v2 v3))
   | (Omaddimm n), v1::v2::nil => Some (Val.add v1 (Val.mul v2 (Vint n)))
   | Omsub, v1::v2::v3::nil => Some (Val.sub v1 (Val.mul v2 v3))
@@ -424,7 +424,7 @@ Definition eval_operation
   | Oshrlimm n, v1::nil => Some (Val.shrl v1 (Vint n))
   | Oshrlu, v1::v2::nil => Some (Val.shrlu v1 v2)
   | Oshrluimm n, v1::nil => Some (Val.shrlu v1 (Vint n))
-  | Oshrxlimm n, v1::nil => Val.shrxl v1 (Vint n)
+  | Oshrxlimm n, v1::nil => Some (Val.maketotal (Val.shrxl v1 (Vint n)))
   | Omaddl, v1::v2::v3::nil => Some (Val.addl v1 (Val.mull v2 v3))
   | (Omaddlimm n), v1::v2::nil => Some (Val.addl v1 (Val.mull v2 (Vlong n)))
   | Omsubl, v1::v2::v3::nil => Some (Val.subl v1 (Val.mull v2 v3))
@@ -454,20 +454,20 @@ Definition eval_operation
                                       
   | Osingleoffloat, v1::nil => Some (Val.singleoffloat v1)
   | Ofloatofsingle, v1::nil => Some (Val.floatofsingle v1)
-  | Ointoffloat, v1::nil => Val.intoffloat v1
-  | Ointuoffloat, v1::nil => Val.intuoffloat v1
-  | Ointofsingle, v1::nil => Val.intofsingle v1
-  | Ointuofsingle, v1::nil => Val.intuofsingle v1
-  | Osingleofint, v1::nil => Val.singleofint v1
-  | Osingleofintu, v1::nil => Val.singleofintu v1
-  | Olongoffloat, v1::nil => Val.longoffloat v1
-  | Olonguoffloat, v1::nil => Val.longuoffloat v1
-  | Ofloatoflong, v1::nil => Val.floatoflong v1
-  | Ofloatoflongu, v1::nil => Val.floatoflongu v1
-  | Olongofsingle, v1::nil => Val.longofsingle v1
-  | Olonguofsingle, v1::nil => Val.longuofsingle v1
-  | Osingleoflong, v1::nil => Val.singleoflong v1
-  | Osingleoflongu, v1::nil => Val.singleoflongu v1
+  | Ointoffloat, v1::nil => Some (Val.maketotal (Val.intoffloat v1))
+  | Ointuoffloat, v1::nil => Some (Val.maketotal (Val.intuoffloat v1))
+  | Ointofsingle, v1::nil => Some (Val.maketotal (Val.intofsingle v1))
+  | Ointuofsingle, v1::nil => Some (Val.maketotal (Val.intuofsingle v1))
+  | Osingleofint, v1::nil => Some (Val.maketotal (Val.singleofint v1))
+  | Osingleofintu, v1::nil => Some (Val.maketotal (Val.singleofintu v1))
+  | Olongoffloat, v1::nil => Some (Val.maketotal (Val.longoffloat v1))
+  | Olonguoffloat, v1::nil => Some (Val.maketotal (Val.longuoffloat v1))
+  | Ofloatoflong, v1::nil => Some (Val.maketotal (Val.floatoflong v1))
+  | Ofloatoflongu, v1::nil => Some (Val.maketotal (Val.floatoflongu v1))
+  | Olongofsingle, v1::nil => Some (Val.maketotal (Val.longofsingle v1))
+  | Olonguofsingle, v1::nil => Some (Val.maketotal (Val.longuofsingle v1))
+  | Osingleoflong, v1::nil => Some (Val.maketotal (Val.singleoflong v1))
+  | Osingleoflongu, v1::nil => Some (Val.maketotal (Val.singleoflongu v1))
   | Ocmp c, _ => Some (Val.of_optbool (eval_condition c vl m))
   | (Oextfz stop start), v0::nil => Some (extfz stop start v0)
   | (Oextfs stop start), v0::nil => Some (extfs stop start v0)
@@ -840,7 +840,7 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1; simpl... destruct (Int.ltu i0 Int.iwordsize)...
   - destruct v0; simpl... destruct (Int.ltu n Int.iwordsize)...
   (* shrx *)
-  - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 31)); inv H0...
+  - destruct v0; simpl... destruct (Int.ltu n (Int.repr 31)); simpl; trivial.
   (* shrimm *)
   - destruct v0; simpl...   
   (* madd *)
@@ -920,7 +920,7 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0; destruct v1; simpl... destruct (Int.ltu i0 Int64.iwordsize')...
   - destruct v0; simpl... destruct (Int.ltu n Int64.iwordsize')...
   (* shrxl *)
-  - destruct v0; simpl in H0; try discriminate. destruct (Int.ltu n (Int.repr 63)); inv H0...
+  - destruct v0; simpl... destruct (Int.ltu n (Int.repr 63)); simpl; trivial.
   (* maddl, maddlim *)
   - apply type_addl.
   - apply type_addl.
@@ -962,26 +962,26 @@ Proof with (try exact I; try reflexivity; auto using Val.Vptr_has_type).
   - destruct v0...
   - destruct v0...
   (* intoffloat, intuoffloat *)
-  - destruct v0; simpl in H0; inv H0. destruct (Float.to_int f); inv H2...
-  - destruct v0; simpl in H0; inv H0. destruct (Float.to_intu f); inv H2...
+  - destruct v0; simpl... destruct (Float.to_int f); simpl; trivial.
+  - destruct v0; simpl... destruct (Float.to_intu f); simpl; trivial.
   (* intofsingle, intuofsingle *)
-  - destruct v0; simpl in H0; inv H0. destruct (Float32.to_int f); inv H2...
-  - destruct v0; simpl in H0; inv H0. destruct (Float32.to_intu f); inv H2...
+  - destruct v0; simpl...  destruct (Float32.to_int f); simpl; trivial.
+  - destruct v0; simpl...  destruct (Float32.to_intu f); simpl; trivial.
   (* singleofint, singleofintu *)
-  - destruct v0; simpl in H0; inv H0...
-  - destruct v0; simpl in H0; inv H0...
+  - destruct v0; simpl...
+  - destruct v0; simpl...
   (* longoffloat, longuoffloat *)
-  - destruct v0; simpl in H0; inv H0. destruct (Float.to_long f); inv H2...
-  - destruct v0; simpl in H0; inv H0. destruct (Float.to_longu f); inv H2...
+  - destruct v0; simpl... destruct (Float.to_long f); simpl; trivial.
+  - destruct v0; simpl... destruct (Float.to_longu f); simpl; trivial.
   (* floatoflong, floatoflongu *)
-  - destruct v0; simpl in H0; inv H0...
-  - destruct v0; simpl in H0; inv H0...
+  - destruct v0; simpl...
+  - destruct v0; simpl...
   (* longofsingle, longuofsingle *)
-  - destruct v0; simpl in H0; inv H0. destruct (Float32.to_long f); inv H2...
-  - destruct v0; simpl in H0; inv H0. destruct (Float32.to_longu f); inv H2...
+  - destruct v0; simpl... destruct (Float32.to_long f); simpl; trivial.
+  - destruct v0; simpl... destruct (Float32.to_longu f); simpl; trivial.
   (* singleoflong, singleoflongu *)
-  - destruct v0; simpl in H0; inv H0...
-  - destruct v0; simpl in H0; inv H0...
+  - destruct v0; simpl...
+  - destruct v0; simpl...
   (* cmp *)
   - destruct (eval_condition cond vl m)... destruct b...
  (* extfz *)
@@ -1033,15 +1033,7 @@ Qed.
 Definition is_trapping_op (op : operation) :=
   match op with
   | Odiv | Odivl | Odivu | Odivlu
-  | Omod | Omodl | Omodu | Omodlu
-  | Oshrximm _ | Oshrxlimm _
-  | Ointoffloat | Ointuoffloat
-  | Ointofsingle | Ointuofsingle
-  | Olongoffloat | Olonguoffloat
-  | Olongofsingle | Olonguofsingle
-  | Osingleofint | Osingleofintu
-  | Osingleoflong | Osingleoflongu
-  | Ofloatoflong | Ofloatoflongu => true
+  | Omod | Omodl | Omodu | Omodlu => true
   | _ => false
   end.
 
@@ -1482,8 +1474,8 @@ Proof.
   - inv H4; inv H2; simpl; auto. destruct (Int.ltu i0 Int.iwordsize); auto.
   - inv H4; simpl; auto. destruct (Int.ltu n Int.iwordsize); auto.
   (* shrx *)
-  - inv H4; simpl in H1; try discriminate. simpl.
-    destruct (Int.ltu n (Int.repr 31)); inv H1. TrivialExists.
+  - inv H4; simpl; auto.
+    destruct (Int.ltu n (Int.repr 31)); inv H; simpl; auto.
   (* rorimm *)
   - inv H4; simpl; auto.
   (* madd, maddim *)
@@ -1572,8 +1564,8 @@ Proof.
   - inv H4; inv H2; simpl; auto. destruct (Int.ltu i0 Int64.iwordsize'); auto.
   - inv H4; simpl; auto. destruct (Int.ltu n Int64.iwordsize'); auto.
   (* shrx *)
-  - inv H4; simpl in H1; try discriminate. simpl.
-    destruct (Int.ltu n (Int.repr 63)); inv H1. TrivialExists.
+  - inv H4; simpl; auto.
+    destruct (Int.ltu n (Int.repr 63)); simpl; auto.
 
   (* maddl, maddlimm *)
   - apply Val.addl_inject; auto.
@@ -1620,34 +1612,26 @@ Proof.
   - inv H4; simpl; auto.
   - inv H4; simpl; auto.
   (* intoffloat, intuoffloat *)
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_int f0); simpl in H2; inv H2.
-    exists (Vint i); auto.
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_intu f0); simpl in H2; inv H2.
-    exists (Vint i); auto.
+  - inv H4; simpl; auto. destruct (Float.to_int f0); simpl; auto.
+  - inv H4; simpl; auto. destruct (Float.to_intu f0); simpl; auto.
   (* intofsingle, intuofsingle *)
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_int f0); simpl in H2; inv H2.
-    exists (Vint i); auto.
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_intu f0); simpl in H2; inv H2.
-    exists (Vint i); auto.
+  - inv H4; simpl; auto. destruct (Float32.to_int f0); simpl; auto.
+  - inv H4; simpl; auto. destruct (Float32.to_intu f0); simpl; auto.
   (* singleofint, singleofintu *)
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
+  - inv H4; simpl; auto.
+  - inv H4; simpl; auto.
   (* longoffloat, longuoffloat *)
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_long f0); simpl in H2; inv H2.
-    exists (Vlong i); auto.
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float.to_longu f0); simpl in H2; inv H2.
-    exists (Vlong i); auto.
+  - inv H4; simpl; auto. destruct (Float.to_long f0); simpl; auto.
+  - inv H4; simpl; auto. destruct (Float.to_longu f0); simpl; auto.
   (* floatoflong, floatoflongu *)
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
+  - inv H4; simpl; auto.
+  - inv H4; simpl; auto.
   (* longofsingle, longuofsingle *)
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_long f0); simpl in H2; inv H2.
-    exists (Vlong i); auto.
-  - inv H4; simpl in H1; inv H1. simpl. destruct (Float32.to_longu f0); simpl in H2; inv H2.
-    exists (Vlong i); auto.
+  - inv H4; simpl; auto. destruct (Float32.to_long f0); simpl; auto.
+  - inv H4; simpl; auto. destruct (Float32.to_longu f0); simpl; auto.
   (* singleoflong, singleoflongu *)
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
-  - inv H4; simpl in H1; inv H1. simpl. TrivialExists.
+  - inv H4; simpl; auto.
+  - inv H4; simpl; auto.
   (* cmp *)
   - subst v1. destruct (eval_condition cond vl1 m1) eqn:?.
     exploit eval_condition_inj; eauto. intros EQ; rewrite EQ.

@@ -988,16 +988,16 @@ Definition arith_eval_rr n v :=
   | Pfinvw => ExtValues.invfs v
   | Pfnarrowdw => Val.singleoffloat v
   | Pfwidenlwd => Val.floatofsingle v
-  | Pfloatwrnsz => match Val.singleofint v with Some f => f | _ => Vundef end
-  | Pfloatuwrnsz => match Val.singleofintu v with Some f => f | _ => Vundef end
-  | Pfloatudrnsz => match Val.floatoflongu v with Some f => f | _ => Vundef end
-  | Pfloatdrnsz => match Val.floatoflong v with Some f => f | _ => Vundef end
-  | Pfixedwrzz => match Val.intofsingle v with Some i => i | _ => Vundef end
-  | Pfixeduwrzz => match Val.intuofsingle v with Some i => i | _ => Vundef end
-  | Pfixeddrzz => match Val.longoffloat v with Some i => i | _ => Vundef end
-  | Pfixedudrzz => match Val.longuoffloat v with Some i => i | _ => Vundef end
-  | Pfixeddrzz_i32 => match Val.intoffloat v with Some i => i | _ => Vundef end
-  | Pfixedudrzz_i32 => match Val.intuoffloat v with Some i => i | _ => Vundef end
+  | Pfloatwrnsz => Val.maketotal (Val.singleofint v)
+  | Pfloatuwrnsz => Val.maketotal (Val.singleofintu v)
+  | Pfloatudrnsz => Val.maketotal (Val.floatoflongu v)
+  | Pfloatdrnsz => Val.maketotal (Val.floatoflong v)
+  | Pfixedwrzz => Val.maketotal (Val.intofsingle v)
+  | Pfixeduwrzz => Val.maketotal (Val.intuofsingle v)
+  | Pfixeddrzz => Val.maketotal (Val.longoffloat v)
+  | Pfixedudrzz => Val.maketotal (Val.longuoffloat v)
+  | Pfixeddrzz_i32 => Val.maketotal (Val.intoffloat v)
+  | Pfixedudrzz_i32 => Val.maketotal (Val.intuoffloat v)
   end.
 
 Definition arith_eval_ri32 n i :=

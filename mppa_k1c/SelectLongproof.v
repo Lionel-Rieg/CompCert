@@ -838,34 +838,7 @@ Proof.
 + predSpec Int.eq Int.eq_spec n Int.zero.
 - subst n. destruct x; simpl in H0; inv H0. econstructor; split; eauto.
   change (Int.ltu Int.zero (Int.repr 63)) with true. simpl. rewrite Int64.shrx'_zero; auto.
-- TrivialExists.
-(*
-  intros. unfold shrxlimm. destruct Archi.splitlong eqn:SL.
-+ eapply SplitLongproof.eval_shrxlimm; eauto using Archi.splitlong_ptr32.
-+ destruct x; simpl in H0; try discriminate. 
-  destruct (Int.ltu n (Int.repr 63)) eqn:LTU; inv H0.
-  predSpec Int.eq Int.eq_spec n Int.zero.
-  - subst n. exists (Vlong i); split; auto. rewrite Int64.shrx'_zero. auto.
-  - assert (NZ: Int.unsigned n <> 0).
-    { intro EQ; elim H0. rewrite <- (Int.repr_unsigned n). rewrite EQ; auto. }
-    assert (LT: 0 <= Int.unsigned n < 63) by (apply Int.ltu_inv in LTU; assumption).
-    assert (LTU2: Int.ltu (Int.sub Int64.iwordsize' n) Int64.iwordsize' = true).
-    { unfold Int.ltu; apply zlt_true.
-      unfold Int.sub. change (Int.unsigned Int64.iwordsize') with 64. 
-      rewrite Int.unsigned_repr. omega. 
-      assert (64 < Int.max_unsigned) by reflexivity. omega. }
-    assert (X: eval_expr ge sp e m le
-               (Eop (Oshrlimm (Int.repr (Int64.zwordsize - 1))) (a ::: Enil))
-               (Vlong (Int64.shr' i (Int.repr (Int64.zwordsize - 1))))).
-    { EvalOp. }
-    assert (Y: eval_expr ge sp e m le (shrxlimm_inner a n)
-               (Vlong (Int64.shru' (Int64.shr' i (Int.repr (Int64.zwordsize - 1))) (Int.sub Int64.iwordsize' n)))).
-    { EvalOp. simpl. rewrite LTU2. auto. }
-    TrivialExists. 
-    constructor. EvalOp. simpl; eauto. constructor. 
-    simpl. unfold Int.ltu; rewrite zlt_true. rewrite Int64.shrx'_shr_2 by auto. reflexivity. 
-    change (Int.unsigned Int64.iwordsize') with 64; omega.
-*)
+- TrivialExists. simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_cmplu:
@@ -915,6 +888,7 @@ Proof.
   unfold longoffloat; red; intros. destruct Archi.splitlong eqn:SL.
   eapply SplitLongproof.eval_longoffloat; eauto.
   TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_longuoffloat: partial_unary_constructor_sound longuoffloat Val.longuoffloat.
@@ -922,6 +896,7 @@ Proof.
   unfold longuoffloat; red; intros. destruct Archi.splitlong eqn:SL.
   eapply SplitLongproof.eval_longuoffloat; eauto.
   TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_floatoflong: partial_unary_constructor_sound floatoflong Val.floatoflong.
@@ -929,6 +904,7 @@ Proof.
   unfold floatoflong; red; intros. destruct Archi.splitlong eqn:SL.
   eapply SplitLongproof.eval_floatoflong; eauto.
   TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_floatoflongu: partial_unary_constructor_sound floatoflongu Val.floatoflongu.
@@ -936,6 +912,7 @@ Proof.
   unfold floatoflongu; red; intros. destruct Archi.splitlong eqn:SL.
   eapply SplitLongproof.eval_floatoflongu; eauto.
   TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_longofsingle: partial_unary_constructor_sound longofsingle Val.longofsingle.
