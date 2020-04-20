@@ -1033,15 +1033,7 @@ Qed.
 Definition is_trapping_op (op : operation) :=
   match op with
   | Odiv | Odivl | Odivu | Odivlu
-  | Omod | Omodl | Omodu | Omodlu
-  | Oshrximm _ | Oshrxlimm _
-  | Ointoffloat | Ointuoffloat
-  | Ointofsingle | Ointuofsingle
-  | Olongoffloat | Olonguoffloat
-  | Olongofsingle | Olonguofsingle
-  | Osingleofint | Osingleofintu
-  | Osingleoflong | Osingleoflongu
-  | Ofloatoflong | Ofloatoflongu => true
+  | Omod | Omodl | Omodu | Omodlu => true
   | _ => false
   end.
 

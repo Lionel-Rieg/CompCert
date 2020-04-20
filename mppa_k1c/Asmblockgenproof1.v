@@ -1535,7 +1535,6 @@ Opaque Int.eq.
   + apply exec_straight_one. simpl. eauto.
   + repeat split.
     * rewrite Pregmap.gss.
-      subst v.
       destruct (rs x0); simpl; trivial.
       unfold Val.maketotal.
       destruct (Int.ltu _ _); simpl; trivial.
@@ -1546,7 +1545,6 @@ Opaque Int.eq.
   + apply exec_straight_one. simpl. eauto.
   + repeat split.
     * rewrite Pregmap.gss.
-      subst v.
       destruct (rs x0); simpl; trivial.
       unfold Val.maketotal.
       destruct (Int.ltu _ _); simpl; trivial.
