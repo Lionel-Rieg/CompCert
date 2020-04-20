@@ -276,7 +276,8 @@ Proof.
     inv H; auto.
   destruct (Int.is_power2 n) eqn:?.
   destruct (Int.ltu i (Int.repr 31)) eqn:?.
-  exists v; split; auto. simpl. eapply Val.divs_pow2; eauto. congruence.
+  exists v; split; auto. simpl.
+  erewrite Val.divs_pow2; eauto. reflexivity. congruence.
   exists v; auto.
   exists v; auto.
 Qed.
@@ -449,7 +450,8 @@ Lemma make_divlimm_correct:
 Proof.
   intros; unfold make_divlimm.
   destruct (Int64.is_power2' n) eqn:?. destruct (Int.ltu i (Int.repr 63)) eqn:?.
-  rewrite H0 in H. econstructor; split. simpl; eauto. eapply Val.divls_pow2; eauto. auto.
+  rewrite H0 in H. econstructor; split. simpl; eauto.
+  erewrite Val.divls_pow2; eauto. auto.
   exists v; auto.
   exists v; auto.
 Qed.
