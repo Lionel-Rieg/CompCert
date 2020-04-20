@@ -1527,7 +1527,10 @@ Proof.
     assert (eval_addressing tge sp addr rs ## args = Some a).
     rewrite <- H0. apply eval_addressing_preserved. exact symbols_preserved.
     eapply exec_Istore; eauto.
-    rewrite (subst_args_ok' sp m); assumption.
+    - rewrite (subst_args_ok' sp m) by assumption.
+      eassumption.
+    - rewrite (subst_arg_ok' sp m) by assumption.
+      eassumption.
   }
   
   constructor; auto.

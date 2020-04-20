@@ -14,6 +14,86 @@ Require Import Coqlib Compopts.
 Require Import AST Integers Floats Values Memory Globalenvs.
 Require Import Op ExtValues ExtFloats RTL ValueDomain.
 
+Definition intoffloat_total (x: aval) :=
+  match x with
+  | F f =>
+      match Float.to_int f with
+      | Some i => I i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition intuoffloat_total (x: aval) :=
+  match x with
+  | F f =>
+      match Float.to_intu f with
+      | Some i => I i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition intofsingle_total (x: aval) :=
+  match x with
+  | FS f =>
+      match Float32.to_int f with
+      | Some i => I i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition intuofsingle_total (x: aval) :=
+  match x with
+  | FS f =>
+      match Float32.to_intu f with
+      | Some i => I i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition longoffloat_total (x: aval) :=
+  match x with
+  | F f =>
+      match Float.to_long f with
+      | Some i => L i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition longuoffloat_total (x: aval) :=
+  match x with
+  | F f =>
+      match Float.to_longu f with
+      | Some i => L i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition longofsingle_total (x: aval) :=
+  match x with
+  | FS f =>
+      match Float32.to_long f with
+      | Some i => L i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
+Definition longuofsingle_total (x: aval) :=
+  match x with
+  | FS f =>
+      match Float32.to_longu f with
+      | Some i => L i
+      | None => ntop
+      end
+  | _ => ntop1 x
+  end.
+
 Definition minf := binop_float ExtFloat.min.
 Definition maxf := binop_float ExtFloat.max.
 Definition minfs := binop_single ExtFloat32.min.
@@ -282,18 +362,18 @@ Definition eval_static_operation (op: operation) (vl: list aval): aval :=
   | Ofmsubfs, v1::v2::v3::nil => fmsubfs v1 v2 v3
   | Osingleoffloat, v1::nil => singleoffloat v1
   | Ofloatofsingle, v1::nil => floatofsingle v1
-  | Ointoffloat, v1::nil => intoffloat v1
-  | Ointuoffloat, v1::nil => intuoffloat v1
-  | Ointofsingle, v1::nil => intofsingle v1
-  | Ointuofsingle, v1::nil => intuofsingle v1
+  | Ointoffloat, v1::nil => intoffloat_total v1
+  | Ointuoffloat, v1::nil => intuoffloat_total v1
+  | Ointofsingle, v1::nil => intofsingle_total v1
+  | Ointuofsingle, v1::nil => intuofsingle_total v1
   | Osingleofint, v1::nil => singleofint v1
   | Osingleofintu, v1::nil => singleofintu v1
-  | Olongoffloat, v1::nil => longoffloat v1
-  | Olonguoffloat, v1::nil => longuoffloat v1
+  | Olongoffloat, v1::nil => longoffloat_total v1
+  | Olonguoffloat, v1::nil => longuoffloat_total v1
   | Ofloatoflong, v1::nil => floatoflong v1
   | Ofloatoflongu, v1::nil => floatoflongu v1
-  | Olongofsingle, v1::nil => longofsingle v1
-  | Olonguofsingle, v1::nil => longuofsingle v1
+  | Olongofsingle, v1::nil => longofsingle_total v1
+  | Olonguofsingle, v1::nil => longuofsingle_total v1
   | Osingleoflong, v1::nil => singleoflong v1
   | Osingleoflongu, v1::nil => singleoflongu v1
   | Ocmp c, _ => of_optbool (eval_static_condition c vl)
@@ -316,6 +396,196 @@ Variable ge: genv.
 Hypothesis GENV: genv_match bc ge.
 Variable sp: block.
 Hypothesis STACK: bc sp = BCstack.
+
+Lemma intoffloat_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.intoffloat v)) (intoffloat_total x).
+Proof.
+  unfold Val.intoffloat, intoffloat_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float.to_int f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve intoffloat_total_sound : va.
+
+Lemma intuoffloat_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.intuoffloat v)) (intuoffloat_total x).
+Proof.
+  unfold Val.intoffloat, intoffloat_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float.to_intu f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve intuoffloat_total_sound : va.
+
+Lemma intofsingle_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.intofsingle v)) (intofsingle_total x).
+Proof.
+  unfold Val.intofsingle, intofsingle_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float32.to_int f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve intofsingle_total_sound : va.
+
+Lemma intuofsingle_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.intuofsingle v)) (intuofsingle_total x).
+Proof.
+  unfold Val.intofsingle, intofsingle_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float32.to_intu f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve intuofsingle_total_sound : va.
+
+Lemma singleofint_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.singleofint v)) (singleofint x).
+Proof.
+  unfold Val.singleofint, singleofint; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve singleofint_total_sound : va.
+
+Lemma singleofintu_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.singleofintu v)) (singleofintu x).
+Proof.
+  unfold Val.singleofintu, singleofintu; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve singleofintu_total_sound : va.
+
+Lemma longoffloat_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.longoffloat v)) (longoffloat_total x).
+Proof.
+  unfold Val.longoffloat, longoffloat_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float.to_long f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve longoffloat_total_sound : va.
+
+Lemma longuoffloat_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.longuoffloat v)) (longuoffloat_total x).
+Proof.
+  unfold Val.longoffloat, longoffloat_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float.to_longu f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve longuoffloat_total_sound : va.
+
+Lemma longofsingle_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.longofsingle v)) (longofsingle_total x).
+Proof.
+  unfold Val.longofsingle, longofsingle_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float32.to_long f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve longofsingle_total_sound : va.
+
+Lemma longuofsingle_total_sound:
+  forall v x
+         (MATCH : vmatch bc v x),
+    vmatch bc (Val.maketotal (Val.longuofsingle v)) (longuofsingle_total x).
+Proof.
+  unfold Val.longofsingle, longofsingle_total. intros.
+  inv MATCH; simpl in *; try constructor.
+  all: destruct (Float32.to_longu f) as [i|] eqn:E; simpl; [auto with va | constructor].
+  unfold ntop1, provenance.
+  destruct (va_strict tt); constructor.
+Qed.
+
+Hint Resolve longuofsingle_total_sound : va.
+
+Lemma singleoflong_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.singleoflong v)) (singleoflong x).
+Proof.
+  unfold Val.singleoflong, singleoflong; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve singleoflong_total_sound : va.
+
+Lemma singleoflongu_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.singleoflongu v)) (singleoflongu x).
+Proof.
+  unfold Val.singleoflongu, singleoflongu; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve singleoflongu_total_sound : va.
+
+Lemma floatoflong_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.floatoflong v)) (floatoflong x).
+Proof.
+  unfold Val.floatoflong, floatoflong; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve floatoflong_total_sound : va.
+
+Lemma floatoflongu_total_sound:
+  forall v x, vmatch bc v x ->
+              vmatch bc (Val.maketotal (Val.floatoflongu v)) (floatoflongu x).
+Proof.
+  unfold Val.floatoflongu, floatoflongu; intros.
+  inv H; simpl.
+  all: auto with va.
+  all: unfold ntop1, provenance.
+  all: try constructor.
+Qed.
+
+Hint Resolve floatoflongu_total_sound : va.
 
 Lemma minf_sound:
   forall v x w y, vmatch bc v x -> vmatch bc w y -> vmatch bc (ExtValues.minf v w) (minf x y).
@@ -490,6 +760,26 @@ Proof.
   destruct addr; trivial; discriminate.
 Qed.
 
+Lemma vmatch_vint_ntop1:
+  forall x y, vmatch bc (Vint x) (ntop1 y).
+Proof.
+  intro. unfold ntop1, provenance.
+  destruct y;
+    destruct (va_strict tt);
+    constructor.
+Qed.
+
+Lemma vmatch_vlong_ntop1:
+  forall x y, vmatch bc (Vlong x) (ntop1 y).
+Proof.
+  intro. unfold ntop1, provenance.
+  destruct y;
+    destruct (va_strict tt);
+    constructor.
+Qed.
+
+Hint Resolve vmatch_vint_ntop1 vmatch_vlong_ntop1: va.
+       
 Theorem eval_static_operation_sound:
   forall op vargs m vres aargs,
   eval_operation ge (Vptr sp Ptrofs.zero) op vargs m = Some vres ->
@@ -518,6 +808,10 @@ Proof.
              end) with (Val.sub (Vint n) (Val.shl a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
     + destruct n; destruct shift; reflexivity.
+  - (* shrx *)
+    inv H1; simpl; try constructor.
+    all: destruct Int.ltu; [simpl | constructor; fail].
+    all: auto with va.
   - replace (match Val.shll a1 (Vint (int_of_shift1_4 shift)) with
     | Vlong n2 => Vlong (Int64.add n n2)
     | Vptr b2 ofs2 =>
@@ -535,6 +829,10 @@ Proof.
              end) with (Val.subl (Vlong n) (Val.shll a1 (Vint (int_of_shift1_4 shift)))).
     + eauto with va.
     + destruct a1; destruct shift; reflexivity.
+  - (* shrxl *)
+    inv H1; simpl; try constructor.
+    all: destruct Int.ltu; [simpl | constructor; fail].
+    all: auto with va.
   - apply of_optbool_sound. eapply eval_static_condition_sound; eauto.
 
   (* extfz *)
