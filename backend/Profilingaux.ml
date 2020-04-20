@@ -24,8 +24,10 @@ let print_anonymous_function pp f =
   
 let function_id (f : coq_function) : identifier =
   let digest = Digest.string (Marshal.to_string f []) in
+  (*
   Printf.fprintf stderr "FUNCTION hash = %a\n" pp_id digest;
   print_anonymous_function stderr f;
+   *)
   digest
 
 let branch_id (f_id : identifier) (node : P.t) : identifier =
@@ -65,7 +67,7 @@ let load_profiling_info (filename : string) : unit =
 
 let condition_oracle (id : identifier) : bool option =
   let (count0, count1) = get_counts id in
-  ( (* if count0 <> 0L || count1 <> 0L then *)
-  Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1);
+  (* (if count0 <> 0L || count1 <> 0L then
+    Printf.fprintf stderr "%a : %Ld %Ld\n" pp_id id count0 count1); *)
   if count0 = count1 then None
   else Some(count1 > count0);;

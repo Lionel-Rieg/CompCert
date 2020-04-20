@@ -1,6 +1,6 @@
 include ../Makefile.config
 
-CFLAGS=-O1 -g -Wall
+CFLAGS=-O1 -Wall
 
 ifeq ($(ARCH),x86)
 ifeq ($(MODEL),64)
