@@ -34,11 +34,57 @@ module Target (*: TARGET*) =
 
     let comment = "#"
 
+    type idiv_function_kind =
+      | Idiv_system
+      | Idiv_stsud
+      | Idiv_fp;;
+
+    let idiv_function_kind = function
+        "stsud" -> Idiv_stsud
+      | "system" -> Idiv_system
+      | "fp" -> Idiv_fp
+      | _ -> failwith "unknown integer division kind";;
+    
+    let idiv_function_kind_32bit () = idiv_function_kind !Clflags.option_div_i32;;
+    let idiv_function_kind_64bit () = idiv_function_kind !Clflags.option_div_i64;;
+    
     let subst_symbol = function
-        "__compcert_i64_udiv" -> "__udivdi3"
-      | "__compcert_i64_sdiv" -> "__divdi3"
-      | "__compcert_i64_umod" -> "__umoddi3"
-      | "__compcert_i64_smod" -> "__moddi3"
+        "__compcert_i64_udiv" ->
+        (match idiv_function_kind_64bit () with
+         | Idiv_system | Idiv_fp -> "__udivdi3"
+         | Idiv_stsud -> "__compcert_i64_udiv_stsud")
+      | "__compcert_i64_sdiv" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__divdi3"
+         | Idiv_stsud -> "__compcert_i64_sdiv_stsud")
+      | "__compcert_i64_umod" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__umoddi3"
+         | Idiv_stsud -> "__compcert_i64_umod_stsud")
+      | "__compcert_i64_smod" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__moddi3"
+         | Idiv_stsud -> "__compcert_i64_smod_stsud")
+      | "__compcert_i32_sdiv" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_sdiv_fp"
+         | Idiv_stsud -> "__compcert_i32_sdiv_stsud")
+      | "__compcert_i32_udiv" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_udiv_fp"
+         | Idiv_stsud -> "__compcert_i32_udiv_stsud")
+      | "__compcert_i32_smod" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_smod_fp"
+         | Idiv_stsud -> "__compcert_i32_smod_stsud")
+      | "__compcert_i32_umod" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_umod_fp"
+         | Idiv_stsud -> "__compcert_i32_umod_stsud")
       | "__compcert_f64_div" -> "__divdf3"
       | "__compcert_f32_div" -> "__divsf3"
       | x -> x;;

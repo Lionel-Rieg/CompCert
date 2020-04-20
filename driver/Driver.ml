@@ -295,6 +295,10 @@ let cmdline_actions =
     [Exact("-f" ^ name ^ "="), String 
       (fun s -> (strref := (if s == "" then "list" else s)); ref := true)
      ] in
+  let f_str name strref default =
+    [Exact("-f" ^ name ^ "="), String 
+      (fun s -> (strref := (if s == "" then default else s)))
+     ] in
   let check_align n =
     if n <= 0 || ((n land (n - 1)) <> 0) then
       error no_loc "requested alignment %d is not a power of 2" n
@@ -418,6 +422,8 @@ let cmdline_actions =
   @ f_opt "globaladdrtmp" option_fglobaladdrtmp
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
+  @ f_str "div-i32" option_div_i32 "stsud"
+  @ f_str "div-i64" option_div_i64 "stsud"
   @ f_opt "addx" option_faddx
   @ f_opt "madd" option_fmadd
   @ f_opt "nontrap-loads" option_fnontrap_loads

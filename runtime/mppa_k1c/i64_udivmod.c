@@ -1,3 +1,4 @@
+#if 0
 /* THIS IS THE PREVIOUS VERSION, USED ON BOSTAN AND ANDEY */
 unsigned long long
 udivmoddi4(unsigned long long num, unsigned long long den, int modwanted)
@@ -26,3 +27,4 @@ udivmoddi4(unsigned long long num, unsigned long long den, int modwanted)
 
     return modwanted ? r : q;
 }
+#endif

@@ -938,6 +938,12 @@ Theorem eval_divu_base:
     Val.divu x y = Some z ->
     exists v, eval_expr ge sp e m le (divu_base a b) v /\ Val.lessdef z v.
 Proof.
+  intros; unfold divu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
+(* For using 64-bit unsigned division for 32-bit
+
   intros until z.
   intros Hax Hby Hdiv. unfold divu_base.
   pose proof (divu_is_divlu x y) as DIVU.
@@ -957,7 +963,8 @@ Proof.
   }
   congruence.
 Qed.
-
+ *)
+  
 Theorem eval_modu_base:
   forall le a b x y z,
     eval_expr ge sp e m le a x ->
@@ -965,6 +972,12 @@ Theorem eval_modu_base:
     Val.modu x y = Some z ->
     exists v, eval_expr ge sp e m le (modu_base a b) v /\ Val.lessdef z v.
 Proof.
+  intros; unfold modu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
+(* for using 64-bit unsigned modulo for 32-bit
+
   intros until z.
   intros Hax Hby Hmod. unfold modu_base.
   pose proof (modu_is_modlu x y) as MODU.
@@ -984,7 +997,8 @@ Proof.
   }
   congruence.
 Qed.
-
+ *)
+  
 Theorem eval_shrximm:
   forall le a n x z,
     eval_expr ge sp e m le a x ->
