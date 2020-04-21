@@ -53,7 +53,17 @@ let print_rtl_transf oc =
       Printf.fprintf oc "%s.transf_program)\n" pass_name;
       Printf.fprintf oc "   @@ print (print_RTL %d)\n" (succ i)
     ) rtl_passes;;
-    
+
+let print_rtl_mkpass oc =
+  Array.iter (fun (partial, trigger, time_label, pass_name) ->
+      output_string oc "  ::: mkpass (";
+      (match trigger with
+       | Always -> ()
+       | Option s ->
+          Printf.fprintf oc "match_if Compopts.%s " s);
+      Printf.fprintf oc "%sproof.match_prog)\n" pass_name)
+    rtl_passes;;
+
 if (Array.length Sys.argv)<>3
 then exit 1;;
 
@@ -69,6 +79,8 @@ let filename_in = Sys.argv.(1) and filename_out = Sys.argv.(2) in
            print_rtl_require oc
         | "EXPAND_RTL_REQUIRE_PROOF" ->
            print_rtl_require_proof oc
+        | "EXPAND_RTL_MKPASS" ->
+           print_rtl_mkpass oc
         | line -> (output_string oc line;
                    output_char oc '\n')
       done

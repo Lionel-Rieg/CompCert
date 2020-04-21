@@ -208,24 +208,7 @@ Definition CompCert's_passes :=
   ::: mkpass Cminorgenproof.match_prog
   ::: mkpass Selectionproof.match_prog
   ::: mkpass RTLgenproof.match_prog
-  ::: mkpass (match_if Compopts.optim_tailcalls Tailcallproof.match_prog)
-  ::: mkpass Inliningproof.match_prog
-  ::: mkpass (match_if Compopts.profile_arcs Profilingproof.match_prog)
-  ::: mkpass (match_if Compopts.branch_probabilities ProfilingExploitproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_move_loop_invariants FirstNopproof.match_prog)
-  ::: mkpass Renumberproof.match_prog
-  ::: mkpass (match_if Compopts.optim_duplicate Duplicateproof.match_prog)
-  ::: mkpass Renumberproof.match_prog
-  ::: mkpass (match_if Compopts.optim_constprop Constpropproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_move_loop_invariants LICMproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_move_loop_invariants Renumberproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_CSE CSEproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_CSE2 CSE2proof.match_prog)
-  ::: mkpass (match_if Compopts.optim_CSE3 CSE3proof.match_prog)
-  ::: mkpass (match_if Compopts.optim_forward_moves ForwardMovesproof.match_prog)
-  ::: mkpass (match_if Compopts.optim_redundancy Deadcodeproof.match_prog)
-  ::: mkpass (match_if Compopts.all_loads_nontrap Allnontrapproof.match_prog)
-  ::: mkpass Unusedglobproof.match_prog
+EXPAND_RTL_MKPASS
   ::: mkpass Allocproof.match_prog
   ::: mkpass Tunnelingproof.match_prog
   ::: mkpass Linearizeproof.match_prog
