@@ -30,11 +30,7 @@ open Clight
    not in the table of atoms.  We print them as "$NNN" (a unique
    integer). *)
 
-let temp_name (id: AST.ident) =
-  try
-    "$" ^ Hashtbl.find string_of_atom id
-  with Not_found ->
-    Printf.sprintf "$%d" (P.to_int id)
+let temp_name (id: AST.ident) = (* "$" ^ Z.to_string (Z.Zpos id) *)extern_atom id
 
 (* Declarator (identifier + type) -- reuse from PrintCsyntax *)
 
