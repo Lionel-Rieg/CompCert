@@ -22,10 +22,8 @@
   Global environments, along with the initial memory state at the beginning
   of program execution, are built from the program of interest, as follows:
 - A distinct memory address is assigned to each function of the program.
-  These function addresses use negative numbers to distinguish them from
-  addresses of memory blocks.  The associations of function name to function
-  address and function address to function description are recorded in
-  the global environment.
+  The associations of function name to function address and function address
+  to function description are recorded in the global environment.
 - For each global variable, a memory block is allocated and associated to
   the name of the variable.
 
