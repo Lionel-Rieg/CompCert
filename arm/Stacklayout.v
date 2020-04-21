@@ -64,7 +64,7 @@ Lemma frame_env_separated:
        ** range sp (fe_ofs_callee_save fe) (size_callee_save_area b (fe_ofs_callee_save fe))
        ** P.
 Proof.
-Local Opaque Z.add Z.mul sepconj range.
+Local Opaque Z.add Z.mul sepconj range'.
   intros; simpl.
   set (olink := 4 * b.(bound_outgoing));
   set (ora := olink + 4);
