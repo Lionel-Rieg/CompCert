@@ -689,10 +689,13 @@ Proof.
 
   - (* Istore *)
     exists (State ts tf sp pc' rs m'). split.
-    + eapply exec_Istore with (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args)); try eassumption.
+    + eapply exec_Istore with (args := (subst_args (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc args))
+      (src := (subst_arg (ctx:=(context_from_hints (snd (preanalysis tenv f)))) (fst (preanalysis tenv f)) pc src)) ; try eassumption.
       * TR_AT. reflexivity.
       * rewrite subst_args_ok with (sp:=sp) (m:=m) by trivial.
         rewrite eval_addressing_preserved with (ge1 := ge) by exact symbols_preserved.
+        eassumption.
+      * rewrite subst_arg_ok with (sp:=sp) (m:=m) by trivial.
         assumption.
     + econstructor; eauto.
       IND_STEP.

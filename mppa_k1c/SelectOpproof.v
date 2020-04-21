@@ -1013,34 +1013,8 @@ Proof.
   replace (Int.shrx i Int.zero) with i. auto.
   unfold Int.shrx, Int.divs. rewrite Int.shl_zero.
   change (Int.signed Int.one) with 1. rewrite Z.quot_1_r. rewrite Int.repr_signed; auto.
-  econstructor; split. EvalOp. auto.
-(*
-  intros. destruct x; simpl in H0; try discriminate. 
-  destruct (Int.ltu n (Int.repr 31)) eqn:LTU; inv H0.
-  unfold shrximm.
-  predSpec Int.eq Int.eq_spec n Int.zero.
-  - subst n. exists (Vint i); split; auto.
-    unfold Int.shrx, Int.divs. rewrite Z.quot_1_r. rewrite Int.repr_signed. auto.
-  - assert (NZ: Int.unsigned n <> 0).
-    { intro EQ; elim H0. rewrite <- (Int.repr_unsigned n). rewrite EQ; auto. }
-    assert (LT: 0 <= Int.unsigned n < 31) by (apply Int.ltu_inv in LTU; assumption).
-    assert (LTU2: Int.ltu (Int.sub Int.iwordsize n) Int.iwordsize = true).
-    { unfold Int.ltu; apply zlt_true.
-      unfold Int.sub. change (Int.unsigned Int.iwordsize) with 32. 
-      rewrite Int.unsigned_repr. omega. 
-      assert (32 < Int.max_unsigned) by reflexivity. omega. }
-    assert (X: eval_expr ge sp e m le
-               (Eop (Oshrimm (Int.repr (Int.zwordsize - 1))) (a ::: Enil))
-               (Vint (Int.shr i (Int.repr (Int.zwordsize - 1))))).
-    { EvalOp. }
-    assert (Y: eval_expr ge sp e m le (shrximm_inner a n)
-               (Vint (Int.shru (Int.shr i (Int.repr (Int.zwordsize - 1))) (Int.sub Int.iwordsize n)))).
-    { EvalOp. simpl. rewrite LTU2. auto. }
-    TrivialExists. 
-    constructor. EvalOp. simpl; eauto. constructor. 
-    simpl. unfold Int.ltu; rewrite zlt_true. rewrite Int.shrx_shr_2 by auto. reflexivity. 
-    change (Int.unsigned Int.iwordsize) with 32; omega.
-*)
+  econstructor; split. EvalOp.
+  simpl. rewrite H0. simpl. reflexivity. auto.
 Qed.
 
 Theorem eval_shl: binary_constructor_sound shl Val.shl.
@@ -1251,6 +1225,7 @@ Theorem eval_intoffloat:
   exists v, eval_expr ge sp e m le (intoffloat a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold intoffloat. TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_intuoffloat:
@@ -1260,6 +1235,7 @@ Theorem eval_intuoffloat:
   exists v, eval_expr ge sp e m le (intuoffloat a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold intuoffloat. TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_floatofintu:
@@ -1279,7 +1255,7 @@ Proof.
     constructor. econstructor. constructor. eassumption. constructor.
     simpl. f_equal. constructor.
     simpl.
-    destruct x; simpl; trivial.
+    destruct x; simpl; trivial; try discriminate.
     f_equal.
     inv H0.
     f_equal.
@@ -1303,7 +1279,7 @@ Proof.
     constructor. econstructor. constructor. eassumption. constructor.
     simpl. f_equal. constructor.
     simpl.
-    destruct x; simpl; trivial.
+    destruct x; simpl; trivial; try discriminate.
     f_equal.
     inv H0.
     f_equal.
@@ -1318,6 +1294,7 @@ Theorem eval_intofsingle:
   exists v, eval_expr ge sp e m le (intofsingle a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold intofsingle. TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_singleofint:
@@ -1327,6 +1304,7 @@ Theorem eval_singleofint:
   exists v, eval_expr ge sp e m le (singleofint a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold singleofint; TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_intuofsingle:
@@ -1336,6 +1314,7 @@ Theorem eval_intuofsingle:
   exists v, eval_expr ge sp e m le (intuofsingle a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold intuofsingle. TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_singleofintu:
@@ -1345,6 +1324,7 @@ Theorem eval_singleofintu:
   exists v, eval_expr ge sp e m le (singleofintu a) v /\ Val.lessdef y v.
 Proof.
   intros; unfold intuofsingle. TrivialExists.
+  simpl. rewrite H0. reflexivity.
 Qed.
 
 Theorem eval_singleoffloat: unary_constructor_sound singleoffloat Val.singleoffloat.

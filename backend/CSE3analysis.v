@@ -64,6 +64,7 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   Qed.
   
   Definition lub := PSet.inter.
+  Definition glb := PSet.union.
   
   Lemma ge_lub_left: forall x y, ge (lub x y) x.
   Proof.
@@ -274,7 +275,8 @@ Section OPERATIONS.
   Definition oper (dst : reg) (op: sym_op) (args : list reg)
              (rel : RELATION.t) : RELATION.t :=
     match rhs_find op (forward_move_l rel args) rel with
-    | Some r => move r dst rel
+    | Some r => RELATION.glb (move r dst rel)
+                             (oper1 dst op args rel)
     | None => oper1 dst op args rel
     end.
   
@@ -323,7 +325,7 @@ Section OPERATIONS.
              (chunk : memory_chunk) (addr: addressing) (args : list reg)
              (src : reg) (ty: typ)
              (rel : RELATION.t) : RELATION.t :=
-    store1 chunk addr (forward_move_l rel args) src ty rel.
+    store1 chunk addr (forward_move_l rel args) (forward_move rel src) ty rel.
 
   Definition kill_builtin_res res rel :=
     match res with
@@ -354,7 +356,7 @@ Section OPERATIONS.
   | Icond _ _ _ _ _
   | Ijumptable _ _ => Some rel
   | Istore chunk addr args src _ =>
-    Some (store chunk addr args src (tenv src) rel)
+    Some (store chunk addr args src (tenv (forward_move rel src)) rel)
   | Iop op args dst _ => Some (oper dst (SOp op) args rel)
   | Iload trap chunk addr args dst _ => Some (oper dst (SLoad chunk addr) args rel)
   | Icall _ _ _ dst _ => Some (kill_reg dst (kill_mem rel))

@@ -57,7 +57,7 @@ Definition transf_instr (fmap : PMap.t RB.t)
     | Some src => Iop Omove (src::nil) dst s
     end
   | Istore chunk addr args src s =>
-    Istore chunk addr (subst_args fmap pc args) src s
+    Istore chunk addr (subst_args fmap pc args) (subst_arg fmap pc src) s
   | Icall sig ros args dst s =>
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>
