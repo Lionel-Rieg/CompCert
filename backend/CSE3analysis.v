@@ -64,6 +64,7 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   Qed.
   
   Definition lub := PSet.inter.
+  Definition glb := PSet.union.
   
   Lemma ge_lub_left: forall x y, ge (lub x y) x.
   Proof.
@@ -274,7 +275,8 @@ Section OPERATIONS.
   Definition oper (dst : reg) (op: sym_op) (args : list reg)
              (rel : RELATION.t) : RELATION.t :=
     match rhs_find op (forward_move_l rel args) rel with
-    | Some r => move r dst rel
+    | Some r => RELATION.glb (move r dst rel)
+                             (oper1 dst op args rel)
     | None => oper1 dst op args rel
     end.
   
