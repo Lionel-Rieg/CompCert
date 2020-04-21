@@ -276,10 +276,10 @@ Definition apply_external_call ef (rel : RELATION.t) : RELATION.t :=
     | Some bf => rel
     | None => kill_mem rel
     end
-  | EF_malloc (* FIXME *)
+  | EF_malloc (* would need lessdef *)
   | EF_external _ _
   | EF_vstore _ 
-  | EF_free (* FIXME *)
+  | EF_free (* would need lessdef? *)
   | EF_memcpy _ _ (* FIXME *)
   | EF_inline_asm _ _ _ => kill_mem rel
   | _ => rel
@@ -363,7 +363,7 @@ Definition transf_instr (fmap : option (PMap.t RB.t))
     | Some src => Iop Omove (src::nil) dst s
     end
   | Istore chunk addr args src s =>
-    Istore chunk addr (subst_args fmap pc args) src s
+    Istore chunk addr (subst_args fmap pc args) (subst_arg fmap pc src) s
   | Icall sig ros args dst s =>
     Icall sig ros (subst_args fmap pc args) dst s
   | Itailcall sig ros args =>
