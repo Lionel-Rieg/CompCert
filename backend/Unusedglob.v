@@ -126,7 +126,7 @@ Fixpoint filter_globdefs (used: IS.t) (accu defs: list (ident * globdef fundef u
 Definition global_defined (p: program) (pm: prog_map) (id: ident) : bool :=
   match pm!id with Some _ => true | None => ident_eq id (prog_main p) end.
 
-Definition transform_program (p: program) : res program :=
+Definition transf_program (p: program) : res program :=
   let pm := prog_defmap p in
   match used_globals p pm with
   | None => Error (msg "Unusedglob: analysis failed")

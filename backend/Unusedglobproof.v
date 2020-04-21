@@ -428,9 +428,9 @@ Qed.
 End TRANSFORMATION.
 
 Theorem transf_program_match:
-  forall p tp, transform_program p = OK tp -> match_prog p tp.
+  forall p tp, transf_program p = OK tp -> match_prog p tp.
 Proof.
-  unfold transform_program; intros p tp TR. set (pm := prog_defmap p) in *.
+  unfold transf_program; intros p tp TR. set (pm := prog_defmap p) in *.
   destruct (used_globals p pm) as [u|] eqn:U; try discriminate.
   destruct (IS.for_all (global_defined p pm) u) eqn:DEF; inv TR.
   exists u; split.

@@ -201,6 +201,8 @@ tools/ndfun: tools/ndfun.ml
 	ocamlopt -o tools/ndfun str.cmxa tools/ndfun.ml
 tools/modorder: tools/modorder.ml
 	ocamlopt -o tools/modorder str.cmxa tools/modorder.ml
+tools/compiler_expand: tools/compiler_expand.ml
+	ocamlopt -o $@ $+
 
 latexdoc:
 	cd doc; $(COQDOC) --latex -o doc/doc.tex -g $(FILES)
@@ -215,6 +217,9 @@ latexdoc:
 	@echo "Preprocessing $*.vp"
 	@tools/ndfun $*.vp > $*.v || { rm -f $*.v; exit 2; }
 	@chmod a-w $*.v
+
+driver/Compiler.v: driver/Compiler.vexpand tools/compiler_expand
+	tools/compiler_expand driver/Compiler.vexpand $@
 
 compcert.ini: Makefile.config
 	(echo "stdlib_path=$(LIBDIR)"; \

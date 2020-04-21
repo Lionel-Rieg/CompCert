@@ -138,42 +138,7 @@ Definition partial_if {A: Type}
 Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    OK f
    @@ print (print_RTL 0)
-   @@ total_if Compopts.optim_tailcalls (time "Tail calls" Tailcall.transf_program)
-   @@ print (print_RTL 1)
-  @@@ time "Inlining" Inlining.transf_program
-   @@ print (print_RTL 2)
-   @@ total_if Compopts.profile_arcs (time "Profiling insertion" Profiling.transf_program)
-   @@ print (print_RTL 3)
-   @@ total_if Compopts.branch_probabilities (time "Profiling use" ProfilingExploit.transf_program)
-   @@ print (print_RTL 4)
-   @@ total_if Compopts.optim_move_loop_invariants (time "Inserting initial nop" FirstNop.transf_program)
-   @@ print (print_RTL 5)
-   @@ time "Renumbering" Renumber.transf_program
-   @@ print (print_RTL 6)
-  @@@ partial_if Compopts.optim_duplicate (time "Tail-duplicating" Duplicate.transf_program)
-   @@ print (print_RTL 7)
-   @@ time "Renumbering pre constprop" Renumber.transf_program
-   @@ print (print_RTL 8)
-   @@ total_if Compopts.optim_constprop (time "Constant propagation" Constprop.transf_program)
-   @@ print (print_RTL 9)
-  @@@ partial_if Compopts.optim_move_loop_invariants (time "LICM" LICM.transf_program)
-   @@ print (print_RTL 10)
-   @@ total_if Compopts.optim_move_loop_invariants (time "Renumbering pre CSE" Renumber.transf_program)
-   @@ print (print_RTL 11)
-  @@@ partial_if Compopts.optim_CSE (time "CSE" CSE.transf_program)
-   @@ print (print_RTL 12)
-   @@ total_if Compopts.optim_CSE2 (time "CSE2" CSE2.transf_program)
-   @@ print (print_RTL 13)
-  @@@ partial_if Compopts.optim_CSE3 (time "CSE3" CSE3.transf_program)
-   @@ print (print_RTL 14)
-   @@ total_if Compopts.optim_forward_moves ForwardMoves.transf_program
-   @@ print (print_RTL 15)
-  @@@ partial_if Compopts.optim_redundancy (time "Redundancy elimination" Deadcode.transf_program)
-   @@ print (print_RTL 16)
-   @@ total_if Compopts.all_loads_nontrap Allnontrap.transf_program
-   @@ print (print_RTL 17)
-  @@@ time "Unused globals" Unusedglob.transform_program
-   @@ print (print_RTL 18)
+EXPAND_TRANSF_PROGRAM
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
    @@ time "Branch tunneling" Tunneling.tunnel_program
