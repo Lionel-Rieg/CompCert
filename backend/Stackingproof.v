@@ -149,7 +149,7 @@ Lemma contains_get_stack:
 Proof.
   intros. unfold load_stack.
   replace (Val.offset_ptr (Vptr sp Ptrofs.zero) (Ptrofs.repr ofs)) with (Vptr sp (Ptrofs.repr ofs)).
-  eapply loadv_rule; eauto.
+  eapply loadv_rule; eauto using perm_F_any.
   simpl. rewrite Ptrofs.add_zero_l; auto.
 Qed.
 
@@ -171,7 +171,7 @@ Lemma contains_set_stack:
 Proof.
   intros. unfold store_stack.
   replace (Val.offset_ptr (Vptr sp Ptrofs.zero) (Ptrofs.repr ofs)) with (Vptr sp (Ptrofs.repr ofs)).
-  eapply storev_rule; eauto.
+  eapply storev_rule; eauto using perm_F_any.
   simpl. rewrite Ptrofs.add_zero_l; auto.
 Qed.
 
@@ -936,7 +936,7 @@ Local Opaque mreg_type.
   apply range_drop_left with (mid := pos1) in SEP; [ | omega ].
   apply range_split with (mid := pos1 + sz) in SEP; [ | omega ].
   unfold sz at 1 in SEP. rewrite <- size_type_chunk in SEP.
-  apply range_contains in SEP; auto.
+  apply range_contains in SEP; auto with mem.
   exploit (contains_set_stack (fun v' => Val.inject j (ls (R r)) v') (rs r)).
   eexact SEP.
   apply load_result_inject; auto. apply wt_ls.
@@ -1087,14 +1087,14 @@ Local Opaque b fe.
   apply (frame_env_separated b) in SEP. replace (make_env b) with fe in SEP by auto.
   (* Store of parent *)
   rewrite sep_swap3 in SEP.
-  apply (range_contains Mptr) in SEP; [|tauto].
+  apply range_contains in SEP;[|apply perm_F_any|tauto].
   exploit (contains_set_stack (fun v' => v' = parent) parent (fun _ => True) m2' Tptr).
   rewrite chunk_of_Tptr; eexact SEP. apply Val.load_result_same; auto.
   clear SEP; intros (m3' & STORE_PARENT & SEP).
   rewrite sep_swap3 in SEP.
   (* Store of return address *)
   rewrite sep_swap4 in SEP.
-  apply (range_contains Mptr) in SEP; [|tauto].
+  apply range_contains in SEP; [|apply perm_F_any|tauto].
   exploit (contains_set_stack (fun v' => v' = ra) ra (fun _ => True) m3' Tptr).
   rewrite chunk_of_Tptr; eexact SEP. apply Val.load_result_same; auto.
   clear SEP; intros (m4' & STORE_RETADDR & SEP).

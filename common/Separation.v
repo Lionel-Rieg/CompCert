@@ -29,7 +29,7 @@
   frame rule; instead, a weak form of the frame rule is provided
   by the lemmas that help us reason about the logical assertions. *)
 
-Require Import Setoid Program.Basics.
+Require Import Setoid Morphisms Program.Basics.
 Require Import Coqlib Decidableplus.
 Require Import AST Integers Values Memory Events Globalenvs.
 
@@ -99,21 +99,46 @@ Add Relation massert massert_eqv
   transitivity proved by massert_eqv_trans
 as massert_eqv_prel.
 
-Add Morphism m_pred
-  with signature massert_imp ==> eq ==> impl
-  as m_pred_morph_1.
+Instance m_pred_morph_1 : Proper (massert_imp ==> eq ==> impl) m_pred.
 Proof.
-  intros P Q [A B]. auto.
+  intros P Q [A B] ? ? ? ?. subst. auto.
 Qed.
 
-Add Morphism m_pred
-  with signature massert_eqv ==> eq ==> iff
-  as m_pred_morph_2.
+Instance m_pred_morph_2 : Proper (massert_eqv ==> eq ==> iff) m_pred.
 Proof.
-  intros P Q [[A B] [C D]]. split; auto.
+  intros P Q [[A B] [C D]] ? ? ?. subst. split; auto.
+Qed.
+
+Instance massert_imp_eqv_Proper:
+  Proper (massert_eqv ==> massert_eqv ==> iff) massert_imp.
+Proof.
+  intros p q Hpq r s Hrs.
+  split; destruct 1 as [HR1 HR2];
+    constructor; intros;
+      apply Hrs || apply Hpq;
+      apply HR1 || apply HR2;
+      apply Hpq || apply Hrs;
+      assumption.
 Qed.
 
 Hint Resolve massert_imp_refl massert_eqv_refl : core.
+
+Instance footprint_massert_imp_Proper:
+  Proper (massert_imp --> eq ==> eq ==> Basics.impl) m_footprint.
+Proof.
+  destruct 1. repeat intro. subst. intuition.
+Qed.
+
+Instance footprint_massert_eqv_Proper:
+  Proper (massert_eqv ==> eq ==> eq ==> iff) m_footprint.
+Proof.
+  intros P Q HPQ b' b Hbeq ofs' ofs Hoeq.
+  subst.
+  destruct HPQ as [HPQ HQP].
+  split; intro HH.
+  now rewrite HQP.
+  now rewrite HPQ.
+Qed.
 
 (** * Separating conjunction *)
 
@@ -133,9 +158,7 @@ Next Obligation.
   destruct H0; [eapply (m_valid P) | eapply (m_valid Q)]; eauto.
 Qed.
 
-Add Morphism sepconj
-  with signature massert_imp ==> massert_imp ==> massert_imp
-  as sepconj_morph_1.
+Instance sepconj_morph_1 : Proper (massert_imp ==> massert_imp ==> massert_imp) sepconj.
 Proof.
   intros P1 P2 [A B] Q1 Q2 [C D].
   red; simpl; split; intros.
@@ -143,11 +166,23 @@ Proof.
 - intuition auto.
 Qed.
 
-Add Morphism sepconj
-  with signature massert_eqv ==> massert_eqv ==> massert_eqv
-  as sepconj_morph_2.
+Instance disjoint_footprint_morph_1 :
+  Proper (massert_eqv ==> massert_eqv ==> iff) disjoint_footprint.
 Proof.
-  intros. destruct H, H0. split; apply sepconj_morph_1; auto.
+  intros p q Hpq r s Hrs.
+  unfold disjoint_footprint.
+  split; intro HH; intros b ofs Hf1 Hf2.
+  - rewrite <-Hpq in Hf1.
+    rewrite <-Hrs in Hf2.
+    now specialize (HH _ _ Hf1 Hf2).
+  - rewrite Hpq in Hf1.
+    rewrite Hrs in Hf2.
+    now specialize (HH _ _ Hf1 Hf2).
+Qed.
+
+Instance sepconj_morph_2 : Proper (massert_eqv ==> massert_eqv ==> massert_eqv) sepconj.
+Proof.
+  intros ? ? H ? ? H0. destruct H, H0. split; apply sepconj_morph_1; auto.
 Qed.
 
 Infix "**" := sepconj (at level 60, right associativity) : sep_scope.
@@ -159,6 +194,15 @@ Lemma sep_imp:
   m |= P ** Q -> massert_imp P P' -> massert_imp Q Q' -> m |= P' ** Q'.
 Proof.
   intros. rewrite <- H0, <- H1; auto.
+Qed.
+
+Lemma sep_imp':
+  forall P P' Q Q',
+    massert_imp P P' ->
+    massert_imp Q Q' ->
+    massert_imp (P ** Q) (P' ** Q').
+Proof.
+  intros * HP HQ. rewrite HP, HQ. reflexivity.
 Qed.
 
 Lemma sep_comm_1:
@@ -240,15 +284,17 @@ Proof.
 Qed.
 
 Lemma sep_drop:
-  forall P Q m, m |= P ** Q -> m |= Q.
+  forall P Q, massert_imp (P ** Q) Q.
 Proof.
-  simpl; intros. tauto.
+  constructor.
+  - simpl; intros. tauto.
+  - intros. now constructor 2.
 Qed.
 
 Lemma sep_drop2:
-  forall P Q R m, m |= P ** Q ** R -> m |= P ** R.
+  forall P Q R, massert_imp (P ** Q ** R) (P ** R).
 Proof.
-  intros. rewrite sep_swap in H. eapply sep_drop; eauto.
+  intros. rewrite sep_swap, sep_drop. reflexivity.
 Qed.
 
 Lemma sep_proj1:
@@ -259,7 +305,9 @@ Qed.
 
 Lemma sep_proj2:
   forall P Q m, m |= P ** Q -> m |= Q.
-Proof sep_drop.
+Proof.
+  apply sep_drop.
+Qed.
 
 Definition sep_pick1 := sep_proj1.
 
@@ -315,19 +363,40 @@ Proof.
   simpl; intros. intuition auto. red; simpl; tauto.
 Qed.
 
-(** A range of bytes, with full permissions and unspecified contents. *)
+Lemma sep_pure':
+  forall P m, m |= pure P <-> P.
+Proof.
+  simpl; intros. intuition auto. 
+Qed.
 
-Program Definition range (b: block) (lo hi: Z) : massert := {|
+(** A range of bytes with given permissions unspecified contents *)
+
+Program Definition range' (p: permission) (b: block) (lo hi: Z) : massert := {|
   m_pred := fun m =>
        0 <= lo /\ hi <= Ptrofs.modulus
-    /\ (forall i k p, lo <= i < hi -> Mem.perm m b i k p);
+    /\ (forall i k, lo <= i < hi -> Mem.perm m b i k p);
   m_footprint := fun b' ofs' => b' = b /\ lo <= ofs' < hi
 |}.
 Next Obligation.
   split; auto. split; auto. intros. eapply Mem.perm_unchanged_on; eauto. simpl; auto.
 Qed.
 Next Obligation.
-  apply Mem.perm_valid_block with ofs Cur Freeable; auto.
+  eapply Mem.perm_valid_block with ofs Cur _; auto.
+Qed.
+
+Notation range := (range' Freeable).
+Notation range_w := (range' Writable).
+
+Lemma range'_imp:
+  forall p p' b lo hi,
+    perm_order p p' ->
+    massert_imp (range' p b lo hi) (range' p' b lo hi).
+Proof.
+  constructor; auto.
+  destruct 1 as (Hlo & Hhi & Hperm).
+  repeat split; auto.
+  intros i k Hoff.
+  eapply Mem.perm_implies; eauto.
 Qed.
 
 Lemma alloc_rule:
@@ -346,47 +415,95 @@ Proof.
   eelim Mem.fresh_block_alloc; eauto. eapply (m_valid P); eauto.
 Qed.
 
-Lemma range_split:
-  forall b lo hi P mid m,
-  lo <= mid <= hi ->
+Lemma free_rule:
+forall P m b lo hi,
   m |= range b lo hi ** P ->
-  m |= range b lo mid ** range b mid hi ** P.
+  exists m',
+    Mem.free m b lo hi = Some m' /\ m' |= P.
 Proof.
-  intros. rewrite <- sep_assoc. eapply sep_imp; eauto.
-  split; simpl; intros.
-- intuition auto.
-+ omega.
-+ apply H5; omega.
-+ omega.
-+ apply H5; omega.
-+ red; simpl; intros; omega.
-- intuition omega.
+  intros P m b lo hi Hr.
+  destruct Hr as ((Hlo & Hhi & Hperm) & HP & Hdj).
+  assert (Mem.range_perm m b lo hi Cur Freeable) as Hrp
+    by (intros ? ?; now apply Hperm).
+  apply Mem.range_perm_free in Hrp.
+  destruct Hrp as (m2 & Hfree).
+  exists m2.
+  split; [assumption|].
+  apply Mem.free_unchanged_on with (P:=m_footprint P) in Hfree.
+  now apply m_invar with (1:=HP) (2:=Hfree).
+  intros i Hr HfP.
+  apply Hdj with (2:=HfP).
+  now split.
+Qed.
+
+Lemma range_split':
+  forall p b lo hi mid,
+    lo <= mid <= hi ->
+    massert_eqv (range' p b lo hi)
+                (range' p b lo mid ** range' p b mid hi).
+Proof.
+  intros * HR.
+  constructor; constructor.
+  - intros m HH.
+    inversion HH as [Hlo [Hhi Hperm]].
+    split; constructor; repeat split.
+    + assumption.
+    + omega.
+    + intros. apply Hperm. omega.
+    + omega.
+    + exact Hhi.
+    + intros. apply Hperm. omega.
+    + red; simpl; intros; omega.
+  - intros. simpl in *. intuition.
+  - intros m HH.
+    inversion_clear HH as [Hlm [Hmh Hdisj]].
+    inversion_clear Hlm as [Hlo [Hmid Hperm]].
+    inversion_clear Hmh as [Hmid' [Hhi Hperm']].
+    constructor; repeat split.
+    + assumption.
+    + assumption.
+    + intros i k Hi.
+      destruct (Z.lt_ge_cases i mid); intuition.
+  - intros * Hfoot. simpl in *.
+    destruct (Z.lt_ge_cases ofs mid); intuition.
+Qed.
+
+Lemma range_split:
+  forall p b lo hi P mid m,
+  lo <= mid <= hi ->
+  m |= range' p b lo hi ** P ->
+  m |= range' p b lo mid ** range' p b mid hi ** P.
+Proof.
+  intros.
+  rewrite <-sep_assoc.
+  rewrite range_split' with (1:=H) in H0.
+  assumption.
 Qed.
 
 Lemma range_drop_left:
-  forall b lo hi P mid m,
+  forall p b lo hi P mid m,
   lo <= mid <= hi ->
-  m |= range b lo hi ** P ->
-  m |= range b mid hi ** P.
+  m |= range' p b lo hi ** P ->
+  m |= range' p b mid hi ** P.
 Proof.
-  intros. apply sep_drop with (range b lo mid). apply range_split; auto.
+  intros. apply sep_drop with (range' p b lo mid). apply range_split; auto.
 Qed.
 
 Lemma range_drop_right:
-  forall b lo hi P mid m,
+  forall p b lo hi P mid m,
   lo <= mid <= hi ->
-  m |= range b lo hi ** P ->
-  m |= range b lo mid ** P.
+  m |= range' p b lo hi ** P ->
+  m |= range' p b lo mid ** P.
 Proof.
-  intros. apply sep_drop2 with (range b mid hi). apply range_split; auto.
+  intros. apply sep_drop2 with (range' p b mid hi). apply range_split; auto.
 Qed.
 
 Lemma range_split_2:
-  forall b lo hi P mid al m,
+  forall p b lo hi P mid al m,
   lo <= align mid al <= hi ->
   al > 0 ->
-  m |= range b lo hi ** P ->
-  m |= range b lo mid ** range b (align mid al) hi ** P.
+  m |= range' p b lo hi ** P ->
+  m |= range' p b lo mid ** range' p b (align mid al) hi ** P.
 Proof.
   intros. rewrite <- sep_assoc. eapply sep_imp; eauto.
   assert (mid <= align mid al) by (apply align_le; auto).
@@ -401,67 +518,89 @@ Proof.
 Qed.
 
 Lemma range_preserved:
-  forall m m' b lo hi,
-  m |= range b lo hi ->
+  forall p m m' b lo hi,
+  m |= range' p b lo hi ->
   (forall i k p, lo <= i < hi -> Mem.perm m b i k p -> Mem.perm m' b i k p) ->
-  m' |= range b lo hi.
+  m' |= range' p b lo hi.
 Proof.
   intros. destruct H as (A & B & C). simpl; intuition auto.
 Qed.
 
-(** A memory area that contains a value sastifying a given predicate *)
+(** A memory area that contains a value satisfying a given predicate. *)
 
-Program Definition contains (chunk: memory_chunk) (b: block) (ofs: Z) (spec: val -> Prop) : massert := {|
+Program Definition contains' (p: permission) (chunk: memory_chunk) (b: block) (ofs: Z) (spec: val -> Prop) : massert := {|
   m_pred := fun m =>
-       0 <= ofs <= Ptrofs.max_unsigned
-    /\ Mem.valid_access m chunk b ofs Freeable
+       0 <= ofs /\ ofs + size_chunk chunk <= Ptrofs.modulus
+    /\ Mem.valid_access m chunk b ofs p
     /\ exists v, Mem.load chunk m b ofs = Some v /\ spec v;
   m_footprint := fun b' ofs' => b' = b /\ ofs <= ofs' < ofs + size_chunk chunk
 |}.
 Next Obligation.
-  rename H2 into v. split;[|split].
+  rename H3 into v. split;[|split;[|split]].
 - auto.
-- destruct H1; split; auto. red; intros; eapply Mem.perm_unchanged_on; eauto. simpl; auto.
+- auto.
+- destruct H2; split; auto. red; intros; eapply Mem.perm_unchanged_on; eauto. simpl; auto.
 - exists v. split; auto. eapply Mem.load_unchanged_on; eauto. simpl; auto.
 Qed.
 Next Obligation.
   eauto with mem.
 Qed.
 
+Notation contains := (contains' Freeable).
+Notation contains_w := (contains' Writable).
+
+Lemma contains'_imp:
+  forall p p' chunk b ofs spec,
+    perm_order p p' ->
+    massert_imp (contains' p chunk b ofs spec) (contains' p' chunk b ofs spec).
+Proof.
+  constructor; auto.
+  inversion 1 as (Hlo & Hhi & Hac & v & Hload & Hspec).
+  eapply Mem.valid_access_implies in Hac; eauto.
+  repeat (split; eauto).
+Qed.
+  
 Lemma contains_no_overflow:
-  forall spec m chunk b ofs,
-  m |= contains chunk b ofs spec ->
+  forall p spec m chunk b ofs,
+  m |= contains' p chunk b ofs spec ->
   0 <= ofs <= Ptrofs.max_unsigned.
 Proof.
-  intros. simpl in H. tauto.
+  intros. simpl in H.
+  destruct H as (H1 & H2 & H3).
+  split; [assumption|].
+  generalize (size_chunk_pos chunk).
+  unfold Ptrofs.max_unsigned. omega.
 Qed.
 
 Lemma load_rule:
-  forall spec m chunk b ofs,
-  m |= contains chunk b ofs spec ->
+  forall p spec m chunk b ofs,
+  perm_order p Readable ->
+  m |= contains' p chunk b ofs spec ->
   exists v, Mem.load chunk m b ofs = Some v /\ spec v.
 Proof.
-  intros. destruct H as (D & E & v & F & G).
+  intros * Hp Hc. destruct Hc as (D & E & F & v & G & H).
   exists v; auto.
 Qed.
 
 Lemma loadv_rule:
-  forall spec m chunk b ofs,
-  m |= contains chunk b ofs spec ->
+  forall p spec m chunk b ofs,
+  perm_order p Readable ->
+  m |= contains' p chunk b ofs spec ->
   exists v, Mem.loadv chunk m (Vptr b (Ptrofs.repr ofs)) = Some v /\ spec v.
 Proof.
-  intros. exploit load_rule; eauto. intros (v & A & B). exists v; split; auto.
+  intros. exploit load_rule; eauto with mem. intros (v & A & B). exists v; split; auto.
   simpl. rewrite Ptrofs.unsigned_repr; auto. eapply contains_no_overflow; eauto.
 Qed.
 
 Lemma store_rule:
-  forall chunk m b ofs v (spec1 spec: val -> Prop) P,
-  m |= contains chunk b ofs spec1 ** P ->
+  forall p chunk m b ofs v (spec1 spec: val -> Prop) P,
+  perm_order p Writable ->
+  m |= contains' p chunk b ofs spec1 ** P ->
   spec (Val.load_result chunk v) ->
   exists m',
-  Mem.store chunk m b ofs v = Some m' /\ m' |= contains chunk b ofs spec ** P.
+  Mem.store chunk m b ofs v = Some m' /\ m' |= contains' p chunk b ofs spec ** P.
 Proof.
-  intros. destruct H as (A & B & C). destruct A as (D & E & v0 & F & G).
+  intros * Hp Hc Hs. destruct Hc as (A & B & C). destruct A as (D & E & v0 & F & G).
   assert (H: Mem.valid_access m chunk b ofs Writable) by eauto with mem.
   destruct (Mem.valid_access_store _ _ _ _ v H) as [m' STORE].
   exists m'; split; auto. simpl. intuition auto.
@@ -473,64 +612,132 @@ Proof.
 Qed.
 
 Lemma storev_rule:
-  forall chunk m b ofs v (spec1 spec: val -> Prop) P,
-  m |= contains chunk b ofs spec1 ** P ->
+  forall p chunk m b ofs v (spec1 spec: val -> Prop) P,
+  perm_order p Writable ->
+  m |= contains' p chunk b ofs spec1 ** P ->
   spec (Val.load_result chunk v) ->
   exists m',
-  Mem.storev chunk m (Vptr b (Ptrofs.repr ofs)) v = Some m' /\ m' |= contains chunk b ofs spec ** P.
+  Mem.storev chunk m (Vptr b (Ptrofs.repr ofs)) v = Some m' /\ m' |= contains' p chunk b ofs spec ** P.
 Proof.
   intros. exploit store_rule; eauto. intros (m' & A & B). exists m'; split; auto.
   simpl. rewrite Ptrofs.unsigned_repr; auto. eapply contains_no_overflow. eapply sep_pick1; eauto.
 Qed.
 
-Lemma range_contains:
-  forall chunk b ofs P m,
-  m |= range b ofs (ofs + size_chunk chunk) ** P ->
-  (align_chunk chunk | ofs) ->
-  m |= contains chunk b ofs (fun v => True) ** P.
+Lemma storev_rule2:
+  forall p chunk m m' b ofs v (spec1 spec: val -> Prop) P,
+    perm_order p Writable ->
+    m |= contains' p chunk b ofs spec1 ** P ->
+    spec (Val.load_result chunk v) ->
+    Memory.Mem.storev chunk m (Vptr b (Ptrofs.repr ofs)) v = Some m' ->
+    m' |= contains' p chunk b ofs spec ** P.
 Proof.
-  intros. destruct H as (A & B & C). destruct A as (D & E & F).
-  split; [|split].
-- assert (Mem.valid_access m chunk b ofs Freeable).
+  intros * Hp Hm Hspec Hstore.
+  eapply storev_rule with (2:=Hm) in Hspec; eauto.
+  destruct Hspec as [m'' [Hmem Hspec]].
+  rewrite Hmem in Hstore. injection Hstore.
+  intro; subst. assumption.
+Qed.
+
+Lemma range_contains':
+  forall p chunk b ofs,
+    perm_order p Readable ->
+    (align_chunk chunk | ofs) ->
+    massert_imp (range' p b ofs (ofs + size_chunk chunk))
+                (contains' p chunk b ofs (fun v => True)).
+Proof.
+  intros. constructor.
+  intros * Hr. destruct Hr as (D & E & F).
+  assert (Mem.valid_access m chunk b ofs p).
   { split; auto. red; auto. }
-  split. generalize (size_chunk_pos chunk). unfold Ptrofs.max_unsigned. omega.
-  split. auto.
-+ destruct (Mem.valid_access_load m chunk b ofs) as [v LOAD].
+  split; [|split].
+- generalize (size_chunk_pos chunk). omega.
+- assumption.
+- split; [assumption|].
+  destruct (Mem.valid_access_load m chunk b ofs) as [v LOAD].
   eauto with mem.
   exists v; auto.
 - auto.
-- auto.
+Qed.
+
+Lemma range_contains:
+  forall p chunk b ofs P m,
+  perm_order p Readable ->
+  m |= range' p b ofs (ofs + size_chunk chunk) ** P ->
+  (align_chunk chunk | ofs) ->
+  m |= contains' p chunk b ofs (fun v => True) ** P.
+Proof.
+  intros * Hp Hr Hc.
+  rewrite range_contains' in Hr; assumption.
+Qed.
+
+Lemma contains_range':
+  forall p chunk b ofs spec,
+    massert_imp (contains' p chunk b ofs spec)
+                (range' p b ofs (ofs + size_chunk chunk)).
+Proof.
+  intros.
+  split.
+- intros. destruct H as (A & B & C & D).
+  split; [|split]; try assumption.
+  destruct C as (C1 & C2).
+  intros i k Hr.
+  specialize (C1 _ Hr).
+  eauto with mem.
+- trivial.
+Qed.
+
+Lemma contains_range:
+  forall p chunk b ofs spec P m,
+  m |= contains' p chunk b ofs spec ** P ->
+  m |= range' p b ofs (ofs + size_chunk chunk) ** P.
+Proof.
+  intros.
+  rewrite contains_range' in H; assumption.
 Qed.
 
 Lemma contains_imp:
-  forall (spec1 spec2: val -> Prop) chunk b ofs,
+  forall p (spec1 spec2: val -> Prop) chunk b ofs,
   (forall v, spec1 v -> spec2 v) ->
-  massert_imp (contains chunk b ofs spec1) (contains chunk b ofs spec2).
+  massert_imp (contains' p chunk b ofs spec1) (contains' p chunk b ofs spec2).
 Proof.
   intros; split; simpl; intros.
 - intuition auto. destruct H4 as (v & A & B). exists v; auto.
 - auto.
 Qed.
 
-(** A memory area that contains a given value *)
+(** A memory area that contains a given value. *)
 
-Definition hasvalue (chunk: memory_chunk) (b: block) (ofs: Z) (v: val) : massert :=
-  contains chunk b ofs (fun v' => v' = v).
+Definition hasvalue' (p: permission) (chunk: memory_chunk) (b: block) (ofs: Z) (v: val) : massert :=
+  contains' p chunk b ofs (fun v' => v' = v).
+
+Notation hasvalue := (hasvalue' Freeable).
+Notation hasvalue_w := (hasvalue' Writable).
+
+Lemma hasvalue'_imp:
+  forall p p' chunk b ofs v,
+    perm_order p p' ->
+    massert_imp (hasvalue' p chunk b ofs v) (hasvalue' p' chunk b ofs v).
+Proof.
+  constructor; auto.
+  now apply contains'_imp.
+Qed.
 
 Lemma store_rule':
-  forall chunk m b ofs v (spec1: val -> Prop) P,
-  m |= contains chunk b ofs spec1 ** P ->
+  forall p chunk m b ofs v (spec1: val -> Prop) P,
+  perm_order p Writable ->
+  m |= contains' p chunk b ofs spec1 ** P ->
   exists m',
-  Mem.store chunk m b ofs v = Some m' /\ m' |= hasvalue chunk b ofs (Val.load_result chunk v) ** P.
+  Mem.store chunk m b ofs v = Some m' /\ m' |= hasvalue' p chunk b ofs (Val.load_result chunk v) ** P.
 Proof.
   intros. eapply store_rule; eauto.
 Qed.
 
 Lemma storev_rule':
-  forall chunk m b ofs v (spec1: val -> Prop) P,
-  m |= contains chunk b ofs spec1 ** P ->
+  forall p chunk m b ofs v (spec1: val -> Prop) P,
+  perm_order p Writable ->
+  m |= contains' p chunk b ofs spec1 ** P ->
   exists m',
-  Mem.storev chunk m (Vptr b (Ptrofs.repr ofs)) v = Some m' /\ m' |= hasvalue chunk b ofs (Val.load_result chunk v) ** P.
+  Mem.storev chunk m (Vptr b (Ptrofs.repr ofs)) v = Some m' /\ m' |= hasvalue' p chunk b ofs (Val.load_result chunk v) ** P.
 Proof.
   intros. eapply storev_rule; eauto.
 Qed.
@@ -590,19 +797,15 @@ Proof.
   red; simpl; intros. destruct H2. eapply F; eauto. eapply C; simpl; eauto.
 Qed.
 
-Add Morphism mconj
-  with signature massert_imp ==> massert_imp ==> massert_imp
-  as mconj_morph_1.
+Instance mconj_morph_1 : Proper (massert_imp ==> massert_imp ==> massert_imp) mconj.
 Proof.
   intros P1 P2 [A B] Q1 Q2 [C D].
   red; simpl; intuition auto.
 Qed.
 
-Add Morphism mconj
-  with signature massert_eqv ==> massert_eqv ==> massert_eqv
-  as mconj_morph_2.
+Instance mconj_morph_2 : Proper (massert_eqv ==> massert_eqv ==> massert_eqv) mconj.
 Proof.
-  intros. destruct H, H0. split; apply mconj_morph_1; auto.
+  intros ? ? H ? ? H0. destruct H, H0. split; apply mconj_morph_1; auto.
 Qed.
 
 (** The image of a memory injection *)
