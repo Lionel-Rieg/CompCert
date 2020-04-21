@@ -35,22 +35,7 @@ Require Cshmgen.
 Require Cminorgen.
 Require Selection.
 Require RTLgen.
-Require Tailcall.
-Require Inlining.
-Require Profiling.
-Require ProfilingExploit.
-Require FirstNop.
-Require Renumber.
-Require Duplicate.
-Require Constprop.
-Require LICM.
-Require CSE.
-Require ForwardMoves.
-Require CSE2.
-Require CSE3.
-Require Deadcode.
-Require Unusedglob.
-Require Allnontrap.
+EXPAND_RTL_REQUIRE
 Require Allocation.
 Require Tunneling.
 Require Linearize.
@@ -65,22 +50,7 @@ Require Cshmgenproof.
 Require Cminorgenproof.
 Require Selectionproof.
 Require RTLgenproof.
-Require Tailcallproof.
-Require Inliningproof.
-Require Profilingproof.
-Require ProfilingExploitproof.
-Require FirstNopproof.
-Require Renumberproof.
-Require Duplicateproof.
-Require Constpropproof.
-Require LICMproof.
-Require CSEproof.
-Require ForwardMovesproof.
-Require CSE2proof.
-Require CSE3proof.
-Require Deadcodeproof.
-Require Unusedglobproof.
-Require Allnontrapproof.
+EXPAND_RTL_REQUIRE_PROOF
 Require Allocproof.
 Require Tunnelingproof.
 Require Linearizeproof.
@@ -138,7 +108,7 @@ Definition partial_if {A: Type}
 Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    OK f
    @@ print (print_RTL 0)
-EXPAND_TRANSF_PROGRAM
+EXPAND_RTL_TRANSF_PROGRAM
   @@@ time "Register allocation" Allocation.transf_program
    @@ print print_LTL
    @@ time "Branch tunneling" Tunneling.tunnel_program
@@ -308,7 +278,7 @@ Proof.
   set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
   destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; simpl in T; try discriminate.
   set (p14bis := total_if all_loads_nontrap Allnontrap.transf_program p14) in *.
-  destruct (Unusedglob.transform_program p14bis) as [p15|e] eqn:P15; simpl in T; try discriminate.
+  destruct (Unusedglob.transf_program p14bis) as [p15|e] eqn:P15; simpl in T; try discriminate.
   destruct (Allocation.transf_program p15) as [p16|e] eqn:P16; simpl in T; try discriminate.
   set (p17 := Tunneling.tunnel_program p16) in *.
   destruct (Linearize.transf_program p17) as [p18|e] eqn:P18; simpl in T; try discriminate.

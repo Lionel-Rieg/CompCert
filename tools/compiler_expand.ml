@@ -1,7 +1,7 @@
 type is_partial = TOTAL | PARTIAL;;
 type when_triggered = Always | Option of string;;
 
-let passes =
+let rtl_passes =
 [|
 TOTAL, (Option "optim_tailcalls"), (Some "Tail calls"), "Tailcall";
 PARTIAL, Always, (Some "Inlining"), "Inlining";
@@ -25,7 +25,17 @@ PARTIAL, Always, (Some "Unused globals"), "Unusedglob"
 
 let totality = function TOTAL -> "total" | PARTIAL -> "partial";;
 
-let print_transf oc =
+let print_rtl_require oc =
+  Array.iter (fun (partial, trigger, time_label, pass_name) ->
+      Printf.fprintf oc "Require %s.\n" pass_name)
+    rtl_passes;;
+
+let print_rtl_require_proof oc =
+  Array.iter (fun (partial, trigger, time_label, pass_name) ->
+      Printf.fprintf oc "Require %sproof.\n" pass_name)
+    rtl_passes;;
+
+let print_rtl_transf oc =
   Array.iteri
     (fun i (partial, trigger, time_label, pass_name) ->
       output_string oc (match partial with
@@ -42,7 +52,7 @@ let print_transf oc =
           Printf.fprintf oc "time \"%s\" " s);
       Printf.fprintf oc "%s.transf_program)\n" pass_name;
       Printf.fprintf oc "   @@ print (print_RTL %d)\n" (succ i)
-    ) passes;;
+    ) rtl_passes;;
     
 if (Array.length Sys.argv)<>3
 then exit 1;;
@@ -52,11 +62,15 @@ let filename_in = Sys.argv.(1) and filename_out = Sys.argv.(2) in
     try
       while true
       do
-        let line = input_line ic in
-        if line = "EXPAND_TRANSF_PROGRAM"
-        then print_transf oc
-        else (output_string oc line;
-              output_char oc '\n')
+        match input_line ic with
+        | "EXPAND_RTL_TRANSF_PROGRAM" ->
+           print_rtl_transf oc
+        | "EXPAND_RTL_REQUIRE" ->
+           print_rtl_require oc
+        | "EXPAND_RTL_REQUIRE_PROOF" ->
+           print_rtl_require_proof oc
+        | line -> (output_string oc line;
+                   output_char oc '\n')
       done
     with End_of_file ->
       (close_in ic; close_out oc);;
