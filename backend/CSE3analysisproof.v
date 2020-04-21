@@ -361,6 +361,30 @@ Section SOUNDNESS.
       eq_catalog ctx i = Some eq ->
       sem_eq eq rs m.
 
+  Lemma sem_rel_glb:
+    forall rel1 rel2 rs m,
+      (sem_rel (RELATION.glb rel1 rel2) rs m) <->
+      ((sem_rel rel1 rs m) /\
+       (sem_rel rel2 rs m)).
+  Proof.
+    intros.
+    unfold sem_rel, RELATION.glb.
+    split.
+    - intro IMPLIES.
+      split;
+        intros i eq CONTAINS;
+        specialize IMPLIES with (i:=i) (eq0:=eq);
+        rewrite PSet.gunion in IMPLIES;
+        rewrite orb_true_iff in IMPLIES;
+        intuition.
+    - intros (IMPLIES1 & IMPLIES2) i eq.
+      rewrite PSet.gunion.
+      rewrite orb_true_iff.
+      specialize IMPLIES1 with (i:=i) (eq0:=eq).
+      specialize IMPLIES2 with (i:=i) (eq0:=eq).
+      intuition.
+  Qed.
+
   Hypothesis ctx_kill_reg_has_lhs :
     forall lhs sop args j,
       eq_catalog ctx j = Some {| eq_lhs := lhs;
@@ -755,11 +779,13 @@ Section SOUNDNESS.
     intros REL RHS.
     unfold oper.
     destruct rhs_find as [src |] eqn:RHS_FIND.
-    - pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
-      eapply forward_move_rhs_sound in RHS.
-      2: eassumption.
-      rewrite <- (sem_rhs_det SOUND RHS).
-      apply move_sound; auto.
+    - apply sem_rel_glb; split.
+      + pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
+        eapply forward_move_rhs_sound in RHS.
+        2: eassumption.
+        rewrite <- (sem_rhs_det SOUND RHS).
+        apply move_sound; auto.
+      + apply oper1_sound; auto.
     - apply oper1_sound; auto.
   Qed.
 
