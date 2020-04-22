@@ -100,7 +100,7 @@ BACKEND=\
   ForwardMoves.v ForwardMovesproof.v \
   FirstNop.v FirstNopproof.v \
   Allnontrap.v Allnontrapproof.v \
-  Allocation.v Allocproof.v \
+  Allocation.v Allocationproof.v \
   Tunneling.v Tunnelingproof.v \
   Linear.v Lineartyping.v \
   Linearize.v Linearizeproof.v \

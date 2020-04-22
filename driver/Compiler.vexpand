@@ -36,12 +36,6 @@ Require Cminorgen.
 Require Selection.
 Require RTLgen.
 EXPAND_RTL_REQUIRE
-Require Allocation.
-Require Tunneling.
-Require Linearize.
-Require CleanupLabels.
-Require Debugvar.
-Require Stacking.
 Require Asmgen.
 (** Proofs of semantic preservation. *)
 Require SimplExprproof.
@@ -51,12 +45,6 @@ Require Cminorgenproof.
 Require Selectionproof.
 Require RTLgenproof.
 EXPAND_RTL_REQUIRE_PROOF
-Require Allocproof.
-Require Tunnelingproof.
-Require Linearizeproof.
-Require CleanupLabelsproof.
-Require Debugvarproof.
-Require Stackingproof.
 Require Import Asmgenproof.
 (** Command-line flags. *)
 Require Import Compopts.
@@ -109,16 +97,8 @@ Definition transf_rtl_program (f: RTL.program) : res Asm.program :=
    OK f
    @@ print (print_RTL 0)
 EXPAND_RTL_TRANSF_PROGRAM
-  @@@ time "Register allocation" Allocation.transf_program
-   @@ print print_LTL
-   @@ time "Branch tunneling" Tunneling.tunnel_program
-  @@@ time "CFG linearization" Linearize.transf_program
-   @@ time "Label cleanup" CleanupLabels.transf_program
-  @@@ partial_if Compopts.debug (time "Debugging info for local variables" Debugvar.transf_program)
-  @@@ time "Mach generation" Stacking.transf_program
-   @@ print print_Mach
   @@@ time "Total Mach->Asm generation" Asmgen.transf_program.
-
+   
 Definition transf_cminor_program (p: Cminor.program) : res Asm.program :=
    OK p
    @@ print print_Cminor
@@ -209,12 +189,6 @@ Definition CompCert's_passes :=
   ::: mkpass Selectionproof.match_prog
   ::: mkpass RTLgenproof.match_prog
 EXPAND_RTL_MKPASS
-  ::: mkpass Allocproof.match_prog
-  ::: mkpass Tunnelingproof.match_prog
-  ::: mkpass Linearizeproof.match_prog
-  ::: mkpass CleanupLabelsproof.match_prog
-  ::: mkpass (match_if Compopts.debug Debugvarproof.match_prog)
-  ::: mkpass Stackingproof.match_prog
   ::: mkpass Asmgenproof.match_prog
   ::: pass_nil _.
 
@@ -244,30 +218,7 @@ Proof.
   destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
   destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
   unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
-  set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
-  destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
-  set (p8bis := total_if profile_arcs Profiling.transf_program p8) in *.
-  set (p8ter := total_if branch_probabilities ProfilingExploit.transf_program p8bis) in *.
-  set (p9 := total_if Compopts.optim_move_loop_invariants FirstNop.transf_program p8ter) in *.
-  set (p9bis := Renumber.transf_program p9) in *.
-  destruct (partial_if optim_duplicate Duplicate.transf_program p9bis) as [p10|e] eqn:P10; simpl in T; try discriminate.
-  set (p11 := Renumber.transf_program p10) in *.
-  set (p12 := total_if optim_constprop Constprop.transf_program p11) in *.
-  destruct (partial_if optim_move_loop_invariants LICM.transf_program p12) as [p12bis|e] eqn:P12bis; simpl in T; try discriminate.
-  set (p12ter :=(total_if optim_move_loop_invariants Renumber.transf_program p12bis)) in *.
-  destruct (partial_if optim_CSE CSE.transf_program p12ter) as [p13|e] eqn:P13; simpl in T; try discriminate.
-  set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
-  destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; simpl in T; try discriminate.
-  set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
-  destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; simpl in T; try discriminate.
-  set (p14bis := total_if all_loads_nontrap Allnontrap.transf_program p14) in *.
-  destruct (Unusedglob.transf_program p14bis) as [p15|e] eqn:P15; simpl in T; try discriminate.
-  destruct (Allocation.transf_program p15) as [p16|e] eqn:P16; simpl in T; try discriminate.
-  set (p17 := Tunneling.tunnel_program p16) in *.
-  destruct (Linearize.transf_program p17) as [p18|e] eqn:P18; simpl in T; try discriminate.
-  set (p19 := CleanupLabels.transf_program p18) in *.
-  destruct (partial_if debug Debugvar.transf_program p19) as [p20|e] eqn:P20; simpl in T; try discriminate.
-  destruct (Stacking.transf_program p20) as [p21|e] eqn:P21; simpl in T; try discriminate.
+EXPAND_RTL_PROOF
   unfold match_prog; simpl.
   exists p1; split. apply SimplExprproof.transf_program_match; auto.
   exists p2; split. apply SimplLocalsproof.match_transf_program; auto.
@@ -275,30 +226,7 @@ Proof.
   exists p4; split. apply Cminorgenproof.transf_program_match; auto.
   exists p5; split. apply Selectionproof.transf_program_match; auto.
   exists p6; split. apply RTLgenproof.transf_program_match; auto.
-  exists p7; split. apply total_if_match. apply Tailcallproof.transf_program_match.
-  exists p8; split. apply Inliningproof.transf_program_match; auto.
-  exists p8bis; split. apply total_if_match. apply Profilingproof.transf_program_match; auto.
-  exists p8ter; split. apply total_if_match. apply ProfilingExploitproof.transf_program_match; auto.
-  exists p9; split. apply total_if_match. apply FirstNopproof.transf_program_match.
-  exists p9bis; split. apply Renumberproof.transf_program_match.
-  exists p10; split. eapply partial_if_match; eauto. apply Duplicateproof.transf_program_match; auto.
-  exists p11; split. apply Renumberproof.transf_program_match.
-  exists p12; split. apply total_if_match. apply Constpropproof.transf_program_match.
-  exists p12bis; split. eapply partial_if_match; eauto. apply LICMproof.transf_program_match.
-  exists p12ter; split. apply total_if_match; eauto. apply Renumberproof.transf_program_match.
-  exists p13; split. eapply partial_if_match; eauto. apply CSEproof.transf_program_match.
-  exists p13bis; split. apply total_if_match. apply CSE2proof.transf_program_match.
-  exists p13ter; split. eapply partial_if_match; eauto. apply CSE3proof.transf_program_match.
-  exists p13quater; split. eapply total_if_match; eauto. apply ForwardMovesproof.transf_program_match.
-  exists p14; split. eapply partial_if_match; eauto. apply Deadcodeproof.transf_program_match.
-  exists p14bis; split. eapply total_if_match; eauto. apply Allnontrapproof.transf_program_match.
-  exists p15; split. apply Unusedglobproof.transf_program_match; auto.
-  exists p16; split. apply Allocproof.transf_program_match; auto.
-  exists p17; split. apply Tunnelingproof.transf_program_match.
-  exists p18; split. apply Linearizeproof.transf_program_match; auto.
-  exists p19; split. apply CleanupLabelsproof.transf_program_match; auto.
-  exists p20; split. eapply partial_if_match; eauto. apply Debugvarproof.transf_program_match.
-  exists p21; split. apply Stackingproof.transf_program_match; auto.
+EXPAND_RTL_PROOF2
   exists tp; split. apply Asmgenproof.transf_program_match; auto.
   reflexivity.
 Qed.
@@ -350,7 +278,9 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p31)).
+  assert (F: forward_simulation (Cstrategy.semantics p)
+EXPAND_ASM_SEMANTICS
+         ).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -364,42 +294,9 @@ Ltac DestructM :=
     eapply Selectionproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply RTLgenproof.transf_program_correct; eassumption.
+EXPAND_RTL_FORWARD_SIMULATIONS
   eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Tailcallproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply Inliningproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Profilingproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact ProfilingExploitproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact FirstNopproof.transf_program_correct.
-  eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Duplicateproof.transf_program_correct.
-  eapply compose_forward_simulations.
-  eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
-  eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact LICMproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Renumberproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact CSEproof.transf_program_correct.
-  eapply compose_forward_simulations.
-  eapply match_if_simulation. eassumption. exact CSE2proof.transf_program_correct.
-  eapply compose_forward_simulations.
-  eapply match_if_simulation. eassumption. exact CSE3proof.transf_program_correct.
-  eapply compose_forward_simulations.
-  eapply match_if_simulation. eassumption. exact ForwardMovesproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Deadcodeproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply match_if_simulation. eassumption. exact Allnontrapproof.transf_program_correct.
-  eapply compose_forward_simulations.
-    eapply Unusedglobproof.transf_program_correct; eassumption.
-  eapply compose_forward_simulations.
-    eapply Allocproof.transf_program_correct; eassumption.
+    eapply Allocationproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
     eapply Tunnelingproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.

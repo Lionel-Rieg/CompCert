@@ -22,7 +22,7 @@ Definition match_prog (p tp: program) :=
   match_program (fun ctx f tf => tf = tunnel_fundef f) eq p tp.
 
 Lemma transf_program_match:
-  forall p, match_prog p (tunnel_program p).
+  forall p, match_prog p (transf_program p).
 Proof.
   intros. eapply match_transform_program; eauto.
 Qed.
