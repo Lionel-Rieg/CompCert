@@ -99,7 +99,7 @@ let print_rtl_proof oc =
          Printf.fprintf oc "set (p%d := %a%s.transf_program p%d) in *.\n"
            j (print_if "total") trigger pass_name (pred j)
       | PARTIAL ->
-         Printf.fprintf oc "destruct (%a%s.transf_program p%d) as [p%d|e] eqn:P%d; simpl in T; try discriminate.\n"
+         Printf.fprintf oc "destruct (%a%s.transf_program p%d) as [p%d|e] eqn:P%d; cbn in T; try discriminate.\n"
            (print_if "partial") trigger pass_name (pred j) j j)
     all_passes;;
 
