@@ -1,3 +1,13 @@
+(*
+The Compcert verified compiler
+
+Compiler.vexpand -> Compiler.v
+
+Expand the list of RTL compiler passes into Compiler.v
+
+David Monniaux, CNRS, VERIMAG
+ *)
+
 type is_partial = TOTAL | PARTIAL;;
 type print_result = Noprint | Print of string;;
 type when_triggered = Always | Option of string;;
