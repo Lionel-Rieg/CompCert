@@ -306,38 +306,38 @@ Theorem transf_c_program_match:
   match_prog p tp.
 Proof.
   intros p tp T.
-  unfold transf_c_program, time in T. simpl in T.
-  destruct (SimplExpr.transl_program p) as [p1|e] eqn:P1; simpl in T; try discriminate.
-  unfold transf_clight_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
-  destruct (SimplLocals.transf_program p1) as [p2|e] eqn:P2; simpl in T; try discriminate.
-  destruct (Cshmgen.transl_program p2) as [p3|e] eqn:P3; simpl in T; try discriminate.
-  destruct (Cminorgen.transl_program p3) as [p4|e] eqn:P4; simpl in T; try discriminate.
-  unfold transf_cminor_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
-  destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
-  destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
-  unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
+  unfold transf_c_program, time in T. cbn in T.
+  destruct (SimplExpr.transl_program p) as [p1|e] eqn:P1; cbn in T; try discriminate.
+  unfold transf_clight_program, time in T. rewrite ! compose_print_identity in T. cbn in T.
+  destruct (SimplLocals.transf_program p1) as [p2|e] eqn:P2; cbn in T; try discriminate.
+  destruct (Cshmgen.transl_program p2) as [p3|e] eqn:P3; cbn in T; try discriminate.
+  destruct (Cminorgen.transl_program p3) as [p4|e] eqn:P4; cbn in T; try discriminate.
+  unfold transf_cminor_program, time in T. rewrite ! compose_print_identity in T. cbn in T.
+  destruct (Selection.sel_program p4) as [p5|e] eqn:P5; cbn in T; try discriminate.
+  destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; cbn in T; try discriminate.
+  unfold transf_rtl_program, time in T. rewrite ! compose_print_identity in T. cbn in T.
   set (p7 := total_if optim_tailcalls Tailcall.transf_program p6) in *.
-  destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; simpl in T; try discriminate.
+  destruct (Inlining.transf_program p7) as [p8|e] eqn:P8; cbn in T; try discriminate.
   set (p9 := total_if Compopts.optim_move_loop_invariants FirstNop.transf_program p8) in *.
   set (p9bis := Renumber.transf_program p9) in *.
-  destruct (partial_if optim_duplicate Duplicate.transf_program p9bis) as [p10|e] eqn:P10; simpl in T; try discriminate.
+  destruct (partial_if optim_duplicate Duplicate.transf_program p9bis) as [p10|e] eqn:P10; cbn in T; try discriminate.
   set (p11 := Renumber.transf_program p10) in *.
   set (p12 := total_if optim_constprop Constprop.transf_program p11) in *.
-  destruct (partial_if optim_move_loop_invariants LICM.transf_program p12) as [p12bis|e] eqn:P12bis; simpl in T; try discriminate.
+  destruct (partial_if optim_move_loop_invariants LICM.transf_program p12) as [p12bis|e] eqn:P12bis; cbn in T; try discriminate.
   set (p12ter :=(total_if optim_move_loop_invariants Renumber.transf_program p12bis)) in *.
-  destruct (partial_if optim_CSE CSE.transf_program p12ter) as [p13|e] eqn:P13; simpl in T; try discriminate.
+  destruct (partial_if optim_CSE CSE.transf_program p12ter) as [p13|e] eqn:P13; cbn in T; try discriminate.
   set (p13bis := total_if optim_CSE2 CSE2.transf_program p13) in *.
-  destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; simpl in T; try discriminate.
+  destruct (partial_if optim_CSE3 CSE3.transf_program p13bis) as [p13ter|e] eqn:P13ter; cbn in T; try discriminate.
   set (p13quater := total_if optim_forward_moves ForwardMoves.transf_program p13ter) in *.
-  destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; simpl in T; try discriminate.
+  destruct (partial_if optim_redundancy Deadcode.transf_program p13quater) as [p14|e] eqn:P14; cbn in T; try discriminate.
   set (p14bis := total_if all_loads_nontrap Allnontrap.transf_program p14) in *.
-  destruct (Unusedglob.transform_program p14bis) as [p15|e] eqn:P15; simpl in T; try discriminate.
-  destruct (Allocation.transf_program p15) as [p16|e] eqn:P16; simpl in T; try discriminate.
+  destruct (Unusedglob.transform_program p14bis) as [p15|e] eqn:P15; cbn in T; try discriminate.
+  destruct (Allocation.transf_program p15) as [p16|e] eqn:P16; cbn in T; try discriminate.
   set (p17 := Tunneling.tunnel_program p16) in *.
-  destruct (Linearize.transf_program p17) as [p18|e] eqn:P18; simpl in T; try discriminate.
+  destruct (Linearize.transf_program p17) as [p18|e] eqn:P18; cbn in T; try discriminate.
   set (p19 := CleanupLabels.transf_program p18) in *.
-  destruct (partial_if debug Debugvar.transf_program p19) as [p20|e] eqn:P20; simpl in T; try discriminate.
-  destruct (Stacking.transf_program p20) as [p21|e] eqn:P21; simpl in T; try discriminate.
+  destruct (partial_if debug Debugvar.transf_program p19) as [p20|e] eqn:P20; cbn in T; try discriminate.
+  destruct (Stacking.transf_program p20) as [p21|e] eqn:P21; cbn in T; try discriminate.
   unfold match_prog; simpl.
   exists p1; split. apply SimplExprproof.transf_program_match; auto.
   exists p2; split. apply SimplLocalsproof.match_transf_program; auto.
