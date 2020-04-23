@@ -24,7 +24,7 @@ PARTIAL, (Option "optim_duplicate"),  (Some "Tail-duplicating"), "Duplicate";
 TOTAL, Always, (Some "Renumbering pre constprop"), "Renumber";
 TOTAL, (Option "optim_constprop"), (Some "Constant propagation"), "Constprop";
 PARTIAL, (Option "optim_move_loop_invariants"), (Some "LICM"), "LICM";
-TOTAL, (Option "optim_move_loop_invariants"), (Some "Renumbering pre CSE"), "Renumber";
+TOTAL, Always, (Some "Renumbering pre CSE"), "Renumber";
 PARTIAL, (Option "optim_CSE"), (Some "CSE"), "CSE";
 TOTAL, (Option "optim_CSE2"), (Some "CSE2"), "CSE2";
 PARTIAL, (Option "optim_CSE3"), (Some "CSE3"), "CSE3";
