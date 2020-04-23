@@ -744,10 +744,10 @@ Inductive tr_expr (c: code):
 
 with tr_condition (c: code):
        mapping -> list reg -> condexpr -> node -> node -> node -> Prop :=
-  | tr_CEcond: forall map pr cond bl ns ntrue nfalse n1 rl i,
+  | tr_CEcond: forall map pr cond expected bl ns ntrue nfalse n1 rl i,
       tr_exprlist c map pr bl ns n1 rl ->
       c!n1 = Some (Icond cond rl ntrue nfalse i) ->
-      tr_condition c map pr (CEcond cond bl) ns ntrue nfalse
+      tr_condition c map pr (CEcond cond expected bl) ns ntrue nfalse
   | tr_CEcondition: forall map pr a1 a2 a3 ns ntrue nfalse n2 n3,
       tr_condition c map pr a1 ns n2 n3 ->
       tr_condition c map pr a2 n2 ntrue nfalse ->

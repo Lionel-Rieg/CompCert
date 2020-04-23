@@ -1318,6 +1318,7 @@ Proof.
   + apply CASE2; inv H1; auto.
   + apply CASE1.
   + apply CASE2; inv H1; auto.
+  + apply CASE2; inv H1; auto.
 * apply set_res_lessdef; auto.
 
 - (* Icond *)

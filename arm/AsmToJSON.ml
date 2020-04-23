@@ -177,6 +177,7 @@ let pp_instructions pp ic =
         | EF_annot_val _
         | EF_builtin _
         | EF_debug _
+        | EF_profiling _
         | EF_external _
         | EF_free
         | EF_malloc

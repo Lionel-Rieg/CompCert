@@ -50,7 +50,7 @@ with exprlist : Type :=
   | Econs: expr -> exprlist -> exprlist
 
 with condexpr : Type :=
-  | CEcond : condition -> exprlist -> condexpr
+  | CEcond : condition -> option bool -> exprlist -> condexpr
   | CEcondition : condexpr -> condexpr -> condexpr -> condexpr
   | CElet: expr -> condexpr -> condexpr.
 
@@ -207,10 +207,10 @@ with eval_exprlist: letenv -> exprlist -> list val -> Prop :=
       eval_exprlist le (Econs a1 al) (v1 :: vl)
 
 with eval_condexpr: letenv -> condexpr -> bool -> Prop :=
-  | eval_CEcond: forall le cond al vl vb,
+  | eval_CEcond: forall le cond expected al vl vb,
       eval_exprlist le al vl ->
       eval_condition cond vl m = Some vb ->
-      eval_condexpr le (CEcond cond al) vb
+      eval_condexpr le (CEcond cond expected al) vb
   | eval_CEcondition: forall le a b c va v,
       eval_condexpr le a va ->
       eval_condexpr le (if va then b else c) v ->
@@ -495,7 +495,7 @@ with lift_exprlist (p: nat) (a: exprlist) {struct a}: exprlist :=
 
 with lift_condexpr (p: nat) (a: condexpr) {struct a}: condexpr :=
   match a with
-  | CEcond c al => CEcond c (lift_exprlist p al)
+  | CEcond c expected al => CEcond c expected (lift_exprlist p al)
   | CEcondition a b c => CEcondition (lift_condexpr p a) (lift_condexpr p b) (lift_condexpr p c)
   | CElet a b => CElet (lift_expr p a) (lift_condexpr (S p) b)
   end.

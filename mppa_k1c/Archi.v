@@ -26,11 +26,11 @@ Definition big_endian := false.
 Definition align_int64 := 8%Z.
 Definition align_float64 := 8%Z.
 
-Definition splitlong := negb ptr64.
+Definition splitlong := false.
 
 Lemma splitlong_ptr32: splitlong = true -> ptr64 = false.
 Proof.
-  unfold splitlong. destruct ptr64; simpl; congruence. 
+  unfold splitlong. congruence. 
 Qed.
 
 (** THIS IS NOT CHECKED ! NONE OF THIS ! *)
@@ -77,3 +77,5 @@ Global Opaque ptr64 big_endian splitlong
 (** Whether to generate position-independent code or not *)
 
 Parameter pic_code: unit -> bool.
+
+Definition has_notrap_loads := true.

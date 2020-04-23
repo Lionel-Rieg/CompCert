@@ -1,0 +1,14 @@
+==> minisat.ccomp.log <==
+time cycles: 3252345
+
+==> minisat.ccomp.profiled.log <==
+time cycles: 3150170
+
+==> minisat.ccomp.trace-linearize.log <==
+time cycles: 3192299
+
+==> minisat.gcc-O3.log <==
+time cycles: 2780324
+
+==> minisat.gcc-O3.profiled.log <==
+time cycles: 2487533

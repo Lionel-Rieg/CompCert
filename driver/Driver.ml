@@ -196,7 +196,11 @@ Processing options:
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
   -fcse          Perform common subexpression elimination [on]
-  -fcse2         Perform inter-loop common subexpression elimination [on]
+  -fcse2         Perform inter-loop common subexpression elimination [off]
+  -fcse3         Perform inter-loop common subexpression elimination [on]
+  -fcse3-alias-analysis Perform inter-loop common subexpression elimination with alias analysis [on]
+  -fcse3-across-calls   Propagate CSE3 information across function calls [off]
+  -fmove-loop-invariants Perform loop-invariant code motion [off]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
   -fpostpass= <optim> Perform postpass scheduling with the specified optimization [list]
@@ -222,7 +226,10 @@ Code generation options: (use -fno-<opt> to turn off -f<opt>)
   -falign-functions <n>  Set alignment (in bytes) of function entry points
   -falign-branch-targets <n>  Set alignment (in bytes) of branch targets
   -falign-cond-branches <n>  Set alignment (in bytes) of conditional branches
-  -fcommon       Put uninitialized globals in the common section [on].
+  -fcommon       Put uninitialized globals in the common section [on]
+  -fprofile-arcs  Profile branches [off].
+  -fprofile-use= filename  Use profiling information in filename
+  -fbranch-probabilities Use profiling information (if available) for branches [on]
 |} ^
  target_help ^
  toolchain_help ^
@@ -270,7 +277,7 @@ let dump_mnemonics destfile =
 
 let optimization_options = [
     option_ftailcalls; option_fifconversion; option_fconstprop;
-    option_fcse; option_fcse2;
+    option_fcse; option_fcse2; option_fcse3;
     option_fpostpass;
     option_fredundancy; option_finline; option_finline_functions_called_once;
 ]
@@ -288,6 +295,10 @@ let cmdline_actions =
   let f_opt_str name ref strref =
     [Exact("-f" ^ name ^ "="), String 
       (fun s -> (strref := (if s == "" then "list" else s)); ref := true)
+     ] in
+  let f_str name strref default =
+    [Exact("-f" ^ name ^ "="), String 
+      (fun s -> (strref := (if s == "" then default else s)))
      ] in
   let check_align n =
     if n <= 0 || ((n land (n - 1)) <> 0) then
@@ -327,7 +338,9 @@ let cmdline_actions =
   _Regexp "-O[123]$", Unit (set_all optimization_options);
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
+  Exact "-fprofile-use=", String (fun s -> Profilingaux.load_profiling_info s);
   Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
+  Exact "-debug-compcert", Integer (fun n -> option_debug_compcert := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
@@ -397,6 +410,10 @@ let cmdline_actions =
   @ f_opt "const-prop" option_fconstprop
   @ f_opt "cse" option_fcse
   @ f_opt "cse2" option_fcse2
+  @ f_opt "cse3" option_fcse3
+  @ f_opt "cse3-alias-analysis" option_fcse3_alias_analysis
+  @ f_opt "cse3-across-calls" option_fcse3_across_calls
+  @ f_opt "move-loop-invariants" option_fmove_loop_invariants
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
   @ [ Exact "-fduplicate", Integer (fun n -> option_fduplicate := n) ]
@@ -408,11 +425,17 @@ let cmdline_actions =
   @ f_opt "globaladdrtmp" option_fglobaladdrtmp
   @ f_opt "globaladdroffset" option_fglobaladdroffset
   @ f_opt "xsaddr" option_fxsaddr
+  @ f_str "div-i32" option_div_i32 "stsud"
+  @ f_str "div-i64" option_div_i64 "stsud"
   @ f_opt "addx" option_faddx
+  @ f_opt "madd" option_fmadd
+  @ f_opt "nontrap-loads" option_fnontrap_loads
   @ f_opt "coalesce-mem" option_fcoalesce_mem
   @ f_opt "all-loads-nontrap" option_all_loads_nontrap
   @ f_opt "forward-moves" option_fforward_moves
-(* Code generation options *)
+ (* Code generation options *)
+  @ f_opt "profile-arcs" option_profile_arcs
+  @ f_opt "branch-probabilities" option_fbranch_probabilities
   @ f_opt "fpu" option_ffpu
   @ f_opt "sse" option_ffpu (* backward compatibility *)
   @ [

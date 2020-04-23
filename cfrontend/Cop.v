@@ -33,6 +33,7 @@ Inductive unary_operation : Type :=
   | Oabsfloat : unary_operation.        (**r floating-point absolute value *)
 
 Inductive binary_operation : Type :=
+  | Oexpect : binary_operation          (**r return first argument *)
   | Oadd : binary_operation             (**r addition (binary [+]) *)
   | Osub : binary_operation             (**r subtraction (binary [-]) *)
   | Omul : binary_operation             (**r multiplication (binary [*]) *)
@@ -763,6 +764,14 @@ Definition sem_mul (v1:val) (t1:type) (v2: val) (t2:type) (m:mem) : option val :
     (fun n1 n2 => Some(Vsingle(Float32.mul n1 n2)))
     v1 t1 v2 t2 m.
 
+Definition sem_expect (v1:val) (t1:type) (v2: val) (t2:type) (m:mem) : option val :=
+  sem_binarith
+    (fun sg n1 n2 => Some(Vint n1))
+    (fun sg n1 n2 => Some(Vlong n1))
+    (fun n1 n2 => Some(Vfloat n1))
+    (fun n1 n2 => Some(Vsingle n1))
+    v1 t1 v2 t2 m.
+
 Definition sem_div (v1:val) (t1:type) (v2: val) (t2:type) (m:mem) : option val :=
   sem_binarith
     (fun sg n1 n2 =>
@@ -1050,6 +1059,7 @@ Definition sem_binary_operation
     (v1: val) (t1: type) (v2: val) (t2:type)
     (m: mem): option val :=
   match op with
+  | Oexpect => sem_expect v1 t1 v2 t2 m
   | Oadd => sem_add cenv v1 t1 v2 t2 m
   | Osub => sem_sub cenv v1 t1 v2 t2 m
   | Omul => sem_mul v1 t1 v2 t2 m
@@ -1290,6 +1300,9 @@ Lemma sem_binary_operation_inj:
   exists tv, sem_binary_operation cenv op tv1 ty1 tv2 ty2 m' = Some tv /\ Val.inject f v tv.
 Proof.
   unfold sem_binary_operation; intros; destruct op.
+- (* expect *)
+  unfold sem_expect in *.
+  eapply sem_binarith_inject; eauto; intros; exact I.
 - (* add *)
   assert (A: forall cenv ty si v1' v2' tv1' tv2',
              Val.inject f v1' tv1' -> Val.inject f v2' tv2' ->

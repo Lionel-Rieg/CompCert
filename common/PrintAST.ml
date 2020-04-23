@@ -47,6 +47,13 @@ let name_of_chunk = function
   | Many32 -> "any32"
   | Many64 -> "any64"
 
+let spp_profiling_id () (x : Digest.t) : string =
+  let s = Buffer.create 32 in
+  for i=0 to 15 do
+    Printf.bprintf s "%02x" (Char.code (String.get x i))
+  done;
+  Buffer.contents s;;
+
 let name_of_external = function
   | EF_external(name, sg) -> sprintf "extern %S" (camlstring_of_coqstring name)
   | EF_builtin(name, sg) -> sprintf "builtin %S" (camlstring_of_coqstring name)
@@ -61,7 +68,9 @@ let name_of_external = function
   | EF_annot_val(kind,text, targ) ->  sprintf "annot_val %S" (camlstring_of_coqstring text)
   | EF_inline_asm(text, sg, clob) -> sprintf "inline_asm %S" (camlstring_of_coqstring text)
   | EF_debug(kind, text, targs) ->
-      sprintf "debug%d %S" (P.to_int kind) (extern_atom text)
+     sprintf "debug%d %S" (P.to_int kind) (extern_atom text)
+  | EF_profiling(id, kind) ->
+     sprintf "profiling %a %d" spp_profiling_id id (Z.to_int kind)
 
 let rec print_builtin_arg px oc = function
   | BA x -> px oc x

@@ -361,6 +361,9 @@ let storage pp = function
   | Storage_default -> ()
   | Storage_extern -> fprintf pp "extern "
   | Storage_static -> fprintf pp "static "
+  | Storage_thread_local -> fprintf pp "_Thread_local"
+  | Storage_thread_local_extern -> fprintf pp "extern _Thread_local"
+  | Storage_thread_local_static -> fprintf pp "static _Thread_local"
   | Storage_auto -> ()   (* used only in blocks, where it can be omitted *)
   | Storage_register -> fprintf pp "register "
 

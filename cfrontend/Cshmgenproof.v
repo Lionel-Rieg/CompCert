@@ -619,6 +619,11 @@ End MAKE_BIN.
 
 Hint Extern 2 (@eq (option val) _ _) => (simpl; reflexivity) : cshm.
 
+Lemma make_expect_correct: binary_constructor_correct make_expect sem_expect.
+Proof.
+  apply make_binarith_correct; intros; auto.
+Qed.
+
 Lemma make_add_correct: binary_constructor_correct (make_add cunit.(prog_comp_env)) (sem_add prog.(prog_comp_env)).
 Proof.
   assert (A: forall ty si a b c e le m va vb v,
@@ -922,22 +927,23 @@ Lemma transl_binop_correct:
   eval_expr ge e le m c v.
 Proof.
   intros. destruct op; simpl in *.
-  eapply make_add_correct; eauto.
-  eapply make_sub_correct; eauto.
-  eapply make_mul_correct; eauto.
-  eapply make_div_correct; eauto.
-  eapply make_mod_correct; eauto.
-  eapply make_and_correct; eauto.
-  eapply make_or_correct; eauto.
-  eapply make_xor_correct; eauto.
-  eapply make_shl_correct; eauto.
-  eapply make_shr_correct; eauto.
-  eapply make_cmp_correct; eauto.
-  eapply make_cmp_correct; eauto.
-  eapply make_cmp_correct; eauto.
-  eapply make_cmp_correct; eauto.
-  eapply make_cmp_correct; eauto.
-  eapply make_cmp_correct; eauto.
+- eapply make_expect_correct; eauto.
+- eapply make_add_correct; eauto.
+- eapply make_sub_correct; eauto.
+- eapply make_mul_correct; eauto.
+- eapply make_div_correct; eauto.
+- eapply make_mod_correct; eauto.
+- eapply make_and_correct; eauto.
+- eapply make_or_correct; eauto.
+- eapply make_xor_correct; eauto.
+- eapply make_shl_correct; eauto.
+- eapply make_shr_correct; eauto.
+- eapply make_cmp_correct; eauto.
+- eapply make_cmp_correct; eauto.
+- eapply make_cmp_correct; eauto.
+- eapply make_cmp_correct; eauto.
+- eapply make_cmp_correct; eauto.
+- eapply make_cmp_correct; eauto.
 Qed.
 
 Lemma make_load_correct:

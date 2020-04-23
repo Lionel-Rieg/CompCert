@@ -158,6 +158,7 @@ Definition destroyed_by_builtin (ef: external_function): list mreg :=
   match ef with
   | EF_memcpy sz al => R15 :: R17 :: R29 :: nil
   | EF_inline_asm txt sg clob => destroyed_by_clobber clob
+  | EF_profiling _ _ => R15 :: R17 :: nil
   | _ => nil
   end.
 

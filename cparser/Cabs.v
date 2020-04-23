@@ -54,7 +54,7 @@ Inductive typeSpecifier := (* Merge all specifiers into one type *)
   | Tenum : option string -> option (list (string * option expression * loc)) -> list attribute -> typeSpecifier
 
 with storage :=
-  AUTO | STATIC | EXTERN | REGISTER | TYPEDEF
+  AUTO | STATIC | EXTERN | REGISTER | TYPEDEF | THREAD_LOCAL
 
 with cvspec :=
 | CV_CONST | CV_VOLATILE | CV_RESTRICT

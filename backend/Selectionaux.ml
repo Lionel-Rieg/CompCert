@@ -39,6 +39,7 @@ let cost_unop = function
   | Osingleoflong | Osingleoflongu -> assert false
 
 let cost_binop = function
+  | Oexpect _ -> 0
   | Oadd  | Osub -> 1
   | Omul -> 2
   | Odiv  | Odivu | Omod  | Omodu -> assert false

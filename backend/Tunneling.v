@@ -101,5 +101,5 @@ Definition tunnel_function (f: LTL.function) : LTL.function :=
 Definition tunnel_fundef (f: LTL.fundef) : LTL.fundef :=
   transf_fundef tunnel_function f.
 
-Definition tunnel_program (p: LTL.program) : LTL.program :=
+Definition transf_program (p: LTL.program) : LTL.program :=
   transform_program tunnel_fundef p.

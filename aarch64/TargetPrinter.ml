@@ -133,7 +133,9 @@ module Target : TARGET =
 
     let name_of_section = function
       | Section_text         -> ".text"
-      | Section_data i | Section_small_data i ->
+      | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+      | Section_data(i, false) | Section_small_data i ->
           if i then ".data" else common_section ()
       | Section_const i | Section_small_const i ->
           if i || (not !Clflags.option_fcommon) then ".section	.rodata" else "COMM"
@@ -226,6 +228,28 @@ module Target : TARGET =
     | EOuxth n -> fprintf oc ", uxth #%a" coqint n
     | EOuxtw n -> fprintf oc ", uxtw #%a" coqint n
     | EOuxtx n -> fprintf oc ", uxtx #%a" coqint n
+
+    let next_profiling_label =
+      let atomic_incr_counter = ref 0 in
+      fun () ->
+      let r = sprintf ".Lcompcert_atomic_incr%d" !atomic_incr_counter in
+      incr atomic_incr_counter; r;;
+                
+    let print_profiling_logger oc id kind =
+      assert (kind >= 0);
+      assert (kind <= 1);
+      fprintf oc "%s begin profiling %a %d: atomic increment\n" comment
+        Profilingaux.pp_id id kind;
+      let ofs = profiling_offset id kind and lbl = next_profiling_label () in
+      fprintf oc "	adrp	x15, %s+%d\n" profiling_counter_table_name ofs;
+      fprintf oc "	add	x15, x15, :lo12:(%s+%d)\n" profiling_counter_table_name ofs;
+      fprintf oc "%s:\n" lbl;
+      fprintf oc "	ldaxr	x17, [x15]\n";
+      fprintf oc "	add	x17, x17, 1\n";
+      fprintf oc "	stlxr	w17, x17, [x15]\n";
+      fprintf oc "	cbnz	w17, %s\n" lbl;
+      fprintf oc "%s end profiling %a %d\n" comment
+        Profilingaux.pp_id id kind;;
 
 (* Printing of instructions *)
     let print_instruction oc = function
@@ -519,6 +543,8 @@ module Target : TARGET =
              fprintf oc "%s begin inline assembly\n\t" comment;
              print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
              fprintf oc "%s end inline assembly\n" comment
+         | EF_profiling (id, coq_kind) ->
+            print_profiling_logger oc id (Z.to_int coq_kind)
          | _ ->
              assert false
         end
@@ -575,7 +601,24 @@ module Target : TARGET =
         section oc Section_text;
       end
 
+    let aarch64_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+	fprintf oc "	adrp	x2, %s\n" profiling_counter_table_name;
+	fprintf oc "	adrp	x1, %s\n" profiling_id_table_name;
+	fprintf oc "	add	x2, x2, :lo12:%s\n" profiling_counter_table_name;
+	fprintf oc "	add	x1, x1, :lo12:%s\n" profiling_id_table_name;
+	fprintf oc "	mov	w0, %d\n" nr_items;
+        fprintf oc "	b	%s\n" profiling_write_table_helper ;;
+
+    let print_atexit oc to_be_called =
+      	fprintf oc "	adrp	x0, %s\n" to_be_called;
+	fprintf oc "	add	x0, x0, :lo12:%s\n" to_be_called;
+	fprintf oc "	b	atexit\n";;
+        
+
     let print_epilogue oc =
+      print_profiling_epilogue elf_text_print_fun_info (Init_atexit print_atexit) aarch64_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;
