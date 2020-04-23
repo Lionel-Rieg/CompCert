@@ -37,6 +37,14 @@ let print_set s =
   List.iter (fun i -> Printf.printf "%d; " (P.to_int i)) (PSet.elements s);
   Printf.printf "}\n";;
 
+let pp_rhs oc (sop, args) =
+  match sop with
+  | SOp op -> PrintOp.print_operation PrintRTL.reg oc (op, args)
+  | SLoad(chunk, addr) ->
+     Printf.fprintf oc "%s[%a]"
+       (PrintAST.name_of_chunk chunk)
+         (PrintOp.print_addressing PrintRTL.reg) (addr, args);;
+
 let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   let cur_eq_id = ref 0
   and cur_catalog = ref PTree.empty
@@ -48,6 +56,7 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   let eq_find_oracle node eq =
     Hashtbl.find_opt eq_table (flatten_eq eq)
   and rhs_find_oracle node sop args =
+    (* Printf.printf "query for %a\n" pp_rhs (sop, args); *)
     match Hashtbl.find_opt rhs_table (sop, List.map P.to_int args) with
     | None -> PSet.empty
     | Some s -> s in
