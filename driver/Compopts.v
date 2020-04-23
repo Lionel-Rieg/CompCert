@@ -42,6 +42,18 @@ Parameter optim_CSE: unit -> bool.
 (** Flag -fcse2.  For DMonniaux's common subexpression elimination. *)
 Parameter optim_CSE2: unit -> bool.
 
+(** Flag -fcse3.  For DMonniaux's common subexpression elimination. *)
+Parameter optim_CSE3: unit -> bool.
+
+(** Flag -fcse3-alias-analysis.  For DMonniaux's common subexpression elimination. Perform a simple alias analysis. *)
+Parameter optim_CSE3_alias_analysis: unit -> bool.
+
+(** Flag -fcse3-across-calls. For DMonniaux's common subexpression elimination. Propagate information across function calls (may increase register pressure). *)
+Parameter optim_CSE3_across_calls: unit -> bool.
+
+(** Flag -fmove-loop-invariants. *)
+Parameter optim_move_loop_invariants: unit -> bool.
+
 (** Flag -fredundancy.  For dead code elimination. *)
 Parameter optim_redundancy: unit -> bool.
 
@@ -60,6 +72,9 @@ Parameter optim_xsaddr: unit -> bool.
 (** FIXME TEMPORARY Flag -fcoaelesce-mem. Fuse (default true) *)
 Parameter optim_coalesce_mem: unit -> bool.
 
+(* FIXME TEMPORARY Flag -faddx. Fuse (default true) *)
+Parameter optim_madd: unit -> bool.
+
 (** FIXME TEMPORARY Flag -faddx. Fuse (default false) *)
 Parameter optim_addx: unit -> bool.
 
@@ -74,6 +89,12 @@ Parameter all_loads_nontrap: unit -> bool.
 
 (** Flag -fforward-moves. Forward moves after CSE. *)
 Parameter optim_forward_moves: unit -> bool.
+
+(** Flag -fprofile-arcs. Add profiling logger. *)
+Parameter profile_arcs : unit -> bool.
+
+(** Flag -fbranch_probabilities. Use profiling information if available *)
+Parameter branch_probabilities : unit -> bool.
 
 (* TODO is there a more appropriate place? *)
 Require Import Coqlib.

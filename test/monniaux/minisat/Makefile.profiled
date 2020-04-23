@@ -1,0 +1,64 @@
+# -*- mode: makefile; -*-
+
+CFILES=main.c solver.c clock.c
+CCOMP=../../../ccomp
+
+#GCC=aarch64-linux-gnu-gcc
+GCC=k1-cos-gcc
+#EXECUTE=qemu-aarch64
+#EXECUTE=qemu-arm
+#EXECUTE=k1-cluster --
+#EXECUTE_CYCLES=k1-cluster --cycle-based --
+
+LIBS=-lm
+PROFILING_DAT=compcert_profiling.dat
+EXAMPLE=sudoku.sat
+CCOMPFLAGS=-static -finline-asm -finline-auto-threshold 50 
+GCCFLAGS=-static
+ALL=minisat.ccomp.log minisat.ccomp.trace-linearize.log minisat.ccomp.profiled.log minisat.gcc-O3.log minisat.gcc-O3.profiled.log
+
+all: $(ALL)
+exe: $(ALL:.log=.exe)
+
+minisat.ccomp.exe: $(CFILES)
+	$(CCOMP) $(CCOMPFLAGS) $(CFILES) -o $@ $(LIBS)
+
+minisat.ccomp.profile-arcs.exe: $(CFILES)
+	$(CCOMP) -DARM_NO_PRIVILEGE $(CCOMPFLAGS) -fprofile-arcs $(CFILES) -o $@ $(LIBS)
+
+minisat.gcc-O3.exe: $(CFILES)
+	$(GCC) $(GCCFLAGS) -O3 $(CFILES) -o $@ $(LIBS)
+
+clock.gcc-O3.noprofile.o : clock.c
+	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -O3 -c $< -o @
+
+minisat.gcc-O3.profile-arcs.exe: main.c solver.c clock.gcc-O3.noprofile.o
+	$(GCC) -DARM_NO_PRIVILEGE $(GCCFLAGS) -fprofile-arcs -O3 $+ -o $@ $(LIBS)
+
+gcda: minisat.gcc-O3.profile-arcs.exe
+	$(EXECUTE) ./$< $(EXAMPLE)
+
+main.gcda solver.gcda: gcda
+
+minisat.gcc-O3.profiled.exe: $(CFILES) $(GCDAFILES)
+	$(GCC) $(GCCFLAGS) -O3 -fprofile-use $(CFILES) -o $@ $(LIBS)
+
+minisat.ccomp.trace-linearize.exe: $(CFILES)
+	$(CCOMP) $(CCOMPFLAGS) -fduplicate 0 -ftracelinearize $(CFILES) -o $@ $(LIBS)
+
+$(PROFILING_DAT): minisat.ccomp.profile-arcs.exe
+	-rm -f $(PROFILING_DAT)
+	$(EXECUTE) ./$< $(EXAMPLE)
+
+minisat.ccomp.profiled.exe: $(CFILES) $(PROFILING_DAT)
+	$(CCOMP) $(CCOMPFLAGS) -fprofile-use= $(PROFILING_DAT) -ftracelinearize $(CFILES) -o $@ $(LIBS)
+
+%.log : %.exe
+	$(EXECUTE_CYCLES) $< $(EXAMPLE) 2>&1 | tee $@
+
+clean:
+	-rm -f *.log *.exe $(PROFILING_DAT) $(GCDAFILES)
+
+.PHONY: clean gcda exe all
+
+.SECONDARY:

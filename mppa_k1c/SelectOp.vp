@@ -168,13 +168,21 @@ Nondetfunction add (e1: expr) (e2: expr) :=
   | t1, Eop (Oaddimm n2) (t2:::Enil) =>
       addimm n2 (Eop Oadd (t1:::t2:::Enil))
   | t1, (Eop Omul (t2:::t3:::Enil)) =>
-      Eop Omadd (t1:::t2:::t3:::Enil)
+    if Compopts.optim_madd tt
+    then Eop Omadd (t1:::t2:::t3:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | (Eop Omul (t2:::t3:::Enil)), t1 =>
-      Eop Omadd (t1:::t2:::t3:::Enil)
+    if Compopts.optim_madd tt
+    then Eop Omadd (t1:::t2:::t3:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | t1, (Eop (Omulimm n) (t2:::Enil)) =>
-      Eop (Omaddimm n) (t1:::t2:::Enil)
+    if Compopts.optim_madd tt
+    then Eop (Omaddimm n) (t1:::t2:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | (Eop (Omulimm n) (t2:::Enil)), t1 =>
-    Eop (Omaddimm n) (t1:::t2:::Enil)
+    if Compopts.optim_madd tt
+    then Eop (Omaddimm n) (t1:::t2:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | (Eop (Oshlimm n) (t1:::Enil)), t2 =>
     add_shlimm n t1 t2
   | t2, (Eop (Oshlimm n) (t1:::Enil)) =>
@@ -197,7 +205,9 @@ Nondetfunction sub (e1: expr) (e2: expr) :=
   | t1, (Eop Omul (t2:::t3:::Enil)) =>
       Eop Omsub (t1:::t2:::t3:::Enil)
   | t1, (Eop (Omulimm n) (t2:::Enil)) =>
-      Eop (Omaddimm (Int.neg n)) (t1:::t2:::Enil)
+    if Compopts.optim_madd tt
+    then Eop (Omaddimm (Int.neg n)) (t1:::t2:::Enil)
+    else Eop Osub (e1:::e2:::Enil)
   | _, _ => Eop Osub (e1:::e2:::Enil)
   end.
 
@@ -452,18 +462,10 @@ Definition mods_base (e1: expr) (e2: expr) :=
   Eexternal i32_smod sig_ii_i (e1 ::: e2 ::: Enil).
 
 Definition divu_base (e1: expr) (e2: expr) :=
-  Eop Olowlong
-     ((Eexternal i64_udiv sig_ll_l
-       ((Eop Ocast32unsigned (e1 ::: Enil)):::
-       (Eop Ocast32unsigned (e2 ::: Enil))::: Enil))
-      :::Enil).
+  Eexternal i32_udiv sig_ii_i (e1 ::: e2 ::: Enil).
   
 Definition modu_base (e1: expr) (e2: expr) :=
-  Eop Olowlong
-     ((Eexternal i64_umod sig_ll_l
-       ((Eop Ocast32unsigned (e1 ::: Enil)):::
-       (Eop Ocast32unsigned (e2 ::: Enil))::: Enil))
-      :::Enil).
+  Eexternal i32_umod sig_ii_i (e1 ::: e2 ::: Enil).
 
 Definition shrximm (e1: expr) (n2: int) :=
   if Int.eq n2 Int.zero then e1 else Eop (Oshrximm n2) (e1:::Enil).

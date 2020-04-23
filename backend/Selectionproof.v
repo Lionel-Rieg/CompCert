@@ -196,12 +196,12 @@ Variable e: env.
 Variable m: mem.
 
 Lemma eval_condexpr_of_expr:
-  forall a le v b,
+  forall expected a le v b,
   eval_expr tge sp e m le a v ->
   Val.bool_of_val v b ->
-  eval_condexpr tge sp e m le (condexpr_of_expr a) b.
+  eval_condexpr tge sp e m le (condexpr_of_expr a expected) b.
 Proof.
-  intros until a. functional induction (condexpr_of_expr a); intros.
+  intros until a. functional induction (condexpr_of_expr a expected); intros.
 (* compare *)
   inv H. econstructor; eauto.
   simpl in H6. inv H6. apply Val.bool_of_val_of_optbool. auto.
@@ -310,46 +310,47 @@ Lemma eval_sel_binop:
   exists v', eval_expr tge sp e m le (sel_binop op a1 a2) v' /\ Val.lessdef v v'.
 Proof.
   destruct op; simpl; intros; FuncInv; try subst v.
-  apply eval_add; auto.
-  apply eval_sub; auto.
-  apply eval_mul; auto.
-  eapply eval_divs; eauto.
-  eapply eval_divu; eauto.
-  eapply eval_mods; eauto.
-  eapply eval_modu; eauto.
-  apply eval_and; auto.
-  apply eval_or; auto.
-  apply eval_xor; auto.
-  apply eval_shl; auto.
-  apply eval_shr; auto.
-  apply eval_shru; auto.
-  apply eval_addf; auto.
-  apply eval_subf; auto.
-  apply eval_mulf; auto.
-  apply eval_divf; auto.
-  apply eval_addfs; auto.
-  apply eval_subfs; auto.
-  apply eval_mulfs; auto.
-  apply eval_divfs; auto.
-  eapply eval_addl; eauto.
-  eapply eval_subl; eauto.
-  eapply eval_mull; eauto.
-  eapply eval_divls; eauto.
-  eapply eval_divlu; eauto.
-  eapply eval_modls; eauto.
-  eapply eval_modlu; eauto.
-  eapply eval_andl; eauto.
-  eapply eval_orl; eauto.
-  eapply eval_xorl; eauto.
-  eapply eval_shll; eauto.
-  eapply eval_shrl; eauto.
-  eapply eval_shrlu; eauto.
-  apply eval_comp; auto.
-  apply eval_compu; auto.
-  apply eval_compf; auto.
-  apply eval_compfs; auto.
-  exists v; split; auto. eapply eval_cmpl; eauto.
-  exists v; split; auto. eapply eval_cmplu; eauto.
+  - exists v1; split; trivial. apply Val.lessdef_normalize.
+  - apply eval_add; auto.
+  - apply eval_sub; auto.
+  - apply eval_mul; auto.
+  - eapply eval_divs; eauto.
+  - eapply eval_divu; eauto.
+  - eapply eval_mods; eauto.
+  - eapply eval_modu; eauto.
+  - apply eval_and; auto.
+  - apply eval_or; auto.
+  - apply eval_xor; auto.
+  - apply eval_shl; auto.
+  - apply eval_shr; auto.
+  - apply eval_shru; auto.
+  - apply eval_addf; auto.
+  - apply eval_subf; auto.
+  - apply eval_mulf; auto.
+  - apply eval_divf; auto.
+  - apply eval_addfs; auto.
+  - apply eval_subfs; auto.
+  - apply eval_mulfs; auto.
+  - apply eval_divfs; auto.
+  - eapply eval_addl; eauto.
+  - eapply eval_subl; eauto.
+  - eapply eval_mull; eauto.
+  - eapply eval_divls; eauto.
+  - eapply eval_divlu; eauto.
+  - eapply eval_modls; eauto.
+  - eapply eval_modlu; eauto.
+  - eapply eval_andl; eauto.
+  - eapply eval_orl; eauto.
+  - eapply eval_xorl; eauto.
+  - eapply eval_shll; eauto.
+  - eapply eval_shrl; eauto.
+  - eapply eval_shrlu; eauto.
+  - apply eval_comp; auto.
+  - apply eval_compu; auto.
+  - apply eval_compf; auto.
+  - apply eval_compfs; auto.
+  - exists v; split; auto. eapply eval_cmpl; eauto.
+  - exists v; split; auto. eapply eval_cmplu; eauto.
 Qed.
 
 Lemma eval_sel_select:
@@ -395,6 +396,13 @@ Proof.
   inv ARGS; try discriminate. inv H0; try discriminate.
   inv SEL.  
   simpl in SEM; inv SEM. apply eval_absf; auto.
+  (* + (* expect *)
+  inv ARGS; try discriminate.
+  inv H0; try discriminate.
+  inv H2; try discriminate.
+  simpl in SEM. inv SEM. inv SEL.
+  destruct v1; destruct v0.
+  all: econstructor; split; eauto. *)
 - eapply eval_platform_builtin; eauto.
 Qed.
 

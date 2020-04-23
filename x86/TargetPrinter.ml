@@ -133,7 +133,9 @@ module ELF_System : SYSTEM =
 
     let name_of_section = function
       | Section_text -> ".text"
-      | Section_data i | Section_small_data i ->
+      | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+      | Section_data(i, false) | Section_small_data i ->
           if i then ".data" else common_section ()
       | Section_const i | Section_small_const i ->
           if i || (not !Clflags.option_fcommon) then ".section	.rodata" else "COMM"
@@ -165,7 +167,44 @@ module ELF_System : SYSTEM =
 
     let print_var_info = elf_print_var_info
 
-    let print_epilogue _ = ()
+    let print_atexit oc to_be_called =
+      if Archi.ptr64
+      then
+        begin
+          fprintf oc "	leaq	%s(%%rip), %%rdi\n" to_be_called;
+	  fprintf oc "	jmp	atexit\n"
+        end
+      else
+        begin
+          fprintf oc "	pushl	$%s\n" to_be_called;
+          fprintf oc "	call	atexit\n";
+          fprintf oc "	addl	$4, %%esp\n";
+          fprintf oc "	ret\n"
+        end
+
+    let x86_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+      if Archi.ptr64
+      then
+        begin
+	  fprintf oc "  leaq	%s(%%rip), %%rdx\n" profiling_counter_table_name;
+	  fprintf oc "  leaq	%s(%%rip), %%rsi\n" profiling_id_table_name;
+          fprintf oc "  movl	$%d, %%edi\n" nr_items;
+          fprintf oc "  jmp	%s\n" profiling_write_table_helper
+        end
+      else
+        begin
+          fprintf oc "	pushl	$%s\n" profiling_counter_table_name;
+	  fprintf oc "	pushl	$%s\n" profiling_id_table_name;
+	  fprintf oc "	pushl	$%d\n" nr_items;
+          fprintf oc "	call	%s\n" profiling_write_table_helper ;
+          fprintf oc "	addl	$12, %%esp\n";
+          fprintf oc "	ret\n"
+        end;;
+    
+    let print_epilogue oc =
+      print_profiling_epilogue elf_text_print_fun_info (Init_atexit print_atexit) x86_profiling_stub oc;;
 
     let print_comm_decl oc name sz al =
       fprintf oc "	.comm	%a, %s, %d\n" symbol name (Z.to_string sz) al
@@ -191,7 +230,9 @@ module MacOS_System : SYSTEM =
 
     let name_of_section = function
       | Section_text -> ".text"
-      | Section_data i | Section_small_data i ->
+      | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+      | Section_data(i, false) | Section_small_data i ->
           if i || (not !Clflags.option_fcommon) then ".data" else "COMM"
       | Section_const i  | Section_small_const i ->
           if i || (not !Clflags.option_fcommon) then ".const" else "COMM"
@@ -268,7 +309,9 @@ module Cygwin_System : SYSTEM =
 
     let name_of_section = function
       | Section_text -> ".text"
-      | Section_data i | Section_small_data i ->
+      | Section_data(i, true) ->
+        failwith "_Thread_local unsupported on this platform"
+      | Section_data(i, false) | Section_small_data i ->
           if i then ".data" else common_section ()
       | Section_const i | Section_small_const i ->
           if i || (not !Clflags.option_fcommon) then ".section	.rdata,\"dr\"" else "COMM"
@@ -395,8 +438,28 @@ module Target(System: SYSTEM):TARGET =
         fprintf oc "%a(%%rip)" label lbl
       end
 
-
-
+    let print_profiling_logger oc id kind =
+      assert (kind >= 0);
+      assert (kind <= 1);
+      let ofs = profiling_offset id kind in
+      if Archi.ptr64
+      then
+        begin
+          fprintf oc "%s profiling %a %d: atomic increment\n" comment
+            Profilingaux.pp_id id kind;
+          fprintf oc "	lock addq	$1, %s+%d(%%rip)\n"
+            profiling_counter_table_name ofs
+        end
+      else
+        begin
+          fprintf oc "%s begin profiling %a %d: increment\n" comment
+            Profilingaux.pp_id id kind;
+          fprintf oc "	addl	$1, %s+%d\n" profiling_counter_table_name ofs;
+          fprintf oc "	adcl	$1, %s+%d\n" profiling_counter_table_name (ofs+4);
+          fprintf oc "%s end profiling %a %d: increment\n" comment
+            Profilingaux.pp_id id kind;
+        end
+      
 (* Printing of instructions *)
 
 (* Reminder on X86 assembly syntaxes:
@@ -834,6 +897,8 @@ module Target(System: SYSTEM):TARGET =
               fprintf oc "%s begin inline assembly\n\t" comment;
               print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
+          | EF_profiling(id, coq_kind) ->
+            print_profiling_logger oc id (Z.to_int coq_kind)          
           | _ ->
               assert false
           end

@@ -77,6 +77,7 @@ Inductive unary_operation : Type :=
   | Osingleoflongu: unary_operation.       (**r unsigned long to float32 *)
 
 Inductive binary_operation : Type :=
+  | Oexpect: typ -> binary_operation       (**r first value, second is expected*)
   | Oadd: binary_operation                 (**r integer addition *)
   | Osub: binary_operation                 (**r integer subtraction *)
   | Omul: binary_operation                 (**r integer multiplication *)
@@ -301,6 +302,7 @@ Definition eval_unop (op: unary_operation) (arg: val) : option val :=
 Definition eval_binop
             (op: binary_operation) (arg1 arg2: val) (m: mem): option val :=
   match op with
+  | Oexpect ty => Some (Val.normalize arg1 ty)
   | Oadd => Some (Val.add arg1 arg2)
   | Osub => Some (Val.sub arg1 arg2)
   | Omul => Some (Val.mul arg1 arg2)

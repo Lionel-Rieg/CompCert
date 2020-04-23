@@ -619,7 +619,7 @@ let expand_instruction instr =
 	   | EF_memcpy(sz, al) ->
 	      expand_builtin_memcpy (Int32.to_int (camlint_of_coqint sz))
 		(Int32.to_int (camlint_of_coqint al)) args
-	   | EF_annot _ | EF_debug _ | EF_inline_asm _ ->
+	   | EF_annot _ | EF_debug _ | EF_inline_asm _ | EF_profiling _ ->
               emit instr
 	   | _ ->
               assert false

@@ -30,6 +30,7 @@ let name_unop = function
   | Oabsfloat -> "__builtin_fabs"
 
 let name_binop = function
+  | Oexpect -> "expect"
   | Oadd -> "+"
   | Osub -> "-"
   | Omul -> "*"
@@ -158,6 +159,7 @@ let rec precedence = function
   | Ebinop(Oand, _, _, _) -> (8, LtoR)
   | Ebinop(Oxor, _, _, _) -> (7, LtoR)
   | Ebinop(Oor, _, _, _) -> (6, LtoR)
+  | Ebinop(Oexpect, _, _, _) -> (5, LtoR) (* fixme *)
   | Eseqand _ -> (5, LtoR)
   | Eseqor _ -> (4, LtoR)
   | Econdition _ -> (3, RtoL)

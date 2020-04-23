@@ -147,7 +147,9 @@ struct
 
   let name_of_section = function
     | Section_text -> ".text"
-    | Section_data i | Section_small_data i ->
+    | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+    | Section_data(i, false) | Section_small_data(i) ->
       if i then ".data" else common_section ()
     | Section_const i | Section_small_const i ->
       if i || (not !Clflags.option_fcommon) then ".section	.rodata" else "COMM"
@@ -201,6 +203,38 @@ struct
     | SOlsr(r, n) -> fprintf oc "%a, lsr #%a" ireg r coqint n
     | SOasr(r, n) -> fprintf oc "%a, asr #%a" ireg r coqint n
     | SOror(r, n) -> fprintf oc "%a, ror #%a" ireg r coqint n
+
+
+    let next_profiling_label =
+      let profiling_label_counter = ref 0 in
+      fun () ->
+      let r = sprintf ".Lprofiling_label%d" !profiling_label_counter in
+      incr profiling_label_counter; r;;
+                   
+    let print_profiling_logger oc id kind =
+      assert (kind >= 0);
+      assert (kind <= 1);
+      let ofs = profiling_offset id kind and olbl = next_profiling_label () in
+      fprintf oc "%s begin profiling %a %d: non-atomic increment\n" comment
+        Profilingaux.pp_id id kind;
+      fprintf oc "	ldr	r2, %s\n" olbl;
+      fprintf oc "	ldr	r3, [r2, #%d]\n"
+        (if Configuration.is_big_endian then 8 else 0);
+      fprintf oc "	ldr	r12, [r2, #%d]\n"
+        (if Configuration.is_big_endian then 0 else 8);
+      fprintf oc "	adds	r3, r3, #1\n";
+      fprintf oc "	adc	r12, r12, #0\n";
+      fprintf oc "	str	r3, [r2, #%d]\n"
+        (if Configuration.is_big_endian then 8 else 0);
+      fprintf oc "	str	r12, [r2, #%d]\n"
+        (if Configuration.is_big_endian then 0 else 8);
+      let jlbl = next_profiling_label () in
+      fprintf oc "	b	%s\n" jlbl;
+      fprintf oc "%s:\n" olbl;
+      fprintf oc "	.word	%s + %d\n" profiling_counter_table_name ofs;
+      fprintf oc "%s:\n" jlbl;
+      fprintf oc "%s end profiling %a %d\n" comment
+        Profilingaux.pp_id id kind;;
 
   let print_instruction oc = function
     (* Core instructions *)
@@ -482,6 +516,7 @@ struct
           fprintf oc "%s begin inline assembly\n\t" comment;
           print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
           fprintf oc "%s end inline assembly\n" comment
+        | EF_profiling(id, coq_kind) -> print_profiling_logger oc id  (Z.to_int coq_kind)
         | _ ->
           assert false
       end
@@ -549,6 +584,11 @@ struct
     if !Clflags.option_mthumb then
       fprintf oc "	.thumb_func\n"
 
+
+  let text_print_fun_info oc name =
+    fprintf oc "	.type	%s, %%function\n" name;
+    fprintf oc "	.size	%s, . - %s\n" name name
+
   let print_fun_info oc name =
     fprintf oc "	.type	%a, %%function\n" symbol name;
     fprintf oc "	.size	%a, . - %a\n" symbol name symbol name
@@ -596,9 +636,22 @@ struct
     if !Clflags.option_g then begin
       section oc Section_text;
       cfi_section oc
-    end
+      end
+
+  let arm_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+        fprintf oc "	ldr	r2, = %s\n" profiling_counter_table_name;
+        fprintf oc "	ldr	r1, = %s\n" profiling_id_table_name;
+	fprintf oc "	mov	r0, #%d\n" nr_items;
+	fprintf oc "	b	%s\n" profiling_write_table_helper;;
+  
+  let print_atexit oc to_be_called =
+      	fprintf oc "	ldr	r0, = %s\n" to_be_called;
+	fprintf oc "	b	atexit\n";;
 
   let print_epilogue oc =
+    print_profiling_epilogue text_print_fun_info (Init_atexit print_atexit) arm_profiling_stub oc;
     if !Clflags.option_g then begin
       Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
       section oc Section_text;

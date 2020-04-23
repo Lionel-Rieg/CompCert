@@ -354,7 +354,9 @@ and is_constant_lval env e =
       begin match Env.find_ident env id with
       | Env.II_ident(sto, _) ->
           begin match sto with
-          | Storage_default | Storage_extern | Storage_static -> true
+          | Storage_default | Storage_extern | Storage_static
+          | Storage_thread_local | Storage_thread_local_extern | Storage_thread_local_static
+            -> true
           | Storage_auto | Storage_register -> false
           end
       | Env.II_enum _ -> false   (* should not happen *)

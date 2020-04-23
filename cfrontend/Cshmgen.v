@@ -259,6 +259,11 @@ Definition make_add_ptr_long (ce: composite_env) (ty: type) (e1 e2: expr) :=
     let n := make_intconst (Int.repr sz) in
     OK (Ebinop Oadd e1 (Ebinop Omul n (Eunop Ointoflong e2))).
 
+Definition make_expect (e1: expr) (ty1: type) (e2: expr) (ty2: type) :=
+  make_binarith (Oexpect AST.Tint) (Oexpect AST.Tint)
+                (Oexpect AST.Tfloat) (Oexpect AST.Tsingle)
+                (Oexpect AST.Tlong) (Oexpect AST.Tlong) e1 ty1 e2 ty2.
+
 Definition make_add (ce: composite_env) (e1: expr) (ty1: type) (e2: expr) (ty2: type) :=
   match classify_add ty1 ty2 with
   | add_case_pi ty si => make_add_ptr_int ce ty si e1 e2
@@ -421,6 +426,7 @@ Definition transl_binop (ce: composite_env)
                         (a: expr) (ta: type)
                         (b: expr) (tb: type) : res expr :=
   match op with
+  | Cop.Oexpect => make_expect a ta b tb
   | Cop.Oadd => make_add ce a ta b tb
   | Cop.Osub => make_sub ce a ta b tb
   | Cop.Omul => make_mul a ta b tb

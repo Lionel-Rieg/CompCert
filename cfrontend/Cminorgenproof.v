@@ -1335,6 +1335,7 @@ Lemma eval_binop_compat:
   /\ Val.inject f v tv.
 Proof.
   destruct op; simpl; intros; inv H.
+- TrivialExists. apply Val.normalize_inject; auto.
 - TrivialExists. apply Val.add_inject; auto.
 - TrivialExists. apply Val.sub_inject; auto.
 - TrivialExists. inv H0; inv H1; constructor.

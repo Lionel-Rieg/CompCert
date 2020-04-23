@@ -799,11 +799,11 @@ Proof.
 Qed.
 
 Lemma transl_condexpr_CEcond_correct:
-  forall le cond al vl vb,
+  forall le cond expected al vl vb,
   eval_exprlist ge sp e m le al vl ->
   transl_exprlist_prop le al vl ->
   eval_condition cond vl m = Some vb ->
-  transl_condexpr_prop le (CEcond cond al) vb.
+  transl_condexpr_prop le (CEcond cond expected al) vb.
 Proof.
   intros; red; intros. inv TE.
   exploit H0; eauto. intros [rs1 [tm1 [EX1 [ME1 [RES1 [OTHER1 EXT1]]]]]].

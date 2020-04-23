@@ -34,11 +34,57 @@ module Target (*: TARGET*) =
 
     let comment = "#"
 
+    type idiv_function_kind =
+      | Idiv_system
+      | Idiv_stsud
+      | Idiv_fp;;
+
+    let idiv_function_kind = function
+        "stsud" -> Idiv_stsud
+      | "system" -> Idiv_system
+      | "fp" -> Idiv_fp
+      | _ -> failwith "unknown integer division kind";;
+    
+    let idiv_function_kind_32bit () = idiv_function_kind !Clflags.option_div_i32;;
+    let idiv_function_kind_64bit () = idiv_function_kind !Clflags.option_div_i64;;
+    
     let subst_symbol = function
-        "__compcert_i64_udiv" -> "__udivdi3"
-      | "__compcert_i64_sdiv" -> "__divdi3"
-      | "__compcert_i64_umod" -> "__umoddi3"
-      | "__compcert_i64_smod" -> "__moddi3"
+        "__compcert_i64_udiv" ->
+        (match idiv_function_kind_64bit () with
+         | Idiv_system | Idiv_fp -> "__udivdi3"
+         | Idiv_stsud -> "__compcert_i64_udiv_stsud")
+      | "__compcert_i64_sdiv" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__divdi3"
+         | Idiv_stsud -> "__compcert_i64_sdiv_stsud")
+      | "__compcert_i64_umod" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__umoddi3"
+         | Idiv_stsud -> "__compcert_i64_umod_stsud")
+      | "__compcert_i64_smod" ->
+        (match idiv_function_kind_64bit() with
+         | Idiv_system | Idiv_fp -> "__moddi3"
+         | Idiv_stsud -> "__compcert_i64_smod_stsud")
+      | "__compcert_i32_sdiv" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_sdiv_fp"
+         | Idiv_stsud -> "__compcert_i32_sdiv_stsud")
+      | "__compcert_i32_udiv" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_udiv_fp"
+         | Idiv_stsud -> "__compcert_i32_udiv_stsud")
+      | "__compcert_i32_smod" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_smod_fp"
+         | Idiv_stsud -> "__compcert_i32_smod_stsud")
+      | "__compcert_i32_umod" as s ->
+        (match idiv_function_kind_32bit() with
+         | Idiv_system -> s
+         | Idiv_fp -> "__compcert_i32_umod_fp"
+         | Idiv_stsud -> "__compcert_i32_umod_stsud")
       | "__compcert_f64_div" -> "__divdf3"
       | "__compcert_f32_div" -> "__divsf3"
       | x -> x;;
@@ -157,8 +203,12 @@ module Target (*: TARGET*) =
 
     let name_of_section = function
       | Section_text         -> ".text"
-      | Section_data i | Section_small_data i ->
-          if i then ".data" else "COMM"
+      | Section_data(true, true) ->
+         ".section .tdata,\"awT\",@progbits"
+      | Section_data(false, true) ->        
+         ".section .tbss,\"awT\",@nobits"
+      | Section_data(i, false) | Section_small_data(i) ->
+         (if i then ".data" else "COMM")
       | Section_const i | Section_small_const i ->
           if i then ".section	.rodata" else "COMM"
       | Section_string       -> ".section	.rodata"
@@ -211,14 +261,20 @@ module Target (*: TARGET*) =
 
 (* Generate code to load the address of id + ofs in register r *)
 
-(* FIXME DMonniaux ugly ugly hack to get at standard __thread data *)
     let loadsymbol oc r id ofs =
       if Archi.pic_code () then begin
         assert (ofs = Integers.Ptrofs.zero);
-        fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
-      end else begin
-        if (extern_atom id) = "_impure_thread_data" then begin
-            fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs)         
+        if C2C.atom_is_thread_local id then begin
+            (* fprintf oc "	addd	%a = $r13, @tprel(%s)\n" ireg r (extern_atom id) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%s)\n" ireg r (extern_atom id)
+        end else begin
+            fprintf oc "	make	%a = %s\n" ireg r (extern_atom id)
+        end
+     end else
+     begin
+        if C2C.atom_is_thread_local id then begin
+            (* fprintf oc "	addd	%a = $r13, @tprel(%a)\n" ireg r symbol_offset (id, ofs) *)
+            fprintf oc "	addd	%a = $r13, @tlsle(%a)\n" ireg r symbol_offset (id, ofs)
         end else begin            
             fprintf oc "	make	%a = %a\n" ireg r symbol_offset (id, ofs)
         end
@@ -239,7 +295,20 @@ module Target (*: TARGET*) =
   (*let w oc =
       if Archi.ptr64 then output_string oc "w"
   *)
-(* Offset part of a load or store *)
+
+    (* Profiling *)
+    
+
+    let k1c_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name =
+          fprintf oc "	make $r0 = %d\n" nr_items;
+          fprintf oc "	make $r1 = %s\n" profiling_id_table_name;
+          fprintf oc "	make $r2 = %s\n" profiling_counter_table_name;
+          fprintf oc "	goto	%s\n" profiling_write_table_helper;
+          fprintf oc "	;;\n";;
+
+    (* Offset part of a load or store *)
 
     let offset oc n = ptrofs oc n 
 
@@ -328,6 +397,18 @@ module Target (*: TARGET*) =
               fprintf oc "%s begin inline assembly\n\t" comment;
               print_inline_asm preg_asm oc (camlstring_of_coqstring txt) sg args res;
               fprintf oc "%s end inline assembly\n" comment
+          | EF_profiling(id, coq_kind) ->
+             let kind = Z.to_int coq_kind in
+             assert (kind >= 0);
+             assert (kind <= 1);
+             fprintf oc "%s profiling %a %d\n" comment
+               Profilingaux.pp_id id kind;
+             fprintf oc "	make	$r63 = %s\n" profiling_counter_table_name;
+             fprintf oc "	make	$r62 = 1\n";
+             fprintf oc "	;;\n";
+             fprintf oc "	afaddd	%d[$r63] = $r62\n"
+               (profiling_offset id kind);
+             fprintf oc "	;;\n"
           | _ ->
               assert false
          end
@@ -789,8 +870,9 @@ module Target (*: TARGET*) =
       if !Clflags.option_g then begin
         section oc Section_text;
       end
-
+       
     let print_epilogue oc =
+      print_profiling_epilogue elf_text_print_fun_info Dtors k1c_profiling_stub oc;
       if !Clflags.option_g then begin
         Debug.compute_gnu_file_enum (fun f -> ignore (print_file oc f));
         section oc Section_text;

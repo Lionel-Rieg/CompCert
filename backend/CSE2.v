@@ -29,7 +29,7 @@ Proof.
   decide equality.
 Defined.
 
-Module RELATION.
+Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
   
 Definition t := (PTree.t sym_val).
 Definition eq (r1 r2 : t) :=
@@ -138,119 +138,6 @@ Qed.
 
 End RELATION.
 
-Module Type SEMILATTICE_WITHOUT_BOTTOM.
-
-  Parameter t: Type.
-  Parameter eq: t -> t -> Prop.
-  Axiom eq_refl: forall x, eq x x.
-  Axiom eq_sym: forall x y, eq x y -> eq y x.
-  Axiom eq_trans: forall x y z, eq x y -> eq y z -> eq x z.
-  Parameter beq: t -> t -> bool.
-  Axiom beq_correct: forall x y, beq x y = true -> eq x y.
-  Parameter ge: t -> t -> Prop.
-  Axiom ge_refl: forall x y, eq x y -> ge x y.
-  Axiom ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
-  Parameter lub: t -> t -> t.
-  Axiom ge_lub_left: forall x y, ge (lub x y) x.
-  Axiom ge_lub_right: forall x y, ge (lub x y) y.
-
-End SEMILATTICE_WITHOUT_BOTTOM.
-
-Module ADD_BOTTOM(L : SEMILATTICE_WITHOUT_BOTTOM).
-  Definition t := option L.t.
-  Definition eq (a b : t) :=
-    match a, b with
-    | None, None => True
-    | Some x, Some y => L.eq x y
-    | Some _, None | None, Some _ => False
-    end.
-  
-  Lemma eq_refl: forall x, eq x x.
-  Proof.
-    unfold eq; destruct x; trivial.
-    apply L.eq_refl.
-  Qed.
-
-  Lemma eq_sym: forall x y, eq x y -> eq y x.
-  Proof.
-    unfold eq; destruct x; destruct y; trivial.
-    apply L.eq_sym.
-  Qed.
-  
-  Lemma eq_trans: forall x y z, eq x y -> eq y z -> eq x z.
-  Proof.
-    unfold eq; destruct x; destruct y; destruct z; trivial.
-    - apply L.eq_trans.
-    - contradiction.
-  Qed.
-  
-  Definition beq (x y : t) :=
-    match x, y with
-    | None, None => true
-    | Some x, Some y => L.beq x y
-    | Some _, None | None, Some _ => false
-    end.
-  
-  Lemma beq_correct: forall x y, beq x y = true -> eq x y.
-  Proof.
-    unfold beq, eq.
-    destruct x; destruct y; trivial; try congruence.
-    apply L.beq_correct.
-  Qed.
-  
-  Definition ge (x y : t) :=
-    match x, y with
-    | None, Some _ => False
-    | _, None => True
-    | Some a, Some b => L.ge a b
-    end.
-  
-  Lemma ge_refl: forall x y, eq x y -> ge x y.
-  Proof.
-    unfold eq, ge.
-    destruct x; destruct y; trivial.
-    apply L.ge_refl.
-  Qed.
-  
-  Lemma ge_trans: forall x y z, ge x y -> ge y z -> ge x z.
-  Proof.
-    unfold ge.
-    destruct x; destruct y; destruct z; trivial; try contradiction.
-    apply L.ge_trans.
-  Qed.
-  
-  Definition bot: t := None.
-  Lemma ge_bot: forall x, ge x bot.
-  Proof.
-    unfold ge, bot.
-    destruct x; trivial.
-  Qed.
-  
-  Definition lub (a b : t) :=
-    match a, b with
-    | None, _ => b
-    | _, None => a
-    | (Some x), (Some y) => Some (L.lub x y)
-    end.
-
-  Lemma ge_lub_left: forall x y, ge (lub x y) x.
-  Proof.
-    unfold ge, lub.
-    destruct x; destruct y; trivial.
-    - apply L.ge_lub_left.
-    - apply L.ge_refl.
-      apply L.eq_refl.
-  Qed.
-  
-  Lemma ge_lub_right: forall x y, ge (lub x y) y.
-  Proof.
-    unfold ge, lub.
-    destruct x; destruct y; trivial.
-    - apply L.ge_lub_right.
-    - apply L.ge_refl.
-      apply L.eq_refl.
-  Qed.
-End ADD_BOTTOM.
 
 Module RB := ADD_BOTTOM(RELATION).
 Module DS := Dataflow_Solver(RB)(NodeSetForward).
@@ -375,7 +262,7 @@ Definition load (chunk: memory_chunk) (addr : addressing)
   | None => load1 chunk addr dst args rel
   end.
 
-Fixpoint kill_builtin_res res rel :=
+Definition kill_builtin_res res rel :=
   match res with
   | BR r => kill_reg r rel
   | _ => rel

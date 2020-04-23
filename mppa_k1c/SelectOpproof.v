@@ -350,13 +350,19 @@ Proof.
     apply eval_addimm. EvalOp.
     repeat rewrite Val.add_assoc. reflexivity.
   - (* Omadd *)
-    subst. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
   - (* Omadd rev *)
-    subst. rewrite Val.add_commut. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
+    simpl. rewrite Val.add_commut. reflexivity.
   - (* Omaddimm *)
-    subst. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
   - (* Omaddimm rev *)
-    subst. rewrite Val.add_commut. TrivialExists.
+    subst. destruct (Compopts.optim_madd tt); TrivialExists;
+    repeat (eauto; econstructor; simpl).
+    simpl. rewrite Val.add_commut. reflexivity.
     (* Oaddx *)
   - subst. pose proof eval_addx as ADDX.
     unfold binary_constructor_sound in ADDX.
@@ -380,11 +386,14 @@ Proof.
   - subst. rewrite Val.sub_add_l. apply eval_addimm; EvalOp.
   - subst. rewrite Val.sub_add_r. apply eval_addimm; EvalOp.
   - TrivialExists. simpl. subst. reflexivity.
-  - TrivialExists. simpl. subst.
-    rewrite sub_add_neg.
-    rewrite neg_mul_distr_r.
-    unfold Val.neg.
-    reflexivity.
+  - destruct (Compopts.optim_madd tt).
+    + TrivialExists. simpl. subst.
+      rewrite sub_add_neg.
+      rewrite neg_mul_distr_r.
+      unfold Val.neg.
+      reflexivity.
+    + TrivialExists. repeat (eauto; econstructor).
+      simpl. subst. reflexivity.
   - TrivialExists.
 Qed.
 
@@ -929,6 +938,12 @@ Theorem eval_divu_base:
     Val.divu x y = Some z ->
     exists v, eval_expr ge sp e m le (divu_base a b) v /\ Val.lessdef z v.
 Proof.
+  intros; unfold divu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
+(* For using 64-bit unsigned division for 32-bit
+
   intros until z.
   intros Hax Hby Hdiv. unfold divu_base.
   pose proof (divu_is_divlu x y) as DIVU.
@@ -948,7 +963,8 @@ Proof.
   }
   congruence.
 Qed.
-
+ *)
+  
 Theorem eval_modu_base:
   forall le a b x y z,
     eval_expr ge sp e m le a x ->
@@ -956,6 +972,12 @@ Theorem eval_modu_base:
     Val.modu x y = Some z ->
     exists v, eval_expr ge sp e m le (modu_base a b) v /\ Val.lessdef z v.
 Proof.
+  intros; unfold modu_base.
+  econstructor; split. eapply eval_helper_2; eauto. DeclHelper. UseHelper. auto.
+Qed.
+
+(* for using 64-bit unsigned modulo for 32-bit
+
   intros until z.
   intros Hax Hby Hmod. unfold modu_base.
   pose proof (modu_is_modlu x y) as MODU.
@@ -975,7 +997,8 @@ Proof.
   }
   congruence.
 Qed.
-
+ *)
+  
 Theorem eval_shrximm:
   forall le a n x z,
     eval_expr ge sp e m le a x ->

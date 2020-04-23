@@ -62,6 +62,7 @@ let precedence = function
   | Ebinop(Oand, _, _, _) -> (8, LtoR)
   | Ebinop(Oxor, _, _, _) -> (7, LtoR)
   | Ebinop(Oor, _, _, _) -> (6, LtoR)
+  | Ebinop(Oexpect, _, _, _) -> (5, LtoR)
 
 (* Expressions *)
 

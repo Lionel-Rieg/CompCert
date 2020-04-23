@@ -57,6 +57,7 @@ FLOCQ=\
 # General-purpose libraries (in lib/)
 
 VLIB=Axioms.v Coqlib.v Intv.v Maps.v Heaps.v Lattice.v Ordered.v \
+  HashedSet.v \
   Iteration.v Zbits.v Integers.v Archi.v IEEE754_extra.v Floats.v \
   Parmov.v UnionFind.v Wfsimpl.v \
   Postorder.v FSetAVLplus.v IntvSets.v Decidableplus.v BoolEqual.v
@@ -79,21 +80,27 @@ BACKEND=\
   RTLgen.v RTLgenspec.v RTLgenproof.v \
   Tailcall.v Tailcallproof.v \
   Inlining.v Inliningspec.v Inliningproof.v \
+  Profiling.v Profilingproof.v \
+  ProfilingExploit.v ProfilingExploitproof.v \
   Renumber.v Renumberproof.v \
   Duplicate.v Duplicateproof.v \
   RTLtyping.v \
   Kildall.v Liveness.v \
   ValueDomain.v ValueAOp.v ValueAnalysis.v \
   ConstpropOp.v Constprop.v ConstpropOpproof.v Constpropproof.v \
+  Inject.v Injectproof.v \
   CSEdomain.v CombineOp.v CSE.v CombineOpproof.v CSEproof.v \
   CSE2deps.v CSE2depsproof.v \
   CSE2.v CSE2proof.v \
+  CSE3analysis.v CSE3analysisproof.v CSE3.v CSE3proof.v \
+  LICM.v LICMproof.v \
   NeedDomain.v NeedOp.v Deadcode.v Deadcodeproof.v \
   Unusedglob.v Unusedglobproof.v \
   Machregs.v Locations.v Conventions1.v Conventions.v LTL.v \
   ForwardMoves.v ForwardMovesproof.v \
+  FirstNop.v FirstNopproof.v \
   Allnontrap.v Allnontrapproof.v \
-  Allocation.v Allocproof.v \
+  Allocation.v Allocationproof.v \
   Tunneling.v Tunnelingproof.v \
   Linear.v Lineartyping.v \
   Linearize.v Linearizeproof.v \
@@ -194,6 +201,8 @@ tools/ndfun: tools/ndfun.ml
 	ocamlopt -o tools/ndfun str.cmxa tools/ndfun.ml
 tools/modorder: tools/modorder.ml
 	ocamlopt -o tools/modorder str.cmxa tools/modorder.ml
+tools/compiler_expand: tools/compiler_expand.ml
+	ocamlopt -o $@ $+
 
 latexdoc:
 	cd doc; $(COQDOC) --latex -o doc/doc.tex -g $(FILES)
@@ -208,6 +217,9 @@ latexdoc:
 	@echo "Preprocessing $*.vp"
 	@tools/ndfun $*.vp > $*.v || { rm -f $*.v; exit 2; }
 	@chmod a-w $*.v
+
+driver/Compiler.v: driver/Compiler.vexpand tools/compiler_expand
+	tools/compiler_expand driver/Compiler.vexpand $@
 
 compcert.ini: Makefile.config
 	(echo "stdlib_path=$(LIBDIR)"; \

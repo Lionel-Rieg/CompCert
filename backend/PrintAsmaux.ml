@@ -111,6 +111,10 @@ let elf_symbol_offset oc (symb, ofs) =
   if ofs <> 0L then fprintf oc " + %Ld" ofs
 
 (* Functions for fun and var info *)
+let elf_text_print_fun_info oc name =
+  fprintf oc "	.type	%s, @function\n" name;
+  fprintf oc "	.size	%s, . - %s\n" name name
+
 let elf_print_fun_info oc name =
   fprintf oc "	.type	%a, @function\n" elf_symbol name;
   fprintf oc "	.size	%a, . - %a\n" elf_symbol name elf_symbol name
@@ -303,6 +307,7 @@ let print_version_and_options oc comment =
     fprintf oc " %s" Commandline.argv.(i)
   done;
   fprintf oc "\n"
+  
 (** Get the name of the common section if it is used otherwise the given section
     name, with bss as default *)
 
@@ -310,4 +315,84 @@ let common_section ?(sec = ".bss") () =
   if !Clflags.option_fcommon then
     "COMM"
   else
-    sec
+    sec;;
+
+(* Profiling *)
+let profiling_table : (Digest.t, int) Hashtbl.t = Hashtbl.create 1000;;
+let next_profiling_position = ref 0;;
+let profiling_position (x : Digest.t) : int =
+  match Hashtbl.find_opt profiling_table x with
+  | None -> let y = !next_profiling_position in
+            next_profiling_position := succ y;
+            Hashtbl.replace profiling_table x y;
+            y
+  | Some y -> y;;
+
+let profiling_ids () =
+  let nr_items = !next_profiling_position in
+  let ar = Array.make nr_items "" in
+  Hashtbl.iter
+    (fun x y -> ar.(y) <- x)
+    profiling_table;
+  ar;;
+
+let print_profiling_id oc id =
+  assert (String.length id = 16);
+  output_string oc "	.byte";
+  for i=0 to 15 do
+    fprintf oc " 0x%02x" (Char.code (String.get id i));
+    if i < 15 then output_char oc ','
+  done;
+  output_char oc '\n';;
+
+let profiling_counter_table_name = ".compcert_profiling_counters"
+and profiling_id_table_name = ".compcert_profiling_ids"
+and profiling_write_table = ".compcert_profiling_save_for_this_object"
+and profiling_init = ".compcert_profiling_init"
+and profiling_write_table_helper = "_compcert_write_profiling_table"
+and dtor_section = ".dtors.65435,\"aw\",@progbits"
+(* and fini_section = ".fini_array_00100,\"aw\"" *)
+and init_section = ".init_array,\"aw\"";;
+
+type finalizer_call_method =
+  | Dtors
+  | Init_atexit of (out_channel -> string -> unit);;
+
+let write_symbol_pointer oc sym =
+  if Archi.ptr64
+  then fprintf oc "	.8byte	%s\n" sym
+  else fprintf oc "	.4byte	%s\n" sym;;
+
+let print_profiling_epilogue declare_function finalizer_call_method print_profiling_stub oc =
+  if !Clflags.option_profile_arcs
+  then
+    let nr_items = !next_profiling_position in
+    if nr_items > 0
+    then
+      begin
+        fprintf oc "	.lcomm	%s, %d\n"
+          profiling_counter_table_name (nr_items * 16);
+        fprintf oc "	.section	.rodata\n";
+        fprintf oc "%s:\n" profiling_id_table_name;
+        Array.iter (print_profiling_id oc) (profiling_ids ());
+        fprintf oc "	.text\n";
+        fprintf oc "%s:\n" profiling_write_table;
+        print_profiling_stub oc nr_items
+          profiling_id_table_name
+          profiling_counter_table_name;
+        declare_function oc profiling_write_table;
+        match finalizer_call_method with
+        | Dtors ->
+           fprintf oc "	.section	%s\n" dtor_section;
+           write_symbol_pointer oc profiling_write_table
+        | Init_atexit(atexit_call) ->
+           fprintf oc "	.section	%s\n" init_section;
+           write_symbol_pointer oc profiling_init;
+           fprintf oc "	.text\n";
+           fprintf oc "%s:\n" profiling_init;
+           atexit_call oc profiling_write_table;
+           declare_function oc profiling_init
+      end;;
+
+let profiling_offset id kind =
+  ((profiling_position id)*2 + kind)*8;;

@@ -36,6 +36,9 @@ Require Parser.
 Require Initializers.
 Require Asmaux.
 
+Require CSE3.
+Require CSE3analysis.
+
 (* Standard lib *)
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
@@ -84,6 +87,9 @@ Extract Inlined Constant Inlining.inlining_info => "Inliningaux.inlining_info".
 Extract Inlined Constant Inlining.inlining_analysis => "Inliningaux.inlining_analysis".
 Extraction Inline Inlining.ret Inlining.bind.
 
+(* Loop invariant code motion *)
+Extract Inlined Constant LICM.gen_injections => "LICMaux.gen_injections".
+
 (* Allocation *)
 Extract Constant Allocation.regalloc => "Regalloc.regalloc".
 
@@ -113,6 +119,15 @@ Extract Constant Compopts.optim_CSE =>
   "fun _ -> !Clflags.option_fcse".
 Extract Constant Compopts.optim_CSE2 =>
   "fun _ -> !Clflags.option_fcse2".
+Extract Constant Compopts.optim_CSE3 =>
+  "fun _ -> !Clflags.option_fcse3".
+Extract Constant Compopts.optim_CSE3_alias_analysis =>
+  "fun _ -> !Clflags.option_fcse3_alias_analysis".
+Extract Constant Compopts.optim_CSE3_across_calls =>
+  "fun _ -> !Clflags.option_fcse3_across_calls".
+Extract Constant Compopts.optim_move_loop_invariants =>
+  "fun _ -> !Clflags.option_fmove_loop_invariants".
+
 Extract Constant Compopts.optim_redundancy =>
   "fun _ -> !Clflags.option_fredundancy".
 Extract Constant Compopts.optim_postpass =>
@@ -129,6 +144,8 @@ Extract Constant Compopts.optim_xsaddr =>
   "fun _ -> !Clflags.option_fxsaddr".
 Extract Constant Compopts.optim_addx =>
   "fun _ -> !Clflags.option_faddx".
+Extract Constant Compopts.optim_madd =>
+  "fun _ -> !Clflags.option_fmadd".
 Extract Constant Compopts.optim_coalesce_mem =>
   "fun _ -> !Clflags.option_fcoalesce_mem".
 Extract Constant Compopts.optim_forward_moves =>
@@ -137,6 +154,10 @@ Extract Constant Compopts.va_strict =>
   "fun _ -> false".
 Extract Constant Compopts.all_loads_nontrap =>
   "fun _ -> !Clflags.option_all_loads_nontrap".
+Extract Constant Compopts.profile_arcs =>
+"fun _ -> !Clflags.option_profile_arcs".
+Extract Constant Compopts.branch_probabilities =>
+  "fun _ -> !Clflags.option_fbranch_probabilities".
 
 (* Compiler *)
 Extract Constant Compiler.print_Clight => "PrintClight.print_if".
@@ -147,8 +168,16 @@ Extract Constant Compiler.print_Mach => "PrintMach.print_if".
 Extract Constant Compiler.print => "fun (f: 'a -> unit) (x: 'a) -> f x; x".
 Extract Constant Compiler.time  => "Timing.time_coq".
 Extract Constant Compopts.time  => "Timing.time_coq".
-
 (*Extraction Inline Compiler.apply_total Compiler.apply_partial.*)
+
+(* Profiling *)
+Extract Constant AST.profiling_id => "Digest.t".
+Extract Constant AST.profiling_id_eq => "Digest.equal".
+Extract Constant Profiling.function_id => "Profilingaux.function_id".
+Extract Constant Profiling.branch_id => "Profilingaux.branch_id".
+Extract Constant ProfilingExploit.function_id => "Profilingaux.function_id".
+Extract Constant ProfilingExploit.branch_id => "Profilingaux.branch_id".
+Extract Constant ProfilingExploit.condition_oracle => "Profilingaux.condition_oracle".
 
 (* Cabs *)
 Extract Constant Cabs.loc =>
@@ -159,6 +188,12 @@ Extract Constant Cabs.loc =>
  }".
 Extract Inlined Constant Cabs.string => "String.t".
 Extract Constant Cabs.char_code => "int64".
+
+Extract Inlined Constant CSE3.preanalysis => "CSE3analysisaux.preanalysis".
+
+Extract Inductive HashedSet.PSet_internals.pset => "HashedSetaux.pset" [ "HashedSetaux.empty" "HashedSetaux.node" ] "HashedSetaux.pset_match".
+
+Extract Inlined Constant HashedSet.PSet_internals.pset_eq => "(==)" (* "HashedSetaux.eq" *).
 
 (* Processor-specific extraction directives *)
 
@@ -182,6 +217,7 @@ Set Extraction AccessOpaque.
 Cd "extraction".
 
 Separate Extraction
+   CSE3analysis.internal_analysis CSE3analysis.eq_depends_on_mem
    Compiler.transf_c_program Compiler.transf_cminor_program
    Cexec.do_initial_state Cexec.do_step Cexec.at_final_state
    Ctypes.merge_attributes Ctypes.remove_attributes Ctypes.build_composite_env
@@ -204,4 +240,5 @@ Separate Extraction
    Floats.Float32.from_parsed Floats.Float.from_parsed
    Globalenvs.Senv.invert_symbol
    Parser.translation_unit_file
-   Compopts.optim_postpass.
+   Compopts.optim_postpass
+   Archi.has_notrap_loads.

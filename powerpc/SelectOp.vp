@@ -472,7 +472,7 @@ Definition intuoffloat (e: expr) :=
   else
     Elet e
     (Elet (Eop (Ofloatconst (Float.of_intu Float.ox8000_0000)) Enil)
-      (Econdition (CEcond (Ccompf Clt) (Eletvar 1 ::: Eletvar 0 ::: Enil))
+      (Econdition (CEcond (Ccompf Clt) None (Eletvar 1 ::: Eletvar 0 ::: Enil))
         (intoffloat (Eletvar 1))
         (addimm Float.ox8000_0000 (intoffloat (subf (Eletvar 1) (Eletvar 0))))))%nat.
 

@@ -46,16 +46,29 @@ let decl_atom : (AST.ident, atom_info) Hashtbl.t = Hashtbl.create 103
 
 let atom_is_static a =
   try
-    (Hashtbl.find decl_atom a).a_storage = C.Storage_static
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_static | C.Storage_thread_local_static -> true
+    | _ -> false
   with Not_found ->
     false
 
 let atom_is_extern a =
   try
-    (Hashtbl.find decl_atom a).a_storage = C.Storage_extern
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_extern| C.Storage_thread_local_extern -> true
+    | _ -> false
   with Not_found ->
     false
 
+let atom_is_thread_local a =
+  try
+    match (Hashtbl.find decl_atom a).a_storage with
+    | C.Storage_thread_local_extern| C.Storage_thread_local_static
+    | C.Storage_thread_local -> true
+    | _ -> false
+  with Not_found ->
+    false
+  
 let atom_alignof a =
   try
     (Hashtbl.find decl_atom a).a_alignment
@@ -168,9 +181,10 @@ let ais_annot_functions =
 let builtins_generic = {
   builtin_typedefs = [];
   builtin_functions =
-    ais_annot_functions
-      @
+    ais_annot_functions @
     [
+    "__builtin_expect",
+    (TInt(ILong, []), [TInt(ILong, []); TInt(ILong, [])], false);
     (* Integer arithmetic *)
     "__builtin_bswap64",
     (TInt(IULongLong, []), [TInt(IULongLong, [])], false);
@@ -899,6 +913,14 @@ let rec convertExpr env e =
   | C.ECompound(ty1, ie) ->
       unsupported "compound literals"; ezero
 
+  | C.ECall({edesc = C.EVar {name = "__builtin_expect"}}, args) ->
+     (match args with
+      | [e1; e2] ->
+         ewrap (Ctyping.ebinop Cop.Oexpect (convertExpr env e1) (convertExpr env e2))
+      | _ -> 
+       error "__builtin_expect wants two arguments";
+       ezero)
+
   | C.ECall({edesc = C.EVar {name = "__builtin_debug"}}, args) when List.length args < 2 ->
       error "too few arguments to function call, expected at least 2, have 0";
       ezero
@@ -1236,7 +1258,8 @@ let convertFundef loc env fd =
   let vars =
     List.map
       (fun (sto, id, ty, init) ->
-        if sto = Storage_extern || sto = Storage_static then
+        if   sto = Storage_extern || sto = Storage_thread_local_extern
+          || sto = Storage_static || sto = Storage_thread_local_static then
           unsupported "'static' or 'extern' local variable";
         if init <> None then
           unsupported "initialized local variable";
@@ -1339,15 +1362,21 @@ let convertGlobvar loc env (sto, id, ty, optinit) =
   let init' =
     match optinit with
     | None ->
-        if sto = C.Storage_extern then [] else [AST.Init_space sz]
+       if sto = C.Storage_extern || sto = C.Storage_thread_local_extern
+       then [] else [AST.Init_space sz]
     | Some i ->
         convertInitializer env ty i in
   let (section, access) =
-    Sections.for_variable env loc id' ty (optinit <> None) in
+    Sections.for_variable env loc id' ty (optinit <> None)
+      (match sto with
+       | Storage_thread_local | Storage_thread_local_extern
+       | Storage_thread_local_static -> true
+       | _ -> false) in
   if Z.gt sz (Z.of_uint64 0xFFFF_FFFFL) then
     error "'%s' is too big (%s bytes)"
                    id.name (Z.to_string sz);
-  if sto <> C.Storage_extern && Cutil.incomplete_type env ty then
+  if sto <> C.Storage_extern && sto <> C.Storage_thread_local_extern
+     && Cutil.incomplete_type env ty then
     error "'%s' has incomplete type" id.name;
   Hashtbl.add decl_atom id'
     { a_storage = sto;
@@ -1446,7 +1475,7 @@ let cleanupGlobals p =
         if IdentSet.mem fd.fd_name !strong then
           error "multiple definitions of %s" fd.fd_name.name;
         strong := IdentSet.add fd.fd_name !strong
-    | C.Gdecl(Storage_extern, id, ty, init) ->
+    | C.Gdecl((Storage_extern|Storage_thread_local_extern), id, ty, init) ->
         extern := IdentSet.add id !extern
     | C.Gdecl(sto, id, ty, Some i) ->
         if IdentSet.mem id !strong then
@@ -1465,7 +1494,7 @@ let cleanupGlobals p =
         match g.gdesc with
         | C.Gdecl(sto, id, ty, init) ->
             let better_def_exists =
-              if sto = Storage_extern then
+              if sto = Storage_extern || sto = Storage_thread_local_extern then
                 IdentSet.mem id !strong || IdentSet.mem id !weak
               else if init = None then
                 IdentSet.mem id !strong

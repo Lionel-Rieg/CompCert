@@ -509,6 +509,10 @@ Definition do_ef_debug (kind: positive) (text: ident) (targs: list typ)
        (w: world) (vargs: list val) (m: mem) : option (world * trace * val * mem) :=
   Some(w, E0, Vundef, m).
 
+Definition do_ef_profiling (id : profiling_id)
+       (w: world) (vargs: list val) (m: mem) : option (world * trace * val * mem) :=
+  Some(w, E0, Vundef, m).
+
 Definition do_builtin_or_external (name: string) (sg: signature)
        (w: world) (vargs: list val) (m: mem) : option (world * trace * val * mem) :=
   match lookup_builtin_function name sg with
@@ -531,6 +535,7 @@ Definition do_external (ef: external_function):
   | EF_annot_val kind text targ => do_ef_annot_val text targ
   | EF_inline_asm text sg clob => do_inline_assembly text sg ge
   | EF_debug kind text targs => do_ef_debug kind text targs
+  | EF_profiling id kind => do_ef_profiling id
   end.
 
 Lemma do_ef_external_sound:
@@ -598,6 +603,8 @@ Proof with try congruence.
   eapply do_inline_assembly_sound; eauto.
 - (* EF_debug *)
   unfold do_ef_debug. mydestr. split; constructor.
+- (* EF_profiling *)
+  unfold do_ef_profiling. mydestr. split; constructor.
 Qed.
 
 Lemma do_ef_external_complete:
@@ -651,6 +658,8 @@ Proof.
 - (* EF_inline_asm *)
   eapply do_inline_assembly_complete; eauto.
 - (* EF_debug *)
+  inv H. inv H0. reflexivity.
+- (* EF_profiling *)
   inv H. inv H0. reflexivity.
 Qed.
 

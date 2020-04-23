@@ -31,7 +31,7 @@ let pp_section pp sec =
     pp_jobject_end pp in
   match sec with
   | Section_text -> pp_simple "Text"
-  | Section_data init -> pp_complex "Data" init
+  | Section_data(init, thread_local) -> pp_complex "Data" init (* FIXME *)
   | Section_small_data init -> pp_complex "Small Data" init
   | Section_const init -> pp_complex "Const" init
   | Section_small_const init -> pp_complex "Small Const" init

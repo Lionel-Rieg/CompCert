@@ -117,7 +117,9 @@ module Linux_System : SYSTEM =
 
     let name_of_section = function
       | Section_text -> ".text"
-      | Section_data i ->
+      | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+      | Section_data(i, false) ->
           if i then
             ".data"
           else
@@ -218,7 +220,9 @@ module Diab_System : SYSTEM =
 
     let name_of_section = function
       | Section_text -> ".text"
-      | Section_data i -> if i then ".data" else common_section ()
+      | Section_data(i, true) ->
+         failwith "_Thread_local unsupported on this platform"
+      | Section_data (i, false) -> if i then ".data" else common_section ()
       | Section_small_data i -> if i then ".sdata" else ".sbss"
       | Section_const _ -> ".text"
       | Section_small_const _ -> ".sdata2"
