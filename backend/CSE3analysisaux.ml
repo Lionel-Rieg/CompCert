@@ -65,16 +65,18 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   and cur_moves = ref (PMap.init PSet.empty) in
   let eq_find_oracle node eq =
     let o = Hashtbl.find_opt eq_table (flatten_eq eq) in
-    Printf.printf "@%d: eq_find %a -> %a\n" (P.to_int node)
-      pp_eq eq (pp_option pp_P) o;
+    (if !Clflags.option_debug_compcert > 1
+     then Printf.printf "@%d: eq_find %a -> %a\n" (P.to_int node)
+            pp_eq eq (pp_option pp_P) o);
     o
   and rhs_find_oracle node sop args =
     let o =
       match Hashtbl.find_opt rhs_table (sop, List.map P.to_int args) with
       | None -> PSet.empty
       | Some s -> s in
-    Printf.printf "@%d: rhs_find %a = %a\n" (P.to_int node) pp_rhs (sop, args)
-      pp_set o;
+    (if !Clflags.option_debug_compcert > 1
+     then Printf.printf "@%d: rhs_find %a = %a\n"
+            (P.to_int node) pp_rhs (sop, args) pp_set o);
     o in
   let mutating_eq_find_oracle node eq : P.t option =
     let (flat_eq_lhs, flat_eq_op, flat_eq_args) as flat_eq = flatten_eq eq in
@@ -106,8 +108,9 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
          Some coq_id
        end
     in
-    Printf.printf "@%d: mutating_eq_find %a -> %a\n" (P.to_int node)
-      pp_eq eq (pp_option pp_P) o;    
+    (if !Clflags.option_debug_compcert > 1
+     then Printf.printf "@%d: mutating_eq_find %a -> %a\n" (P.to_int node)
+      pp_eq eq (pp_option pp_P) o);    
     o
   in
   match

@@ -84,3 +84,4 @@ let option_fcoalesce_mem = ref true
 let option_fforward_moves = ref true
 let option_all_loads_nontrap = ref false
 let option_inline_auto_threshold = ref 0
+let option_debug_compcert = ref 0

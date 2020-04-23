@@ -330,6 +330,7 @@ let cmdline_actions =
   Exact "-Os", Set option_Osize;
   Exact "-Obranchless", Set option_Obranchless;
   Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
+  Exact "-debug-compcert", Integer (fun n -> option_debug_compcert := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
