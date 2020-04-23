@@ -344,16 +344,28 @@ Section OPERATIONS.
 
   Definition apply_external_call ef (rel : RELATION.t) : RELATION.t :=
     match ef with
-    | EF_builtin name sg
-    | EF_runtime name sg =>
+    | EF_builtin name sg =>
       match Builtins.lookup_builtin_function name sg with
       | Some bf => rel
-      | None => kill_mem rel
+      | None => if Compopts.optim_CSE3_across_calls tt
+                then kill_mem rel
+                else RELATION.top
       end
-    | EF_malloc (* FIXME *)
+    | EF_runtime name sg =>
+      if Compopts.optim_CSE3_across_calls tt
+      then 
+        match Builtins.lookup_builtin_function name sg with
+        | Some bf => rel
+        | None => kill_mem rel
+        end
+      else RELATION.top
+    | EF_malloc
     | EF_external _ _
+    | EF_free =>
+      if Compopts.optim_CSE3_across_calls tt
+      then kill_mem rel
+      else RELATION.top
     | EF_vstore _ 
-    | EF_free (* FIXME *)
     | EF_memcpy _ _ (* FIXME *)
     | EF_inline_asm _ _ _ => kill_mem rel
     | _ => rel

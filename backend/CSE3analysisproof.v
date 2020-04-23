@@ -917,6 +917,17 @@ Section SOUNDNESS.
 
   Hint Resolve kill_builtin_res_sound : cse3.
 
+  Lemma top_sound:
+    forall rs m, (sem_rel RELATION.top rs m).
+  Proof.
+    unfold RELATION.top, sem_rel.
+    intros.
+    rewrite PSet.gempty in H.
+    discriminate.
+  Qed.
+
+  Hint Resolve top_sound : cse3.
+
   Lemma external_call_sound:
     forall ge ef (rel : RELATION.t) (m m' : mem) (rs : regset) vargs t vres
            (REL : sem_rel rel rs m)
@@ -926,11 +937,11 @@ Section SOUNDNESS.
     destruct ef; intros; simpl in *.
     all: eauto using kill_mem_sound.
     all: unfold builtin_or_external_sem in *.
-    1, 2: destruct (Builtins.lookup_builtin_function name sg);
-      eauto using kill_mem_sound;
-      inv CALL; eauto using kill_mem_sound.
-    all: inv CALL.
-    all: eauto using kill_mem_sound.
+    1, 2, 3, 5, 6: destruct (Compopts.optim_CSE3_across_calls tt).
+    all: eauto using kill_mem_sound, top_sound.
+    1, 2, 3: destruct (Builtins.lookup_builtin_function name sg).
+    all: eauto using kill_mem_sound, top_sound.
+    all: inv CALL; eauto using kill_mem_sound.
   Qed.
 
   Hint Resolve external_call_sound : cse3.
