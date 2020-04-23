@@ -32,10 +32,10 @@ let print_eq channel (lhs, sop, args) =
      Printf.printf "%a = %s @ %a\n" print_reg lhs (string_of_chunk chunk)
        (PrintOp.print_addressing print_reg) (addr, args);;
 
-let print_set s =
-  Printf.printf "{ ";
-  List.iter (fun i -> Printf.printf "%d; " (P.to_int i)) (PSet.elements s);
-  Printf.printf "}\n";;
+let pp_set oc s =
+  Printf.fprintf oc "{ ";
+  List.iter (fun i -> Printf.fprintf oc "%d; " (P.to_int i)) (PSet.elements s);
+  Printf.fprintf oc "}";;
 
 let pp_rhs oc (sop, args) =
   match sop with
@@ -44,6 +44,16 @@ let pp_rhs oc (sop, args) =
      Printf.fprintf oc "%s[%a]"
        (PrintAST.name_of_chunk chunk)
          (PrintOp.print_addressing PrintRTL.reg) (addr, args);;
+
+let pp_eq oc eq =
+  Printf.fprintf oc "x%d = %a" (P.to_int eq.eq_lhs)
+    pp_rhs (eq.eq_op, eq.eq_args);;
+
+let pp_P oc x = Printf.fprintf oc "%d" (P.to_int x)
+              
+let pp_option pp oc = function
+  | None -> output_string oc "none"
+  | Some x -> pp oc x;;
 
 let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   let cur_eq_id = ref 0
@@ -54,14 +64,21 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
   and cur_kill_mem = ref PSet.empty
   and cur_moves = ref (PMap.init PSet.empty) in
   let eq_find_oracle node eq =
-    Hashtbl.find_opt eq_table (flatten_eq eq)
+    let o = Hashtbl.find_opt eq_table (flatten_eq eq) in
+    Printf.printf "@%d: eq_find %a -> %a\n" (P.to_int node)
+      pp_eq eq (pp_option pp_P) o;
+    o
   and rhs_find_oracle node sop args =
-    (* Printf.printf "query for %a\n" pp_rhs (sop, args); *)
-    match Hashtbl.find_opt rhs_table (sop, List.map P.to_int args) with
-    | None -> PSet.empty
-    | Some s -> s in
+    let o =
+      match Hashtbl.find_opt rhs_table (sop, List.map P.to_int args) with
+      | None -> PSet.empty
+      | Some s -> s in
+    Printf.printf "@%d: rhs_find %a = %a\n" (P.to_int node) pp_rhs (sop, args)
+      pp_set o;
+    o in
   let mutating_eq_find_oracle node eq : P.t option =
     let (flat_eq_lhs, flat_eq_op, flat_eq_args) as flat_eq = flatten_eq eq in
+    let o =
     match Hashtbl.find_opt eq_table flat_eq with
     | Some x ->
        Some x
@@ -88,6 +105,10 @@ let preanalysis (tenv : typing_env) (f : RTL.coq_function) =
           | _, _ -> ());
          Some coq_id
        end
+    in
+    Printf.printf "@%d: mutating_eq_find %a -> %a\n" (P.to_int node)
+      pp_eq eq (pp_option pp_P) o;    
+    o
   in
   match
     internal_analysis

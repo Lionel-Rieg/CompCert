@@ -274,11 +274,20 @@ Section OPERATIONS.
 
   Definition oper (dst : reg) (op: sym_op) (args : list reg)
              (rel : RELATION.t) : RELATION.t :=
-    match rhs_find op (forward_move_l rel args) rel with
-    | Some r => RELATION.glb (move r dst rel)
-                             (oper1 dst op args rel)
-    | None => oper1 dst op args rel
-    end.
+    if is_smove op
+    then
+      match args with
+      | src::nil =>
+        move (forward_move rel src) dst rel
+      | _ => kill_reg dst rel
+      end
+    else
+      let args' := forward_move_l rel args in
+      match rhs_find op args' rel with
+      | Some r => (* FIXME RELATION.glb ( *) move r dst rel (* )
+                                                               (oper1 dst op args' rel) *)
+      | None => oper1 dst op args' rel
+      end.
   
   Definition clever_kill_store
              (chunk : memory_chunk) (addr: addressing) (args : list reg)

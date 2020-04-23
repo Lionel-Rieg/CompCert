@@ -778,15 +778,25 @@ Section SOUNDNESS.
     intros until v.
     intros REL RHS.
     unfold oper.
-    destruct rhs_find as [src |] eqn:RHS_FIND.
-    - apply sem_rel_glb; split.
-      + pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
-        eapply forward_move_rhs_sound in RHS.
-        2: eassumption.
-        rewrite <- (sem_rhs_det SOUND RHS).
-        apply move_sound; auto.
+    destruct (is_smove sop).
+    - subst.
+      simpl in RHS.
+      destruct args. contradiction.
+      destruct args. 2: contradiction.
+      cbn in *.
+      subst.
+      rewrite <- (forward_move_sound rel rs m r) by auto.
+      apply move_sound; auto.
+    - destruct rhs_find as [src |] eqn:RHS_FIND.
+      + (* FIXME apply sem_rel_glb; split. *)
+        * pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
+          eapply forward_move_rhs_sound in RHS.
+          2: eassumption.
+          rewrite <- (sem_rhs_det SOUND RHS).
+          apply move_sound; auto.
+        (* FIXME * apply oper1_sound; auto. *)
       + apply oper1_sound; auto.
-    - apply oper1_sound; auto.
+        apply forward_move_rhs_sound; auto.
   Qed.
 
   Hint Resolve oper_sound : cse3.
