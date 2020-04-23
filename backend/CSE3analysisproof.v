@@ -778,15 +778,25 @@ Section SOUNDNESS.
     intros until v.
     intros REL RHS.
     unfold oper.
-    destruct rhs_find as [src |] eqn:RHS_FIND.
-    - apply sem_rel_glb; split.
-      + pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
-        eapply forward_move_rhs_sound in RHS.
-        2: eassumption.
-        rewrite <- (sem_rhs_det SOUND RHS).
-        apply move_sound; auto.
+    destruct (is_smove sop).
+    - subst.
+      simpl in RHS.
+      destruct args. contradiction.
+      destruct args. 2: contradiction.
+      cbn in *.
+      subst.
+      rewrite <- (forward_move_sound rel rs m r) by auto.
+      apply move_sound; auto.
+    - destruct rhs_find as [src |] eqn:RHS_FIND.
+      + (* FIXME apply sem_rel_glb; split. *)
+        * pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
+          eapply forward_move_rhs_sound in RHS.
+          2: eassumption.
+          rewrite <- (sem_rhs_det SOUND RHS).
+          apply move_sound; auto.
+        (* FIXME * apply oper1_sound; auto. *)
       + apply oper1_sound; auto.
-    - apply oper1_sound; auto.
+        apply forward_move_rhs_sound; auto.
   Qed.
 
   Hint Resolve oper_sound : cse3.
@@ -907,6 +917,17 @@ Section SOUNDNESS.
 
   Hint Resolve kill_builtin_res_sound : cse3.
 
+  Lemma top_sound:
+    forall rs m, (sem_rel RELATION.top rs m).
+  Proof.
+    unfold RELATION.top, sem_rel.
+    intros.
+    rewrite PSet.gempty in H.
+    discriminate.
+  Qed.
+
+  Hint Resolve top_sound : cse3.
+
   Lemma external_call_sound:
     forall ge ef (rel : RELATION.t) (m m' : mem) (rs : regset) vargs t vres
            (REL : sem_rel rel rs m)
@@ -916,11 +937,11 @@ Section SOUNDNESS.
     destruct ef; intros; simpl in *.
     all: eauto using kill_mem_sound.
     all: unfold builtin_or_external_sem in *.
-    1, 2: destruct (Builtins.lookup_builtin_function name sg);
-      eauto using kill_mem_sound;
-      inv CALL; eauto using kill_mem_sound.
-    all: inv CALL.
-    all: eauto using kill_mem_sound.
+    1, 2, 3, 5, 6: destruct (Compopts.optim_CSE3_across_calls tt).
+    all: eauto using kill_mem_sound, top_sound.
+    1, 2, 3: destruct (Builtins.lookup_builtin_function name sg).
+    all: eauto using kill_mem_sound, top_sound.
+    all: inv CALL; eauto using kill_mem_sound.
   Qed.
 
   Hint Resolve external_call_sound : cse3.

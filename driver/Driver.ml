@@ -195,10 +195,11 @@ Processing options:
   -fconst-prop   Perform global constant propagation  [on]
   -ffloat-const-prop <n>  Control constant propagation of floats
                    (<n>=0: none, <n>=1: limited, <n>=2: full; default is full)
-  -fcse          Perform common subexpression elimination [off]
+  -fcse          Perform common subexpression elimination [on]
   -fcse2         Perform inter-loop common subexpression elimination [off]
   -fcse3         Perform inter-loop common subexpression elimination [on]
   -fcse3-alias-analysis Perform inter-loop common subexpression elimination with alias analysis [on]
+  -fcse3-across-calls   Propagate CSE3 information across function calls [off]
   -fmove-loop-invariants Perform loop-invariant code motion [off]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
@@ -339,6 +340,7 @@ let cmdline_actions =
   Exact "-Obranchless", Set option_Obranchless;
   Exact "-fprofile-use=", String (fun s -> Profilingaux.load_profiling_info s);
   Exact "-finline-auto-threshold", Integer (fun n -> option_inline_auto_threshold := n);
+  Exact "-debug-compcert", Integer (fun n -> option_debug_compcert := n);
   Exact "-fsmall-data", Integer(fun n -> option_small_data := n);
   Exact "-fsmall-const", Integer(fun n -> option_small_const := n);
   Exact "-ffloat-const-prop", Integer(fun n -> option_ffloatconstprop := n); 
@@ -410,6 +412,7 @@ let cmdline_actions =
   @ f_opt "cse2" option_fcse2
   @ f_opt "cse3" option_fcse3
   @ f_opt "cse3-alias-analysis" option_fcse3_alias_analysis
+  @ f_opt "cse3-across-calls" option_fcse3_across_calls
   @ f_opt "move-loop-invariants" option_fmove_loop_invariants
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass

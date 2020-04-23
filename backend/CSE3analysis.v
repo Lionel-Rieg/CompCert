@@ -274,11 +274,20 @@ Section OPERATIONS.
 
   Definition oper (dst : reg) (op: sym_op) (args : list reg)
              (rel : RELATION.t) : RELATION.t :=
-    match rhs_find op (forward_move_l rel args) rel with
-    | Some r => RELATION.glb (move r dst rel)
-                             (oper1 dst op args rel)
-    | None => oper1 dst op args rel
-    end.
+    if is_smove op
+    then
+      match args with
+      | src::nil =>
+        move (forward_move rel src) dst rel
+      | _ => kill_reg dst rel
+      end
+    else
+      let args' := forward_move_l rel args in
+      match rhs_find op args' rel with
+      | Some r => (* FIXME RELATION.glb ( *) move r dst rel (* )
+                                                               (oper1 dst op args' rel) *)
+      | None => oper1 dst op args' rel
+      end.
   
   Definition clever_kill_store
              (chunk : memory_chunk) (addr: addressing) (args : list reg)
@@ -335,16 +344,28 @@ Section OPERATIONS.
 
   Definition apply_external_call ef (rel : RELATION.t) : RELATION.t :=
     match ef with
-    | EF_builtin name sg
-    | EF_runtime name sg =>
+    | EF_builtin name sg =>
       match Builtins.lookup_builtin_function name sg with
       | Some bf => rel
-      | None => kill_mem rel
+      | None => if Compopts.optim_CSE3_across_calls tt
+                then kill_mem rel
+                else RELATION.top
       end
-    | EF_malloc (* FIXME *)
+    | EF_runtime name sg =>
+      if Compopts.optim_CSE3_across_calls tt
+      then 
+        match Builtins.lookup_builtin_function name sg with
+        | Some bf => rel
+        | None => kill_mem rel
+        end
+      else RELATION.top
+    | EF_malloc
     | EF_external _ _
+    | EF_free =>
+      if Compopts.optim_CSE3_across_calls tt
+      then kill_mem rel
+      else RELATION.top
     | EF_vstore _ 
-    | EF_free (* FIXME *)
     | EF_memcpy _ _ (* FIXME *)
     | EF_inline_asm _ _ _ => kill_mem rel
     | _ => rel
