@@ -30,6 +30,7 @@ PARTIAL, (Option "optim_CSE3"), (Some "CSE3"), "CSE3";
 TOTAL, (Option "optim_forward_moves"), (Some "Forwarding moves"), "ForwardMoves";
 PARTIAL, (Option "optim_redundancy"), (Some "Redundancy elimination"), "Deadcode";
 PARTIAL, (Option "optim_move_loop_invariants"), (Some "LICM"), "LICM";
+TOTAL, (Option "optim_move_loop_invariants"), (Some "Renumbering for LICM"), "Renumber";
 PARTIAL, (Option "optim_move_loop_invariants"), (Some "CSE3 for LICM"), "CSE3";
 PARTIAL, (Option "optim_move_loop_invariants"), (Some "Redundancy elimination for LICM"), "Deadcode";
 TOTAL, (Option "all_loads_nontrap"), None, "Allnontrap";
