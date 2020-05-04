@@ -1,14 +1,16 @@
 # CompCert Install Instructions
 
 ## Dependencies
+
 ### Additional dependencies
+
 Replace with the package manager for your distribution
 ```
-sudo <pkg-manager> install -y mercurial darcs ocaml
-
+sudo <pkg-manager> install -y mercurial darcs ocaml bubblewrap
 ```
 
 ### Opam
+
 ```
 sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
 ```
@@ -20,20 +22,21 @@ eval `opam config env`
 ```
 Add this to your `.bashrc` or `.bash_profile`
 ```
-. /nfs/home/mschuh/.opam/opam-init/init.sh > /dev/null 2> /dev/null || true
+. $HOME/.opam/opam-init/init.sh > /dev/null 2> /dev/null || true
 ```
-Switch to last compiler version
+Switch to a recent OCaml compiler version
 ```
-opam switch 4.07.0
+opam switch create 4.09.0
+opam switch 4.09.0
 ```
-Install dependecies available through opam
+Install dependencies available through opam
 ```
 opam install coq menhir
 ```
 
 ## Compilation
 Pre-compilation configure replace the placeholder with your desired platform
-(for Kalray it is k1c-cos or k1c-mbr)
+(for Kalray Coolidge it is `k1c-cos`)
 ```
 ./configure <platform>
 ```
