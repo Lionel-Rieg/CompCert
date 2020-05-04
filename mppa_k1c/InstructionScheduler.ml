@@ -1,3 +1,17 @@
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           Sylvain Boulmé     Grenoble-INP, VERIMAG          *)
+(*           David Monniaux     CNRS, VERIMAG                  *)
+(*           Cyril Six          Kalray                         *)
+(*                                                             *)
+(*  Copyright Kalray. Copyright VERIMAG. All rights reserved.  *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
+
 (** Schedule instructions on a synchronized pipeline
 @author David Monniaux, CNRS, VERIMAG *)
 

@@ -1,3 +1,17 @@
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           Sylvain Boulmé     Grenoble-INP, VERIMAG          *)
+(*           David Monniaux     CNRS, VERIMAG                  *)
+(*           Cyril Six          Kalray                         *)
+(*                                                             *)
+(*  Copyright Kalray. Copyright VERIMAG. All rights reserved.  *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
+
 (* Oracle for Duplicate pass.
  * - Add static prediction information to Icond nodes
  * - Performs tail duplication on interesting traces to form superblocks

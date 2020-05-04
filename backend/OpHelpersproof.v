@@ -1,3 +1,15 @@
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           David Monniaux     CNRS, VERIMAG                  *)
+(*                                                             *)
+(*  Copyright VERIMAG. All rights reserved.                    *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
+
 Require Import Coqlib.
 Require Import Maps.
 Require Import AST.

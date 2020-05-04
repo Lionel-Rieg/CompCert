@@ -1,3 +1,17 @@
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           Sylvain Boulmé     Grenoble-INP, VERIMAG          *)
+(*           David Monniaux     CNRS, VERIMAG                  *)
+(*           Cyril Six          Kalray                         *)
+(*                                                             *)
+(*  Copyright Kalray. Copyright VERIMAG. All rights reserved.  *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
+
 (** * Translation from Asmblock to AbstractBB 
 
     We define a specific instance of AbstractBB, named L, translate bblocks from Asmblock into this instance

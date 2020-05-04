@@ -1,3 +1,15 @@
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           Sylvain Boulmé     Grenoble-INP, VERIMAG          *)
+(*                                                             *)
+(*  Copyright VERIMAG. All rights reserved.                    *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
+
 (** Implementation of a symbolic execution of sequential semantics of Abstract Basic Blocks
 
 with imperative hash-consing, and rewriting.

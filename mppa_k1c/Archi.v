@@ -1,18 +1,17 @@
-(* *********************************************************************)
-(*                                                                     *)
-(*              The Compcert verified compiler                         *)
-(*                                                                     *)
-(*                Xavier Leroy, INRIA Paris                            *)
-(*                Jacques-Henri Jourdan, INRIA Paris                   *)
-(*                                                                     *)
-(*  Copyright Institut National de Recherche en Informatique et en     *)
-(*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the GNU General Public License as published by  *)
-(*  the Free Software Foundation, either version 2 of the License, or  *)
-(*  (at your option) any later version.  This file is also distributed *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
-(*                                                                     *)
-(* *********************************************************************)
+(* *************************************************************)
+(*                                                             *)
+(*             The Compcert verified compiler                  *)
+(*                                                             *)
+(*           Sylvain Boulmé     Grenoble-INP, VERIMAG          *)
+(*           Xavier Leroy       INRIA Paris-Rocquencourt       *)
+(*           David Monniaux     CNRS, VERIMAG                  *)
+(*           Cyril Six          Kalray                         *)
+(*                                                             *)
+(*  Copyright Kalray. Copyright VERIMAG. All rights reserved.  *)
+(*  This file is distributed under the terms of the INRIA      *)
+(*  Non-Commercial License Agreement.                          *)
+(*                                                             *)
+(* *************************************************************)
 
 (** Architecture-dependent parameters for MPPA K1c. Mostly copied from the Risc-V backend *)
 
@@ -33,7 +32,7 @@ Proof.
   unfold splitlong. congruence. 
 Qed.
 
-(** THIS IS NOT CHECKED ! NONE OF THIS ! *)
+(** FIXME - Check the properties below *)
 
 (** Section 7.3: "Except when otherwise stated, if the result of a
    floating-point operation is NaN, it is the canonical NaN. The
