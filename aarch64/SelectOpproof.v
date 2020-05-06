@@ -161,8 +161,10 @@ Proof.
 - rewrite <- Val.add_assoc. apply eval_addimm. EvalOp.
 - rewrite Val.add_commut. TrivialExists.
 - TrivialExists.
-- rewrite Val.add_commut. TrivialExists.
-- TrivialExists.
+- destruct (Compopts.optim_madd tt).
+  + rewrite Val.add_commut. TrivialExists.
+  + TrivialExists.
+- destruct (Compopts.optim_madd tt); TrivialExists.
 - TrivialExists.
 Qed.
 

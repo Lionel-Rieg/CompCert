@@ -56,9 +56,13 @@ Nondetfunction add (e1: expr) (e2: expr) :=
   | t1, Eop (Oshift s a) (t2:::Enil) ?? arith_shift s =>
       Eop (Oaddshift s a) (t1 ::: t2 ::: Enil)
   | Eop Omul (t1:::t2:::Enil), t3 =>
-      Eop Omuladd (t3:::t1:::t2:::Enil)
+    if Compopts.optim_madd tt
+    then Eop Omuladd (t3:::t1:::t2:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | t1, Eop Omul (t2:::t3:::Enil) =>
-      Eop Omuladd (t1:::t2:::t3:::Enil)
+    if Compopts.optim_madd tt
+    then Eop Omuladd (t1:::t2:::t3:::Enil)
+    else Eop Oadd (e1:::e2:::Enil)
   | _, _ => Eop Oadd (e1:::e2:::Enil)
   end.
 
