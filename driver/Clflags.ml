@@ -31,6 +31,7 @@ let option_fcse3 = ref true
 let option_fcse3_alias_analysis = ref true
 let option_fcse3_across_calls = ref false
 let option_fcse3_across_merges = ref true
+let option_fcse3_glb = ref true
 let option_fredundancy = ref true
 let option_fduplicate = ref (-1)
 let option_finvertcond = ref true

@@ -799,13 +799,17 @@ Section SOUNDNESS.
       rewrite <- (forward_move_sound rel rs m r) by auto.
       apply move_sound; auto.
     - destruct rhs_find as [src |] eqn:RHS_FIND.
-      + (* FIXME apply sem_rel_glb; split. *)
-        * pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
-          eapply forward_move_rhs_sound in RHS.
-          2: eassumption.
-          rewrite <- (sem_rhs_det SOUND RHS).
-          apply move_sound; auto.
-        (* FIXME * apply oper1_sound; auto. *)
+      + destruct (Compopts.optim_CSE3_glb tt).
+        * apply sem_rel_glb; split.
+          ** pose proof (rhs_find_sound no sop (forward_move_l (ctx:=ctx) rel args) rel src rs m REL RHS_FIND) as SOUND.
+             eapply forward_move_rhs_sound in RHS.
+             2: eassumption.
+             rewrite <- (sem_rhs_det SOUND RHS).
+             apply move_sound; auto.
+          ** apply oper1_sound; auto.
+             apply forward_move_rhs_sound; auto.
+        * ** apply oper1_sound; auto.
+             apply forward_move_rhs_sound; auto.
       + apply oper1_sound; auto.
         apply forward_move_rhs_sound; auto.
   Qed.

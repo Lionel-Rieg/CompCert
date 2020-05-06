@@ -201,6 +201,7 @@ Processing options:
   -fcse3-alias-analysis Perform inter-loop common subexpression elimination with alias analysis [on]
   -fcse3-across-calls   Propagate CSE3 information across function calls [off]
   -fcse3-across-merges  Propagate CSE3 information across control-flow merges [on]
+  -fcse3-glb            Refine CSE3 information using greatest lower bounds [on]
   -fmove-loop-invariants Perform loop-invariant code motion [off]
   -fredundancy   Perform redundancy elimination [on]
   -fpostpass     Perform postpass scheduling (only for K1 architecture) [on]
@@ -415,6 +416,7 @@ let cmdline_actions =
   @ f_opt "cse3-alias-analysis" option_fcse3_alias_analysis
   @ f_opt "cse3-across-calls" option_fcse3_across_calls
   @ f_opt "cse3-across-merges" option_fcse3_across_merges
+  @ f_opt "cse3-glb" option_fcse3_glb
   @ f_opt "move-loop-invariants" option_fmove_loop_invariants
   @ f_opt "redundancy" option_fredundancy
   @ f_opt "postpass" option_fpostpass
