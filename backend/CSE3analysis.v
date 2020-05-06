@@ -75,29 +75,43 @@ Module RELATION <: SEMILATTICE_WITHOUT_BOTTOM.
     intuition.
   Qed.
   
-  Definition lub := PSet.inter.
+  Definition lub x y :=
+    if Compopts.optim_CSE3_across_merges tt
+    then PSet.inter x y
+    else PSet.empty.
+  
   Definition glb := PSet.union.
   
   Lemma ge_lub_left: forall x y, ge (lub x y) x.
   Proof.
     unfold ge, lub.
     intros.
-    apply PSet.is_subset_spec.
-    intro.
-    rewrite PSet.ginter.
-    rewrite andb_true_iff.
-    intuition.
+    destruct (Compopts.optim_CSE3_across_merges tt).
+    - apply PSet.is_subset_spec.
+      intro.
+      rewrite PSet.ginter.
+      rewrite andb_true_iff.
+      intuition.
+    - apply PSet.is_subset_spec.
+      intro.
+      rewrite PSet.gempty.
+      discriminate.
   Qed.
   
   Lemma ge_lub_right: forall x y, ge (lub x y) y.
   Proof.
     unfold ge, lub.
     intros.
-    apply PSet.is_subset_spec.
-    intro.
-    rewrite PSet.ginter.
-    rewrite andb_true_iff.
-    intuition.
+    destruct (Compopts.optim_CSE3_across_merges tt).
+    - apply PSet.is_subset_spec.
+      intro.
+      rewrite PSet.ginter.
+      rewrite andb_true_iff.
+      intuition.
+    - apply PSet.is_subset_spec.
+      intro.
+      rewrite PSet.gempty.
+      discriminate.
   Qed.
 
   Definition top := PSet.empty.

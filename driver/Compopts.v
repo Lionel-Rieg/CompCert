@@ -51,6 +51,9 @@ Parameter optim_CSE3_alias_analysis: unit -> bool.
 (** Flag -fcse3-across-calls. For DMonniaux's common subexpression elimination. Propagate information across function calls (may increase register pressure). *)
 Parameter optim_CSE3_across_calls: unit -> bool.
 
+(** Flag -fcse3-across-calls. For DMonniaux's common subexpression elimination. Propagate information across control-flow merges (may increase register pressure). *)
+Parameter optim_CSE3_across_merges: unit -> bool.
+
 (** Flag -fmove-loop-invariants. *)
 Parameter optim_move_loop_invariants: unit -> bool.
 
