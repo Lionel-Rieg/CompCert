@@ -112,6 +112,11 @@ Lemma inject_profiling_call_increases:
 Proof.
   intros.
   simpl.
+  rewrite <- (Pos2Nat.id (Pos.succ (Pos.succ extra_pc))).
+  rewrite <- (Pos2Nat.id (extra_pc + 2)).
+  rewrite !Pos2Nat.inj_succ.
+  rewrite !Pos2Nat.inj_add.
+  apply f_equal.
   lia.
 Qed.
 

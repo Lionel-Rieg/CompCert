@@ -89,7 +89,7 @@ Qed.
 Obligation 2.
 Proof.
   simpl in BOUND.
-  lia.
+  omega.
 Qed.
 
 Program Definition bounded_nth_S_statement : Prop :=
@@ -104,14 +104,14 @@ Lemma bounded_nth_proof_irr :
          (BOUND1 BOUND2 : (k < List.length l)%nat),
     (bounded_nth k l BOUND1) = (bounded_nth k l BOUND2).
 Proof.
-  induction k; destruct l; simpl; intros; trivial; lia.
+  induction k; destruct l; simpl; intros; trivial; omega.
 Qed.
 
 Lemma bounded_nth_S : bounded_nth_S_statement.
 Proof.
   unfold bounded_nth_S_statement.
   induction k; destruct l; simpl; intros; trivial.
-  1, 2: lia.
+  1, 2: omega.
   apply bounded_nth_proof_irr.
 Qed.
 
@@ -121,7 +121,7 @@ Lemma inject_list_injected:
     Some (inject_instr (bounded_nth k l BOUND) (Pos.succ (pos_add_nat pc k))).
 Proof.
   induction l; simpl; intros.
-  - lia.
+  - omega.
   - simpl.
     destruct k as [ | k]; simpl pos_add_nat.
     + simpl bounded_nth.
