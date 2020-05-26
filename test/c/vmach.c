@@ -159,7 +159,7 @@ long wordcode_interp(unsigned int* code)
 
 #define I(a,b,c,d) ((a) + ((b) << 8) + ((c) << 16) + ((d) << 24))
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define FIBSIZE 15
 #else
 #define FIBSIZE 30
@@ -182,7 +182,7 @@ unsigned int wordcode_fib[] = {
 /* 13 */ I(WRETURN, 0, 2, 0)
 };
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define TAKSIZE1 6
 #define TAKSIZE2 9
 #define TAKSIZE3 12

@@ -29,14 +29,14 @@ static unsigned int nsieve(int m) {
 #define NITER 2
 
 int main(int argc, char * argv[]) {
-#ifdef __K1C__
+#ifdef __KVX__
     int m = argc < 2 ? 6 : atoi(argv[1]);
 #else
     int m = argc < 2 ? 9 : atoi(argv[1]);
 #endif
     int i, j;
     for (i = 0; i < 3; i++) {
-#ifdef __K1C__
+#ifdef __KVX__
       int n = 200 << (m-i);
 #else
       int n = 10000 << (m-i);

@@ -18,14 +18,14 @@ MAX_MEASURES=10
 MEASURES?=time
 
 # Flags common to both compilers, then to gcc, then to ccomp
-ALL_CFLAGS+=-Wall -D__K1C_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
+ALL_CFLAGS+=-Wall -D__KVX_COS__ -DMAX_MEASURES=$(MAX_MEASURES)
 #ALL_CFLAGS+=-g
 ALL_GCCFLAGS+=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
 ALL_CCOMPFLAGS+=$(ALL_CFLAGS)
 
 # The compilers
-K1C_CC?=k1-cos-gcc
-K1C_CCOMP?=ccomp
+KVX_CC?=k1-cos-gcc
+KVX_CCOMP?=ccomp
 
 # Command to execute
 #EXECUTE_CYCLES?=timeout --signal=SIGTERM 3m k1-cluster --syscall=libstd_scalls.so --cycle-based --
@@ -75,7 +75,7 @@ asm/%$(3).s: %.c
 	$(1) $(2) -S $$< -o $$@
 
 .SECONDARY:
-bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK).gcc.k1c.o
+bin/$(TARGET)$(3).bin: $(addprefix obj/,$(ALL_CFILES:.c=$(3).o)) $(CLOCK).gcc.kvx.o
 	@mkdir -p $$(@D)
 	$(1) $$+ -lm -o $$@
 
@@ -86,13 +86,13 @@ FIRSTLINE:=$(FIRSTLINE), $(3)
 endef
 
 # Clock generation
-$(CLOCK).gcc.k1c.o: $(CLOCK).c
-	$(K1C_CC) $(ALL_GCCFLAGS) -O3 $< -c -o $@
+$(CLOCK).gcc.kvx.o: $(CLOCK).c
+	$(KVX_CC) $(ALL_GCCFLAGS) -O3 $< -c -o $@
 
 # Generic rules
 obj/%.o: asm/%.s
 	@mkdir -p $(@D)
-	$(K1C_CC) $< -c -o $@
+	$(KVX_CC) $< -c -o $@
 
 out/%.out: bin/%.bin
 	@mkdir -p $(@D)
@@ -104,35 +104,35 @@ out/%.out: bin/%.bin
 ##
 
 ifneq ($(GCC0FLAGS),)
-$(eval $(call gen_rules,$(K1C_CC),$(GCC0FLAGS),$(GCC0PREFIX)))
+$(eval $(call gen_rules,$(KVX_CC),$(GCC0FLAGS),$(GCC0PREFIX)))
 endif
 ifneq ($(GCC1FLAGS),)
-$(eval $(call gen_rules,$(K1C_CC),$(GCC1FLAGS),$(GCC1PREFIX)))
+$(eval $(call gen_rules,$(KVX_CC),$(GCC1FLAGS),$(GCC1PREFIX)))
 endif
 ifneq ($(GCC2FLAGS),)
-$(eval $(call gen_rules,$(K1C_CC),$(GCC2FLAGS),$(GCC2PREFIX)))
+$(eval $(call gen_rules,$(KVX_CC),$(GCC2FLAGS),$(GCC2PREFIX)))
 endif
 ifneq ($(GCC3FLAGS),)
-$(eval $(call gen_rules,$(K1C_CC),$(GCC3FLAGS),$(GCC3PREFIX)))
+$(eval $(call gen_rules,$(KVX_CC),$(GCC3FLAGS),$(GCC3PREFIX)))
 endif
 ifneq ($(GCC4FLAGS),)
-$(eval $(call gen_rules,$(K1C_CC),$(GCC4FLAGS),$(GCC4PREFIX)))
+$(eval $(call gen_rules,$(KVX_CC),$(GCC4FLAGS),$(GCC4PREFIX)))
 endif
 
 ifneq ($(CCOMP0FLAGS),)
-$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP0FLAGS),$(CCOMP0PREFIX)))
+$(eval $(call gen_rules,$(KVX_CCOMP),$(CCOMP0FLAGS),$(CCOMP0PREFIX)))
 endif
 ifneq ($(CCOMP1FLAGS),)
-$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP1FLAGS),$(CCOMP1PREFIX)))
+$(eval $(call gen_rules,$(KVX_CCOMP),$(CCOMP1FLAGS),$(CCOMP1PREFIX)))
 endif
 ifneq ($(CCOMP2FLAGS),)
-$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP2FLAGS),$(CCOMP2PREFIX)))
+$(eval $(call gen_rules,$(KVX_CCOMP),$(CCOMP2FLAGS),$(CCOMP2PREFIX)))
 endif
 ifneq ($(CCOMP3FLAGS),)
-$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP3FLAGS),$(CCOMP3PREFIX)))
+$(eval $(call gen_rules,$(KVX_CCOMP),$(CCOMP3FLAGS),$(CCOMP3PREFIX)))
 endif
 ifneq ($(CCOMP4FLAGS),)
-$(eval $(call gen_rules,$(K1C_CCOMP),$(CCOMP4FLAGS),$(CCOMP4PREFIX)))
+$(eval $(call gen_rules,$(KVX_CCOMP),$(CCOMP4FLAGS),$(CCOMP4PREFIX)))
 endif
 
 measures.csv: $(OUTFILES)

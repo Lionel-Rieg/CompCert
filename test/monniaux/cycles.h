@@ -2,7 +2,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#ifdef __K1C__
+#ifdef __KVX__
 typedef uint64_t cycle_t;
 #define PRcycle PRId64
 
@@ -11,18 +11,18 @@ typedef uint64_t cycle_t;
 static inline void cycle_count_config(void)
 {
         /* config pmc for cycle count */
-        cycle_t pmc_value = __builtin_k1_get(COS_SFR_PMC);
+        cycle_t pmc_value = __builtin_kvx_get(COS_SFR_PMC);
 
         pmc_value &= ~(0xfULL);
-        __builtin_k1_set(COS_SFR_PMC, pmc_value);
+        __builtin_kvx_set(COS_SFR_PMC, pmc_value);
 }
 
 static inline cycle_t get_cycle(void)
 {
-        return __builtin_k1_get(COS_SFR_PM0);
+        return __builtin_kvx_get(COS_SFR_PM0);
 }
 
-#else // not K1C
+#else // not KVX
 static inline void cycle_count_config(void) { }
 
 #if defined(__i386__) || defined( __x86_64__)

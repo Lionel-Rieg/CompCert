@@ -3,7 +3,7 @@ include ../Makefile.config
 #DIRS=c compression raytracer spass regression
 
 # Kalray note - removing compression, raytracer and spass that cannot be executed by the simulator in reasonable time
-ifeq ($(ARCH),mppa_k1c)
+ifeq ($(ARCH),kvx)
 	DIRS=c regression
 else
 	DIRS=c compression raytracer spass regression

@@ -30,7 +30,7 @@ nsieve(unsigned int m)
 	return (count);
 }
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define NITER 1
 #else
 #define NITER 2
@@ -52,7 +52,7 @@ main(int ac, char **av)
 {
 	unsigned int n;
 
-#ifdef __K1C__
+#ifdef __KVX__
 	n = ac < 2 ? 2 : atoi(av[1]);
 #else
 	n = ac < 2 ? 9 : atoi(av[1]);

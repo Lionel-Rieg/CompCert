@@ -1,7 +1,7 @@
-diff --git a/mppa_k1c/PostpassSchedulingOracle.ml b/mppa_k1c/PostpassSchedulingOracle.ml
+diff --git a/kvx/PostpassSchedulingOracle.ml b/kvx/PostpassSchedulingOracle.ml
 index 2fc561e..d3748e8 100644
---- a/mppa_k1c/PostpassSchedulingOracle.ml
-+++ b/mppa_k1c/PostpassSchedulingOracle.ml
+--- a/kvx/PostpassSchedulingOracle.ml
++++ b/kvx/PostpassSchedulingOracle.ml
 @@ -808,7 +808,7 @@ let print_bb oc bb =
    let asm_instructions = Asm.unfold_bblock bb
    in List.iter (print_inst oc) asm_instructions

@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     unsigned   N, depth, minDepth, maxDepth, stretchDepth;
     treeNode   *stretchTree, *longLivedTree, *tempTree;
 
-#ifdef __K1C__
+#ifdef __KVX__
     N = argc < 2 ? 6 : atol(argv[1]);
 #else
     N = argc < 2 ? 12 : atol(argv[1]);

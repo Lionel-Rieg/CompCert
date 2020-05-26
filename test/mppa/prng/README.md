@@ -11,7 +11,7 @@ The following commands can be run inside that folder:
 
 - `make`: produces the unitary test binaries
   - `prng-test-gcc-x86` : binary from gcc on x86
-  - `prng-test-k1c-x86` : binary from gcc on k1c
-  - `prng-test-ccomp-x86` : binary from ccomp on k1c
+  - `prng-test-kvx-x86` : binary from gcc on kvx
+  - `prng-test-ccomp-x86` : binary from ccomp on kvx
 - `make test`: tests the return value of the binaries produced by gcc.
 - `make check`: tests the return value of the binary produced by CompCert.

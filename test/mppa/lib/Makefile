@@ -1,4 +1,4 @@
-K1CC ?= k1-cos-gcc
+KVXC ?= k1-cos-gcc
 K1AR ?= k1-cos-ar
 CC ?= gcc
 AR ?= gcc-ar
@@ -14,7 +14,7 @@ BINDIR=$(DIR)/bin
 ASMDIR=$(DIR)/asm
 OBJDIR=$(DIR)/obj
 
-K1CCPATH=$(shell which $(K1CC))
+KVXCPATH=$(shell which $(KVXC))
 K1ARPATH=$(shell which $(K1AR))
 CCPATH=$(shell which $(CC))
 ARPATH=$(shell which $(AR))
@@ -89,9 +89,9 @@ $(BINDIR)/%.x86-gcc.bin: $(OBJDIR)/%.x86-gcc.o system.x86-gcc.a $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-$(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o system.gcc.a $(K1CCPATH)
+$(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o system.gcc.a $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
+	$(KVXC) $(CFLAGS) $(filter-out $(KVXCPATH),$^) -o $@
 
 $(BINDIR)/%.ccomp.bin: $(OBJDIR)/%.ccomp.o system.gcc.a $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -110,9 +110,9 @@ $(OBJDIR)/%.x86-gcc.o: $(ASMDIR)/%.x86-gcc.s $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.gcc.o: $(ASMDIR)/%.gcc.s $(K1CCPATH)
+$(OBJDIR)/%.gcc.o: $(ASMDIR)/%.gcc.s $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) -c $< -o $@
+	$(KVXC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.ccomp.o: $(ASMDIR)/%.ccomp.s $(CCOMPPATH)
 	$(CCOMP) $(CFLAGS) -c $< -o $@
@@ -123,9 +123,9 @@ $(ASMDIR)/%.x86-gcc.s: $(SRCDIR)/%.c $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -S $< -o $@
 
-$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(K1CCPATH)
+$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) -S $< -o $@
+	$(KVXC) $(CFLAGS) -S $< -o $@
 
 $(ASMDIR)/%.ccomp.s: $(SRCDIR)/%.c $(CCOMPPATH)
 	@mkdir -p $(@D)

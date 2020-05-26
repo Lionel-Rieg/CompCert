@@ -6,7 +6,7 @@
 #if defined __x86_64__ || defined __amd64__ || defined __x86_64 || \
     defined __amd64    || defined _M_X64    || defined __ia64__ || \
     defined __ia64__   || defined __IA64__  || defined __ia64   || \
-    defined _M_IA64    || defined __K1C__
+    defined _M_IA64    || defined __KVX__
 # define __BSTEA_WORDSIZE     64
 #else
 # define __BSTEA_WORDSIZE     32

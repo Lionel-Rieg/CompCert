@@ -33,8 +33,8 @@ prints something of the form `c3 cycles: 44131`.
 - `ALL_CFLAGS`: `cflags` that are to be included for all compilers
 - `ALL_GCCFLAGS`: same, but GCC specific
 - `ALL_CCOMPFLAGS`: same, but `ccomp` specific
-- `K1C_CC`: GCC compiler (default `k1-cos-gcc`)
-- `K1C_CCOMP`: `CompCert` compiler (default `ccomp`)
+- `KVX_CC`: GCC compiler (default `k1-cos-gcc`)
+- `KVX_CCOMP`: `CompCert` compiler (default `ccomp`)
 - `EXECUTE_CYCLES`: running command (default is `k1-cluster --syscall=libstd_scalls.so --cycle-based --`)
 - `EXECUTE_ARGS`: execution arguments. You can use a macro `__BASE__` which expands to the name of the binary being executed.
 - `GCCiFLAGS` with `i` from 0 to 4: the wanted optimizations. If one of these flags is empty, nothing is done. Same for `CCOMPiFLAGS`. Look at `rules.mk` to see the default values. You might find something like this:

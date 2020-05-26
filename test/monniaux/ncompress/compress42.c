@@ -192,7 +192,7 @@
 #	define	SIG_TYPE	void (*)()
 #endif
 
-#if defined(AMIGA) || defined(DOS) || defined(MINGW) || defined(WINDOWS) || defined(__K1C__)
+#if defined(AMIGA) || defined(DOS) || defined(MINGW) || defined(WINDOWS) || defined(__KVX__)
 #	define	chmod(pathname, mode) 0
 #	define	chown(pathname, owner, group) 0
 #	define	utime(pathname, times) 0

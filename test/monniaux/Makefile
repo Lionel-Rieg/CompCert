@@ -14,8 +14,8 @@ verifier_times.txt: Asmblockdeps.patch
 
 oracle_times.txt: PostpassSchedulingOracle.patch
 	(cd ../../ && make -j20 && make install)
-	patch $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
-	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../mppa_k1c/PostpassSchedulingOracle.ml) < $<
+	patch $(realpath ../../kvx/PostpassSchedulingOracle.ml) < $<
+	(cd ../../ && make -j20 && make install); patch -R $(realpath ../../kvx/PostpassSchedulingOracle.ml) < $<
 	bash clean_benches.sh
 	bash build_benches.sh $@
 
@@ -30,10 +30,10 @@ measures.csv:
 #compile_times.pdf: gencompile.py verifier_times.txt oracle_times.txt
 #	python3.5 $^ $@
 #
-#measure_times.k1c.pdf: gengraphs.py measures.csv
+#measure_times.kvx.pdf: gengraphs.py measures.csv
 #	python3.5 $^ $(basename $(basename $@))
 
 .PHONY:
 clean:
 	@bash clean_benches.sh
-	rm -f verifier_times.txt oracle_times.txt compile_times.pdf measure_times.k1c.pdf measures.csv
+	rm -f verifier_times.txt oracle_times.txt compile_times.pdf measure_times.kvx.pdf measures.csv

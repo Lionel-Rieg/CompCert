@@ -16,7 +16,7 @@ udivmoddi4(unsigned long long num, unsigned long long den, int modwanted)
 	    unsigned i = k;
 	    den = den >> 1;
 	    do {
-		r = __builtin_k1_stsud (den, r);
+		r = __builtin_kvx_stsud (den, r);
 		i--;
 	    } while (i!= 0);
 	    q = q + r;

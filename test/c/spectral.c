@@ -43,7 +43,7 @@ void eval_AtA_times_u(int N, const double u[], double AtAu[])
 int main(int argc, char *argv[])
 {
   int i;
-#ifdef __K1C__
+#ifdef __KVX__
   int N = ((argc == 2) ? atoi(argv[1]) : 11);
 #else
   int N = ((argc == 2) ? atoi(argv[1]) : 1000);

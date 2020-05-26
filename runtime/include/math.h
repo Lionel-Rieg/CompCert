@@ -15,7 +15,7 @@
 #ifndef _COMPCERT_MATH_H
 #define _COMPCERT_MATH_H
 
-#ifdef __K1C__
+#ifdef __KVX__
 
 #define isfinite(__y) (fpclassify((__y)) >= FP_ZERO)
 

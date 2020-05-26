@@ -14,7 +14,7 @@ check-admitted:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -35,7 +35,7 @@ build_x86_64:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -58,7 +58,7 @@ build_ia32:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -81,7 +81,7 @@ build_aarch64:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -104,7 +104,7 @@ build_arm:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -128,7 +128,7 @@ build_armhf:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -149,7 +149,7 @@ build_ppc:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -170,7 +170,7 @@ build_ppc64:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -193,7 +193,7 @@ build_rv64:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
@@ -214,13 +214,13 @@ build_rv32:
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always
     - when: manual
 
-build_k1c:
+build_kvx:
   stage: build
   image: "coqorg/coq"
   before_script:
@@ -228,12 +228,12 @@ build_k1c:
     - eval `opam config env`
     - opam install -y menhir
   script:
-    - ./config_k1c.sh -no-runtime-lib
+    - ./config_kvx.sh -no-runtime-lib
     - make -j "$NJOBS"
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "mppa-k1c"'
+    - if: '$CI_COMMIT_BRANCH == "mppa-kvx"'
       when: always
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: always

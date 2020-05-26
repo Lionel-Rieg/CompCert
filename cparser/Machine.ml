@@ -238,8 +238,8 @@ let rv64 =
                    struct_passing_style = SP_ref_callee; (* Wrong *)
                    struct_return_style = SR_ref } (* to check *)
 
-let mppa_k1c =
-  { name = "k1c";
+let kvx =
+  { name = "kvx";
     char_signed = true;
     wchar_signed = true;
     sizeof_ptr = 8;

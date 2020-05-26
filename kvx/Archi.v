@@ -13,7 +13,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** Architecture-dependent parameters for MPPA K1c. Mostly copied from the Risc-V backend *)
+(** Architecture-dependent parameters for MPPA KVX. Mostly copied from the Risc-V backend *)
 
 Require Import ZArith List.
 Require Import Binary Bits.

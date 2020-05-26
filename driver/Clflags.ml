@@ -15,7 +15,7 @@
 let prepro_options = ref ([]: string list)
 let linker_options = ref ([]: string list)
 let assembler_options = ref ([]: string list)
-let option_flongdouble = ref (Configuration.arch = "mppa_k1c")
+let option_flongdouble = ref (Configuration.arch = "kvx")
 let option_fstruct_passing = ref false
 let option_fbitfields = ref false
 let option_fvararg_calls = ref true

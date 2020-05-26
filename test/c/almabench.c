@@ -45,7 +45,7 @@
 #define sineps 0.3977771559319137
 #define coseps 0.9174820620691818
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define TEST_LENGTH 12
 #else
 #define TEST_LENGTH 36525

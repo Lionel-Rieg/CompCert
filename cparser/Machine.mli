@@ -87,7 +87,7 @@ val arm_littleendian : t
 val arm_bigendian : t
 val rv32 : t
 val rv64 : t
-val mppa_k1c : t
+val kvx : t
 val aarch64 : t
 
 val gcc_extensions : t -> t

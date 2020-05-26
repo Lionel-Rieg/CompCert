@@ -153,7 +153,7 @@ int main(int argc, char ** argv)
   float enp, t, y, z, zr, zi, zm, a;
   float * xr, * xi, * pxr, * pxi;
 
-#ifdef __K1C__
+#ifdef __KVX__
   if (argc >= 2) n = atoi(argv[1]); else n = 3;
 #else
   if (argc >= 2) n = atoi(argv[1]); else n = 12;

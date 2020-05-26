@@ -22,13 +22,13 @@ Depending on the platform, this logging system is or is not thread-safe and is o
 | AArch64         | Yes        | Yes         | No  |
 | ARM             | Yes        | No          | No  |
 | IA32            | Yes        | No          | No  |
-| K1c             | Yes        | Yes         | No  |
+| KVX             | Yes        | Yes         | No  |
 | PowerPC         | No         |             |     |
 | PowerPC 64      | No         |             |     |
 | Risc-V 32       | No         |             |     |
 | Risc-V 64       | No         |             |     |
 | x86-64          | Yes        | Yes         | Yes |
 
-For recompiling the program using profiling information, use `-fprofile-use= compcert_profiling.dat -ftracelinearize` (substitute the appropriate filename for `compcert_profiling.dat` if needed). Experiments show performance improvement on K1c, not on other platforms.
+For recompiling the program using profiling information, use `-fprofile-use= compcert_profiling.dat -ftracelinearize` (substitute the appropriate filename for `compcert_profiling.dat` if needed). Experiments show performance improvement on KVX, not on other platforms.
 
 The same options (except for `-fprofile-use=` and `-fprofile-arcs`) should be used to compile the logging and optimized versions of the program: only functions that are exactly the same in the intermediate representation will be optimized according to profiling information.

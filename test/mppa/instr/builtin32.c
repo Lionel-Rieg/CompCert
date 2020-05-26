@@ -2,9 +2,9 @@
 
 BEGIN_TEST(int)
   int *ptr = &c;
-#ifdef __K1C__
+#ifdef __KVX__
   int d = c;
-  a = __builtin_k1_alclrw(ptr);
+  a = __builtin_kvx_alclrw(ptr);
   c = d;
 
 #endif

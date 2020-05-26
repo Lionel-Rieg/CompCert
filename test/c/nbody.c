@@ -140,7 +140,7 @@ void setup_bodies(void)
 
 int main(int argc, char ** argv)
 {
-#ifdef __K1C__
+#ifdef __KVX__
   int n = argc < 2 ? 100 : atoi(argv[1]);
 #else
   int n = argc < 2 ? 1000000 : atoi(argv[1]);

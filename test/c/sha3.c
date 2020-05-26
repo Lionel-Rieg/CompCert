@@ -190,7 +190,7 @@ test_triplet_t testvec[4] = {
   }
 };
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define DATALEN 1000
 #define NITER 7
 #else

@@ -401,69 +401,69 @@ let expand_builtin_inline name args res = let open Asmvliw in
      expand_builtin_va_start a
   | "__builtin_clzll", [BA(IR a)], BR(IR res) ->
      emit (Pclzll(res, a))
-  | "__builtin_k1_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
+  | "__builtin_kvx_stsud", [BA(IR a1); BA(IR a2)], BR(IR res) ->
      emit (Pstsud(res, a1, a2))
-  | "__builtin_k1_get", [BA_int(n)], BR(IR res) ->
+  | "__builtin_kvx_get", [BA_int(n)], BR(IR res) ->
      let cn = camlint_of_coqint n in
      (if not_system_register cn
-      then failwith (Printf.sprintf "__builtin_k1_get(n): n must be between 0 and %ld, was %ld" last_system_register cn)
+      then failwith (Printf.sprintf "__builtin_kvx_get(n): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Pgetn(n, res)))
-  | "__builtin_k1_set", [BA_int(n); BA(IR src)], _ ->
+  | "__builtin_kvx_set", [BA_int(n); BA(IR src)], _ ->
      let cn = camlint_of_coqint n in
      (if not_system_register cn
-      then failwith (Printf.sprintf "__builtin_k1_set(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
+      then failwith (Printf.sprintf "__builtin_kvx_set(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Psetn(n, src)))
-  | "__builtin_k1_wfxl", [BA_int(n); BA(IR src)], _ ->
+  | "__builtin_kvx_wfxl", [BA_int(n); BA(IR src)], _ ->
      let cn = camlint_of_coqint n in
      (if not_system_register cn
-      then failwith (Printf.sprintf "__builtin_k1_wfxl(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
+      then failwith (Printf.sprintf "__builtin_kvx_wfxl(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Pwfxl(n, src)))
-  | "__builtin_k1_wfxm", [BA_int(n); BA(IR src)], _ ->
+  | "__builtin_kvx_wfxm", [BA_int(n); BA(IR src)], _ ->
      let cn = camlint_of_coqint n in
      (if not_system_register cn
-      then failwith (Printf.sprintf "__builtin_k1_wfxm(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
+      then failwith (Printf.sprintf "__builtin_kvx_wfxm(n, val): n must be between 0 and %ld, was %ld" last_system_register cn)
       else emit (Pwfxm(n, src)))
-  | "__builtin_k1_ldu", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_ldu", [BA(IR addr)], BR(IR res) ->
      emit (Pldu(res, addr))
-  | "__builtin_k1_lbzu", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_lbzu", [BA(IR addr)], BR(IR res) ->
      emit (Plbzu(res, addr))
-  | "__builtin_k1_lhzu", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_lhzu", [BA(IR addr)], BR(IR res) ->
      emit (Plhzu(res, addr))
-  | "__builtin_k1_lwzu", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_lwzu", [BA(IR addr)], BR(IR res) ->
      emit (Plwzu(res, addr))
-  | "__builtin_k1_alclrd", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_alclrd", [BA(IR addr)], BR(IR res) ->
      emit (Palclrd(res, addr))
-  | "__builtin_k1_alclrw", [BA(IR addr)], BR(IR res) ->
+  | "__builtin_kvx_alclrw", [BA(IR addr)], BR(IR res) ->
      emit (Palclrw(res, addr))
-  | "__builtin_k1_await", [], _ ->
+  | "__builtin_kvx_await", [], _ ->
      emit Pawait
-  | "__builtin_k1_sleep", [], _ ->
+  | "__builtin_kvx_sleep", [], _ ->
      emit Psleep
-  | "__builtin_k1_stop", [], _ ->
+  | "__builtin_kvx_stop", [], _ ->
      emit Pstop
-  | "__builtin_k1_barrier", [], _ ->
+  | "__builtin_kvx_barrier", [], _ ->
      emit Pbarrier
-  | "__builtin_k1_fence", [], _ ->
+  | "__builtin_kvx_fence", [], _ ->
      emit Pfence
-  | "__builtin_k1_dinval", [], _ ->
+  | "__builtin_kvx_dinval", [], _ ->
      emit Pdinval
-  | "__builtin_k1_dinvall", [BA(IR addr)], _ ->
+  | "__builtin_kvx_dinvall", [BA(IR addr)], _ ->
      emit (Pdinvall addr)
-  | "__builtin_k1_dtouchl", [BA(IR addr)], _ ->
+  | "__builtin_kvx_dtouchl", [BA(IR addr)], _ ->
      emit (Pdtouchl addr)
-  | "__builtin_k1_iinval", [], _ ->
+  | "__builtin_kvx_iinval", [], _ ->
      emit Piinval
-  | "__builtin_k1_iinvals", [BA(IR addr)], _ ->
+  | "__builtin_kvx_iinvals", [BA(IR addr)], _ ->
      emit (Piinvals addr)
-  | "__builtin_k1_itouchl", [BA(IR addr)], _ ->
+  | "__builtin_kvx_itouchl", [BA(IR addr)], _ ->
      emit (Pitouchl addr)
-  | "__builtin_k1_dzerol", [BA(IR addr)], _ ->
+  | "__builtin_kvx_dzerol", [BA(IR addr)], _ ->
      emit (Pdzerol addr)
-(*| "__builtin_k1_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
+(*| "__builtin_kvx_afaddd", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
       then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddd(addr, res))
-  | "__builtin_k1_afaddw", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
+  | "__builtin_kvx_afaddw", [BA(IR addr); BA (IR incr_res)], BR(IR res) ->
      (if res <> incr_res
       then (emit (Asm.Pmv(res, incr_res)); emit Psemi));
      emit (Pafaddw(addr, res)) *) (* see #157 *)

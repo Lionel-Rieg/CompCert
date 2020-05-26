@@ -1,5 +1,5 @@
 **.host
-**.k1c
+**.kvx
 **measures.csv
 
 commands.txt
@@ -7,7 +7,7 @@ oracle_times.txt
 verifier_times.txt
 compile_times.pdf
 measure_times.host.pdf
-measure_times.k1c.pdf
+measure_times.kvx.pdf
 
 /.mypy_cache/
 

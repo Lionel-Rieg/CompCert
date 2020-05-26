@@ -12,7 +12,7 @@ int fib(int n)
 int main(int argc, char ** argv)
 {
   int n, r;
-#ifdef __K1C__
+#ifdef __KVX__
   if (argc >= 2) n = atoi(argv[1]); else n = 15;
 #else
   if (argc >= 2) n = atoi(argv[1]); else n = 35;

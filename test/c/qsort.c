@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
   int n, i, j;
   int * a, * b;
 
-#ifdef __K1C__
+#ifdef __KVX__
   if (argc >= 2) n = atoi(argv[1]); else n = 500;
 #else
   if (argc >= 2) n = atoi(argv[1]); else n = 100000;

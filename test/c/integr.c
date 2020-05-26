@@ -25,7 +25,7 @@ double test(int n)
 int main(int argc, char ** argv)
 {
   int n; double r;
-#ifdef __K1C__
+#ifdef __KVX__
   if (argc >= 2) n = atoi(argv[1]); else n = 100000;
 #else
   if (argc >= 2) n = atoi(argv[1]); else n = 10000000;

@@ -11,7 +11,7 @@ The following commands can be run inside the folder:
 
 - `make`: produces the unitary test binaries
   - `mmult-test-gcc-x86` : binary from gcc on x86
-  - `mmult-test-k1c-x86` : binary from gcc on k1c
-  - `mmult-test-ccomp-x86` : binary from ccomp on k1c
+  - `mmult-test-kvx-x86` : binary from gcc on kvx
+  - `mmult-test-ccomp-x86` : binary from ccomp on kvx
 - `make test`: tests the return value of the binaries produced by gcc.
 - `make check`: tests the return value of the binary produced by CompCert.

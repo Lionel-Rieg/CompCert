@@ -235,7 +235,7 @@ int test_vectors()
 
 u8 testdata[100] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 12, 34, 56, 78, 90 };
 
-#ifdef __K1C__
+#ifdef __KVX__
 #define NITER 1000
 #else
 #define NITER 1000000

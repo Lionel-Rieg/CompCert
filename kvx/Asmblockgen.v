@@ -13,7 +13,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** * Translation from Machblock to K1c assembly language (Asmblock) 
+(** * Translation from Machblock to KVX assembly language (Asmblock) 
     Inspired from the Mach->Asm pass of other backends, but adapted to the block structure *)
 
 Require Archi.

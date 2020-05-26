@@ -102,7 +102,7 @@ fannkuch( int n )
     int
 main( int argc, char* argv[] )
 {
-#ifdef __K1C__
+#ifdef __KVX__
     int		n = (argc>1) ? atoi(argv[1]) : 6;
 #else
     int		n = (argc>1) ? atoi(argv[1]) : 10;

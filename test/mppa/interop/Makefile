@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-K1CC ?= k1-cos-gcc
+KVXC ?= k1-cos-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 CFLAGS ?= -O2 -Wno-varargs
@@ -26,7 +26,7 @@ VAARG_COMMON=vaarg_common
 # There is also a $(VAARG_COMMON) that is the same than $(COMMON) but with va_arg
 ##
 
-K1CCPATH=$(shell which $(K1CC))
+KVXCPATH=$(shell which $(KVXC))
 CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
@@ -273,9 +273,9 @@ $(BINDIR)/$(COMMON).x86-gcc.bin: $(OBJDIR)/$(COMMON).x86-gcc.o $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BINDIR)/$(COMMON).gcc.bin: $(OBJDIR)/$(COMMON).gcc.o $(K1CCPATH)
+$(BINDIR)/$(COMMON).gcc.bin: $(OBJDIR)/$(COMMON).gcc.o $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $< -o $@
+	$(KVXC) $(CFLAGS) $< -o $@
 
 $(BINDIR)/$(COMMON).ccomp.bin: $(OBJDIR)/$(COMMON).ccomp.o $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -287,9 +287,9 @@ $(BINDIR)/$(VAARG_COMMON).x86-gcc.bin: $(OBJDIR)/$(VAARG_COMMON).x86-gcc.o $(CCP
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BINDIR)/$(VAARG_COMMON).gcc.bin: $(OBJDIR)/$(VAARG_COMMON).gcc.o $(K1CCPATH)
+$(BINDIR)/$(VAARG_COMMON).gcc.bin: $(OBJDIR)/$(VAARG_COMMON).gcc.o $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $< -o $@
+	$(KVXC) $(CFLAGS) $< -o $@
 
 $(BINDIR)/$(VAARG_COMMON).ccomp.bin: $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -301,11 +301,11 @@ $(BINDIR)/%.x86-gcc.bin: $(OBJDIR)/%.x86-gcc.o $(OBJDIR)/$(COMMON).x86-gcc.o $(C
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
-$(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).gcc.o $(K1CCPATH)
+$(BINDIR)/%.gcc.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).gcc.o $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+	$(KVXC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
-$(BINDIR)/%.gcc.rev.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).ccomp.o $(K1CCPATH)
+$(BINDIR)/%.gcc.rev.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(COMMON).ccomp.o $(KVXCPATH)
 	@mkdir -p $(@D)
 	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
@@ -319,11 +319,11 @@ $(BINDIR)/%.x86-gcc.vaarg.bin: $(OBJDIR)/%.x86-gcc.o $(OBJDIR)/$(VAARG_COMMON).x
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
-$(BINDIR)/%.gcc.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(K1CCPATH)
+$(BINDIR)/%.gcc.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).gcc.o $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
+	$(KVXC) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
-$(BINDIR)/%.gcc.rev.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(K1CCPATH)
+$(BINDIR)/%.gcc.rev.vaarg.bin: $(OBJDIR)/%.gcc.o $(OBJDIR)/$(VAARG_COMMON).ccomp.o $(KVXCPATH)
 	@mkdir -p $(@D)
 	$(CCOMP) $(CFLAGS) $(wordlist 1,2,$^) -o $@
 
@@ -339,9 +339,9 @@ $(OBJDIR)/%.x86-gcc.o: $(ASMDIR)/%.x86-gcc.s $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(OBJDIR)/%.gcc.o: $(ASMDIR)/%.gcc.s $(K1CCPATH)
+$(OBJDIR)/%.gcc.o: $(ASMDIR)/%.gcc.s $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) -c $(CFLAGS) $< -o $@
+	$(KVXC) -c $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.ccomp.o: $(ASMDIR)/%.ccomp.s $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -356,9 +356,9 @@ $(ASMDIR)/%.x86-gcc.s: $(SRCDIR)/%.c $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -S $< -o $@
 
-$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(K1CCPATH)
+$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) -S $< -o $@
+	$(KVXC) $(CFLAGS) -S $< -o $@
 
 $(ASMDIR)/%.ccomp.s: $(SRCDIR)/%.c $(CCOMPPATH)
 	@mkdir -p $(@D)

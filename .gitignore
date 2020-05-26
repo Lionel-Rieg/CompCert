@@ -47,9 +47,9 @@
 /riscV/ConstpropOp.v
 /riscV/SelectOp.v
 /riscV/SelectLong.v
-/mppa_k1c/ConstpropOp.v
-/mppa_k1c/SelectOp.v
-/mppa_k1c/SelectLong.v
+/kvx/ConstpropOp.v
+/kvx/SelectOp.v
+/kvx/SelectLong.v
 /aarch64/ConstpropOp.v
 /aarch64/SelectOp.v
 /aarch64/SelectLong.v
@@ -79,11 +79,11 @@
 /doc/html/
 # MacOS metadata
 .DS_Store
-runtime/mppa_k1c/i64_sdiv.s
-runtime/mppa_k1c/i64_smod.s
-runtime/mppa_k1c/i64_udiv.s
-runtime/mppa_k1c/i64_udivmod.s
-runtime/mppa_k1c/i64_umod.s
+runtime/kvx/i64_sdiv.s
+runtime/kvx/i64_smod.s
+runtime/kvx/i64_udiv.s
+runtime/kvx/i64_udivmod.s
+runtime/kvx/i64_umod.s
 # Test generated data
 /test/clightgen/*.v
 # Coq caches

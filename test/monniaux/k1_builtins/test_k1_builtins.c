@@ -1,40 +1,40 @@
 #include <stdio.h>
-#include <mppa_bare_runtime/k1c/registers.h>
+#include <mppa_bare_runtime/kvx/registers.h>
 
 void test_system_regs(void) {
-  __builtin_k1_wfxl(K1_SFR_EV4, 0x1000ULL);
-  __builtin_k1_wfxm(K1_SFR_EV4, 0x2000ULL);
-  __builtin_k1_get(K1_SFR_EV4);
-  __builtin_k1_set(K1_SFR_EV4, 0x4000ULL);
+  __builtin_kvx_wfxl(K1_SFR_EV4, 0x1000ULL);
+  __builtin_kvx_wfxm(K1_SFR_EV4, 0x2000ULL);
+  __builtin_kvx_get(K1_SFR_EV4);
+  __builtin_kvx_set(K1_SFR_EV4, 0x4000ULL);
 }
 
 void test_loads(void *addr) {
-  __builtin_k1_alclrd(addr);
-  __builtin_k1_alclrw(addr);
-  __builtin_k1_lbzu(addr);
-  __builtin_k1_lhzu(addr);
-  __builtin_k1_lwzu(addr);
-  __builtin_k1_ldu(addr);
-  __builtin_k1_dinvall(addr);
-  __builtin_k1_dtouchl(addr);
-  __builtin_k1_dzerol(addr);
-  __builtin_k1_iinvals(addr);
-  /* __builtin_k1_itouchl(addr); */
-  __builtin_k1_dzerol(addr);
+  __builtin_kvx_alclrd(addr);
+  __builtin_kvx_alclrw(addr);
+  __builtin_kvx_lbzu(addr);
+  __builtin_kvx_lhzu(addr);
+  __builtin_kvx_lwzu(addr);
+  __builtin_kvx_ldu(addr);
+  __builtin_kvx_dinvall(addr);
+  __builtin_kvx_dtouchl(addr);
+  __builtin_kvx_dzerol(addr);
+  __builtin_kvx_iinvals(addr);
+  /* __builtin_kvx_itouchl(addr); */
+  __builtin_kvx_dzerol(addr);
 }
 
 void test_stops(void) {
-  __builtin_k1_await();
-  __builtin_k1_sleep();
-  __builtin_k1_stop();
-  __builtin_k1_barrier();
-  __builtin_k1_fence();
-  __builtin_k1_dinval();
-  __builtin_k1_iinval();
+  __builtin_kvx_await();
+  __builtin_kvx_sleep();
+  __builtin_kvx_stop();
+  __builtin_kvx_barrier();
+  __builtin_kvx_fence();
+  __builtin_kvx_dinval();
+  __builtin_kvx_iinval();
 }
 
 int main() {
   unsigned long long data = 45;
-  unsigned long long res = __builtin_k1_alclrd(&data);
+  unsigned long long res = __builtin_kvx_alclrd(&data);
   printf("%llu %llu\n", res, data);
 }

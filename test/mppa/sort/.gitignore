@@ -1,9 +1,9 @@
-main-test-ccomp-k1c
-main-test-gcc-k1c
+main-test-ccomp-kvx
+main-test-gcc-kvx
 main-test-gcc-x86
-merge-test-gcc-k1c
+merge-test-gcc-kvx
 merge-test-gcc-x86
-selection-test-gcc-k1c
+selection-test-gcc-kvx
 selection-test-gcc-x86
-insertion-test-gcc-k1c
+insertion-test-gcc-kvx
 insertion-test-gcc-x86

@@ -16,7 +16,7 @@
 Require Import Floats Integers ZArith.
 
 Module ExtFloat.
-(** TODO check with the actual K1c;
+(** TODO check with the actual KVX;
     this is what happens on x86 and may be inappropriate. *)
 
 Definition min (x : float) (y : float) : float :=
@@ -33,7 +33,7 @@ Definition max (x : float) (y : float) : float :=
 End ExtFloat.
 
 Module ExtFloat32.
-(** TODO check with the actual K1c *)
+(** TODO check with the actual KVX *)
 
 Definition min (x : float32) (y : float32) : float32 :=
   match Float32.compare x y with

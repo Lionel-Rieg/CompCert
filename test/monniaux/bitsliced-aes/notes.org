@@ -3,52 +3,52 @@
 ==> test.ccomp.host.out <==
 cycles: 3080223
 
-==> test.ccomp.k1c.out <==
+==> test.ccomp.kvx.out <==
 cycles: 10145951
 
 ==> test.gcc.host.out <==
 cycles: 1485887
 
-==> test.gcc.k1c.out <==
+==> test.gcc.kvx.out <==
 cycles: 4078535
 
 ** neg and
 ==> test.ccomp.host.out <==
 cycles: 2905049
 
-==> test.ccomp.k1c.out <==
+==> test.ccomp.kvx.out <==
 cycles: 7995063
 
 ==> test.gcc.host.out <==
 cycles: 1858263
 
-==> test.gcc.k1c.out <==
+==> test.gcc.kvx.out <==
 cycles: 5255763
 
 ** cmove mais mauvais scheduling de registres
 ==> test.ccomp.host.out <==
 cycles: 4363682
 
-==> test.ccomp.k1c.out <==
+==> test.ccomp.kvx.out <==
 cycles: 7208629
 
 ==> test.gcc.host.out <==
 cycles: 2916854
 
-==> test.gcc.k1c.out <==
+==> test.gcc.kvx.out <==
 cycles: 5646730
 
 ** cmove via match du and
 ==> test.ccomp.host.out <==
 cycles: 2553732
 
-==> test.ccomp.k1c.out <==
+==> test.ccomp.kvx.out <==
 cycles: 7208629
 
 ==> test.gcc.host.out <==
 cycles: 1849125
 
-==> test.gcc.k1c.out <==
+==> test.gcc.kvx.out <==
 cycles: 5255763
 
 ** hand optimized loads

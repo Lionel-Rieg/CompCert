@@ -36,7 +36,7 @@ opam install coq menhir
 
 ## Compilation
 Pre-compilation configure replace the placeholder with your desired platform
-(for Kalray Coolidge it is `k1c-cos`)
+(for Kalray Coolidge it is `kvx-cos`)
 ```
 ./configure <platform>
 ```
@@ -57,7 +57,7 @@ ccomp -O3 test.c -o test.bin
 ```
 
 ## Changing platform
-If you decide to change the platform, for instance from k1c-cos to k1c-mbr, you
+If you decide to change the platform, for instance from kvx-cos to kvx-mbr, you
 should change the `compcert.ini` file with the respective tools and then run
 ```
 make install

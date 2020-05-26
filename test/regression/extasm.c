@@ -24,7 +24,7 @@ int clobbers(int x, int z)
  || (defined(ARCH_riscV) && defined(MODEL_64)) \
  || (defined(ARCH_powerpc) && defined(MODEL_ppc64)) \
  || (defined(ARCH_powerpc) && defined(MODEL_e5500)) \
- || (defined(ARCH_mppa_k1c) && defined(MODEL_64)) \
+ || (defined(ARCH_kvx) && defined(MODEL_64)) \
  || defined(ARCH_aarch64)
 #define SIXTYFOUR
 #else

@@ -26,7 +26,7 @@ TESTS_COMP?=attribs1 bitfields1 bitfields2 bitfields3 bitfields4 \
   varargs1 varargs2 varargs3 sections alias aligned\
   packedstruct1 packedstruct2
 
-ifeq ($(ARCH),mppa_k1c)
+ifeq ($(ARCH),kvx)
 	TESTS_COMP:=$(filter-out packedstruct1,$(TESTS_COMP))
 	TESTS_COMP:=$(filter-out packedstruct2,$(TESTS_COMP))
 endif
@@ -35,7 +35,7 @@ endif
 # but produce processor-dependent results, so no reference output in Results
 
 TESTS_DIFF=NaNs
-# FIXME ifeq ($(ARCH),mppa_k1c)
+# FIXME ifeq ($(ARCH),kvx)
 	TESTS_DIFF:=$(filter-out NaNs,$(TESTS_DIFF))
 # endif
 

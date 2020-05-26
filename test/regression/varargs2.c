@@ -122,12 +122,12 @@ int main()
   miniprintf("A string: %s\n", "Hello world");
   miniprintf("A double: %e\n", 3.141592654);
 
-#ifndef __K1C__
+#ifndef __KVX__
   miniprintf("A small struct: %y\n", (struct Y) { 'x', 12 });
   miniprintf("A bigger struct: %z\n", (struct Z) { 123, 456, 789 });
 #endif
 
-#ifdef __K1C__
+#ifdef __KVX__
   miniprintf("A mixture: %c & %s & %d & %l & %e & %f\n",
              'x',
              "Hello, world!",

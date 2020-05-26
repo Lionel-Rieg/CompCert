@@ -14,7 +14,7 @@ include ../rules.mk
 #
 #src=$(wildcard *.c)
 #
-#PRODUCTS?=minigzip.gcc.host minigzip.ccomp.host minigzip.gcc.k1c minigzip.gcc.o1.k1c minigzip.ccomp.k1c
+#PRODUCTS?=minigzip.gcc.host minigzip.ccomp.host minigzip.gcc.kvx minigzip.gcc.o1.kvx minigzip.ccomp.kvx
 #PRODUCTS_OUT=$(addsuffix .out,$(PRODUCTS))
 #
 #all: $(PRODUCTS)
@@ -27,15 +27,15 @@ include ../rules.mk
 #	$(CC) $(CFLAGS) $+ -lm -o $@
 #minigzip.ccomp.host: $(src:.c=.ccomp.host.o) ../clock.gcc.host.o 
 #	$(CCOMP) $(CCOMPFLAGS) $+ -lm -o $@
-#minigzip.gcc.k1c: $(src:.c=.gcc.k1c.o) ../clock.gcc.k1c.o 
-#	$(K1C_CC) $(K1C_CFLAGS) $+ -lm -o $@
-#minigzip.gcc.o1.k1c: $(src:.c=.gcc.o1.k1c.o) ../clock.gcc.k1c.o 
-#	$(K1C_CC) $(K1C_CFLAGS_O1) $+ -lm -o $@
-#minigzip.ccomp.k1c: $(src:.c=.ccomp.k1c.o) ../clock.gcc.k1c.o 
-#	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) $+ -lm -o $@
+#minigzip.gcc.kvx: $(src:.c=.gcc.kvx.o) ../clock.gcc.kvx.o 
+#	$(KVX_CC) $(KVX_CFLAGS) $+ -lm -o $@
+#minigzip.gcc.o1.kvx: $(src:.c=.gcc.o1.kvx.o) ../clock.gcc.kvx.o 
+#	$(KVX_CC) $(KVX_CFLAGS_O1) $+ -lm -o $@
+#minigzip.ccomp.kvx: $(src:.c=.ccomp.kvx.o) ../clock.gcc.kvx.o 
+#	$(KVX_CCOMP) $(KVX_CCOMPFLAGS) $+ -lm -o $@
 #measures.csv: $(PRODUCTS_OUT)
-#	echo "benches, gcc host,ccomp host,gcc k1c,gcc o1 k1c,ccomp k1c" > $@
-#	echo "zlib ", $$(grep 'cycles' minigzip.gcc.host.out | cut -d':' -f2), $$(grep 'cycles' minigzip.ccomp.host.out | cut -d':' -f2), $$(grep 'cycles' minigzip.gcc.k1c.out | cut -d':' -f2), $$(grep 'cycles' minigzip.gcc.o1.k1c.out | cut -d':' -f2), $$(grep 'cycles' minigzip.ccomp.k1c.out | cut -d':' -f2)>> $@
+#	echo "benches, gcc host,ccomp host,gcc kvx,gcc o1 kvx,ccomp kvx" > $@
+#	echo "zlib ", $$(grep 'cycles' minigzip.gcc.host.out | cut -d':' -f2), $$(grep 'cycles' minigzip.ccomp.host.out | cut -d':' -f2), $$(grep 'cycles' minigzip.gcc.kvx.out | cut -d':' -f2), $$(grep 'cycles' minigzip.gcc.o1.kvx.out | cut -d':' -f2), $$(grep 'cycles' minigzip.ccomp.kvx.out | cut -d':' -f2)>> $@
 #
 #SAMPLE_FILE=zlib.h
 #
@@ -45,18 +45,18 @@ include ../rules.mk
 #minigzip.ccomp.host.out minigzip.ccomp.host.output: minigzip.ccomp.host
 #	./$< < $(SAMPLE_FILE) > $<.output 2> $@
 #
-#minigzip.gcc.k1c.out minigzip.gcc.k1c.output: minigzip.gcc.k1c
+#minigzip.gcc.kvx.out minigzip.gcc.kvx.output: minigzip.gcc.kvx
 #	$(EXECUTE_CYCLES) $< < $(SAMPLE_FILE) > $<.output 2> $@
 #
-#minigzip.gcc.o1.k1c.out minigzip.gcc.o1.k1c.output: minigzip.gcc.o1.k1c
+#minigzip.gcc.o1.kvx.out minigzip.gcc.o1.kvx.output: minigzip.gcc.o1.kvx
 #	$(EXECUTE_CYCLES) $< < $(SAMPLE_FILE) > $<.output 2> $@
 #
-#minigzip.ccomp.k1c.out minigzip.ccomp.k1c.output: minigzip.ccomp.k1c
+#minigzip.ccomp.kvx.out minigzip.ccomp.kvx.output: minigzip.ccomp.kvx
 #	$(EXECUTE_CYCLES) $< < $(SAMPLE_FILE) > $<.output 2> $@
 #
 #.SECONDARY:
 #
 #.PHONY:
 #clean:
-#	rm -f *.o *.s *.k1c *.csv
+#	rm -f *.o *.s *.kvx *.csv
 #

@@ -338,7 +338,7 @@ int main(void)
   struct _play *tree;
 
 
-#ifdef __K1C__
+#ifdef __KVX__
   ncol = 4;
   nrow = 4;
 #else

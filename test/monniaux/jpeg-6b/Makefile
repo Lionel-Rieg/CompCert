@@ -15,7 +15,7 @@ EXECUTE_ARGS=-dct int -outfile __BASE__.jpg testimg.ppm 2> __BASE__.out
 
 include ../rules.mk
 
-#all: cjpeg.gcc.k1c.out djpeg.gcc.k1c.out cjpeg.gcc.o1.k1c.out djpeg.gcc.o1.k1c.out cjpeg.ccomp.k1c.out djpeg.ccomp.k1c.out
+#all: cjpeg.gcc.kvx.out djpeg.gcc.kvx.out cjpeg.gcc.o1.kvx.out djpeg.gcc.o1.kvx.out cjpeg.ccomp.kvx.out djpeg.ccomp.kvx.out
 #
 #LIBSOURCES= jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c \
 #        jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c \
@@ -27,26 +27,26 @@ include ../rules.mk
 #        jquant2.c jutils.c jmemmgr.c jmemansi.c
 #CSOURCES=$(LIBSOURCES) rdppm.c rdgif.c rdtarga.c rdrle.c rdbmp.c rdswitch.c cdjpeg.c wrppm.c wrgif.c wrtarga.c wrrle.c wrbmp.c rdcolmap.c
 #
-#LIB_K1C_GCC_OFILES=$(CSOURCES:.c=.gcc.k1c.o)
-#LIB_K1C_GCC_O1_OFILES=$(CSOURCES:.c=.gcc.o1.k1c.o)
-#LIB_K1C_CCOMP_OFILES=$(CSOURCES:.c=.ccomp.k1c.o)
+#LIB_KVX_GCC_OFILES=$(CSOURCES:.c=.gcc.kvx.o)
+#LIB_KVX_GCC_O1_OFILES=$(CSOURCES:.c=.gcc.o1.kvx.o)
+#LIB_KVX_CCOMP_OFILES=$(CSOURCES:.c=.ccomp.kvx.o)
 #
 #include ../rules.mk
 #
-#cjpeg.gcc.k1c: $(LIB_K1C_GCC_OFILES) cjpeg.gcc.k1c.o
-#	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
-#djpeg.gcc.k1c: $(LIB_K1C_GCC_OFILES) djpeg.gcc.k1c.o
-#	$(K1C_CC) $(K1C_CFLAGS) -o $@ $+ ../clock.gcc.k1c.o
+#cjpeg.gcc.kvx: $(LIB_KVX_GCC_OFILES) cjpeg.gcc.kvx.o
+#	$(KVX_CC) $(KVX_CFLAGS) -o $@ $+ ../clock.gcc.kvx.o
+#djpeg.gcc.kvx: $(LIB_KVX_GCC_OFILES) djpeg.gcc.kvx.o
+#	$(KVX_CC) $(KVX_CFLAGS) -o $@ $+ ../clock.gcc.kvx.o
 #
-#cjpeg.gcc.o1.k1c: $(LIB_K1C_GCC_O1_OFILES) cjpeg.gcc.k1c.o
-#	$(K1C_CC) $(K1C_CFLAGS_O1) -o $@ $+ ../clock.gcc.k1c.o
-#djpeg.gcc.o1.k1c: $(LIB_K1C_GCC_O1_OFILES) djpeg.gcc.k1c.o
-#	$(K1C_CC) $(K1C_CFLAGS_O1) -o $@ $+ ../clock.gcc.k1c.o
+#cjpeg.gcc.o1.kvx: $(LIB_KVX_GCC_O1_OFILES) cjpeg.gcc.kvx.o
+#	$(KVX_CC) $(KVX_CFLAGS_O1) -o $@ $+ ../clock.gcc.kvx.o
+#djpeg.gcc.o1.kvx: $(LIB_KVX_GCC_O1_OFILES) djpeg.gcc.kvx.o
+#	$(KVX_CC) $(KVX_CFLAGS_O1) -o $@ $+ ../clock.gcc.kvx.o
 #
-#cjpeg.ccomp.k1c: $(LIB_K1C_CCOMP_OFILES) cjpeg.gcc.k1c.o
-#	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+ ../clock.gcc.k1c.o
-#djpeg.ccomp.k1c: $(LIB_K1C_CCOMP_OFILES) djpeg.gcc.k1c.o
-#	$(K1C_CCOMP) $(K1C_CCOMPFLAGS) -o $@ $+ ../clock.gcc.k1c.o
+#cjpeg.ccomp.kvx: $(LIB_KVX_CCOMP_OFILES) cjpeg.gcc.kvx.o
+#	$(KVX_CCOMP) $(KVX_CCOMPFLAGS) -o $@ $+ ../clock.gcc.kvx.o
+#djpeg.ccomp.kvx: $(LIB_KVX_CCOMP_OFILES) djpeg.gcc.kvx.o
+#	$(KVX_CCOMP) $(KVX_CCOMPFLAGS) -o $@ $+ ../clock.gcc.kvx.o
 #
 #
 #djpeg.%.out: djpeg.%

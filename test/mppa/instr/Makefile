@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-K1CC ?= k1-cos-gcc
+KVXC ?= k1-cos-gcc
 CC ?= gcc
 CCOMP ?= ccomp
 OPTIM ?= -O2
@@ -24,7 +24,7 @@ K1LIB=../lib/system.gcc.a
 #                    -> .ccomp.s -> .ccomp.bin -> .ccomp.out
 ##
 
-K1CCPATH=$(shell which $(K1CC))
+KVXCPATH=$(shell which $(KVXC))
 CCPATH=$(shell which $(CC))
 CCOMPPATH=$(shell which $(CCOMP))
 SIMUPATH=$(shell which $(SIMU))
@@ -63,8 +63,8 @@ simutest: $(X86_GCC_OUT) $(GCC_SIMUOUT)
 	for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.simu.out;\
-		if grep "__K1C__" -q $$test.c; then\
-			printf "$(YELLOW)UNTESTED: $$test.c contains an \`#ifdef __K1C__\`\n";\
+		if grep "__KVX__" -q $$test.c; then\
+			printf "$(YELLOW)UNTESTED: $$test.c contains an \`#ifdef __KVX__\`\n";\
 		elif $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
 			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
@@ -91,8 +91,8 @@ hardtest: $(X86_GCC_OUT) $(GCC_HARDOUT)
 	for test in $(TESTNAMES); do\
 		x86out=$(OUTDIR)/$$test.x86-gcc.out;\
 		gccout=$(OUTDIR)/$$test.gcc.hard.out;\
-		if grep "__K1C__" -q $$test.c; then\
-			printf "$(YELLOW)UNTESTED: $$test.c contains an \`#ifdef __K1C__\`\n";\
+		if grep "__KVX__" -q $$test.c; then\
+			printf "$(YELLOW)UNTESTED: $$test.c contains an \`#ifdef __KVX__\`\n";\
 		elif $(DIFF) $$x86out $$gccout > /dev/null; test $${PIPESTATUS[0]} -ne 0; then\
 			>&2 printf "$(RED)ERROR: $$x86out and $$gccout differ$(NC)\n";\
 		else\
@@ -153,9 +153,9 @@ $(BINDIR)/%.x86-gcc.bin: $(ASMDIR)/%.x86-gcc.s $(LIB) $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(filter-out $(CCPATH),$^) -o $@
 
-$(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1LIB) $(K1CCPATH)
+$(BINDIR)/%.gcc.bin: $(ASMDIR)/%.gcc.s $(K1LIB) $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) $(filter-out $(K1CCPATH),$^) -o $@
+	$(KVXC) $(CFLAGS) $(filter-out $(KVXCPATH),$^) -o $@
 
 $(BINDIR)/%.ccomp.bin: $(ASMDIR)/%.ccomp.s $(K1LIB) $(CCOMPPATH)
 	@mkdir -p $(@D)
@@ -167,9 +167,9 @@ $(ASMDIR)/%.x86-gcc.s: $(SRCDIR)/%.c $(CCPATH)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -S $< -o $@
 
-$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(K1CCPATH)
+$(ASMDIR)/%.gcc.s: $(SRCDIR)/%.c $(KVXCPATH)
 	@mkdir -p $(@D)
-	$(K1CC) $(CFLAGS) -S $< -o $@
+	$(KVXC) $(CFLAGS) -S $< -o $@
 
 $(ASMDIR)/%.ccomp.s: $(SRCDIR)/%.c $(CCOMPPATH)
 	@mkdir -p $(@D)

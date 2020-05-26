@@ -13,7 +13,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** * Abstract syntax for K1c textual assembly language.
+(** * Abstract syntax for KVX textual assembly language.
 
     Each emittable instruction is defined here. ';;' is also defined as an instruction.
     The goal of this representation is to stay compatible with the rest of the generic backend of CompCert

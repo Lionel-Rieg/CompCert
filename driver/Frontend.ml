@@ -116,7 +116,7 @@ let init () =
     | "riscV"   -> if Configuration.model = "64"
                    then Machine.rv64
                    else Machine.rv32
-    | "mppa_k1c" -> Machine.mppa_k1c
+    | "kvx" -> Machine.kvx
     | "aarch64" -> Machine.aarch64
     | _         -> assert false
   end;

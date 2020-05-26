@@ -1,9 +1,9 @@
 # Needs to be called from CompCert root directory
-# $ make -f mppa_k1c/unittest/Makefile postpass_test
+# $ make -f kvx/unittest/Makefile postpass_test
 
 include Makefile.extr
 
-TEST_CMX=mppa_k1c/unittest/postpass_test.cmx
+TEST_CMX=kvx/unittest/postpass_test.cmx
 
 UNITTEST_OBJS:=$(shell $(MODORDER) $(TEST_CMX))
 

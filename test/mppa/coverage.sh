@@ -1,6 +1,6 @@
 #!/bin/bash
 
-printer=../../mppa_k1c/TargetPrinter.ml
+printer=../../kvx/TargetPrinter.ml
 asmdir=instr/asm/
 to_cover_raw=/tmp/to_cover_raw
 to_cover=/tmp/to_cover

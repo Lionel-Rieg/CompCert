@@ -55,8 +55,8 @@ Supported targets:
   x86_64-macosx        (x86 64 bits, MacOS X)
   rv32-linux           (RISC-V 32 bits, Linux)
   rv64-linux           (RISC-V 64 bits, Linux)
-  k1c-mbr              (Kalray K1c, bare runtime)
-  k1c-cos              (Kalray K1c, ClusterOS)
+  kvx-mbr              (Kalray KVX, bare runtime)
+  kvx-cos              (Kalray KVX, ClusterOS)
   aarch64-linux        (AArch64, i.e. ARMv8 in 64-bit mode, Linux)
   manual               (edit configuration file by hand)
 
@@ -179,8 +179,8 @@ case "$target" in
       arch="riscV"; model="32"; endianness="little"; bitsize=32;;
   rv64-*)
       arch="riscV"; model="64"; endianness="little"; bitsize=64;;
-  k1c-*)
-      arch="mppa_k1c"; model="64"; endianness="little"; bitsize=64;;
+  kvx-*)
+      arch="kvx"; model="64"; endianness="little"; bitsize=64;;
   aarch64-*|arm64-*)
       arch="aarch64"; model="default"; endianness="little"; bitsize=64;;
   manual)
@@ -437,9 +437,9 @@ if test "$arch" = "riscV"; then
 fi
 
 #
-# K1c Target Configuration
+# KVX Target Configuration
 #
-if test "$arch" = "mppa_k1c"; then
+if test "$arch" = "kvx"; then
   #model_options="-march=rv64imafd -mabi=lp64d"
   # FIXME - maybe later add it for NodeOS & cie
   #model_options=-m64
@@ -452,12 +452,12 @@ if test "$arch" = "mppa_k1c"; then
   elif test "$target" = "elf";
   then os="elf";
   else
-      echo "Unknown K1c backend"
+      echo "Unknown KVX backend"
       exit 1
   fi
   osupper=`echo $os|tr a-z A-Z`
-  k1base="k1-$os"
-  casm="k1-elf-as"
+  k1base="kvx-$os"
+  casm="kvx-elf-as"
   casm_options="$model_options"
   cc="$k1base-gcc $model_options"
   clinker="$k1base-gcc"
@@ -465,7 +465,7 @@ if test "$arch" = "mppa_k1c"; then
   libdir="$HOME/.usr/lib"
   clinker_options="$model_options -L$libdir -Wl,-rpath=$libdir"
   cprepro="$k1base-gcc"
-  cprepro_options="$model_options -D __K1C_${osupper}__ -std=c99 -E -include ccomp_k1c_fixes.h"
+  cprepro_options="$model_options -D __KVX_${osupper}__ -std=c99 -E -include ccomp_kvx_fixes.h"
   libmath="-lm"
   system="linux"
 fi
@@ -838,12 +838,12 @@ RESPONSEFILE="none"
 EOF
 fi
 
-if [ "$arch" = "mppa_k1c" ]; then
+if [ "$arch" = "kvx" ]; then
 cat >> Makefile.config <<EOF
 ARCHDIRS=$arch $arch/lib $arch/abstractbb $arch/abstractbb/Impure
-EXECUTE=k1-cluster --syscall=libstd_scalls.so --
-CFLAGS= -D __K1C_COS__
-SIMU=k1-cluster -- 
+EXECUTE=kvx-cluster --syscall=libstd_scalls.so --
+CFLAGS= -D __KVX_COS__
+SIMU=kvx-cluster -- 
 BACKENDLIB=Machblock.v Machblockgen.v Machblockgenproof.v\\
     Asmblock.v Asmblockgen.v Asmblockgenproof0.v Asmblockgenproof1.v Asmblockgenproof.v Asmvliw.v Asmblockprops.v\\
     ForwardSimulationBlock.v PostpassScheduling.v PostpassSchedulingproof.v\\

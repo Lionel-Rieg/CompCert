@@ -1,5 +1,5 @@
 /*
-Integer division for K1c
+Integer division for KVX
 
 David Monniaux, CNRS / Verimag
 	*/

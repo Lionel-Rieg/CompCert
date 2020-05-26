@@ -685,7 +685,7 @@ let real_inst_to_latency = function
   | Floatwz | Floatuwz | Fixeduwz | Fixedwz | Floatdz | Floatudz | Fixeddz | Fixedudz -> 4
   | Mulw | Muld | Maddw | Maddd | Msbfw | Msbfd -> 2 (* FIXME - WORST CASE. If it's S10 then it's only 1 *)
   | Lbs | Lbz | Lhs | Lhz | Lws | Ld | Lq | Lo -> 3
-  | Sb | Sh | Sw | Sd | Sq | So -> 1 (* See k1c-Optimization.pdf page 19 *)
+  | Sb | Sh | Sw | Sd | Sq | So -> 1 (* See kvx-Optimization.pdf page 19 *)
   | Get -> 1
   | Set -> 4 (* According to the manual should be 3, but I measured 4 *)
   | Icall | Call | Cb | Igoto | Goto | Ret -> 42 (* Should not matter since it's the final instruction of the basic block *)

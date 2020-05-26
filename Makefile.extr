@@ -43,7 +43,7 @@ cparser/pre_parser_messages.ml:
 
 DIRS=extraction \
   lib common $(ARCH) backend cfrontend cparser driver \
-  exportclight debug mppa_k1c/unittest mppa_k1c/abstractbb/Impure/ocaml
+  exportclight debug kvx/unittest kvx/abstractbb/Impure/ocaml
 
 INCLUDES=$(patsubst %,-I %, $(DIRS))
 

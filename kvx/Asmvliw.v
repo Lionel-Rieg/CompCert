@@ -13,7 +13,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** Abstract syntax and semantics for VLIW semantics of K1c assembly language. *)
+(** Abstract syntax and semantics for VLIW semantics of KVX assembly language. *)
 
 Require Import Coqlib.
 Require Import Maps.
@@ -35,7 +35,7 @@ Require Import Chunks.
 
 (** * Abstract syntax *)
 
-(** A K1c program is syntactically given as a list of functions. 
+(** A KVX program is syntactically given as a list of functions. 
     Each function is associated to a list of bundles of type [bblock] below.
     Hence, syntactically, we view each bundle as a basic block:
     this view induces our sequential semantics of bundles defined in [Asmblock].
@@ -219,7 +219,7 @@ Inductive ftest: Type :=
 
 Definition offset : Type := ptrofs.
 
-(** We model a subset of the K1c instruction set. In particular, we do not
+(** We model a subset of the KVX instruction set. In particular, we do not
   support floats yet.
 
   Although it is possible to use the 32-bits mode, for now we don't support it.

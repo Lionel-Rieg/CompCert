@@ -1,4 +1,4 @@
-/* K1C
+/* KVX
 32-bit unsigned/signed integer division/modulo (udiv5)
 
 D. Monniaux, CNRS, VERIMAG */

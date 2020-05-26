@@ -17,7 +17,7 @@ int main (int argc, char **argv)
 {
     int w, h, bit_num = 0;
     char byte_acc = 0;
-#ifdef __K1C__
+#ifdef __KVX__
     int i, iter = 30;
 #else
     int i, iter = 50;
@@ -26,7 +26,7 @@ int main (int argc, char **argv)
     double Zr, Zi, Cr, Ci, Tr, Ti;
 
     if (argc < 2) {
-#ifdef __K1C__
+#ifdef __KVX__
       w = h = 40;
 #else
       w = h = 1000;
@@ -60,7 +60,7 @@ int main (int argc, char **argv)
             if(bit_num == 8)
             {
                 putc(byte_acc,stdout);
-#ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
+#ifdef __KVX__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
                 fflush(stdout);
 #endif
                 byte_acc = 0;
@@ -70,7 +70,7 @@ int main (int argc, char **argv)
             {
                 byte_acc <<= (8-w%8);
                 putc(byte_acc,stdout);
-#ifdef __K1C__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
+#ifdef __KVX__ // stdout isn't flushed enough when --syscall=libstd_scalls.so is passed to the simulator k1-cluster
                 fflush(stdout);
 #endif
                 byte_acc = 0;

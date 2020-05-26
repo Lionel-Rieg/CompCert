@@ -25,7 +25,7 @@ a:active {color : Red; text-decoration : underline; }
 <font color=gray><H1 align="center">The CompCert verified compiler</H1>
 <H2 align="center">Commented Coq development</H2>
 <H3 align="center">Version 3.7, 2020-03-31</H3></font>
-<H3 align="center">PATCHED for the Kalray MPPA-K1C VLIW CORE</H3>
+<H3 align="center">PATCHED for the Kalray MPPA-KVX VLIW CORE</H3>
 
 <H2>Introduction</H2>
 
@@ -54,11 +54,11 @@ inequations by fixpoint iteration.
 <LI> <A HREF="html/compcert.lib.Postorder.html">Postorder</A>: postorder numbering of a directed graph.
 </UL></font>
 
-<H4>The <tt>abstractbb</tt> library, introduced for MPPA-K1C</H4>
+<H4>The <tt>abstractbb</tt> library, introduced for MPPA-KVX</H4>
 <UL>
-<LI> <A HREF="html/compcert.mppa_k1c.abstractbb.AbstractBasicBlocksDef.html">AbstractBasicBlocksDef</A>: an IR for verifying some semantic properties on basic-blocks.
-<LI> <A HREF="html/compcert.mppa_k1c.abstractbb.Parallelizability.html">Parallelizability</A>: verifying that sequential and parallel semantics are equivalent for a given abstract basic-block.
-<LI> <A HREF="html/compcert.mppa_k1c.abstractbb.ImpSimuTest.html">ImpSimuTest</A>: verifying that a given abstract basic-block is simulated by another one for sequential semantics. This module refines <A HREF="html/compcert.mppa_k1c.abstractbb.SeqSimuTheory.html">SeqSimuTheory</A> with hash-consing. 
+<LI> <A HREF="html/compcert.kvx.abstractbb.AbstractBasicBlocksDef.html">AbstractBasicBlocksDef</A>: an IR for verifying some semantic properties on basic-blocks.
+<LI> <A HREF="html/compcert.kvx.abstractbb.Parallelizability.html">Parallelizability</A>: verifying that sequential and parallel semantics are equivalent for a given abstract basic-block.
+<LI> <A HREF="html/compcert.kvx.abstractbb.ImpSimuTest.html">ImpSimuTest</A>: verifying that a given abstract basic-block is simulated by another one for sequential semantics. This module refines <A HREF="html/compcert.kvx.abstractbb.SeqSimuTheory.html">SeqSimuTheory</A> with hash-consing. 
 </UL>
 
 <font color=gray>
@@ -77,7 +77,7 @@ See also: <A HREF="html/compcert.common.Memdata.html">Memdata</A> (in-memory rep
 <LI> <A HREF="html/compcert.common.Smallstep.html">Smallstep</A>: tools for small-step semantics.
 <LI> <A HREF="html/compcert.common.Behaviors.html">Behaviors</A>: from small-step semantics to observable behaviors of programs.
 <LI> <A HREF="html/compcert.common.Determinism.html">Determinism</A>: determinism properties of small-step semantics.
-<LI> <A HREF="html/compcert.mppa_k1c.Op.html"><I>Op</I></A>: operators, addressing modes and their
+<LI> <A HREF="html/compcert.kvx.Op.html"><I>Op</I></A>: operators, addressing modes and their
 semantics.
 <LI> <A HREF="html/compcert.common.Unityping.html">Unityping</A>: a solver for atomic unification constraints.
 </UL>
@@ -108,21 +108,21 @@ pseudo-registers).
 code, control-flow graph of basic blocks, finitely many physical registers, infinitely
 many stack slots). <BR>
 See also: <A HREF="html/compcert.backend.Locations.html">Locations</A> (representation of
-locations) and <A HREF="html/compcert.mppa_k1c.Machregs.html"><I>Machregs</I></A> (description of processor registers).
+locations) and <A HREF="html/compcert.kvx.Machregs.html"><I>Machregs</I></A> (description of processor registers).
 <LI> <A HREF="html/compcert.backend.Linear.html">Linear</A>: like LTL, but the CFG is
 replaced by a linear list of instructions with explicit branches and labels.
 <LI> <A HREF="html/compcert.backend.Mach.html">Mach</A>: like Linear, with a more concrete
 view of the activation record.  
 </UL>
 </font>
-<H4>Languages introduced for MPPA-K1C</H4>
+<H4>Languages introduced for MPPA-KVX</H4>
 <UL>
-<LI> <A HREF="html/compcert.mppa_k1c.lib.Machblock.html">Machblock</A>: a variant of Mach, with a syntax for basic-blocks, and a block-step semantics (execute one basic-block in one step).
-This IR is generic over the processor, even if currently, only used for MPPA_K1C.
-<LI> <A HREF="html/compcert.mppa_k1c.Asmvliw.html"><I>Asmvliw</I></A>: abstract syntax and semantics for Mppa_K1c VLIW assembly: atomic instructions are grouped by "bundles". These bundles are executed sequentially, but execution is parallel within bundles.
-<LI> <A HREF="html/compcert.mppa_k1c.Asmblock.html"><I>Asmblock</I></A>: a variant of Asmvliw, with a sequential semantics within bundles, which make them corresponds here to usual basic-blocks.
+<LI> <A HREF="html/compcert.kvx.lib.Machblock.html">Machblock</A>: a variant of Mach, with a syntax for basic-blocks, and a block-step semantics (execute one basic-block in one step).
+This IR is generic over the processor, even if currently, only used for MPPA_KVX.
+<LI> <A HREF="html/compcert.kvx.Asmvliw.html"><I>Asmvliw</I></A>: abstract syntax and semantics for Mppa_KVX VLIW assembly: atomic instructions are grouped by "bundles". These bundles are executed sequentially, but execution is parallel within bundles.
+<LI> <A HREF="html/compcert.kvx.Asmblock.html"><I>Asmblock</I></A>: a variant of Asmvliw, with a sequential semantics within bundles, which make them corresponds here to usual basic-blocks.
   This IR is an intermediate step between Machblock and Asmvliw.
-<LI> <A HREF="html/compcert.mppa_k1c.Asm.html"><I>Asm</I></A>: a variant of Asmvliw with a flat syntax for bundles, instead of a structured one (bundle termination is encoded as a pseudo-instruction). This IR is mainly a wrapper of <I>Asmvliw</I> for a smooth integration in CompCert (and an easier pretty-printing of the abstract syntax).
+<LI> <A HREF="html/compcert.kvx.Asm.html"><I>Asm</I></A>: a variant of Asmvliw with a flat syntax for bundles, instead of a structured one (bundle termination is encoded as a pseudo-instruction). This IR is mainly a wrapper of <I>Asmvliw</I> for a smooth integration in CompCert (and an easier pretty-printing of the abstract syntax).
 </UL>
 
 <font color=gray><H3>Compiler passes</H3></font>
@@ -169,13 +169,13 @@ This IR is generic over the processor, even if currently, only used for MPPA_K1C
   <TD>Recognition of operators<br>and addressing modes</TD>
   <TD>Cminor to CminorSel</TD>
   <TD><A HREF="html/compcert.backend.Selection.html">Selection</A><br>
-      <A HREF="html/compcert.mppa_k1c.SelectOp.html"><I>SelectOp</I></A><br>
-      <A HREF="html/compcert.mppa_k1c.SelectLong.html"><I>SelectLong</I></A><br>
+      <A HREF="html/compcert.kvx.SelectOp.html"><I>SelectOp</I></A><br>
+      <A HREF="html/compcert.kvx.SelectLong.html"><I>SelectLong</I></A><br>
       <A HREF="html/compcert.backend.SelectDiv.html">SelectDiv</A><br>
       <A HREF="html/compcert.backend.SplitLong.html">SplitLong</A></TD>
   <TD><A HREF="html/compcert.backend.Selectionproof.html">Selectionproof</A><br>
-      <A HREF="html/compcert.mppa_k1c.SelectOpproof.html"><I>SelectOpproof</I></A><br>
-      <A HREF="html/compcert.mppa_k1c.SelectLongproof.html"><I>SelectLongproof</I></A><br>
+      <A HREF="html/compcert.kvx.SelectOpproof.html"><I>SelectOpproof</I></A><br>
+      <A HREF="html/compcert.kvx.SelectLongproof.html"><I>SelectLongproof</I></A><br>
       <A HREF="html/compcert.backend.SelectDivproof.html">SelectDivproof</A><br>
       <A HREF="html/compcert.backend.SplitLongproof.html">SplitLongproof</A></TD>
 </TR>
@@ -214,18 +214,18 @@ This IR is generic over the processor, even if currently, only used for MPPA_K1C
   <TD>Constant propagation</TD>
   <TD>RTL to RTL</TD>
   <TD><A HREF="html/compcert.backend.Constprop.html">Constprop</A><br>
-      <A HREF="html/compcert.mppa_k1c.ConstpropOp.html"><I>ConstpropOp</I></A></TD>
+      <A HREF="html/compcert.kvx.ConstpropOp.html"><I>ConstpropOp</I></A></TD>
   <TD><A HREF="html/compcert.backend.Constpropproof.html">Constpropproof</A><br>
-      <A HREF="html/compcert.mppa_k1c.ConstpropOpproof.html"><I>ConstproppOproof</I></A></TD>
+      <A HREF="html/compcert.kvx.ConstpropOpproof.html"><I>ConstproppOproof</I></A></TD>
 </TR>
 
 <TR valign="top">
   <TD>Common subexpression elimination</TD>
   <TD>RTL to RTL</TD>
   <TD><A HREF="html/compcert.backend.CSE.html">CSE</A><BR>
-      <A HREF="html/compcert.mppa_k1c.CombineOp.html"><I>CombineOp</I></A></TD>
+      <A HREF="html/compcert.kvx.CombineOp.html"><I>CombineOp</I></A></TD>
   <TD><A HREF="html/compcert.backend.CSEproof.html">CSEproof</A><BR>
-      <A HREF="html/compcert.mppa_k1c.CombineOpproof.html"><I>CombineOpproof</I></A></TD>
+      <A HREF="html/compcert.kvx.CombineOpproof.html"><I>CombineOpproof</I></A></TD>
 </TR>
 
 <TR valign="top">
@@ -282,44 +282,44 @@ This IR is generic over the processor, even if currently, only used for MPPA_K1C
   <TD>Linear to Mach</TD>
   <TD><A HREF="html/compcert.backend.Stacking.html">Stacking</A><BR>
       <A HREF="html/compcert.backend.Bounds.html">Bounds</A><BR>
-      <A HREF="html/compcert.mppa_k1c.Stacklayout.html"><I>Stacklayout</I></A></TD>
+      <A HREF="html/compcert.kvx.Stacklayout.html"><I>Stacklayout</I></A></TD>
   <TD><A HREF="html/compcert.backend.Stackingproof.html">Stackingproof</A><br>
       <A HREF="html/compcert.common.Separation.html">Separation</A></TD>
 </TR>
 </TABLE>
 
-<H4>Compilation passes introduced for MPPA-K1C</H4>
+<H4>Compilation passes introduced for MPPA-KVX</H4>
 <TABLE cellpadding="5%">
 <TR valign="top">
   <TD>Reconstruction of basic-blocks at Mach level</TD>
   <TD>Mach to Machblock</TD>
-  <TD><A HREF="html/compcert.mppa_k1c.lib.Machblockgen.html">Machblockgen</A></TD>
-  <TD><A HREF="html/compcert.mppa_k1c.lib.ForwardSimulationBlock.html">ForwardSimulationBlock</A><BR>
-      <A HREF="html/compcert.mppa_k1c.lib.Machblockgenproof.html">Machblockgenproof</A></TD>
+  <TD><A HREF="html/compcert.kvx.lib.Machblockgen.html">Machblockgen</A></TD>
+  <TD><A HREF="html/compcert.kvx.lib.ForwardSimulationBlock.html">ForwardSimulationBlock</A><BR>
+      <A HREF="html/compcert.kvx.lib.Machblockgenproof.html">Machblockgenproof</A></TD>
 </TR>
 
 <TR valign="top">
   <TD>Emission of purely sequential assembly code</TD>
   <TD>Machblock to Asmblock</TD>
-  <TD><A HREF="html/compcert.mppa_k1c.Asmblockgen.html"><I>Asmblockgen</I></A></TD>
-  <TD><A HREF="html/compcert.mppa_k1c.lib.Asmblockgenproof0.html"><I>Asmblockgenproof0</I></A><BR>
-      <A HREF="html/compcert.mppa_k1c.Asmblockgenproof1.html"><I>Asmblockgenproof1</I></A><BR>
-      <A HREF="html/compcert.mppa_k1c.Asmblockgenproof.html"><I>Asmblockgenproof</I></A></TD>
+  <TD><A HREF="html/compcert.kvx.Asmblockgen.html"><I>Asmblockgen</I></A></TD>
+  <TD><A HREF="html/compcert.kvx.lib.Asmblockgenproof0.html"><I>Asmblockgenproof0</I></A><BR>
+      <A HREF="html/compcert.kvx.Asmblockgenproof1.html"><I>Asmblockgenproof1</I></A><BR>
+      <A HREF="html/compcert.kvx.Asmblockgenproof.html"><I>Asmblockgenproof</I></A></TD>
 </TR>
 
 <TR valign="top">
   <TD>Bundling (and basic-block scheduling)</TD>
   <TD>Asmblock to Asmvliw</TD>
-  <TD><A HREF="html/compcert.mppa_k1c.PostpassScheduling.html"><I>PostpassScheduling</I></A> using<BR>
-      <A HREF="html/compcert.mppa_k1c.Asmblockdeps.html"><I>Asmblockdeps</I></A> and the <tt>abstractbb</tt> library</TD>
-  <TD><A HREF="html/compcert.mppa_k1c.PostpassSchedulingproof.html"><I>PostpassSchedulingproof</I></A></TD>
+  <TD><A HREF="html/compcert.kvx.PostpassScheduling.html"><I>PostpassScheduling</I></A> using<BR>
+      <A HREF="html/compcert.kvx.Asmblockdeps.html"><I>Asmblockdeps</I></A> and the <tt>abstractbb</tt> library</TD>
+  <TD><A HREF="html/compcert.kvx.PostpassSchedulingproof.html"><I>PostpassSchedulingproof</I></A></TD>
 </TR>
 
 <TR valign="top">
   <TD>Flattening bundles (only a bureaucratic operation)</TD>
   <TD>Asmvliw to Asm</TD>
-  <TD><A HREF="html/compcert.mppa_k1c.Asmgen.html"><I>Asmgen</I></A></TD>
-  <TD><A HREF="html/compcert.mppa_k1c.Asmgenproof.html"><I>Asmgenproof</I></A></TD>
+  <TD><A HREF="html/compcert.kvx.Asmgen.html"><I>Asmgen</I></A></TD>
+  <TD><A HREF="html/compcert.kvx.Asmgenproof.html"><I>Asmgenproof</I></A></TD>
 </TR>
 </TABLE>
 
@@ -341,10 +341,10 @@ CSE, and dead code elimination.
 <LI> <A HREF="html/compcert.backend.Liveness.html">Liveness</A>: liveness analysis</A>.
 <LI> <A HREF="html/compcert.backend.ValueAnalysis.html">ValueAnalysis</A>: value and alias analysis</A> <BR>
 See also: <A HREF="html/compcert.backend.ValueDomain.html">ValueDomain</A>: the abstract domain for value analysis.<BR>
-See also: <A HREF="html/compcert.mppa_k1c.ValueAOp.html"><I>ValueAOp</I></A>: processor-dependent parts of value analysis.
+See also: <A HREF="html/compcert.kvx.ValueAOp.html"><I>ValueAOp</I></A>: processor-dependent parts of value analysis.
 <LI> <A HREF="html/compcert.backend.Deadcode.html">Deadcode</A>: neededness analysis</A> <BR>
 See also: <A HREF="html/compcert.backend.NeedDomain.html">NeedDomain</A>: the abstract domain for neededness analysis.<BR>
-See also: <A HREF="html/compcert.mppa_k1c.NeedOp.html"><I>NeedOp</I></A>: processor-dependent parts of neededness analysis.
+See also: <A HREF="html/compcert.kvx.NeedOp.html"><I>NeedOp</I></A>: processor-dependent parts of neededness analysis.
 </UL>
 
 <H3>Type systems</H3>

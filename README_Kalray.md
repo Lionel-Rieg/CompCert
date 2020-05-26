@@ -4,8 +4,8 @@ The verified C compiler ported to Kalray.
 ## Features
 
 This delivery contains (in addition to features from CompCert master branch):
-- A fully functional port of CompCert to Coolidge k1c VLIW core
-- Postpass scheduling optimization, only for k1c. Activated by default, it can be deactivated with the compiler flag `-fno-postpass`
+- A fully functional port of CompCert to Coolidge kvx VLIW core
+- Postpass scheduling optimization, only for kvx. Activated by default, it can be deactivated with the compiler flag `-fno-postpass`
 - Some experimental features that are work in progress:
   - Slightly better subexpression eliminations, called CSE2 and CSE3. Both go through loops and feature a small alias analysis.
   - `-fduplicate 0` to activate static branch prediction information. The branch prediction is basic, it annotates each `Icond` node by an `option bool`. A `Some true` annotation indicates we predict the branch will be taken. `Some false` indicates the fallthrough case is predicted. `None` indicates we could not predict anything, and are not sure about which control will be preferred.

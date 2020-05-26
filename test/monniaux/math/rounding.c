@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <fenv.h>
 
-#ifdef __K1C__
-#include <mppa_bare_runtime/k1c/registers.h>
+#ifdef __KVX__
+#include <mppa_bare_runtime/kvx/registers.h>
 int fesetround(int rounding_mode) {
   if (rounding_mode < 0 || rounding_mode > 3) return 1;
-  unsigned long long cs = __builtin_k1_get(K1_SFR_CS);
+  unsigned long long cs = __builtin_kvx_get(K1_SFR_CS);
   cs = (cs & ~(3 << 16)) | (rounding_mode << 16);
-  __builtin_k1_set(K1_SFR_CS, cs);
+  __builtin_kvx_set(K1_SFR_CS, cs);
   return 0;
 }
 
 int fegetround(void) {
-  unsigned long long cs = __builtin_k1_get(K1_SFR_CS);
+  unsigned long long cs = __builtin_kvx_get(K1_SFR_CS);
   return (cs >> 16) & 3;
 }
 #endif

@@ -12,7 +12,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** Sequential block semantics for K1c assembly. The syntax is given in AsmVLIW *)
+(** Sequential block semantics for KVX assembly. The syntax is given in AsmVLIW *)
 
 Require Import Coqlib.
 Require Import Maps.

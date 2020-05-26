@@ -19,7 +19,7 @@ int main() {
   int rpoulet = (*((fun_type*) buf))(33);
   memcpy(buf, canard, SIZE);
   int rcanard = (*((fun_type*) buf))(33);
-  __builtin_k1_iinval();
+  __builtin_kvx_iinval();
   int rcanard2 = (*((fun_type*) buf))(33);
   free(buf);
   printf("%d %d %d\n", rpoulet, rcanard, rcanard2);
