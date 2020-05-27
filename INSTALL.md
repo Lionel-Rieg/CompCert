@@ -40,7 +40,7 @@ Pre-compilation configure replace the placeholder with your desired platform
 ```
 ./configure <platform>
 ```
-If using Kalray's platform, make sure that the k1 tools are on your path
+If using Kalray's platform, make sure that the kvx tools are on your path
 Compile (adapt -j# to the number of cores and available RAM)
 ```
 make -j12
