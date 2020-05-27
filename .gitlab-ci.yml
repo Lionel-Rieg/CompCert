@@ -224,12 +224,20 @@ build_kvx:
   stage: build
   image: "coqorg/coq"
   before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install sshpass openssh-client
+    - ./.download_from_Kalray.sh
+    - rm download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb
+    - sudo dpkg -i download/*.deb
+    - rm -rf download
     - opam switch 4.07.1+flambda
     - eval `opam config env`
     - opam install -y menhir
   script:
-    - ./config_kvx.sh -no-runtime-lib
-    - make -j "$NJOBS"
+    - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
+    - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS"
+    - source /opt/kalray/accesscore/kalray.sh && make -C test CCOMPOPTS=-static SIMU='kvx-cluster -- ' EXECUTE='kvx-cluster -- ' all test
+    - source /opt/kalray/accesscore/kalray.sh && make -C test/monniaux/yarpgen TARGET_CC='kvx-cos-gcc' EXECUTE='kvx-cluster -- ' CCOMPOPTS='-static' TARGET_CFLAGS='-static'
   rules:
     - if: '$CI_COMMIT_BRANCH == "mppa-work"'
       when: always
