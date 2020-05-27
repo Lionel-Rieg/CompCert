@@ -276,7 +276,8 @@ pages:
     - opam install coq-coq2html
   script:
     - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
-    - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS" documentation
+    - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS"
+    - source /opt/kalray/accesscore/kalray.sh && make documentation
     - mkdir public
     - cp -r doc/* public/
     - mv public/index-kvx.html public/index.html
