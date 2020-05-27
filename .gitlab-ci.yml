@@ -225,9 +225,9 @@ build_kvx:
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
-    - sudo apt-get -y install sshpass openssh-client
+    - sudo apt-get -y install sshpass openssh-client libzip4 lttng-tools liblttng-ctl-dev liblttng-ust-dev babeltrace
     - ./.download_from_Kalray.sh
-    - rm -f download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb
+    - rm -f download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb download/*board-mgmt* download/*oce-host* download/*pocl*
     - sudo dpkg -i download/*.deb
     - rm -rf download
     - opam switch 4.07.1+flambda
