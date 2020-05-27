@@ -259,8 +259,12 @@ build_kvx:
     - when: manual
 
 pages:
-  stage: build
+  inherit:
+    build_kvx: [image before_script]
+  stage: build  # TODO: change to "deploy" when "build" succeeds
   script:
+    - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
+    - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS" documentation
     - mkdir public
     - cp -r doc/* public/
     - mv public/index-kvx.html public/index.html
