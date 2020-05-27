@@ -7,6 +7,7 @@ check-admitted:
   before_script:
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_x86_64.sh
@@ -26,6 +27,7 @@ build_x86_64:
   before_script:
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_x86_64.sh
@@ -49,6 +51,7 @@ build_ia32:
     - sudo apt-get -y install gcc-multilib
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_ia32.sh
@@ -72,6 +75,7 @@ build_aarch64:
     - sudo apt-get -y install gcc-aarch64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_aarch64.sh
@@ -95,6 +99,7 @@ build_arm:
     - sudo apt-get -y install gcc-arm-linux-gnueabi qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_arm.sh
@@ -119,6 +124,7 @@ build_armhf:
     - sudo apt-get -y install gcc-arm-linux-gnueabihf qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_armhf.sh
@@ -142,6 +148,7 @@ build_ppc:
     - sudo apt-get -y install gcc-powerpc-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_ppc.sh
@@ -163,6 +170,7 @@ build_ppc64:
     - sudo apt-get -y install gcc-powerpc64-linux-gnu
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_ppc64.sh
@@ -184,6 +192,7 @@ build_rv64:
     - sudo apt-get -y install gcc-riscv64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_rv64.sh
@@ -207,6 +216,7 @@ build_rv32:
     - sudo apt-get -y install gcc-riscv64-linux-gnu qemu-user
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - ./config_rv32.sh -no-runtime-lib
@@ -232,6 +242,7 @@ build_kvx:
     - rm -rf download
     - opam switch 4.07.1+flambda
     - eval `opam config env`
+    - opam update
     - opam install -y menhir
   script:
     - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
