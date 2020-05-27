@@ -272,6 +272,8 @@ pages:
     - eval `opam config env`
     - opam update
     - opam install -y menhir
+    - opam repo add coq-released https://coq.inria.fr/opam/released
+    - opam install coq-coq2html
   script:
     - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
     - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS" documentation

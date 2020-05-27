@@ -16,6 +16,11 @@ This delivery contains (in addition to features from CompCert master branch):
 
 Please follow the instructions in `INSTALL.md`
 
+## Documentation of the Coq sources
+
+The documentation is available [online](https://certicompil.gricad-pages.univ-grenoble-alpes.fr/compcert-kvx).
+You may also generate it locally from `make documentation` (after installation via `INSTALL.md`): the entry-point is in `doc/index-kvx.html`. 
+
 ## Testing
 
 We modified most of the CompCert tests of the `c` folder in order for them to be executable in reasonable time by the simulator.
