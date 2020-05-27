@@ -259,9 +259,19 @@ build_kvx:
     - when: manual
 
 pages:
-  inherit:
-    build_kvx: [image before_script]
   stage: build  # TODO: change to "deploy" when "build" succeeds
+  image: "coqorg/coq"
+  before_script:
+    - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+    - sudo apt-get -y install sshpass openssh-client libzip4 lttng-tools liblttng-ctl-dev liblttng-ust-dev babeltrace
+    - ./.download_from_Kalray.sh
+    - rm -f download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb download/*board-mgmt* download/*oce-host* download/*pocl*
+    - sudo dpkg -i download/*.deb
+    - rm -rf download
+    - opam switch 4.07.1+flambda
+    - eval `opam config env`
+    - opam update
+    - opam install -y menhir
   script:
     - source /opt/kalray/accesscore/kalray.sh && ./config_kvx.sh
     - source /opt/kalray/accesscore/kalray.sh && make -j "$NJOBS" documentation
