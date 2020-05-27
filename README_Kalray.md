@@ -27,6 +27,6 @@ make
 make test
 ```
 
-The reference files were generated using `k1-cos-gcc -O1`.
+The reference files were generated using `kvx-cos-gcc -O1`.
 
-We also have our own tests in `test/mppa/` - to run them, execute the script `simucheck.sh` located in that folder. These consist in comparing `compcert` output to `k1-cos-gcc` output.
+We also have our own tests in `test/kvx/` - to run them, execute the script `simucheck.sh` located in that folder. These consist in comparing `compcert` output to `kvx-cos-gcc` output.

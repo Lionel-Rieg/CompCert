@@ -16,6 +16,18 @@ features, installation instructions, using the compiler, etc), please
 refer to the [Web site](http://compcert.inria.fr/) and especially
 the [user's manual](http://compcert.inria.fr/man/).
 
+## VERIMAG version
+This is a special version with additions from Verimag and Kalray :
+	* Some general-purpose optimization phases (e.g. profiling).
+	* A backend for the KVX processor.
+	
+The people responsible for this version are
+	* Sylvain Boulmé (Grenoble-INP, Verimag)
+	* David Monniaux (CNRS, Verimag)
+	* Cyril Six (Kalray)
+	
+See also `README_Kalray.md` and `PROFILING.md`.
+
 ## License
 CompCert is not free software.  This non-commercial release can only
 be used for evaluation, research, educational and personal purposes.
@@ -29,6 +41,7 @@ The CompCert verified compiler is Copyright Institut National de
 Recherche en Informatique et en Automatique (INRIA) and 
 AbsInt Angewandte Informatik GmbH.
 
+The additions are Copyright Grenoble-INP, CNRS and Kalray.
 
 ## Contact
 General discussions on CompCert take place on the
@@ -37,3 +50,5 @@ mailing list.
 
 For inquiries on the commercial version of CompCert, please contact
 info@absint.com
+
+For inquiries on the Verimag-specific additions, contact the researchers.
