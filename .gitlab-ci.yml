@@ -227,7 +227,7 @@ build_kvx:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
     - sudo apt-get -y install sshpass openssh-client
     - ./.download_from_Kalray.sh
-    - rm download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb
+    - rm -f download/*dkms*.deb download/*eclipse*.deb download/*llvm*.deb
     - sudo dpkg -i download/*.deb
     - rm -rf download
     - opam switch 4.07.1+flambda
