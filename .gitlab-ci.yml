@@ -261,6 +261,7 @@ build_kvx:
 pages:
   stage: build
   script:
+    - mkdir public
     - cp -r doc/* public/
     - mv public/index-kvx.html public/index.html
   artifacts:
