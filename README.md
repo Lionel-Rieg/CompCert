@@ -18,15 +18,17 @@ the [user's manual](http://compcert.inria.fr/man/).
 
 ## VERIMAG version
 This is a special version with additions from Verimag and Kalray :
+
 	* Some general-purpose optimization phases (e.g. profiling).
 	* A backend for the KVX processor.
 	
 The people responsible for this version are
+
 	* Sylvain Boulmé (Grenoble-INP, Verimag)
 	* David Monniaux (CNRS, Verimag)
 	* Cyril Six (Kalray)
 	
-See also `README_Kalray.md` and `PROFILING.md`.
+See also `README_Kalray.md` and `PROFILING.md` and [the online documentation](https://certicompil.gricad-pages.univ-grenoble-alpes.fr/compcert-kvx).
 
 ## License
 CompCert is not free software.  This non-commercial release can only
