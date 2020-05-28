@@ -258,8 +258,8 @@ build_kvx:
       when: always
     - when: manual
 
-pages:
-  stage: build  # TODO: change to "deploy" when "build" succeeds
+pages: # TODO: change to "deploy" when "build" succeeds (or integrate with "build_kvx" above ?)
+  stage: build
   image: "coqorg/coq"
   before_script:
     - sudo apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
@@ -280,7 +280,8 @@ pages:
     - source /opt/kalray/accesscore/kalray.sh && make documentation
     - mkdir public
     - cp -r doc/* public/
-    - mv public/index-kvx.html public/index.html
+    - tools/fix_html_date.sh doc/index-kvx.html " (" ")" > public/index.html
+    - rm public/index-kvx.html
   artifacts:
     paths:
     - public
