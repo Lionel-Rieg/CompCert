@@ -13,7 +13,7 @@
 (*                                                             *)
 (* *************************************************************)
 
-(** Correctness proof for RISC-V generation: main proof. *)
+(** Correctness proof for kvx/Asmblock generation: main proof. *)
 
 Require Import Coqlib Errors.
 Require Import Integers Floats AST Linking.
