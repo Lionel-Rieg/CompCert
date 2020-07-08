@@ -24,12 +24,12 @@ ALL_GCCFLAGS+=$(ALL_CFLAGS) -std=c99 -Wextra -Werror=implicit
 ALL_CCOMPFLAGS+=$(ALL_CFLAGS)
 
 # The compilers
-KVX_CC?=k1-cos-gcc
+KVX_CC?=kvx-cos-gcc
 KVX_CCOMP?=ccomp
 
 # Command to execute
-#EXECUTE_CYCLES?=timeout --signal=SIGTERM 3m k1-cluster --syscall=libstd_scalls.so --cycle-based --
-EXECUTE_CYCLES?=k1-cluster --syscall=libstd_scalls.so --cycle-based --
+#EXECUTE_CYCLES?=timeout --signal=SIGTERM 3m kvx-cluster --syscall=libstd_scalls.so --cycle-based --
+EXECUTE_CYCLES?=kvx-cluster --syscall=libstd_scalls.so --cycle-based --
 
 # You can define up to GCC4FLAGS and CCOMP4FLAGS
 GCC0FLAGS?=$(ALL_GCCFLAGS) -O0

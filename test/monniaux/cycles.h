@@ -6,7 +6,7 @@
 typedef uint64_t cycle_t;
 #define PRcycle PRId64
 
-#include <../../k1-cos/include/hal/cos_registers.h>
+#include <../../kvx-cos/include/hal/cos_registers.h>
 
 static inline void cycle_count_config(void)
 {
