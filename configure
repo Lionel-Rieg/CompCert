@@ -457,7 +457,7 @@ if test "$arch" = "kvx"; then
   fi
   osupper=`echo $os|tr a-z A-Z`
   k1base="kvx-$os"
-  casm="kvx-elf-as"
+  casm="$k1base-as"
   casm_options="$model_options"
   cc="$k1base-gcc $model_options"
   clinker="$k1base-gcc"
